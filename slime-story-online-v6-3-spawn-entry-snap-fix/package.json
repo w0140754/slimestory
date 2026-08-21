@@ -1,0 +1,16 @@
+{
+  "name": "slime-story-online",
+  "version": "0.6.3",
+  "private": true,
+  "description": "Slime Story multiplayer with teleport-aware interpolation for map entry and enemy respawns",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
