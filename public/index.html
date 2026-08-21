@@ -11998,9 +11998,19 @@ function killGhost(ghost) {
   ghost.burnTickTimer = 0;
 }
 
+let remotePlayerDrawDepth = 0;
+
 function equippedWeapon() {
+  if (player.weaponIndex < 0) {
+    return null;
+  }
+
+  // Local gameplay must still require ownership. Remote rendering is
+  // different: a remote player's synced weaponIndex describes THEIR
+  // equipment and must not be hidden just because the viewer does not own
+  // that same weapon.
   if (
-    player.weaponIndex < 0 ||
+    remotePlayerDrawDepth <= 0 &&
     !playerOwnsWeaponIndex(
       player.weaponIndex
     )
@@ -15701,17 +15711,27 @@ function drawRemotePlayer(
   player.hurlReachDirX = Number(remote.hurlReachDirX) || 0;
   player.hurlReachDirY = Number(remote.hurlReachDirY) || 0;
 
-  drawPlayer(
-    camX,
-    camY,
-    reflectionMode,
-    getCarriedSlimeForPlayerId(
-      remote.id
-    )
-  );
+  remotePlayerDrawDepth += 1;
 
-  for (const key of REMOTE_PLAYER_DRAW_FIELDS) {
-    player[key] = backup[key];
+  try {
+    drawPlayer(
+      camX,
+      camY,
+      reflectionMode,
+      getCarriedSlimeForPlayerId(
+        remote.id
+      )
+    );
+  } finally {
+    remotePlayerDrawDepth =
+      Math.max(
+        0,
+        remotePlayerDrawDepth - 1
+      );
+
+    for (const key of REMOTE_PLAYER_DRAW_FIELDS) {
+      player[key] = backup[key];
+    }
   }
 }
 

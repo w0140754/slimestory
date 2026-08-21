@@ -1,8 +1,8 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.10",
+  "version": "0.6.10.1",
   "private": true,
-  "description": "Slime Story: level/stat/weapon-power damage formula, stronger Goblins, spectral Ghost resistance",
+  "description": "Slime Story: remote players display their equipped weapons regardless of viewer inventory",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

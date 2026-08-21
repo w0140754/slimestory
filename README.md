@@ -512,3 +512,30 @@ to server/database authority remains a later architecture step.
 - COMBAT_BALANCE version: 1
 Both versions are included in the WebSocket welcome/health data so future
 client/server data mismatches are detectable.
+
+
+## v0.6.10.1 remote weapon visibility fix
+
+Fixed multiplayer weapon rendering.
+
+Root cause:
+- remote player state correctly synced `weaponIndex`;
+- `drawRemotePlayer()` temporarily reused the local `player` object;
+- `drawPlayer()` called `equippedWeapon()`;
+- `equippedWeapon()` checked the local viewer's inventory ownership;
+- therefore a remote player's weapon disappeared if the viewer did not own the
+  same weapon.
+
+This was especially noticeable with the Wood Sword (weapon index 0), but could
+affect any remote weapon the viewer had not yet acquired.
+
+Fix:
+- added a scoped `remotePlayerDrawDepth` render context;
+- local gameplay still requires actual inventory ownership;
+- while rendering a remote player/reflection, `equippedWeapon()` trusts the
+  remote synced `weaponIndex`;
+- `try/finally` guarantees the remote render context and temporarily-swapped
+  player fields are restored even if drawing throws.
+
+This preserves multiplayer weapon animations, Hurl carry poses, reflections,
+and all v0.6.10 combat progression changes.
