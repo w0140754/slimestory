@@ -1898,6 +1898,11 @@ for (const tree of trees) {
   tree.canopyBurnDuration = 2.7;
   tree.canopyBurned = false;
 
+  // Local animation only. Server authority decides when the tree regrows.
+  tree.regrowAnimTime = 0;
+  tree.regrowAnimDuration = 0.34;
+  tree.regrowAt = 0;
+
   tree.canopyVariant = randomTreeCanopyVariant();
 }
 
@@ -2089,11 +2094,67 @@ function drawTree(tree, camX, camY) {
 
     ctx.globalAlpha = canopyAlpha;
 
-    ctx.drawImage(
-      canopyImage,
-      drawX + canopyOffsetX,
-      drawY + canopyOffsetY
-    );
+    if (tree.regrowAnimTime > 0) {
+      const progress =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            1 -
+              tree.regrowAnimTime /
+              (tree.regrowAnimDuration || 0.34)
+          )
+        );
+
+      const popScale =
+        progress < 0.72
+          ? 0.88 +
+            (progress / 0.72) * 0.18
+          : 1.06 -
+            (
+              (progress - 0.72) /
+              0.28
+            ) * 0.06;
+
+      const bounceY =
+        -Math.round(
+          Math.sin(progress * Math.PI) *
+          2
+        );
+
+      const canopyX =
+        drawX +
+        canopyOffsetX;
+
+      const canopyY =
+        drawY +
+        canopyOffsetY +
+        bounceY;
+
+      ctx.translate(
+        canopyX + 16,
+        canopyY + 24
+      );
+
+      ctx.scale(
+        popScale,
+        popScale
+      );
+
+      ctx.drawImage(
+        canopyImage,
+        -16,
+        -24,
+        32,
+        48
+      );
+    } else {
+      ctx.drawImage(
+        canopyImage,
+        drawX + canopyOffsetX,
+        drawY + canopyOffsetY
+      );
+    }
 
     ctx.restore();
   }
@@ -2185,6 +2246,17 @@ tallGrass.forEach(clump => {
   clump.flowerType = null;
   clump.flowerPicked = true;
   clump.patchFlower = false;
+
+  clump.burnt =
+    Boolean(clump.burnt);
+  clump.burnTime =
+    Number(clump.burnTime) || 0;
+  clump.burnDuration =
+    Number(clump.burnDuration) || 1.05;
+
+  clump.regrowAnimTime = 0;
+  clump.regrowAnimDuration = 0.22;
+  clump.regrowAt = 0;
 });
 
 function drawTallGrass(clump, camX, camY) {
@@ -2210,6 +2282,52 @@ function drawTallGrass(clump, camX, camY) {
     ctx.fillRect(screenX + 1, screenY - 2, 1, 2);
     ctx.fillRect(screenX + 4, screenY - 3, 1, 3);
     return;
+  }
+
+  ctx.save();
+
+  if (clump.regrowAnimTime > 0) {
+    const progress =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          1 -
+            clump.regrowAnimTime /
+            (clump.regrowAnimDuration || 0.22)
+        )
+      );
+
+    const eased =
+      1 -
+      Math.pow(
+        1 - progress,
+        3
+      );
+
+    const scaleY =
+      0.30 + eased * 0.70;
+
+    const riseY =
+      Math.round(
+        (1 - eased) * 3
+      );
+
+    // Pivot at the grass base so the blades visibly grow upward from the soil.
+    ctx.translate(
+      0,
+      screenY + riseY
+    );
+
+    ctx.scale(
+      1,
+      scaleY
+    );
+
+    ctx.translate(
+      0,
+      -screenY
+    );
   }
 
   // Shared breeze direction with a little per-clump variation.
@@ -2283,6 +2401,8 @@ function drawTallGrass(clump, camX, camY) {
       drawPixelFlame(screenX, screenY - 6, clump.phase + 4.0);
     }
   }
+
+  ctx.restore();
 }
 
 function tryCutGrass() {
@@ -2323,6 +2443,7 @@ function tryCutGrass() {
 
       // Offline fallback.
       clump.cut = true;
+      scheduleLocalGrassRegrow(clump);
     }
   }
 }
@@ -2604,6 +2725,7 @@ function tryCutHarvestFlowers() {
 // -----------------------------------------------------------------------------
 const fireballs = [];
 const fireParticles = [];
+const growthParticles = [];
 const basicProjectiles = [];
 const rainOrbs = [];
 const rainClouds = [];
@@ -2632,6 +2754,146 @@ function spawnFireParticle(x, y, vx = 0, vy = -8, life = 0.28) {
     life,
     maxLife: life
   });
+}
+
+function spawnTreeRegrowBurst(tree) {
+  tree.regrowAnimTime =
+    tree.regrowAnimDuration || 0.34;
+
+  const leafColors = [
+    "#3f7d3b",
+    "#55964a",
+    "#6baa54",
+    "#87bd62"
+  ];
+
+  for (let i = 0; i < 8; i++) {
+    const angle =
+      Math.random() * Math.PI * 2;
+
+    const speed =
+      8 + Math.random() * 18;
+
+    const life =
+      0.30 + Math.random() * 0.30;
+
+    growthParticles.push({
+      x:
+        tree.x +
+        (Math.random() - 0.5) * 14,
+      y:
+        tree.y - 23 +
+        (Math.random() - 0.5) * 12,
+      vx:
+        Math.cos(angle) * speed,
+      vy:
+        Math.sin(angle) * speed - 8,
+      life,
+      maxLife: life,
+      color:
+        leafColors[
+          (Math.random() *
+            leafColors.length) | 0
+        ],
+      size:
+        Math.random() < 0.28 ? 2 : 1
+    });
+  }
+}
+
+function spawnGrassRegrowBurst(clump) {
+  clump.regrowAnimTime =
+    clump.regrowAnimDuration || 0.22;
+
+  const grassColors = [
+    "#4f8947",
+    "#5b9850",
+    "#67a858"
+  ];
+
+  for (let i = 0; i < 3; i++) {
+    const life =
+      0.20 + Math.random() * 0.18;
+
+    growthParticles.push({
+      x:
+        clump.x +
+        (Math.random() - 0.5) * 8,
+      y:
+        clump.y - 2 -
+        Math.random() * 4,
+      vx:
+        (Math.random() - 0.5) * 8,
+      vy:
+        -7 - Math.random() * 7,
+      life,
+      maxLife: life,
+      color:
+        grassColors[
+          (Math.random() *
+            grassColors.length) | 0
+        ],
+      size: 1
+    });
+  }
+}
+
+function updateGrowthParticles(dt) {
+  for (
+    let i = growthParticles.length - 1;
+    i >= 0;
+    i--
+  ) {
+    const particle =
+      growthParticles[i];
+
+    particle.life -= dt;
+    particle.x += particle.vx * dt;
+    particle.y += particle.vy * dt;
+
+    particle.vx *= 0.96;
+    particle.vy += 13 * dt;
+
+    if (particle.life <= 0) {
+      growthParticles.splice(i, 1);
+    }
+  }
+}
+
+function drawGrowthParticles(
+  camX,
+  camY
+) {
+  for (const particle of growthParticles) {
+    const pct = Math.max(
+      0,
+      Math.min(
+        1,
+        particle.life /
+          particle.maxLife
+      )
+    );
+
+    ctx.save();
+    ctx.globalAlpha =
+      Math.min(1, pct * 1.5);
+
+    ctx.fillStyle =
+      particle.color;
+
+    ctx.fillRect(
+      Math.round(
+        particle.x - camX
+      ),
+      Math.round(
+        particle.y - camY
+      ),
+      particle.size,
+      particle.size
+    );
+
+    ctx.restore();
+  }
 }
 
 
@@ -3173,6 +3435,53 @@ function spawnRemoteRainCast(
     ownerId,
     cloudLife
   });
+}
+
+const LOCAL_TREE_REGROW_MIN_MS = 75_000;
+const LOCAL_TREE_REGROW_MAX_MS = 105_000;
+const LOCAL_GRASS_REGROW_MIN_MS = 25_000;
+const LOCAL_GRASS_REGROW_MAX_MS = 45_000;
+
+function randomLocalRegrowTimestamp(
+  minMs,
+  maxMs
+) {
+  return Date.now() +
+    minMs +
+    Math.floor(
+      Math.random() *
+      (maxMs - minMs + 1)
+    );
+}
+
+function scheduleLocalTreeRegrow(tree) {
+  if (
+    tree.serverControlled ||
+    tree.regrowAt > 0
+  ) {
+    return;
+  }
+
+  tree.regrowAt =
+    randomLocalRegrowTimestamp(
+      LOCAL_TREE_REGROW_MIN_MS,
+      LOCAL_TREE_REGROW_MAX_MS
+    );
+}
+
+function scheduleLocalGrassRegrow(clump) {
+  if (
+    clump.serverControlled ||
+    clump.regrowAt > 0
+  ) {
+    return;
+  }
+
+  clump.regrowAt =
+    randomLocalRegrowTimestamp(
+      LOCAL_GRASS_REGROW_MIN_MS,
+      LOCAL_GRASS_REGROW_MAX_MS
+    );
 }
 
 function igniteGrass(clump) {
@@ -4186,6 +4495,7 @@ function updateFire(dt) {
         if (!clump.serverControlled) {
           clump.cut = true;
           clump.burnt = true;
+          scheduleLocalGrassRegrow(clump);
         }
       }
     }
@@ -4238,6 +4548,7 @@ function updateFire(dt) {
 
         if (!tree.serverControlled) {
           tree.canopyBurned = true;
+          scheduleLocalTreeRegrow(tree);
         }
 
         // Little final ember scatter.
@@ -5980,6 +6291,10 @@ function makeRuntimeTree(x, y, phase = 0) {
     canopyBurnDuration: 2.7,
     canopyBurned: false,
 
+    regrowAnimTime: 0,
+    regrowAnimDuration: 0.34,
+    regrowAt: 0,
+
     canopyVariant: randomTreeCanopyVariant()
   };
 }
@@ -5993,6 +6308,12 @@ function makeMapGrass(x, y, phase, width = 13, flowerType = null) {
     cut: false,
     burnt: false,
     burnTime: 0,
+    burnDuration: 1.05,
+
+    regrowAnimTime: 0,
+    regrowAnimDuration: 0.22,
+    regrowAt: 0,
+
     flowerType,
     flowerPicked: !flowerType,
     patchFlower: false
@@ -7280,7 +7601,10 @@ class OnlineClient {
     return null;
   }
 
-  applyEnvironmentEntityState(state) {
+  applyEnvironmentEntityState(
+    state,
+    animateRegrowth = true
+  ) {
     if (!state || !state.id) return;
 
     const entity =
@@ -7295,6 +7619,18 @@ class OnlineClient {
 
     if (state.kind === "tree") {
       const oldHp = entity.hp;
+
+      const wasDepleted =
+        Boolean(
+          entity.isStump ||
+          entity.falling ||
+          entity.canopyBurned ||
+          (
+            Number.isFinite(entity.hp) &&
+            Number.isFinite(entity.maxHp) &&
+            entity.hp < entity.maxHp
+          )
+        );
 
       entity.hp =
         Number.isFinite(state.hp)
@@ -7352,8 +7688,33 @@ class OnlineClient {
         entity.shakeTime = 0.18;
       }
 
+      const isFreshNow =
+        !entity.isStump &&
+        !entity.falling &&
+        !entity.canopyBurned &&
+        entity.canopyBurnTime <= 0 &&
+        entity.hp >= entity.maxHp;
+
+      if (
+        animateRegrowth &&
+        wasDepleted &&
+        isFreshNow &&
+        state.mapId === currentMapId
+      ) {
+        spawnTreeRegrowBurst(
+          entity
+        );
+      }
+
       return;
     }
+
+    const grassWasDepleted =
+      state.kind === "grass" &&
+      Boolean(
+        entity.cut ||
+        entity.burnt
+      );
 
     entity.cut = Boolean(state.cut);
     entity.burnt = Boolean(state.burnt);
@@ -7365,6 +7726,19 @@ class OnlineClient {
     if (Number.isFinite(state.burnDuration)) {
       entity.burnDuration =
         state.burnDuration;
+    }
+
+    if (
+      animateRegrowth &&
+      state.kind === "grass" &&
+      grassWasDepleted &&
+      !entity.cut &&
+      !entity.burnt &&
+      state.mapId === currentMapId
+    ) {
+      spawnGrassRegrowBurst(
+        entity
+      );
     }
 
     if (state.kind === "flower") {
@@ -7380,13 +7754,19 @@ class OnlineClient {
   applyEnvironmentSnapshot(states) {
     for (const state of states || []) {
       this.applyEnvironmentEntityState(
-        state
+        state,
+        false
       );
     }
   }
 
   applyEnvironmentPatch(states) {
-    this.applyEnvironmentSnapshot(states);
+    for (const state of states || []) {
+      this.applyEnvironmentEntityState(
+        state,
+        true
+      );
+    }
   }
 
   sendEnvironmentAction(
@@ -10069,6 +10449,7 @@ function tryHitTree() {
   // Offline fallback.
   bestTree.hp -= 1;
   bestTree.shakeTime = 0.18;
+  scheduleLocalTreeRegrow(bestTree);
 
   if (bestTree.hp <= 0) {
     bestTree.hp = 0;
@@ -14167,6 +14548,71 @@ function updateHudUi() {
   }
 }
 
+function resetLocalTreeToFresh(tree) {
+  tree.hp = tree.maxHp;
+  tree.isStump = false;
+  tree.falling = false;
+  tree.fallTime = 0;
+  tree.canopyBurnTime = 0;
+  tree.canopyBurned = false;
+  tree.regrowAt = 0;
+
+  spawnTreeRegrowBurst(tree);
+}
+
+function resetLocalGrassToFresh(clump) {
+  clump.cut = false;
+  clump.burnt = false;
+  clump.burnTime = 0;
+  clump.regrowAt = 0;
+
+  spawnGrassRegrowBurst(clump);
+}
+
+function updateEnvironmentRegrowthEffects(
+  dt
+) {
+  const now = Date.now();
+
+  for (const tree of trees) {
+    tree.regrowAnimTime =
+      Math.max(
+        0,
+        (tree.regrowAnimTime || 0) - dt
+      );
+
+    if (
+      !tree.serverControlled &&
+      tree.regrowAt > 0 &&
+      now >= tree.regrowAt
+    ) {
+      resetLocalTreeToFresh(
+        tree
+      );
+    }
+  }
+
+  for (const clump of tallGrass) {
+    clump.regrowAnimTime =
+      Math.max(
+        0,
+        (clump.regrowAnimTime || 0) - dt
+      );
+
+    if (
+      !clump.serverControlled &&
+      clump.regrowAt > 0 &&
+      now >= clump.regrowAt
+    ) {
+      resetLocalGrassToFresh(
+        clump
+      );
+    }
+  }
+
+  updateGrowthParticles(dt);
+}
+
 function updateTransientSystems(dt) {
   updateDamageNumbers(dt);
   updateFloatingTexts(dt);
@@ -14179,6 +14625,7 @@ function updateTransientSystems(dt) {
   updateBasicProjectiles(dt);
   updateRainMagic(dt);
   updateFire(dt);
+  updateEnvironmentRegrowthEffects(dt);
 }
 
 function updateWorldObjectStates(dt) {
@@ -16195,6 +16642,7 @@ function drawForegroundLayer(camX, camY) {
 
   drawJesterAfterimages(camX, camY);
   drawFireParticles(camX, camY);
+  drawGrowthParticles(camX, camY);
   drawShadowSmoke(camX, camY);
   drawJesterConfetti(camX, camY);
 

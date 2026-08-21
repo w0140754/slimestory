@@ -1,8 +1,8 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.10.4",
+  "version": "0.6.11",
   "private": true,
-  "description": "Slime Story: fix first Rain Cloud self-cast with Movement enhancement",
+  "description": "Slime Story: lightweight server-authoritative tree and grass regrowth with pop animations",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

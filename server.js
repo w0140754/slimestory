@@ -107,6 +107,89 @@ let nextSharedResourceId = 1;
 let environmentSpreadTimer = 0;
 const ENVIRONMENT_SPREAD_INTERVAL = 0.24;
 
+// Regrowth uses one timestamp stored on the existing environment entity.
+// There are no per-tree/per-grass setTimeout timers.
+const TREE_REGROW_MIN_MS = 75_000;
+const TREE_REGROW_MAX_MS = 105_000;
+const GRASS_REGROW_MIN_MS = 25_000;
+const GRASS_REGROW_MAX_MS = 45_000;
+
+function randomRegrowTimestamp(
+  minMs,
+  maxMs
+) {
+  const delay =
+    minMs +
+    Math.floor(
+      Math.random() *
+      (maxMs - minMs + 1)
+    );
+
+  return Date.now() + delay;
+}
+
+function scheduleTreeRegrow(entity) {
+  if (
+    !entity ||
+    entity.kind !== "tree" ||
+    entity.regrowAt > 0
+  ) {
+    return false;
+  }
+
+  entity.regrowAt =
+    randomRegrowTimestamp(
+      TREE_REGROW_MIN_MS,
+      TREE_REGROW_MAX_MS
+    );
+
+  return true;
+}
+
+function scheduleGrassRegrow(entity) {
+  if (
+    !entity ||
+    entity.kind !== "grass" ||
+    entity.regrowAt > 0
+  ) {
+    return false;
+  }
+
+  entity.regrowAt =
+    randomRegrowTimestamp(
+      GRASS_REGROW_MIN_MS,
+      GRASS_REGROW_MAX_MS
+    );
+
+  return true;
+}
+
+function resetTreeToFresh(entity) {
+  entity.hp = entity.maxHp;
+  entity.isStump = false;
+
+  entity.falling = false;
+  entity.fallTime = 0;
+  entity.fallDirection = 1;
+  entity.lastHitPlayerId = null;
+
+  entity.canopyBurnTime = 0;
+  entity.canopyBurned = false;
+
+  entity.regrowAt = 0;
+
+  markEnvironmentDirty(entity);
+}
+
+function resetGrassToFresh(entity) {
+  entity.cut = false;
+  entity.burnt = false;
+  entity.burnTime = 0;
+  entity.regrowAt = 0;
+
+  markEnvironmentDirty(entity);
+}
+
 function environmentEntitySnapshot(entity) {
   const common = {
     id: entity.id,
@@ -231,6 +314,8 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       canopyBurnDuration: 2.7,
       canopyBurned: false,
 
+      regrowAt: 0,
+
       canopyVariant: clampInteger(
         source.canopyVariant,
         0,
@@ -251,7 +336,8 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       cut: false,
       burnt: false,
       burnTime: 0,
-      burnDuration: 1.05
+      burnDuration: 1.05,
+      regrowAt: 0
     };
   }
 
@@ -1054,6 +1140,8 @@ function spreadSharedEnvironmentFire() {
 }
 
 function tickSharedEnvironment(dt) {
+  const now = Date.now();
+
   for (const entity of sharedEnvironment.values()) {
     if (
       entity.kind === "tree" &&
@@ -1066,6 +1154,7 @@ function tickSharedEnvironment(dt) {
         entity.fallTime = 0;
         entity.falling = false;
         entity.isStump = true;
+        scheduleTreeRegrow(entity);
 
         spawnSharedResource(
           entity.mapId,
@@ -1099,6 +1188,7 @@ function tickSharedEnvironment(dt) {
       if (entity.canopyBurnTime <= 0) {
         entity.canopyBurnTime = 0;
         entity.canopyBurned = true;
+        scheduleTreeRegrow(entity);
         markEnvironmentDirty(entity);
       }
     }
@@ -1115,12 +1205,33 @@ function tickSharedEnvironment(dt) {
         entity.cut = true;
         entity.burnt = true;
 
+        if (entity.kind === "grass") {
+          scheduleGrassRegrow(entity);
+        }
+
         if (entity.kind === "flower") {
           entity.looted = true;
         }
 
         markEnvironmentDirty(entity);
       }
+    }
+
+    if (
+      entity.kind === "tree" &&
+      entity.regrowAt > 0 &&
+      now >= entity.regrowAt
+    ) {
+      resetTreeToFresh(entity);
+      continue;
+    }
+
+    if (
+      entity.kind === "grass" &&
+      entity.regrowAt > 0 &&
+      now >= entity.regrowAt
+    ) {
+      resetGrassToFresh(entity);
     }
   }
 
@@ -1242,6 +1353,7 @@ function handleEnvironmentAction(
     );
 
     entity.lastHitPlayerId = playerId;
+    scheduleTreeRegrow(entity);
     markEnvironmentDirty(entity);
 
     if (entity.hp <= 0) {
@@ -1267,7 +1379,7 @@ function handleEnvironmentAction(
       !environmentMeleeValid(
         playerState,
         entity,
-        [0, 4],
+        [0, 4, 5],
         5,
         8,
         0.94
@@ -1278,6 +1390,7 @@ function handleEnvironmentAction(
 
     entity.cut = true;
     entity.burnTime = 0;
+    scheduleGrassRegrow(entity);
     markEnvironmentDirty(entity);
     return;
   }
@@ -1289,7 +1402,7 @@ function handleEnvironmentAction(
       !environmentMeleeValid(
         playerState,
         entity,
-        [0, 4],
+        [0, 4, 5],
         7,
         8,
         0.94
@@ -3739,6 +3852,10 @@ function damageTreeFromHurl(
 
   bestTree.lastHitPlayerId =
     attackerId;
+
+  scheduleTreeRegrow(
+    bestTree
+  );
 
   markEnvironmentDirty(
     bestTree

@@ -626,3 +626,81 @@ Fix:
 
 All v0.6.10.3 map-transition Rain/Blink cleanup and the restored original Sword
 remain intact.
+
+
+## v0.6.11 environment regrowth
+
+Added lightweight, shared tree and grass regeneration.
+
+### Timing
+A regrow time is rolled once when vegetation becomes depleted:
+
+- Trees: random 75-105 seconds
+- Grass: random 25-45 seconds
+
+The random value is NOT rerolled while the entity is waiting.
+
+### Architecture
+Regrowth does not create per-entity `setTimeout()` timers.
+
+Each existing server-owned environment object has one numeric `regrowAt`
+timestamp. The normal shared-environment tick compares `Date.now()` with that
+timestamp. This keeps memory use tiny and means empty maps need no dedicated
+timer objects.
+
+When the timestamp expires:
+
+Tree resets completely to fresh:
+- full HP
+- no stump
+- no falling state
+- full canopy
+- canopy burn cleared
+- normal collision/chopping behavior
+
+Grass resets completely to fresh:
+- not cut
+- not burnt
+- no burn timer
+
+The authoritative server patch is broadcast to every connected player, so all
+players agree on exactly when vegetation returns.
+
+### What starts the timer
+Trees:
+- taking axe damage
+- taking Hurl damage
+- becoming a stump
+- fully losing the canopy to fire
+
+Grass:
+- being cut
+- fully burning down
+
+### Regrowth animation
+No new art assets are needed.
+
+Tree:
+- fresh canopy pops in from about 88% size
+- tiny overshoot and settle
+- small upward bounce
+- eight small green leaf pixels burst around the canopy
+
+Grass:
+- blades grow upward from the soil over about 0.22 sec
+- three tiny green growth particles pop upward
+
+Initial environment snapshots do not play regrow effects. Only an actual
+server patch from depleted -> fresh triggers the animation.
+
+### Offline fallback
+The same timestamp ranges and animations are also used by the existing local
+fallback path when no multiplayer server is connected.
+
+### Restored Sword compatibility
+The restored original Sword (weapon index 5) is now also accepted by the server
+for cutting grass and harvestable flowers, matching its intended normal-sword
+behavior.
+
+All v0.6.10.4 Rain self-cast, map-transition cleanup, combat progression,
+hotbar, shop, Ghost Grove, and multiplayer weapon fixes remain intact.
