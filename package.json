@@ -1,8 +1,8 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.3",
+  "version": "0.6.4-12",
   "private": true,
-  "description": "Slime Story multiplayer with teleport-aware interpolation for map entry and enemy respawns",
+  "description": "Slime Story popup-font fix: full A-Z floating text alphabet",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

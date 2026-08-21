@@ -3024,6 +3024,18 @@ function makeServerSlime(spawn) {
     knockbackX: 0,
     knockbackY: 0,
 
+    // STR ability: Hurl.
+    carriedBy: null,
+    pickupTime: 0,
+    pickupDuration: 0.18,
+    pickupDirX: 0,
+    pickupDirY: 0,
+    hurlTime: 0,
+    hurlDuration: 0.58,
+    hurlVelocityX: 0,
+    hurlVelocityY: 0,
+    hurlThrownBy: null,
+
     lastDamagePlayerId: null
   };
 }
@@ -3095,7 +3107,15 @@ function slimeSnapshot() {
     maxHp: slime.maxHp,
     alive: slime.alive,
     burnTime: Number(slime.burnTime.toFixed(2)),
-    respawnTime: Number(slime.respawnTime.toFixed(2))
+    respawnTime: Number(slime.respawnTime.toFixed(2)),
+
+    carriedBy: slime.carriedBy,
+    pickupTime: Number(slime.pickupTime.toFixed(3)),
+    pickupDuration: slime.pickupDuration,
+    pickupDirX: Number(slime.pickupDirX.toFixed(3)),
+    pickupDirY: Number(slime.pickupDirY.toFixed(3)),
+    hurlTime: Number(slime.hurlTime.toFixed(3)),
+    hurlDuration: slime.hurlDuration
   }));
 }
 
@@ -3267,6 +3287,16 @@ function resetServerSlime(slime) {
 
   slime.knockbackX = 0;
   slime.knockbackY = 0;
+
+  slime.carriedBy = null;
+  slime.pickupTime = 0;
+  slime.pickupDirX = 0;
+  slime.pickupDirY = 0;
+  slime.hurlTime = 0;
+  slime.hurlVelocityX = 0;
+  slime.hurlVelocityY = 0;
+  slime.hurlThrownBy = null;
+
   slime.lastDamagePlayerId = null;
 }
 
@@ -3280,6 +3310,15 @@ function killServerSlime(slime, killerId = null) {
   slime.burnTickTimer = 0;
   slime.knockbackX = 0;
   slime.knockbackY = 0;
+
+  slime.carriedBy = null;
+  slime.pickupTime = 0;
+  slime.pickupDirX = 0;
+  slime.pickupDirY = 0;
+  slime.hurlTime = 0;
+  slime.hurlVelocityX = 0;
+  slime.hurlVelocityY = 0;
+  slime.hurlThrownBy = null;
 
   const droppedCoin = Math.random() < 0.45;
 
@@ -3302,8 +3341,562 @@ function killServerSlime(slime, killerId = null) {
   });
 }
 
+
+function broadcastHurlSlimeDamage(
+  slime,
+  amount,
+  attackerId,
+  source = "hurl"
+) {
+  if (!slime.alive || amount <= 0) {
+    return;
+  }
+
+  slime.hp = Math.max(
+    0,
+    slime.hp - amount
+  );
+
+  slime.lastDamagePlayerId =
+    attackerId;
+
+  slime.aggroTime =
+    Math.max(
+      slime.aggroTime,
+      4.5
+    );
+
+  broadcast({
+    type: "slimeDamage",
+    slimeId: slime.id,
+    amount,
+    hp: slime.hp,
+    critical: false,
+    source,
+    attackerId,
+    mapId: slime.mapId
+  });
+
+  if (slime.hp <= 0) {
+    killServerSlime(
+      slime,
+      attackerId
+    );
+  }
+}
+
+function broadcastHurlGoblinDamage(
+  goblin,
+  amount,
+  attackerId,
+  velocityX,
+  velocityY
+) {
+  if (!goblin.alive || amount <= 0) {
+    return;
+  }
+
+  goblin.hp = Math.max(
+    0,
+    goblin.hp - amount
+  );
+
+  goblin.lastDamagePlayerId =
+    attackerId;
+
+  goblin.aggroTime =
+    goblin.aggroDuration;
+
+  const speed =
+    Math.hypot(
+      velocityX,
+      velocityY
+    ) || 1;
+
+  goblin.knockbackX =
+    velocityX / speed * 58;
+
+  goblin.knockbackY =
+    velocityY / speed * 58;
+
+  broadcast({
+    type: "enemyDamage",
+    enemyType: "goblin",
+    enemyId: goblin.id,
+    mapId: goblin.mapId,
+    amount,
+    hp: goblin.hp,
+    critical: false,
+    source: "hurl",
+    attackerId
+  });
+
+  if (goblin.hp <= 0) {
+    killSharedEnemy(
+      goblin,
+      attackerId
+    );
+  }
+}
+
+function damageTreeFromHurl(
+  mapId,
+  x,
+  y,
+  attackerId,
+  directionX
+) {
+  let bestTree = null;
+  let bestDistance = Infinity;
+
+  for (
+    const entity
+    of sharedEnvironment.values()
+  ) {
+    if (
+      entity.mapId !== mapId ||
+      entity.kind !== "tree" ||
+      entity.isStump ||
+      entity.falling
+    ) {
+      continue;
+    }
+
+    const distance = Math.hypot(
+      entity.x - x,
+      entity.y - y
+    );
+
+    if (
+      distance <= 12 &&
+      distance < bestDistance
+    ) {
+      bestTree = entity;
+      bestDistance = distance;
+    }
+  }
+
+  if (!bestTree) {
+    return false;
+  }
+
+  bestTree.hp = Math.max(
+    0,
+    bestTree.hp - 1
+  );
+
+  bestTree.lastHitPlayerId =
+    attackerId;
+
+  markEnvironmentDirty(
+    bestTree
+  );
+
+  if (bestTree.hp <= 0) {
+    bestTree.falling = true;
+    bestTree.fallTime =
+      bestTree.fallDuration;
+
+    bestTree.fallDirection =
+      directionX >= 0
+        ? 1
+        : -1;
+
+    markEnvironmentDirty(
+      bestTree
+    );
+  }
+
+  return true;
+}
+
+function finishServerSlimeHurl(
+  slime,
+  attackerId,
+  landingDamage = true
+) {
+  if (!slime.alive) return;
+
+  const velocityX =
+    slime.hurlVelocityX;
+
+  const velocityY =
+    slime.hurlVelocityY;
+
+  slime.carriedBy = null;
+  slime.hurlTime = 0;
+  slime.hurlVelocityX = 0;
+  slime.hurlVelocityY = 0;
+  slime.hurlThrownBy = null;
+
+  const speed =
+    Math.hypot(
+      velocityX,
+      velocityY
+    ) || 1;
+
+  slime.knockbackX =
+    velocityX / speed * 24;
+
+  slime.knockbackY =
+    velocityY / speed * 24;
+
+  if (landingDamage) {
+    broadcastHurlSlimeDamage(
+      slime,
+      4 + Math.floor(Math.random() * 4),
+      attackerId,
+      "hurlLanding"
+    );
+  }
+}
+
+function tryHurlCollision(
+  slime
+) {
+  const attackerId =
+    slime.hurlThrownBy;
+
+  const velocityX =
+    slime.hurlVelocityX;
+
+  const velocityY =
+    slime.hurlVelocityY;
+
+  for (const target of sharedSlimes) {
+    if (
+      target === slime ||
+      !target.alive ||
+      target.carriedBy ||
+      target.hurlTime > 0 ||
+      target.mapId !== slime.mapId
+    ) {
+      continue;
+    }
+
+    if (
+      Math.hypot(
+        target.x - slime.x,
+        target.y - slime.y
+      ) > 10
+    ) {
+      continue;
+    }
+
+    const speed =
+      Math.hypot(
+        velocityX,
+        velocityY
+      ) || 1;
+
+    target.knockbackX =
+      velocityX / speed * 58;
+
+    target.knockbackY =
+      velocityY / speed * 58;
+
+    broadcastHurlSlimeDamage(
+      target,
+      8 + Math.floor(Math.random() * 5),
+      attackerId,
+      "hurl"
+    );
+
+    finishServerSlimeHurl(
+      slime,
+      attackerId,
+      true
+    );
+
+    return true;
+  }
+
+  for (const goblin of sharedGoblins) {
+    if (
+      !goblin.alive ||
+      goblin.mapId !== slime.mapId
+    ) {
+      continue;
+    }
+
+    if (
+      Math.hypot(
+        goblin.x - slime.x,
+        goblin.y - slime.y
+      ) > 11
+    ) {
+      continue;
+    }
+
+    broadcastHurlGoblinDamage(
+      goblin,
+      8 + Math.floor(Math.random() * 5),
+      attackerId,
+      velocityX,
+      velocityY
+    );
+
+    finishServerSlimeHurl(
+      slime,
+      attackerId,
+      true
+    );
+
+    return true;
+  }
+
+  if (
+    damageTreeFromHurl(
+      slime.mapId,
+      slime.x,
+      slime.y,
+      attackerId,
+      velocityX
+    )
+  ) {
+    finishServerSlimeHurl(
+      slime,
+      attackerId,
+      true
+    );
+
+    return true;
+  }
+
+  return false;
+}
+
+function tickServerSlimeHurl(
+  slime,
+  dt
+) {
+  if (slime.carriedBy) {
+    const carrier =
+      players.get(slime.carriedBy);
+
+    if (
+      !carrier ||
+      carrier.hp <= 0 ||
+      carrier.mapId !== slime.mapId
+    ) {
+      slime.carriedBy = null;
+      slime.pickupTime = 0;
+      slime.pickupDirX = 0;
+      slime.pickupDirY = 0;
+      slime.hurlThrownBy = null;
+      return false;
+    }
+
+    slime.x = carrier.x;
+    slime.y = carrier.y;
+
+    slime.pickupTime = Math.max(
+      0,
+      slime.pickupTime - dt
+    );
+
+    slime.knockbackX = 0;
+    slime.knockbackY = 0;
+    slime.aggroTime = 0;
+    slime.tauntTime = 0;
+
+    return true;
+  }
+
+  if (slime.hurlTime <= 0) {
+    return false;
+  }
+
+  slime.hurlTime =
+    Math.max(
+      0,
+      slime.hurlTime - dt
+    );
+
+  const nextX =
+    slime.x +
+    slime.hurlVelocityX * dt;
+
+  const nextY =
+    slime.y +
+    slime.hurlVelocityY * dt;
+
+  if (
+    !slimePositionAllowed(
+      slime,
+      nextX,
+      nextY
+    )
+  ) {
+    finishServerSlimeHurl(
+      slime,
+      slime.hurlThrownBy,
+      true
+    );
+
+    return true;
+  }
+
+  slime.x = nextX;
+  slime.y = nextY;
+
+  if (tryHurlCollision(slime)) {
+    return true;
+  }
+
+  if (slime.hurlTime <= 0) {
+    finishServerSlimeHurl(
+      slime,
+      slime.hurlThrownBy,
+      true
+    );
+
+    return true;
+  }
+
+  return true;
+}
+
+function handleSlimeHurlAction(
+  playerId,
+  slime,
+  action,
+  payload
+) {
+  const playerState =
+    players.get(playerId);
+
+  if (
+    !playerState ||
+    playerState.hp <= 0 ||
+    playerState.mapId !== slime.mapId ||
+    !slime.alive
+  ) {
+    return;
+  }
+
+  if (action === "hurlGrab") {
+    if (
+      slime.carriedBy ||
+      slime.hurlTime > 0
+    ) {
+      return;
+    }
+
+    if (
+      sharedSlimes.some(
+        candidate =>
+          candidate.carriedBy === playerId
+      )
+    ) {
+      return;
+    }
+
+    const distance = Math.hypot(
+      slime.x - playerState.x,
+      slime.y - playerState.y
+    );
+
+    if (distance > 24) {
+      return;
+    }
+
+    if (
+      actionRateLimited(
+        playerId,
+        slime.id,
+        "hurlGrab",
+        300
+      )
+    ) {
+      return;
+    }
+
+    const pickupDx =
+      slime.x - playerState.x;
+    const pickupDy =
+      slime.y - playerState.y;
+    const pickupLength =
+      Math.hypot(pickupDx, pickupDy) || 1;
+
+    slime.carriedBy = playerId;
+    slime.pickupTime =
+      slime.pickupDuration;
+    slime.pickupDirX =
+      pickupDx / pickupLength;
+    slime.pickupDirY =
+      pickupDy / pickupLength;
+    slime.hurlTime = 0;
+    slime.hurlVelocityX = 0;
+    slime.hurlVelocityY = 0;
+    slime.hurlThrownBy = null;
+    slime.knockbackX = 0;
+    slime.knockbackY = 0;
+    slime.aggroTime = 0;
+    slime.tauntTime = 0;
+
+    return;
+  }
+
+  if (action === "hurlThrow") {
+    if (
+      slime.carriedBy !== playerId
+    ) {
+      return;
+    }
+
+    const aimAngle =
+      Number(payload.aimAngle);
+
+    if (!Number.isFinite(aimAngle)) {
+      return;
+    }
+
+    if (
+      actionRateLimited(
+        playerId,
+        slime.id,
+        "hurlThrow",
+        220
+      )
+    ) {
+      return;
+    }
+
+    const throwSpeed = 126;
+
+    slime.carriedBy = null;
+    slime.pickupTime = 0;
+    slime.pickupDirX = 0;
+    slime.pickupDirY = 0;
+    slime.hurlTime =
+      slime.hurlDuration;
+
+    slime.hurlVelocityX =
+      Math.cos(aimAngle) *
+      throwSpeed;
+
+    slime.hurlVelocityY =
+      Math.sin(aimAngle) *
+      throwSpeed;
+
+    slime.hurlThrownBy =
+      playerId;
+
+    slime.lastDamagePlayerId =
+      playerId;
+
+    slime.aggroTime = 0;
+    slime.tauntTime = 0;
+  }
+}
+
 function tryServerSlimeContact(slime) {
-  if (slime.tauntTime > 0) {
+  if (
+    slime.tauntTime > 0 ||
+    slime.carriedBy ||
+    slime.hurlTime > 0
+  ) {
     return;
   }
 
@@ -3408,6 +4001,15 @@ function tickSharedSlimes(dt) {
     }
 
     if (!slime.alive) continue;
+
+    if (
+      tickServerSlimeHurl(
+        slime,
+        dt
+      )
+    ) {
+      continue;
+    }
 
     if (slime.tauntTime > 0) {
       slime.tauntTime = Math.max(
@@ -3656,7 +4258,12 @@ function handleSlimeDamageAction(playerId, slime, payload) {
     return;
   }
 
-  if (!slime.alive) return;
+  if (
+    !slime.alive ||
+    slime.carriedBy
+  ) {
+    return;
+  }
 
   const source = String(payload.source || "");
   let damage = 0;
@@ -3780,6 +4387,20 @@ function handleSlimeAction(playerId, message) {
   }
 
   if (
+    action === "hurlGrab" ||
+    action === "hurlThrow"
+  ) {
+    handleSlimeHurlAction(
+      playerId,
+      slime,
+      action,
+      payload
+    );
+
+    return;
+  }
+
+  if (
     actionRateLimited(
       playerId,
       slime.id,
@@ -3791,7 +4412,12 @@ function handleSlimeAction(playerId, message) {
   }
 
   if (action === "ignite") {
-    if (!slime.alive) return;
+    if (
+      !slime.alive ||
+      slime.carriedBy
+    ) {
+      return;
+    }
 
     slime.burnTime = 3.0;
     slime.burnTickTimer = slime.burnTickInterval;
@@ -3809,6 +4435,8 @@ function handleSlimeAction(playerId, message) {
   if (action === "taunt") {
     if (
       !slime.alive ||
+      slime.carriedBy ||
+      slime.hurlTime > 0 ||
       playerState.mapId !== slime.mapId
     ) {
       return;
@@ -4196,7 +4824,21 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       clampNumber(source.shadowHideRevealTime, 0, 1, 0),
 
     wetTime: clampNumber(source.wetTime, 0, 10, 0),
-    burnTime: clampNumber(source.burnTime, 0, 10, 0)
+    burnTime: clampNumber(source.burnTime, 0, 10, 0),
+
+    // Presentation-only Hurl whiff/reach state. These fields are sanitized
+    // and rebroadcast so nearby players can see the failed-grab animation.
+    hurlReachTime:
+      clampNumber(source.hurlReachTime, 0, 0.5, 0),
+
+    hurlReachDuration:
+      clampNumber(source.hurlReachDuration, 0.05, 0.5, 0.18),
+
+    hurlReachDirX:
+      clampNumber(source.hurlReachDirX, -1, 1, 0),
+
+    hurlReachDirY:
+      clampNumber(source.hurlReachDirY, -1, 1, 0)
   };
 }
 

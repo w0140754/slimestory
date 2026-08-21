@@ -1148,6 +1148,30 @@
             </div>
           </div>
 
+
+          <div class="skill-node locked" data-skill-node="hurl">
+            <div class="skill-node-top">
+              <span class="skill-node-name">Hurl</span>
+              <span class="skill-status">Locked</span>
+            </div>
+            <div class="skill-description">
+              Grab a nearby slime, carry it overhead, then left-click to throw it. Thrown slimes can smash enemies and trees.
+            </div>
+            <div class="skill-requirement">Requires 10 Strength</div>
+            <div class="skill-level-row">
+              <span class="skill-level-text">LV 0 / 5</span>
+              <button class="ability-upgrade-button" data-ability-id="hurl">Unlock</button>
+            </div>
+            <div class="skill-bind-label">Bind key</div>
+            <div class="skill-bind-row">
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="shift">Shift</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="space">Space</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="e">E</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="r">R</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="">Clear</button>
+            </div>
+          </div>
+
           <div class="skill-node locked" data-skill-node="jesterBlink">
             <div class="skill-node-top">
               <span class="skill-node-name">Jester Blink</span>
@@ -7793,6 +7817,38 @@ class OnlineClient {
 
       slime.alive = nextAlive;
       slime.dir = state.dir === -1 ? -1 : 1;
+
+      slime.carriedBy =
+        typeof state.carriedBy === "string"
+          ? state.carriedBy
+          : null;
+
+      slime.pickupTime = Math.max(
+        0,
+        Number(state.pickupTime) || 0
+      );
+
+      slime.pickupDuration = Math.max(
+        0.01,
+        Number(state.pickupDuration) || 0.18
+      );
+
+      slime.pickupDirX =
+        Number(state.pickupDirX) || 0;
+
+      slime.pickupDirY =
+        Number(state.pickupDirY) || 0;
+
+      slime.hurlTime = Math.max(
+        0,
+        Number(state.hurlTime) || 0
+      );
+
+      slime.hurlDuration = Math.max(
+        0.01,
+        Number(state.hurlDuration) || 0.58
+      );
+
       slime.burnTime = Math.max(0, Number(state.burnTime) || 0);
       slime.respawnTime = Math.max(
         0,
@@ -7903,7 +7959,12 @@ class OnlineClient {
       shadowHidden: player.shadowHidden,
       shadowHideRevealTime: player.shadowHideRevealTime,
       wetTime: player.wetTime,
-      burnTime: player.burnTime
+      burnTime: player.burnTime,
+
+      hurlReachTime: player.hurlReachTime,
+      hurlReachDuration: player.hurlReachDuration,
+      hurlReachDirX: player.hurlReachDirX,
+      hurlReachDirY: player.hurlReachDirY
     };
   }
 
@@ -7948,6 +8009,11 @@ class OnlineClient {
       remote.burnTime = Math.max(
         0,
         (Number(remote.burnTime) || 0) - dt
+      );
+
+      remote.hurlReachTime = Math.max(
+        0,
+        (Number(remote.hurlReachTime) || 0) - dt
       );
     }
   }
@@ -8527,6 +8593,7 @@ function drawDamageNumbers(camX, camY) {
 }
 
 // Small 3x5 pixel alphabet used for progression popups above the player.
+// Now includes a full A-Z set so short status messages no longer lose letters.
 const FLOAT_GLYPHS = {
   "0": ["111","101","101","101","111"],
   "1": ["010","110","010","010","111"],
@@ -8538,17 +8605,44 @@ const FLOAT_GLYPHS = {
   "7": ["111","001","010","010","010"],
   "8": ["111","101","111","101","111"],
   "9": ["111","101","111","001","111"],
-  "+": ["000","010","111","010","000"],
-  "!": ["010","010","010","000","010"],
+
+  "A": ["010","101","111","101","101"],
+  "B": ["110","101","110","101","110"],
+  "C": ["111","100","100","100","111"],
+  "D": ["110","101","101","101","110"],
   "E": ["111","100","110","100","111"],
   "F": ["111","100","110","100","100"],
-  "X": ["101","101","010","101","101"],
-  "P": ["110","101","110","100","100"],
+  "G": ["111","100","101","101","111"],
+  "H": ["101","101","111","101","101"],
+  "I": ["111","010","010","010","111"],
+  "J": ["001","001","001","101","111"],
+  "K": ["101","101","110","101","101"],
   "L": ["100","100","100","100","111"],
-  "V": ["101","101","101","101","010"],
+  "M": ["101","111","111","101","101"],
+  "N": ["101","111","111","111","101"],
+  "O": ["111","101","101","101","111"],
+  "P": ["110","101","110","100","100"],
+  "Q": ["111","101","101","111","001"],
+  "R": ["110","101","110","101","101"],
+  "S": ["111","100","111","001","111"],
+  "T": ["111","010","010","010","010"],
   "U": ["101","101","101","101","111"],
+  "V": ["101","101","101","101","010"],
   "W": ["101","101","111","111","101"],
-  "C": ["111","100","100","100","111"],
+  "X": ["101","101","010","101","101"],
+  "Y": ["101","101","010","010","010"],
+  "Z": ["111","001","010","100","111"],
+
+  "+": ["000","010","111","010","000"],
+  "!": ["010","010","010","000","010"],
+  "?": ["111","001","010","000","010"],
+  ".": ["000","000","000","000","010"],
+  ",": ["000","000","000","010","100"],
+  ":": ["000","010","000","010","000"],
+  "-": ["000","000","111","000","000"],
+  "'": ["010","010","000","000","000"],
+  "/": ["001","001","010","100","100"],
+
   " ": ["000","000","000","000","000"]
 };
 
@@ -9083,33 +9177,120 @@ function hitsSlime(x, y) {
 function drawSlime(slime, camX, camY) {
   if (!slime.alive) return;
 
-  let screenX = Math.round(slime.x - camX);
-  const screenY = Math.round(slime.y - camY);
+  const carrier =
+    slime.carriedBy &&
+    typeof onlineClient !== "undefined"
+      ? onlineClient.playerForNetworkId(
+          slime.carriedBy
+        )
+      : null;
+
+  const baseWorldX =
+    carrier ? carrier.x : slime.x;
+
+  const baseWorldY =
+    carrier ? carrier.y : slime.y;
+
+  let screenX =
+    Math.round(baseWorldX - camX);
+
+  const screenY =
+    Math.round(baseWorldY - camY);
 
   if (slime.shakeTime > 0) {
-    screenX += Math.sin(slime.shakeTime * 120) > 0 ? 1 : -1;
+    screenX +=
+      Math.sin(slime.shakeTime * 120) > 0
+        ? 1
+        : -1;
   }
 
-  // Each slime has its own bounce phase so groups don't hop in sync.
-  const bounceBase =
-    Math.sin(worldTime * 6.2 + slime.phase) * 0.5 + 0.5;
+  const carried = Boolean(carrier);
 
-  const hopWave = Math.pow(bounceBase, 1.65);
-  const hopHeight = Math.round(hopWave * 5);
+  const pickupDuration = Math.max(
+    0.01,
+    slime.pickupDuration || 0.18
+  );
+
+  const pickupProgressRaw = carried
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          1 - (slime.pickupTime || 0) / pickupDuration
+        )
+      )
+    : 1;
+
+  const pickupProgress = carried
+    ? 1 - Math.pow(1 - pickupProgressRaw, 2)
+    : 1;
+
+  const bounceBase = carried
+    ? 0
+    : Math.sin(
+        worldTime * 6.2 + slime.phase
+      ) * 0.5 + 0.5;
+
+  const hopWave = carried
+    ? 0
+    : Math.pow(
+        bounceBase,
+        1.65
+      );
+
+  let hopHeight = carried
+    ? Math.round(9 * pickupProgress)
+    : Math.round(hopWave * 5);
+
+  if (
+    !carried &&
+    slime.hurlTime > 0
+  ) {
+    const duration =
+      Math.max(
+        0.01,
+        slime.hurlDuration || 0.58
+      );
+
+    const progress =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          1 - slime.hurlTime / duration
+        )
+      );
+
+    hopHeight += Math.round(
+      Math.sin(progress * Math.PI) * 13
+    );
+  }
 
   let drawWidth = 16;
   let drawHeight = 16;
 
-  if (hopWave < 0.26) {
+  if (carried && pickupProgressRaw < 1) {
+    const pickupSquash =
+      Math.sin(pickupProgressRaw * Math.PI);
+
+    if (pickupSquash > 0.2) {
+      drawWidth = 17;
+      drawHeight = 15;
+    }
+  } else if (!carried && hopWave < 0.26) {
     drawWidth = 17;
     drawHeight = 16;
-  } else if (hopWave > 0.78) {
+  } else if (!carried && hopWave > 0.78) {
     drawWidth = 16;
     drawHeight = 17;
   }
 
-  const shadowWidth = Math.round(12 - hopWave * 5);
-  const shadowAlpha = 0.42 - hopWave * 0.16;
+  const shadowWave = carried
+    ? pickupProgress
+    : hopWave;
+
+  const shadowWidth = Math.round(12 - shadowWave * 5);
+  const shadowAlpha = 0.42 - shadowWave * 0.16;
 
   ctx.fillStyle = `rgba(35, 52, 37, ${shadowAlpha})`;
   ctx.fillRect(
@@ -9354,6 +9535,13 @@ const player = {
   shadowHideRevealDuration: 0.16,
   shadowCritAttack: false,
 
+  // Hurl whiff / reach feedback when the ability is pressed without
+  // a valid slime target.
+  hurlReachTime: 0,
+  hurlReachDuration: 0.18,
+  hurlReachDirX: 0,
+  hurlReachDirY: 0,
+
   // Currency / resources.
   coins: 0,
   wood: 0,
@@ -9368,6 +9556,7 @@ const player = {
 
   abilities: {
     shadowHide: 0,
+    hurl: 0,
     jesterBlink: 0,
     fireball: 0,
     rainCloud: 0
@@ -9405,6 +9594,15 @@ const ACTIVE_SKILLS = {
     maxLevel: 5,
     enhancementName: "Shadow Hide Enhancement",
     enhancementEffect: "Reserved for future stealth bonuses."
+  },
+  hurl: {
+    name: "Hurl",
+    requirementStat: "strength",
+    requirementLabel: "Strength",
+    requirementValue: 10,
+    maxLevel: 5,
+    enhancementName: "Hurl Enhancement",
+    enhancementEffect: "Reserved for heavier throws and larger enemies."
   },
   jesterBlink: {
     name: "Jester Blink",
@@ -9727,12 +9925,217 @@ function normalizeActiveSkillKey(event) {
   return null;
 }
 
+
+const HURL_GRAB_RANGE = 22;
+
+
+function getCarriedSlimeForPlayerId(playerId) {
+  if (!playerId) return null;
+
+  return (
+    slimes.find(
+      slime =>
+        slime.alive &&
+        slime.carriedBy === playerId
+    ) || null
+  );
+}
+
+function getLocalCarriedSlime() {
+  if (
+    typeof onlineClient === "undefined" ||
+    !onlineClient.localPlayerId
+  ) {
+    return null;
+  }
+
+  return getCarriedSlimeForPlayerId(
+    onlineClient.localPlayerId
+  );
+}
+
+function findNearestHurlableSlime(
+  maxDistance = HURL_GRAB_RANGE
+) {
+  let best = null;
+  let bestDistance = maxDistance;
+
+  for (const slime of slimes) {
+    if (
+      !slime.alive ||
+      slime.carriedBy ||
+      slime.hurlTime > 0
+    ) {
+      continue;
+    }
+
+    const distance = Math.hypot(
+      slime.x - player.x,
+      slime.y - player.y
+    );
+
+    if (distance <= bestDistance) {
+      best = slime;
+      bestDistance = distance;
+    }
+  }
+
+  return best;
+}
+
+function tryCastHurl() {
+  if (
+    typeof onlineClient === "undefined" ||
+    !onlineClient.connected
+  ) {
+    spawnFloatingText(
+      player.x,
+      player.y - 27,
+      "Online only",
+      "#ffe38b",
+      0.75
+    );
+
+    return true;
+  }
+
+  const carried = getLocalCarriedSlime();
+
+  if (carried) {
+    spawnFloatingText(
+      player.x,
+      player.y - 33,
+      "Click to throw!",
+      "#ffd28a",
+      0.75
+    );
+
+    return true;
+  }
+
+  const slime =
+    findNearestHurlableSlime();
+
+  if (!slime) {
+    const target =
+      getCurrentWorldMouseTarget();
+
+    aimPlayerTowardPoint(
+      target.x,
+      target.y
+    );
+
+    startHurlReachAnimation(
+      target.x,
+      target.y
+    );
+
+    spawnFloatingText(
+      player.x,
+      player.y - 27,
+      "No slime nearby",
+      "#ffe38b",
+      0.72
+    );
+
+    return true;
+  }
+
+  onlineClient.sendSlimeAction(
+    "hurlGrab",
+    slime
+  );
+
+  return true;
+}
+
+function tryThrowCarriedSlime(
+  aimAngle
+) {
+  const slime =
+    getLocalCarriedSlime();
+
+  if (!slime) return false;
+
+  if (
+    typeof onlineClient === "undefined"
+  ) {
+    return false;
+  }
+
+  return onlineClient.sendSlimeAction(
+    "hurlThrow",
+    slime,
+    { aimAngle }
+  );
+}
+
+function startHurlReachAnimation(
+  targetX,
+  targetY
+) {
+  let dx = targetX - player.x;
+  let dy = targetY - player.y;
+
+  const len = Math.hypot(dx, dy);
+
+  if (len > 0.001) {
+    dx /= len;
+    dy /= len;
+  } else {
+    dx = Math.cos(player.attackAimAngle || 0);
+    dy = Math.sin(player.attackAimAngle || 0);
+
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      dx = -1;
+      dy = 0;
+    }
+  }
+
+  player.hurlReachTime =
+    player.hurlReachDuration;
+
+  player.hurlReachDirX = dx;
+  player.hurlReachDirY = dy;
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient &&
+    typeof onlineClient.sendLocalState === "function"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+}
+
 function triggerActiveSkillForKey(key) {
   const skillId = skillBindings[key];
   if (!skillId || !isAbilityUnlocked(skillId)) return false;
 
+  const carriedSlime =
+    getLocalCarriedSlime();
+
+  if (
+    carriedSlime &&
+    skillId !== "hurl"
+  ) {
+    spawnFloatingText(
+      player.x,
+      player.y - 33,
+      "Hands full!",
+      "#ffd28a",
+      0.72
+    );
+
+    return true;
+  }
+
   if (skillId === "shadowHide") {
     return tryEnterShadowHide();
+  }
+
+  if (skillId === "hurl") {
+    breakShadowHide();
+    return tryCastHurl();
   }
 
   if (skillId === "jesterBlink") {
@@ -10502,6 +10905,12 @@ class InputController {
   }
 
   getMovementVector() {
+    // While carrying a slime, the player is rooted in place for now.
+    // A future enhancement can explicitly relax this rule.
+    if (typeof getLocalCarriedSlime === "function" && getLocalCarriedSlime()) {
+      return { dx: 0, dy: 0, moving: false };
+    }
+
     let dx = 0;
     let dy = 0;
 
@@ -10712,9 +11121,34 @@ function executeWeaponAttack(weapon) {
 }
 
 function executePrimaryAttackCommand(payload) {
-  const attackingFromShadowHide = player.shadowHidden;
+  const attackingFromShadowHide =
+    player.shadowHidden;
+
   breakShadowHide();
-  player.shadowCritAttack = attackingFromShadowHide;
+
+  player.shadowCritAttack =
+    attackingFromShadowHide;
+
+  // Hurl occupies both hands. A primary click becomes the throw.
+  if (getLocalCarriedSlime()) {
+    updateAttackAimFromPointer(
+      payload.pointerX,
+      payload.pointerY
+    );
+
+    if (
+      tryThrowCarriedSlime(
+        player.attackAimAngle
+      )
+    ) {
+      player.attackTime = 0.12;
+      player.attackCooldown = 0.25;
+      player.slashTime = 0;
+    }
+
+    player.shadowCritAttack = false;
+    return;
+  }
 
   if (player.attackCooldown > 0) {
     player.shadowCritAttack = false;
@@ -10722,18 +11156,28 @@ function executePrimaryAttackCommand(payload) {
   }
 
   const currentWeapon = equippedWeapon();
+
   if (!currentWeapon) {
     player.shadowCritAttack = false;
     return;
   }
 
-  updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
+  updateAttackAimFromPointer(
+    payload.pointerX,
+    payload.pointerY
+  );
 
-  player.attackTime = player.attackDuration;
-  player.attackCooldown = attackCooldownForWeapon(currentWeapon);
-  player.slashTime = player.slashDuration;
+  player.attackTime =
+    player.attackDuration;
+
+  player.attackCooldown =
+    attackCooldownForWeapon(currentWeapon);
+
+  player.slashTime =
+    player.slashDuration;
 
   executeWeaponAttack(currentWeapon);
+
   player.shadowCritAttack = false;
 }
 
@@ -11349,6 +11793,7 @@ function updatePlayerStatusAndTimers(dt) {
   tickTimer(player, "shadowHideRevealTime", dt);
   tickTimer(player, "contactCooldown", dt);
   tickTimer(player, "wetTime", dt);
+  tickTimer(player, "hurlReachTime", dt);
   tickTimer(player, "attackTime", dt);
   tickTimer(player, "attackCooldown", dt);
   tickTimer(player, "slashTime", dt);
@@ -11514,6 +11959,20 @@ function updateSlimes(dt) {
 
     if (slime.burnTime > 0) {
       slime.burnTime = Math.max(0, slime.burnTime - dt);
+    }
+
+    if (slime.pickupTime > 0) {
+      slime.pickupTime = Math.max(
+        0,
+        slime.pickupTime - dt
+      );
+    }
+
+    if (slime.hurlTime > 0) {
+      slime.hurlTime = Math.max(
+        0,
+        slime.hurlTime - dt
+      );
     }
 
     if (!slime.alive && slime.respawnTime > 0) {
@@ -11709,7 +12168,7 @@ function drawWetStatus(screenX, screenY) {
   ctx.restore();
 }
 
-function drawPlayer(camX, camY, reflectionMode = false) {
+function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = undefined) {
   const screenX = Math.round(player.x - camX);
   const screenY = Math.round(player.y - camY);
 
@@ -11729,6 +12188,95 @@ function drawPlayer(camX, camY, reflectionMode = false) {
 
   let baseX = plantedBaseX;
   let baseY = plantedBaseY;
+
+  // Local rendering calls drawPlayer() without a fourth argument and may
+  // look up the local carried slime. Remote rendering ALWAYS supplies a fourth
+  // argument (slime object or null), so a remote player with no slime must not
+  // accidentally inherit the local player's carry state.
+  const hasCarryingOverride =
+    arguments.length >= 4;
+
+  const carriedSlime =
+    hasCarryingOverride
+      ? (
+          carryingSlimeOverride &&
+          typeof carryingSlimeOverride === "object"
+            ? carryingSlimeOverride
+            : null
+        )
+      : getLocalCarriedSlime();
+
+  const carryingSlime =
+    Boolean(carriedSlime);
+
+  const carryPickupDuration =
+    carryingSlime && carriedSlime
+      ? Math.max(
+          0.01,
+          carriedSlime.pickupDuration || 0.18
+        )
+      : 0.18;
+
+  const carryPickupProgressRaw =
+    carryingSlime && carriedSlime
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            1 -
+              (carriedSlime.pickupTime || 0) /
+                carryPickupDuration
+          )
+        )
+      : 1;
+
+  const carryPickupEffort =
+    carryingSlime &&
+    carryPickupProgressRaw < 1
+      ? Math.sin(carryPickupProgressRaw * Math.PI)
+      : 0;
+
+  const carryPickupDirX =
+    carryingSlime && carriedSlime
+      ? Number(carriedSlime.pickupDirX) || 0
+      : 0;
+
+  const carryPickupDirY =
+    carryingSlime && carriedSlime
+      ? Number(carriedSlime.pickupDirY) || 0
+      : 0;
+
+  const hurlReachDuration = Math.max(
+    0.01,
+    Number(player.hurlReachDuration) || 0.18
+  );
+
+  const hurlReachProgressRaw =
+    !carryingSlime && player.hurlReachTime > 0
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            1 - player.hurlReachTime / hurlReachDuration
+          )
+        )
+      : 1;
+
+  const hurlReachEffort =
+    !carryingSlime &&
+    player.hurlReachTime > 0
+      ? Math.sin(hurlReachProgressRaw * Math.PI)
+      : 0;
+
+  const hurlReachDirX =
+    !carryingSlime
+      ? Number(player.hurlReachDirX) || 0
+      : 0;
+
+  const hurlReachDirY =
+    !carryingSlime
+      ? Number(player.hurlReachDirY) || 0
+      : 0;
 
   // Ground shadow stays planted at the real player position.
   // Reflections do not mirror the shadow into the pond.
@@ -11762,6 +12310,36 @@ function drawPlayer(camX, camY, reflectionMode = false) {
     baseY += Math.round(lungeY * lunge);
   }
 
+  if (carryingSlime && carryPickupEffort > 0) {
+    // Tiny visual-only step/reach toward the slime during the pickup wind-up.
+    // Only move the body base here; headOffsetY is initialized below.
+    baseX += Math.round(
+      carryPickupDirX *
+      3 *
+      carryPickupEffort
+    );
+
+    baseY += Math.round(
+      carryPickupDirY *
+      2 *
+      carryPickupEffort
+    );
+  }
+
+  if (hurlReachEffort > 0) {
+    baseX += Math.round(
+      hurlReachDirX *
+      3 *
+      hurlReachEffort
+    );
+
+    baseY += Math.round(
+      hurlReachDirY *
+      2 *
+      hurlReachEffort
+    );
+  }
+
   // ---------------------------------------------------------
   // WALK ANIMATION
   // ---------------------------------------------------------
@@ -11785,12 +12363,26 @@ function drawPlayer(camX, camY, reflectionMode = false) {
     rightLegScaleY =
       1 - Math.max(0, -walkWave) * 0.30;
 
-    const armStep = Math.round(walkWave);
-    leftArmOffsetY = armStep;
-    rightArmOffsetY = -armStep;
+    if (!carryingSlime) {
+      const armStep = Math.round(walkWave);
+      leftArmOffsetY = armStep;
+      rightArmOffsetY = -armStep;
+    }
 
     headOffsetY = Math.round(
       (1 - Math.cos(player.walkTime * 2)) * 0.5
+    );
+  }
+
+  if (carryingSlime && carryPickupEffort > 0) {
+    headOffsetY -= Math.round(
+      carryPickupEffort
+    );
+  }
+
+  if (hurlReachEffort > 0) {
+    headOffsetY -= Math.round(
+      hurlReachEffort
     );
   }
 
@@ -11832,6 +12424,35 @@ function drawPlayer(camX, camY, reflectionMode = false) {
     );
   }
 
+  function drawCarryArmFlipped(
+    img,
+    drawX,
+    drawY
+  ) {
+    // Flip the existing separated arm sprite vertically inside its own
+    // 16x16 box. This puts the hand above the shoulder instead of simply
+    // lifting the normal hanging-arm artwork upward.
+    ctx.save();
+
+    ctx.translate(
+      drawX,
+      drawY + 16
+    );
+
+    ctx.scale(
+      1,
+      -1
+    );
+
+    ctx.drawImage(
+      img,
+      0,
+      0
+    );
+
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.globalAlpha *= playerDrawAlpha;
 
@@ -11869,6 +12490,23 @@ function drawPlayer(camX, camY, reflectionMode = false) {
     : leftArmOffsetY;
 
   // Whole-pixel arm poses.
+  if (hurlReachEffort > 0) {
+    const reachSideShift = Math.round(
+      hurlReachDirX * 1.5
+    );
+
+    const reachVerticalShift =
+      Math.round(
+        hurlReachDirY * 1.5
+      ) - 1;
+
+    weaponArmX = reachSideShift;
+    weaponArmY = reachVerticalShift - 1;
+
+    leftArmOffsetY -= 1;
+    rightArmOffsetY -= 1;
+  }
+
   if (attackFrame >= 0) {
     if (player.attackDirection === "left") {
       if (attackFrame === 0) { weaponArmX = 0;  weaponArmY = -1; }
@@ -11922,34 +12560,83 @@ function drawPlayer(camX, camY, reflectionMode = false) {
 
   ctx.drawImage(appearance.torso, baseX, baseY);
 
-  if (useRightHand) {
-    // Left arm stays in its normal walking pose.
-    ctx.drawImage(
-      appearance.leftArm,
-      baseX,
-      baseY + leftArmOffsetY
-    );
+  if (!carryingSlime) {
+    if (hurlReachEffort > 0 && attackFrame < 0) {
+      // For the no-target Hurl whiff, keep one arm anchored as a support arm
+      // and let only one arm do the little reach. This avoids the detached
+      // off-body look from moving both arms outward together.
+      const whiffUseRightHand =
+        Math.abs(hurlReachDirX) > 0.15
+          ? hurlReachDirX >= 0
+          : true;
 
-    // Right arm becomes the weapon arm.
-    ctx.drawImage(
-      appearance.rightArm,
-      baseX + weaponArmX,
-      baseY + weaponArmY
-    );
-  } else {
-    // Left arm is the weapon arm.
-    ctx.drawImage(
-      appearance.leftArm,
-      baseX + weaponArmX,
-      baseY + weaponArmY
-    );
+      const supportLift = -1;
+      const reachX = Math.round(
+        hurlReachDirX * 1.5
+      );
+      const reachY =
+        Math.round(
+          hurlReachDirY * 1.5
+        ) - 2;
 
-    // Right arm stays in its normal walking pose.
-    ctx.drawImage(
-      appearance.rightArm,
-      baseX,
-      baseY + rightArmOffsetY
-    );
+      if (whiffUseRightHand) {
+        // Left arm stays close to the body.
+        ctx.drawImage(
+          appearance.leftArm,
+          baseX,
+          baseY + leftArmOffsetY + supportLift
+        );
+
+        // Right arm reaches slightly toward the cursor.
+        ctx.drawImage(
+          appearance.rightArm,
+          baseX + 1 + reachX,
+          baseY + rightArmOffsetY + reachY
+        );
+      } else {
+        // Left arm reaches slightly toward the cursor.
+        ctx.drawImage(
+          appearance.leftArm,
+          baseX - 1 + reachX,
+          baseY + leftArmOffsetY + reachY
+        );
+
+        // Right arm stays close to the body.
+        ctx.drawImage(
+          appearance.rightArm,
+          baseX,
+          baseY + rightArmOffsetY + supportLift
+        );
+      }
+    } else if (useRightHand) {
+      // Left arm stays in its normal walking pose.
+      ctx.drawImage(
+        appearance.leftArm,
+        baseX,
+        baseY + leftArmOffsetY
+      );
+
+      // Right arm becomes the weapon arm.
+      ctx.drawImage(
+        appearance.rightArm,
+        baseX + weaponArmX,
+        baseY + weaponArmY
+      );
+    } else {
+      // Left arm is the weapon arm.
+      ctx.drawImage(
+        appearance.leftArm,
+        baseX + weaponArmX,
+        baseY + weaponArmY
+      );
+
+      // Right arm stays in its normal walking pose.
+      ctx.drawImage(
+        appearance.rightArm,
+        baseX,
+        baseY + rightArmOffsetY
+      );
+    }
   }
 
   // ---------------------------------------------------------
@@ -12006,6 +12693,46 @@ function drawPlayer(camX, camY, reflectionMode = false) {
     baseY + headOffsetY
   );
 
+  if (carryingSlime) {
+    // During the pickup wind-up, start the arms slightly lower and extend them
+    // a touch toward the slime. Then settle into the overhead carry pose.
+    const carryReachBlend =
+      1 - carryPickupProgressRaw;
+
+    const carryArmLiftY =
+      Math.round(
+        baseY +
+        1 +
+        carryReachBlend * 4
+      );
+
+    const carryArmShiftX =
+      Math.round(
+        carryPickupDirX *
+        carryReachBlend *
+        2
+      );
+
+    const carryArmShiftY =
+      Math.round(
+        carryPickupDirY *
+        carryReachBlend *
+        2
+      );
+
+    drawCarryArmFlipped(
+      appearance.leftArm,
+      baseX + 1 + carryArmShiftX,
+      carryArmLiftY + carryArmShiftY
+    );
+
+    drawCarryArmFlipped(
+      appearance.rightArm,
+      baseX - 1 + carryArmShiftX,
+      carryArmLiftY + carryArmShiftY
+    );
+  }
+
   if (!reflectionMode && playerIsWet()) {
     drawWetStatus(screenX, screenY);
   }
@@ -12022,7 +12749,7 @@ function drawPlayer(camX, camY, reflectionMode = false) {
   // Draw the equipped tool last so it stays visually in front.
   const currentWeapon = equippedWeapon();
 
-  if (currentWeapon) {
+  if (currentWeapon && !carryingSlime) {
     const weaponImage =
       currentWeapon === "axe"
         ? axeImage
@@ -12257,7 +12984,11 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "wetTime",
   "wetDuration",
   "burnTime",
-  "burnDuration"
+  "burnDuration",
+  "hurlReachTime",
+  "hurlReachDuration",
+  "hurlReachDirX",
+  "hurlReachDirY"
 ];
 
 function drawRemotePlayer(
@@ -12320,10 +13051,19 @@ function drawRemotePlayer(
   player.burnTime = Number(remote.burnTime) || 0;
   player.burnDuration = 5.0;
 
+  player.hurlReachTime = Number(remote.hurlReachTime) || 0;
+  player.hurlReachDuration =
+    Math.max(0.01, Number(remote.hurlReachDuration) || 0.18);
+  player.hurlReachDirX = Number(remote.hurlReachDirX) || 0;
+  player.hurlReachDirY = Number(remote.hurlReachDirY) || 0;
+
   drawPlayer(
     camX,
     camY,
-    reflectionMode
+    reflectionMode,
+    getCarriedSlimeForPlayerId(
+      remote.id
+    )
   );
 
   for (const key of REMOTE_PLAYER_DRAW_FIELDS) {
@@ -12537,7 +13277,31 @@ function buildWorldDrawables(camX, camY) {
   });
 
   for (const slime of slimes) {
-    addDrawable(drawables, slime.y, () => drawSlime(slime, camX, camY));
+    let sortY = slime.y;
+
+    if (
+      slime.carriedBy &&
+      typeof onlineClient !== "undefined"
+    ) {
+      const carrier =
+        onlineClient.playerForNetworkId(
+          slime.carriedBy
+        );
+
+      if (carrier) {
+        sortY = carrier.y + 0.25;
+      }
+    }
+
+    addDrawable(
+      drawables,
+      sortY,
+      () => drawSlime(
+        slime,
+        camX,
+        camY
+      )
+    );
   }
 
   for (const goblin of goblins) {
