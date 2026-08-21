@@ -596,3 +596,33 @@ intended balance. Client and server now agree on:
 - Ghost: 150 HP, speed 10, chase 32, detect 110, leash 145
 
 The restored original Sword from v0.6.10.2 is retained.
+
+
+## v0.6.10.4 Rain Cloud first self-cast fix
+
+Fixed a very specific Cloud Movement self-cast bug.
+
+Reproduction:
+- Cloud Movement enhancement equipped
+- no active Rain Cloud yet
+- self-cast by clicking certain parts of the player's torso
+- local orb flies away and never creates the local cloud
+- remote observers still see the cloud correctly
+
+Root cause:
+- local `castRainOrb()` calculated the orb velocity from the original mouse
+  position first;
+- self-cast detection then replaced the orb destination with the player's
+  follow position;
+- the velocity was NOT recalculated after that destination changed.
+
+The remote visual path already calculated its velocity from the final corrected
+start/target pair, explaining why other players could see the cloud.
+
+Fix:
+- self-target destination is resolved before direction/velocity calculation;
+- ordinary ranged casts recalculate direction after max-range clamping too;
+- local and remote Rain Orb movement now derive from the same final destination.
+
+All v0.6.10.3 map-transition Rain/Blink cleanup and the restored original Sword
+remain intact.

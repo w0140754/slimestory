@@ -2869,25 +2869,42 @@ function castRainOrb(targetX, targetY) {
   const startX = player.x + Math.cos(player.attackAimAngle) * 11;
   const startY = (player.y - 8) + Math.sin(player.attackAimAngle) * 11;
 
-  let dx = targetX - startX;
-  let dy = targetY - startY;
-  const len = Math.hypot(dx, dy) || 1;
-
-  // Shorter tactical cast range. Clicking farther away still casts in that
-  // direction, but the orb stops at this maximum distance.
-  const maxRange = 80;
-  const travelDistance = Math.min(len, maxRange);
-  const dirX = dx / len;
-  const dirY = dy / len;
-
-  targetX = startX + dirX * travelDistance;
-  targetY = startY + dirY * travelDistance;
-
+  // IMPORTANT: resolve self-targeting BEFORE calculating travel direction.
+  // Previously we calculated velocity toward the raw torso click, then
+  // replaced the destination with the player-follow point. For some torso
+  // clicks that left the local orb travelling away from its corrected target.
   if (selfTarget) {
     const followTarget = getRainSelfFollowTarget();
     targetX = followTarget.x;
     targetY = followTarget.y;
   }
+
+  let dx = targetX - startX;
+  let dy = targetY - startY;
+  let len = Math.hypot(dx, dy) || 1;
+
+  // Shorter tactical cast range. Clicking farther away still casts in that
+  // direction, but the orb stops at this maximum distance. Self-casts always
+  // use the resolved player-follow point directly.
+  const maxRange = 80;
+
+  if (!selfTarget) {
+    const travelDistance = Math.min(len, maxRange);
+    const initialDirX = dx / len;
+    const initialDirY = dy / len;
+
+    targetX = startX + initialDirX * travelDistance;
+    targetY = startY + initialDirY * travelDistance;
+
+    // Recalculate from the final clamped target so local and remote orb
+    // movement are derived from exactly the same start/destination pair.
+    dx = targetX - startX;
+    dy = targetY - startY;
+    len = Math.hypot(dx, dy) || 1;
+  }
+
+  const dirX = dx / len;
+  const dirY = dy / len;
 
   const activeCloud = getActiveRainCloud();
 
