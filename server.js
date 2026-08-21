@@ -4691,23 +4691,23 @@ function sanitizeVisualEffectPayload(
 
       hatIndex: clampInteger(
         payload.hatIndex,
-        0,
-        5,
-        0
+        -1,
+        6,
+        -1
       ),
 
       shirtIndex: clampInteger(
         payload.shirtIndex,
-        0,
+        -1,
         3,
-        0
+        -1
       ),
 
       pantsIndex: clampInteger(
         payload.pantsIndex,
-        0,
+        -1,
         3,
-        0
+        -1
       )
     };
   }
@@ -4793,9 +4793,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     x: clampNumber(source.x, 0, 640, 320),
     y: clampNumber(source.y, 0, 400, 200),
 
-    hatIndex: clampInteger(source.hatIndex, 0, 5, 0),
-    shirtIndex: clampInteger(source.shirtIndex, 0, 3, 0),
-    pantsIndex: clampInteger(source.pantsIndex, 0, 3, 0),
+    hatIndex: clampInteger(source.hatIndex, -1, 6, -1),
+    shirtIndex: clampInteger(source.shirtIndex, -1, 3, -1),
+    pantsIndex: clampInteger(source.pantsIndex, -1, 3, -1),
     weaponIndex: clampInteger(source.weaponIndex, -1, 4, -1),
 
     walkTime: clampNumber(source.walkTime, 0, 1000000, 0),

@@ -971,6 +971,7 @@
         <div class="menu-item"><img id="inventoryHatImg" alt="Hat" /><span>Hat</span></div>
         <div class="menu-item"><img id="inventoryCapImg" alt="Blue Cap" /><span>Blue Cap</span></div>
         <div class="menu-item"><img id="inventoryWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span></div>
+        <div class="menu-item"><img id="inventoryBandanaHatImg" alt="Bandana" /><span>Bandana</span></div>
         <div class="menu-item"><img id="inventoryJesterHatImg" alt="Jester Hat" /><span>Jester Hat</span></div>
         <div class="menu-item"><img id="inventoryJesterShirtImg" alt="Jester Shirt" /><span>Jester Shirt</span></div>
         <div class="menu-item"><img id="inventoryJesterPantsImg" alt="Jester Pants" /><span>Jester Pants</span></div>
@@ -1012,6 +1013,9 @@
           <div id="gearHeadPanel" class="gear-panel active">
             <div class="menu-section-title">Headwear</div>
             <div class="equip-options">
+              <button class="equip-choice hat-choice" data-hat-index="-1">
+                <img id="equipBaseHatImg" alt="No headgear" /><span>Unequip</span>
+              </button>
               <button class="equip-choice hat-choice" data-hat-index="0">
                 <img id="equipHatImg" alt="Hat" /><span>Hat</span>
               </button>
@@ -1029,6 +1033,9 @@
               </button>
               <button class="equip-choice hat-choice" data-hat-index="5">
                 <img id="equipKnightHatImg" alt="Knight Helm" /><span>Knight Helm</span>
+              </button>
+              <button class="equip-choice hat-choice" data-hat-index="6">
+                <img id="equipBandanaHatImg" alt="Bandana" /><span>Bandana</span>
               </button>
             </div>
           </div>
@@ -1061,6 +1068,9 @@
           <div id="gearShirtPanel" class="gear-panel">
             <div class="menu-section-title">Shirt</div>
             <div class="equip-options">
+              <button class="equip-choice shirt-choice" data-shirt-index="-1">
+                <img id="equipBaseShirtImg" alt="No shirt armor" /><span>Unequip</span>
+              </button>
               <button class="equip-choice shirt-choice" data-shirt-index="0">
                 <img id="equipTravelerShirtImg" alt="Traveler Shirt" /><span>Traveler</span>
               </button>
@@ -1079,6 +1089,9 @@
           <div id="gearPantsPanel" class="gear-panel">
             <div class="menu-section-title">Pants</div>
             <div class="equip-options">
+              <button class="equip-choice pants-choice" data-pants-index="-1">
+                <img id="equipBasePantsImg" alt="No pants armor" /><span>Unequip</span>
+              </button>
               <button class="equip-choice pants-choice" data-pants-index="0">
                 <img id="equipTravelerPantsImg" alt="Traveler Pants" /><span>Traveler</span>
               </button>
@@ -1397,6 +1410,15 @@ function loadImage(src) {
 }
 
 const sprite = {
+  // Under-clothes / default appearance. These are not inventory items:
+  // they are rendered whenever the corresponding armor slot is empty.
+  baseLeftLeg: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASklEQVQ4T2NkoBAwwllkglEDRsNg8KaD/9BUCgN4Uys2yf/npjeBGUaZdSAKmxo4wCb5/////wxPnjxhkJWVBfGxqYEDbJIkeQEA2YINEWjEZXQAAAAQZGVCRzlBMEQzQzFGMEM4NkNGOUGyHcfBAAAAAElFTkSuQmCC"),
+  baseRightLeg: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAARElEQVQ4T2NkoBAwwllkglEDRsNg6KSD/9BUCwMoqZeYpPz/3PQmMMMosw5EkW7A48ePGWRkZBgYGcHKSTcAzoIAFD0AAXMKESJVAOoAAAAQZGVCRzhENDMxQkY2QjA3QTNBRjEn2XE6AAAAAElFTkSuQmCC"),
+  baseTorso: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlElEQVQ4T2NkoBAwwllkglEDaBQG/3GIgwCGHLrC/ztb8hncaybCBZABkhxcH7oBIPD/+8E1DBx2wXABEPhxaC0Dp30IiInXBSDw//HjxwwyMjJwARB48uQJg6ysLIhJ2IBVq1YxWFpawgVA4Pjx4wxhYWEgJmEDBPn4GOTk5RkePXwIFoCx33/6BOISNIAkMPAGAAD6ISgRUpy/tAAAABBkZUJHRDUzQzVDNTg1MjE5QjJENi+g4D8AAAAASUVORK5CYIIA"),
+  baseLeftArm: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVQ4T2NkoBAwwllkglEDBmMY/CfVVciK/5+b3sRglFkHYhNtCIoB3w+uYeC0DwGxyTIABCjyAllgGBgAABWUChEvz5FkAAAAEGRlQkc0RDVDREE2MjE1MEQ5RDQzFt0lugAAAABJRU5ErkJgggAA"),
+  baseRightArm: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVQ4T2NkoBAwwllkglEDhmoY/Ed2OanR+P/c9CYGo8w6EBusl2QDvh9cw8BpHwJik2UACFDkBQwwDAwAAK12ChG0t5hsAAAAEGRlQkdDMzIyQkMwNTFFNUZCNjM59yRDjAAAAABJRU5ErkJgggAA"),
+  baseHat: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjUlEQVQ4T2NkwA7+w1mogBHOggIMAZDmZC8zBhkpCQYeLg6wwJdvPxiePHvBMHfbKRAXRQ+6Af+DTGQYBMWkwByQISAA0gwC7189Y1h35gmICdeH0wBsLiBkANjpIABSCDPE39iEYermLXAxdENQDADZDgLrzjxBdxkYBJnIgAMXlwFkgVEDRsOAKukAAG1dOhFPmxZ7AAAAEGRlQkdBMjhCRkRFNEFGMENENTE3e6xUtQAAAABJRU5ErkJgggAA"),
+
   leftLeg: loadImage(sources.leftLeg),
   rightLeg: loadImage(sources.rightLeg),
   torso: loadImage(sources.torso),
@@ -1404,6 +1426,7 @@ const sprite = {
   rightArm: loadImage(sources.rightArm),
   face: loadImage(sources.face),
   hat: loadImage(sources.hat),
+  bandanaHat: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAnElEQVQ4T2NkwA3+w1kQwAhnIQGsgiDN9Sl+DDxcHGDOl28/GBrnbAIxMdRjCIA0J3uZgRkyUhJg+smzF2B67rZTIApFD7oB/4NMZBgExaTAmpFdADLk/atnDOvOPAEJwfVhGACyfU8kK5gjISUJpl88ew6mXZb/xnAFsgH/2VsVGX5W30c3FC8gSTE2MLhcQBagahiQBUYNYGAAAIrBLhEifdggAAAAEGRlQkdFRDJEM0U5Qjc5NEE4NzJEukB06wAAAABJRU5ErkJgggAA"),
   blueCap: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcElEQVQ4T2NkoBAwwlmo4D+chQow1GMIgDQrTlsJ5yCD+1nhIApFD9UN+C/RO59BXF4BLoAMXj58wPCiOBHEhOtDNuD/wSRRMCPPaxVUCBVM2hYGpu3nvQZRYL0YLsAihg5Q1BBSTBCMGjAaBqB0AAAethkR9yxqpQAAABBkZUJHMjE4RjBGQ0QyMkI2NkE0Q8eRNTMAAAAASUVORK5CYIIA"),
   wizardHat: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhElEQVQ4T2NkwA/+Q2lGKI0BcEqANGdcP8vQLFfHIMq9FcTHqharIEwzMpihaQyiMNRjCIA0v/7qDWbUPmqCCjHgdAkyB+xf/dkTGUT5+GBiKOD1p08MF1PzYVywXpgB/11WzkdXgBXALNgTngjiMmK4AN2JWACKOkKKCYJRA0bDAJQOAK6iJBF69CrqAAAAEGRlQkcyMjQwMkI3RTA3NjkxNDE1WzHzEAAAAABJRU5ErkJgggAA"),
 
@@ -5166,6 +5189,7 @@ document.getElementById("inventoryRainWandImg").src = rainWandImage.src;
 document.getElementById("inventoryHatImg").src = sprite.hat.src;
 document.getElementById("inventoryCapImg").src = sprite.blueCap.src;
 document.getElementById("inventoryWizardHatImg").src = sprite.wizardHat.src;
+document.getElementById("inventoryBandanaHatImg").src = sprite.bandanaHat.src;
 document.getElementById("inventoryJesterHatImg").src = sprite.jesterHat.src;
 document.getElementById("inventoryJesterShirtImg").src = sprite.jesterTorso.src;
 document.getElementById("inventoryJesterPantsImg").src = sprite.jesterLeftLeg.src;
@@ -5181,16 +5205,20 @@ document.getElementById("equipAxeImg").src = axeImage.src;
 document.getElementById("equipWandImg").src = wandImage.src;
 document.getElementById("equipRainWandImg").src = rainWandImage.src;
 document.getElementById("equipKatanaImg").src = katanaImage.src;
+document.getElementById("equipBaseHatImg").src = sprite.baseHat.src;
 document.getElementById("equipHatImg").src = sprite.hat.src;
 document.getElementById("equipCapImg").src = sprite.blueCap.src;
 document.getElementById("equipWizardHatImg").src = sprite.wizardHat.src;
 document.getElementById("equipJesterHatImg").src = sprite.jesterHat.src;
 document.getElementById("equipNinjaHatImg").src = sprite.ninjaHat.src;
 document.getElementById("equipKnightHatImg").src = sprite.knightHat.src;
+document.getElementById("equipBandanaHatImg").src = sprite.bandanaHat.src;
+document.getElementById("equipBaseShirtImg").src = sprite.baseTorso.src;
 document.getElementById("equipTravelerShirtImg").src = sprite.torso.src;
 document.getElementById("equipJesterShirtImg").src = sprite.jesterTorso.src;
 document.getElementById("equipNinjaShirtImg").src = sprite.ninjaTorso.src;
 document.getElementById("equipKnightShirtImg").src = sprite.knightTorso.src;
+document.getElementById("equipBasePantsImg").src = sprite.baseLeftLeg.src;
 document.getElementById("equipTravelerPantsImg").src = sprite.leftLeg.src;
 document.getElementById("equipJesterPantsImg").src = sprite.jesterLeftLeg.src;
 document.getElementById("equipNinjaPantsImg").src = sprite.ninjaLeftLeg.src;
@@ -9480,9 +9508,11 @@ const player = {
   speed: GAME_CONFIG.player.baseSpeed,
 
   // Cosmetic equipment can be mixed independently.
-  hatIndex: 0,   // 0 Hat, 1 Blue Cap, 2 Wizard Hat, 3 Jester Hat, 4 Ninja Hat, 5 Knight Helm
-  shirtIndex: 0, // 0 Traveler, 1 Jester, 2 Ninja, 3 Knight
-  pantsIndex: 0, // 0 Traveler, 1 Jester, 2 Ninja, 3 Knight
+  // -1 means the armor slot is empty. The new base artwork is the
+  // underlying appearance shown in that case.
+  hatIndex: -1,   // -1 none/base, 0 Hat, 1 Blue Cap, 2 Wizard, 3 Jester, 4 Ninja, 5 Knight, 6 Bandana
+  shirtIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight
+  pantsIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight
   walkTime: 0,
   wasMoving: false,
   firstRaisedLeg: "left",
@@ -9581,7 +9611,7 @@ const player = {
 };
 
 const HOTBAR_SLOTS = ["sword", "axe", "wand", "rainWand", "katana"];
-const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat"];
+const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight"];
 
@@ -10386,15 +10416,18 @@ let inventoryOpen = false;
 let enhancementUiSignature = "";
 
 function hatDisplayName(style) {
+  if (!style) return "None";
   if (style === "blueCap") return "Blue Cap";
   if (style === "wizardHat") return "Wizard Hat";
   if (style === "jesterHat") return "Jester Hat";
   if (style === "ninjaHat") return "Ninja Hat";
   if (style === "knightHat") return "Knight Helm";
+  if (style === "bandanaHat") return "Bandana";
   return "Hat";
 }
 
 function shirtDisplayName(style) {
+  if (!style) return "None";
   if (style === "jester") return "Jester Shirt";
   if (style === "ninja") return "Ninja Shirt";
   if (style === "knight") return "Knight Chest";
@@ -10402,6 +10435,7 @@ function shirtDisplayName(style) {
 }
 
 function pantsDisplayName(style) {
+  if (!style) return "None";
   if (style === "jester") return "Jester Pants";
   if (style === "ninja") return "Ninja Pants";
   if (style === "knight") return "Knight Greaves";
@@ -10418,15 +10452,18 @@ function weaponDisplayName(style) {
 }
 
 function hatImageForIndex(index) {
+  if (index < 0) return sprite.baseHat;
   if (index === 1) return sprite.blueCap;
   if (index === 2) return sprite.wizardHat;
   if (index === 3) return sprite.jesterHat;
   if (index === 4) return sprite.ninjaHat;
   if (index === 5) return sprite.knightHat;
+  if (index === 6) return sprite.bandanaHat;
   return sprite.hat;
 }
 
 function shirtImageForIndex(index) {
+  if (index < 0) return sprite.baseTorso;
   if (index === 1) return sprite.jesterTorso;
   if (index === 2) return sprite.ninjaTorso;
   if (index === 3) return sprite.knightTorso;
@@ -10434,6 +10471,7 @@ function shirtImageForIndex(index) {
 }
 
 function pantsImageForIndex(index) {
+  if (index < 0) return sprite.baseLeftLeg;
   if (index === 1) return sprite.jesterLeftLeg;
   if (index === 2) return sprite.ninjaLeftLeg;
   if (index === 3) return sprite.knightLeftLeg;
@@ -10458,7 +10496,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaLeftLeg
         : knightPants
           ? sprite.knightLeftLeg
-          : sprite.leftLeg,
+          : pantsStyle === "traveler"
+            ? sprite.leftLeg
+            : sprite.baseLeftLeg,
 
     rightLeg: jesterPants
       ? sprite.jesterRightLeg
@@ -10466,7 +10506,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaRightLeg
         : knightPants
           ? sprite.knightRightLeg
-          : sprite.rightLeg,
+          : pantsStyle === "traveler"
+            ? sprite.rightLeg
+            : sprite.baseRightLeg,
 
     torso: jesterShirt
       ? sprite.jesterTorso
@@ -10474,7 +10516,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaTorso
         : knightShirt
           ? sprite.knightTorso
-          : sprite.torso,
+          : shirtStyle === "traveler"
+            ? sprite.torso
+            : sprite.baseTorso,
 
     leftArm: jesterShirt
       ? sprite.jesterLeftArm
@@ -10482,7 +10526,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaLeftArm
         : knightShirt
           ? sprite.knightLeftArm
-          : sprite.leftArm,
+          : shirtStyle === "traveler"
+            ? sprite.leftArm
+            : sprite.baseLeftArm,
 
     rightArm: jesterShirt
       ? sprite.jesterRightArm
@@ -10490,7 +10536,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaRightArm
         : knightShirt
           ? sprite.knightRightArm
-          : sprite.rightArm,
+          : shirtStyle === "traveler"
+            ? sprite.rightArm
+            : sprite.baseRightArm,
 
     hat: hatImageForIndex(hatIndex)
   };

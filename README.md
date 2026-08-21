@@ -213,3 +213,27 @@ This fixes missing letters in messages like:
 - `NO SLIME NEARBY`
 - `CLICK TO THROW!`
 - and other short status / ability text.
+
+
+## v0.6.5 base outfit + bandana
+
+- Added the new user-drawn base appearance:
+  - base head/hair
+  - base torso
+  - base left/right arms
+  - base left/right legs
+- Base appearance is NOT inventory gear. It is automatically rendered whenever
+  the matching Head/Shirt/Pants slot is unequipped.
+- New players now begin with Head/Shirt/Pants unequipped.
+- Added explicit `Unequip` choices to the three armor gear panels.
+- The original Traveler pieces remain normal equippable gear.
+- Added the user-drawn Bandana as a normal equippable hat and inventory item.
+- Updated multiplayer state validation and Jester Blink appearance relay to
+  support empty armor slots and the new Bandana index.
+
+
+## v0.6.5.1 base hat update
+
+- Replaced the default/base hat-hair sprite with the new user-drawn version.
+- This only affects the fallback appearance used when the Head slot is unequipped.
+- Equippable hats, bandana, and all other systems are unchanged.
