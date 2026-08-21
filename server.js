@@ -8,6 +8,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
+const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
 
 const ALLOWED_MAPS = new Set(
   Object.keys(WORLD_CONTENT.maps)
@@ -69,6 +70,15 @@ function validateWorldContent() {
     ) {
       throw new Error(
         `Invalid coordinates for world entity: ${spawn.id}`
+      );
+    }
+
+    if (
+      !Number.isFinite(spawn.level) ||
+      spawn.level < 1
+    ) {
+      throw new Error(
+        `Invalid enemy level for world entity: ${spawn.id}`
       );
     }
   }
@@ -441,6 +451,188 @@ function handleResourcePickup(
     collectorId: playerId,
     totalWood: playerState.wood,
     totalFlowers: playerState.flowers
+  });
+}
+
+const FIRST_BENCH_X = 376;
+const FIRST_BENCH_Y = 201;
+const WOOD_SWORD_COST = 5;
+
+function handleCraftRequest(
+  playerId,
+  socket,
+  message
+) {
+  const playerState =
+    players.get(playerId);
+
+  if (
+    !playerState ||
+    message.recipe !== "woodSword"
+  ) {
+    return;
+  }
+
+  const validBench =
+    playerState.mapId === "spawn" &&
+    Math.hypot(
+      playerState.x - FIRST_BENCH_X,
+      playerState.y - FIRST_BENCH_Y
+    ) <= 30;
+
+  if (!validBench) {
+    sendJson(socket, {
+      type: "craftResult",
+      recipe: "woodSword",
+      success: false,
+      reason: "tooFar",
+      totalWood: playerState.wood
+    });
+    return;
+  }
+
+  if (playerState.woodSwordCrafted) {
+    sendJson(socket, {
+      type: "craftResult",
+      recipe: "woodSword",
+      success: false,
+      reason: "alreadyCrafted",
+      totalWood: playerState.wood
+    });
+    return;
+  }
+
+  if (playerState.wood < WOOD_SWORD_COST) {
+    sendJson(socket, {
+      type: "craftResult",
+      recipe: "woodSword",
+      success: false,
+      reason: "needWood",
+      totalWood: playerState.wood
+    });
+    return;
+  }
+
+  playerState.wood -=
+    WOOD_SWORD_COST;
+
+  playerState.woodSwordCrafted = true;
+
+  sendJson(socket, {
+    type: "craftResult",
+    recipe: "woodSword",
+    success: true,
+    totalWood: playerState.wood
+  });
+}
+
+const FIRST_NPC_X = 350;
+const FIRST_NPC_Y = 200;
+const SHOP_PRICE = 1;
+
+const SHOP_ITEM_IDS = new Set([
+  "weapon_sword",
+  "weapon_axe",
+  "weapon_wand",
+  "weapon_rainWand",
+  "weapon_katana",
+
+  "hat_original",
+  "hat_blueCap",
+  "hat_wizard",
+  "hat_jester",
+  "hat_ninja",
+  "hat_knight",
+  "hat_bandana",
+
+  "shirt_traveler",
+  "shirt_jester",
+  "shirt_ninja",
+  "shirt_knight",
+
+  "pants_traveler",
+  "pants_jester",
+  "pants_ninja",
+  "pants_knight"
+]);
+
+function handleShopPurchase(
+  playerId,
+  socket,
+  message
+) {
+  const playerState =
+    players.get(playerId);
+
+  const itemId =
+    typeof message.itemId === "string"
+      ? message.itemId
+      : "";
+
+  if (
+    !playerState ||
+    !SHOP_ITEM_IDS.has(itemId)
+  ) {
+    return;
+  }
+
+  const validShop =
+    playerState.mapId === "spawn" &&
+    Math.hypot(
+      playerState.x - FIRST_NPC_X,
+      playerState.y - FIRST_NPC_Y
+    ) <= 48;
+
+  if (!validShop) {
+    sendJson(socket, {
+      type: "shopPurchaseResult",
+      itemId,
+      success: false,
+      reason: "tooFar",
+      totalCoins: playerState.coins
+    });
+    return;
+  }
+
+  // These two are guaranteed by the tutorial by the time the shop unlocks.
+  if (
+    itemId === "weapon_axe" ||
+    itemId === "weapon_sword" ||
+    playerState.shopPurchases.includes(itemId)
+  ) {
+    sendJson(socket, {
+      type: "shopPurchaseResult",
+      itemId,
+      success: false,
+      reason: "alreadyOwned",
+      totalCoins: playerState.coins
+    });
+    return;
+  }
+
+  if (playerState.coins < SHOP_PRICE) {
+    sendJson(socket, {
+      type: "shopPurchaseResult",
+      itemId,
+      success: false,
+      reason: "needCoin",
+      totalCoins: playerState.coins
+    });
+    return;
+  }
+
+  playerState.coins -=
+    SHOP_PRICE;
+
+  playerState.shopPurchases.push(
+    itemId
+  );
+
+  sendJson(socket, {
+    type: "shopPurchaseResult",
+    itemId,
+    success: true,
+    totalCoins: playerState.coins
   });
 }
 
@@ -1230,13 +1422,15 @@ function makeServerGoblin(spawn) {
     mapId,
     x,
     y,
-    phase = 0
+    phase = 0,
+    level = 3
   } = spawn;
 
   return {
     id,
     mapId,
     type: "goblin",
+    level,
 
     x,
     y,
@@ -1245,10 +1439,10 @@ function makeServerGoblin(spawn) {
     dir: 1,
     phase,
 
-    speed: 19,
-    chaseSpeed: 31,
-    detectionRadius: 82,
-    leashRadius: 110,
+    speed: 20,
+    chaseSpeed: 34,
+    detectionRadius: 90,
+    leashRadius: 120,
 
     aggroTime: 0,
     aggroDuration: 5.0,
@@ -1260,8 +1454,8 @@ function makeServerGoblin(spawn) {
     wanderRadiusX: 24,
     wanderRadiusY: 18,
 
-    maxHp: 60,
-    hp: 60,
+    maxHp: 150,
+    hp: 150,
     alive: true,
     respawnTime: 0,
 
@@ -1297,13 +1491,15 @@ function makeServerGhost(spawn) {
     mapId,
     x,
     y,
-    phase = 0
+    phase = 0,
+    level = 5
   } = spawn;
 
   return {
     id,
     mapId,
     type: "ghost",
+    level,
 
     x,
     y,
@@ -1312,10 +1508,10 @@ function makeServerGhost(spawn) {
     dir: 1,
     phase,
 
-    speed: 9,
-    chaseSpeed: 27,
-    detectionRadius: 96,
-    leashRadius: 125,
+    speed: 10,
+    chaseSpeed: 32,
+    detectionRadius: 110,
+    leashRadius: 145,
 
     aggroTime: 0,
     aggroDuration: 5.5,
@@ -1369,6 +1565,7 @@ function sharedEnemySnapshot(enemyType) {
     x: Number(enemy.x.toFixed(2)),
     y: Number(enemy.y.toFixed(2)),
     dir: enemy.dir,
+    level: enemy.level,
     hp: enemy.hp,
     maxHp: enemy.maxHp,
     alive: enemy.alive,
@@ -2238,7 +2435,7 @@ function tickSharedGhosts(dt) {
       dy /= length;
 
       const damage =
-        9 + Math.floor(Math.random() * 5);
+        14 + Math.floor(Math.random() * 5);
 
       setPlayerContactCooldown(
         contact.player.id,
@@ -2331,7 +2528,7 @@ function tickSharedGoblins(dt) {
             playerContactAvailable(target.id)
           ) {
             const damage =
-              6 + Math.floor(Math.random() * 5);
+              9 + Math.floor(Math.random() * 5);
 
             const length =
               Math.hypot(hitDx, hitDy) || 1;
@@ -2650,6 +2847,31 @@ function validateSharedEnemyMeleeHit(
   );
 }
 
+function calculateServerPlayerDamage(
+  playerState,
+  enemy,
+  source,
+  critical = false,
+  options = {}
+) {
+  return COMBAT_BALANCE.calculateDamage({
+    source,
+    weaponIndex:
+      playerState.weaponIndex,
+    playerLevel:
+      playerState.level || 1,
+    stats:
+      playerState.stats || {},
+    monsterType:
+      enemy.type,
+    monsterLevel:
+      enemy.level || 1,
+    critical,
+    rainPower:
+      options.rainPower ?? 2
+  });
+}
+
 function handleSharedEnemyDamageAction(
   playerId,
   enemy,
@@ -2686,14 +2908,16 @@ function handleSharedEnemyDamageAction(
 
     minimumMs = 260;
 
-    const baseDamage =
-      8 + Math.floor(Math.random() * 5);
+    critical =
+      Boolean(payload.critical);
 
-    critical = Boolean(payload.critical);
-
-    damage = critical
-      ? Math.ceil(baseDamage * 1.75)
-      : baseDamage;
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "melee",
+        critical
+      );
 
     knockback =
       enemy.type === "goblin" ? 28 : 22;
@@ -2709,7 +2933,11 @@ function handleSharedEnemyDamageAction(
     }
 
     damage =
-      5 + Math.floor(Math.random() * 3);
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "basic"
+      );
 
     knockback =
       enemy.type === "goblin" ? 17 : 14;
@@ -2724,7 +2952,11 @@ function handleSharedEnemyDamageAction(
     }
 
     damage =
-      6 + Math.floor(Math.random() * 4);
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "fireball"
+      );
 
     knockback =
       enemy.type === "goblin" ? 22 : 18;
@@ -2926,9 +3158,20 @@ function handleSharedEnemyAction(
   ) {
     if (!enemy.alive) return;
 
-    const damage = Math.round(
+    const rainPower = Math.round(
       clampNumber(payload.power, 1, 3, 2)
     );
+
+    const damage =
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "rain",
+        false,
+        {
+          rainPower
+        }
+      );
 
     enemy.hp = Math.max(
       0,
@@ -2977,13 +3220,15 @@ function makeServerSlime(spawn) {
     y,
     phase = 0,
     wanderRadiusX = 26,
-    wanderRadiusY = 18
+    wanderRadiusY = 18,
+    level = 1
   } = spawn;
 
   return {
     id,
     mapId,
     type: "slime",
+    level,
 
     x,
     y,
@@ -3103,6 +3348,7 @@ function slimeSnapshot() {
     x: Number(slime.x.toFixed(2)),
     y: Number(slime.y.toFixed(2)),
     dir: slime.dir,
+    level: slime.level,
     hp: slime.hp,
     maxHp: slime.maxHp,
     alive: slime.alive,
@@ -4278,13 +4524,16 @@ function handleSlimeDamageAction(playerId, slime, payload) {
 
     minimumMs = 260;
 
-    const baseDamage =
-      8 + Math.floor(Math.random() * 5);
+    critical =
+      Boolean(payload.critical);
 
-    critical = Boolean(payload.critical);
-    damage = critical
-      ? Math.ceil(baseDamage * 1.75)
-      : baseDamage;
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        slime,
+        "melee",
+        critical
+      );
 
     knockback = 32;
   } else if (source === "basic") {
@@ -4298,7 +4547,13 @@ function handleSlimeDamageAction(playerId, slime, payload) {
       return;
     }
 
-    damage = 5 + Math.floor(Math.random() * 3);
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        slime,
+        "basic"
+      );
+
     knockback = 18;
   } else if (source === "fireball") {
     if (
@@ -4310,7 +4565,13 @@ function handleSlimeDamageAction(playerId, slime, payload) {
       return;
     }
 
-    damage = 6 + Math.floor(Math.random() * 4);
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        slime,
+        "fireball"
+      );
+
     knockback = 24;
   } else {
     return;
@@ -4782,6 +5043,19 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.flowers
       : 0,
 
+    // Session-only first crafting progression. Wood is server-owned, so the
+    // bench recipe must be validated/spent here rather than only on the client.
+    woodSwordCrafted:
+      previous
+        ? Boolean(previous.woodSwordCrafted)
+        : false,
+
+    shopPurchases:
+      previous &&
+      Array.isArray(previous.shopPurchases)
+        ? previous.shopPurchases
+        : [],
+
     maxHp: previous && Number.isFinite(previous.maxHp)
       ? previous.maxHp
       : 50,
@@ -4797,6 +5071,45 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     shirtIndex: clampInteger(source.shirtIndex, -1, 3, -1),
     pantsIndex: clampInteger(source.pantsIndex, -1, 3, -1),
     weaponIndex: clampInteger(source.weaponIndex, -1, 4, -1),
+
+    // Progression remains client-owned for now, but server damage uses these
+    // sanitized values instead of trusting a client-supplied damage number.
+    level: clampInteger(
+      source.level,
+      1,
+      99,
+      previous?.level || 1
+    ),
+
+    stats: {
+      strength: clampInteger(
+        source.stats?.strength,
+        0,
+        999,
+        previous?.stats?.strength || 0
+      ),
+
+      dex: clampInteger(
+        source.stats?.dex,
+        0,
+        999,
+        previous?.stats?.dex || 0
+      ),
+
+      luck: clampInteger(
+        source.stats?.luck,
+        0,
+        999,
+        previous?.stats?.luck || 0
+      ),
+
+      int: clampInteger(
+        source.stats?.int,
+        0,
+        999,
+        previous?.stats?.int || 0
+      )
+    },
 
     walkTime: clampNumber(source.walkTime, 0, 1000000, 0),
     firstRaisedLeg:
@@ -4926,7 +5239,10 @@ const server = http.createServer((req, res) => {
       sharedGhosts: sharedGhosts.length,
       sharedEnvironment: sharedEnvironment.size,
       sharedResources: sharedResources.size,
-      sharedCoins: sharedCoins.size
+      sharedCoins: sharedCoins.size,
+      worldContentVersion: WORLD_CONTENT.version,
+      combatBalanceVersion:
+        COMBAT_BALANCE.version
     }));
     return;
   }
@@ -4954,7 +5270,13 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, {
       "Content-Type": contentTypeFor(filePath),
-      "Cache-Control": "no-cache"
+
+      // index.html and shared/world-content.js must always come from the same
+      // build. `no-cache` still permits browser storage; `no-store` avoids
+      // stale shared map/enemy registries across localhost / Render updates.
+      "Cache-Control": "no-store, max-age=0",
+      "Pragma": "no-cache",
+      "Expires": "0"
     });
 
     if (req.method === "HEAD") {
@@ -5003,7 +5325,11 @@ wss.on("connection", socket => {
     wood: initialState.wood,
     flowers: initialState.flowers,
     hp: initialState.hp,
-    maxHp: initialState.maxHp
+    maxHp: initialState.maxHp,
+    worldContentVersion:
+      WORLD_CONTENT.version,
+    combatBalanceVersion:
+      COMBAT_BALANCE.version
   });
 
   sendJson(socket, {
@@ -5129,6 +5455,24 @@ wss.on("connection", socket => {
       handleResourcePickup(
         id,
         message.resourceId
+      );
+      return;
+    }
+
+    if (message.type === "craftRequest") {
+      handleCraftRequest(
+        id,
+        socket,
+        message
+      );
+      return;
+    }
+
+    if (message.type === "shopPurchase") {
+      handleShopPurchase(
+        id,
+        socket,
+        message
       );
       return;
     }

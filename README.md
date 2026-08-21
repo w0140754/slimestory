@@ -237,3 +237,278 @@ This fixes missing letters in messages like:
 - Replaced the default/base hat-hair sprite with the new user-drawn version.
 - This only affects the fallback appearance used when the Head slot is unequipped.
 - Equippable hats, bandana, and all other systems are unchanged.
+
+
+## v0.6.6 ownership-driven inventory
+
+New players now begin with a genuinely empty inventory:
+
+- Head / Shirt / Pants start unequipped and continue to show the base outfit.
+- Hand starts as Empty Hands.
+- No weapons, armor, hats, or other gear are owned.
+- The five numbered hotbar slots remain in place, but unowned weapon icons are hidden.
+- Zero-count Coins / Wood / Flowers are hidden until the player has at least one.
+
+Inventory and Gear menus are now ownership-driven:
+
+- Inventory only shows equipment the player owns at least one copy of.
+- Equipment panels only show owned gear plus the always-available
+  Unequip / Empty Hands choices.
+- Empty Inventory sections display `No resources` / `No gear or items`.
+- Traveler shirt and pants now appear in Inventory when owned, since they are
+  real equippable gear.
+
+Added count-based helpers for future loot / shops / chests:
+
+- `grantInventoryItem(itemId, count)`
+- `removeInventoryItem(itemId, count)`
+
+Removing the final copy of an equipped item automatically unequips that slot.
+Item ownership remains client-local for now, matching the current progression
+architecture.
+
+
+## v0.6.7 first progression loop
+
+Added the first playable progression/tutorial sequence to Safe Spawn:
+
+1. New player begins with no items.
+2. Walk near the new NPC and press `F`.
+3. NPC grants one Axe and automatically equips it.
+4. NPC asks the player to collect 5 Wood.
+5. Chop trees and collect shared Wood drops.
+6. Walk to the workbench beside the NPC and press `F`.
+7. The bench consumes exactly 5 Wood and grants/equips the Wood Sword.
+
+New content:
+- exact user-drawn NPC sprite
+- exact user-drawn workbench sprite
+- exact user-drawn Wood Sword sprite
+- Wood Sword replaces the generic slot-1 Sword artwork/name while retaining
+  the existing sword combat mechanics
+- `F TALK` / `F CRAFT` pixel prompts
+- NPC and bench collision footprints
+
+Progress flags:
+- `player.story.axeReceived`
+- `player.story.woodSwordCrafted`
+- `player.benchCraftPending`
+
+Multiplayer/resource note:
+- Wood totals are server-owned in online play, so the workbench sends a
+  `craftRequest`.
+- Server validates that the player is in Spawn, near the bench, has at least
+  5 Wood, and has not already completed the recipe in that server session.
+- On success the server spends 5 Wood and the client grants the Wood Sword.
+- Item ownership/progression is still client/session-local overall; database
+  persistence remains future work.
+
+
+## v0.6.8 shop + Ghost Grove
+
+### Tutorial change
+- Receiving the Axe from the tutorial NPC no longer auto-equips it.
+- It appears in Inventory / Gear and the player chooses when to equip it.
+
+### NPC shop
+After the Wood Sword has been crafted, talking to the tutorial NPC opens the
+Village Shop.
+
+- Every current equippable weapon / hat / shirt / pants is listed.
+- Every item costs exactly 1 Coin.
+- Already-owned items display `OWNED` and cannot be bought again from the UI.
+- Axe and Wood Sword are already owned by the time the shop unlocks.
+- Online purchases are server validated:
+  - player must be in Spawn and near the NPC;
+  - Wood Sword tutorial craft must be complete;
+  - player must have at least 1 server-owned Coin;
+  - the server deducts the Coin and returns the approved item.
+- Offline fallback purchases deduct the local Coin and grant the item directly.
+
+### Ghost Grove
+- Added a new `ghostGrove` map connected to the NORTH edge of Slime Meadow.
+- Added a north path/gate to Meadow.
+- Ghost Grove has a matching south entrance back to Meadow.
+- Both natural Ghosts were removed from Meadow and moved to Ghost Grove.
+- Shared `world-content.js` was updated, so Ghosts remain server authoritative
+  in multiplayer on their new map.
+
+
+## v0.6.8-1 hotfix
+
+Fixed the three issues found in v0.6.8:
+
+- Shop purchases:
+  - removed a brittle server-only tutorial flag requirement;
+  - shop still only opens client-side after the Wood Sword is crafted;
+  - server validates proximity, item id, duplicate purchase, and 1-Coin cost;
+  - opening the shop sends a fresh position packet;
+  - failed purchases now show an on-screen reason.
+- Frozen Meadow ghosts:
+  - removed the old hard-coded client ghost pair;
+  - natural Ghosts now come only from shared WORLD_CONTENT, where they live in Ghost Grove.
+- Ghost Grove portal:
+  - fixed impossible `y <= 9` trigger (player Y is clamped to >=15);
+  - portal now triggers at `y <= 16`;
+  - widened the vertical gate and cleared a deeper north corridor through the trees.
+
+
+## v0.6.8-2 shop + Ghost routing fix
+
+### Shop click freeze
+The shop grid was being regenerated on every animation frame while the shop was
+open. A button could be destroyed between mouse-down and mouse-up, preventing
+the browser from ever emitting the click event.
+
+- Shop DOM is no longer rebuilt every frame.
+- It refreshes when opened and after purchase state changes.
+- Networking continues updating while the shop is open.
+
+### Ghost map routing
+Added a defensive shared-enemy reconciliation step on every `activateMap()`:
+
+- natural enemies are rebuilt/preserved from that map's `WORLD_CONTENT`;
+- each entity has its `networkMapId` reasserted;
+- active arrays are loaded only after reconciliation;
+- natural Ghosts render/update only when `networkMapId === currentMapId`;
+- `drawGhost()` includes the same final map guard.
+
+This makes Slime Meadow explicitly have zero natural Ghost visuals, while
+Ghost Grove reconstructs its two shared Ghost entities on entry.
+
+Temporary console diagnostics now print the active Ghost IDs/map IDs when
+entering Meadow or Ghost Grove.
+
+
+## v0.6.8-3 shared-world cache fix
+
+The persistent Ghost behavior was a client/server world-data split.
+
+`public/shared/world-content.js` is used by both sides:
+- Node loads the current file from disk;
+- the browser loads it separately as a script.
+
+If the browser keeps an earlier copy, the two sides can disagree about which
+map owns a Ghost. That exactly produces:
+- visible stale Ghosts in Meadow;
+- authoritative invisible Ghosts damaging the player in Ghost Grove.
+
+Fix:
+- `WORLD_CONTENT.version` bumped to `2`;
+- browser URL is now `/shared/world-content.js?v=2`;
+- static game files are served with `Cache-Control: no-store, max-age=0`;
+- server `/health` and WebSocket `welcome` report `worldContentVersion`;
+- client reports `WORLD DATA MISMATCH · REFRESH` if its registry version ever
+  differs from the server;
+- startup diagnostic prints the client Ghost assignments.
+
+Expected client registry:
+- Meadow Ghosts: none
+- Ghost Grove: `ghostGrove:ghost:1`, `ghostGrove:ghost:2`
+
+
+## v0.6.9 assignable hotbar
+
+- Hotbar slots 1-5 are now independent assignments rather than fixed weapon positions.
+- New usable weapons/tools automatically occupy the first empty hotbar slot.
+  - Axe received first -> slot 1.
+  - Wood Sword crafted next -> slot 2.
+- If all five slots are occupied, later weapons remain owned but unassigned.
+- Open Inventory and click an owned weapon/tool to open `Choose a hotbar slot`.
+- Buttons 1-5 manually assign/rearrange the selected item.
+- Moving an assigned item onto another occupied slot swaps the two items.
+- Moving an unassigned item onto an occupied slot replaces that assignment.
+- Clear removes the selected item from the hotbar without deleting it.
+- Inventory weapon/tool cards show their current hotbar number.
+- Gear-page equipping remains independent from hotbar organization.
+- Pressing 1-5 equips whatever item is assigned to that slot.
+- Pressing 0 still switches to Empty Hands.
+- Losing the final copy of a usable item clears it from the hotbar.
+
+
+## v0.6.9.1 hotbar unassign / held-item fix
+
+- Clearing the currently equipped weapon from the hotbar now immediately
+  switches the player to Empty Hands.
+- Moving that weapon to another hotbar slot does NOT unequip it.
+- Swapping two assigned hotbar items does NOT unequip the current weapon.
+- If an unassigned weapon is placed over an occupied slot and the displaced
+  weapon was currently held, the displaced weapon is unequipped because it is
+  no longer assigned anywhere.
+
+
+## v0.6.10 combat progression foundation
+
+### Monster levels / tougher enemies
+- Slime: Level 1, 40 HP
+- Goblin: Level 3, 90 HP
+  - chase speed 34
+  - detection radius 90
+  - lunge damage 9-13
+- Ghost: Level 5, 150 HP
+  - chase speed 32
+  - detection radius 110
+  - contact damage 14-18
+
+Enemy levels now live in shared `world-content.js` and are carried by both the
+server and browser entity objects/snapshots.
+
+### Shared damage formula
+Added `public/shared/combat-balance.js`, loaded by both Node and the browser.
+
+Ordinary player attack damage now uses:
+
+`(Weapon/Spell Power + stat scaling) × level multiplier × monster resistance × random roll`
+
+- If the player is below the monster's level:
+  - damage loses 7% per level behind.
+  - multiplier bottoms out at 45%.
+- Being above the monster's level does not currently add a level bonus.
+- Normal melee / wand shots have a 90%-110% damage roll.
+- Rain Cloud damage is steady rather than randomly rolled.
+- Shadow critical hits still multiply final melee damage by 1.75.
+
+### Weapon power / scaling
+- Wood Sword: PWR 8
+  - +0.50 per STR
+  - +0.20 per DEX
+- Axe: PWR 10
+  - +0.75 per STR
+- Fire Wand: PWR 8
+  - +0.70 per INT
+- Rain Wand: PWR 7
+  - +0.65 per INT
+- Katana: PWR 12
+  - +0.30 per STR
+  - +0.65 per DEX
+- Fireball: spell PWR 12
+  - +0.90 per INT
+- Rain Cloud: spell PWR 4
+  - +0.30 per INT
+  - Power enhancement still adds additional spell power.
+
+Selecting a usable weapon in Inventory now shows its `PWR` value in the hotbar
+assignment panel.
+
+### Ghost resistance
+Ghosts are intentionally poor targets for mundane weapons:
+- physical damage multiplier: 15%
+- magic damage multiplier: 115%
+
+This means swords, axes, and katanas generally scratch a Ghost for only 1-2
+damage, especially while under-levelled, while Wand shots, Fireball, Rain Cloud,
+and burning remain practical answers.
+
+### Multiplayer authority
+The browser now sends player Level + STR/DEX/LUCK/INT as progression state.
+The server sanitizes those values and computes the actual damage itself. Clients
+do not submit their final damage numbers.
+
+Progression itself is still client-owned in this prototype; moving progression
+to server/database authority remains a later architecture step.
+
+### Shared-data versions
+- WORLD_CONTENT version: 3
+- COMBAT_BALANCE version: 1
+Both versions are included in the WebSocket welcome/health data so future
+client/server data mismatches are detectable.

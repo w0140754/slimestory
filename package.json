@@ -1,8 +1,8 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.5.1",
+  "version": "0.6.10",
   "private": true,
-  "description": "Slime Story: updated base/default hat-hair sprite",
+  "description": "Slime Story: level/stat/weapon-power damage formula, stronger Goblins, spectral Ghost resistance",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

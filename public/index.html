@@ -203,6 +203,136 @@
     display: flex;
   }
 
+  #shopOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 10, 0.46);
+    pointer-events: auto;
+    z-index: 20;
+  }
+
+  #shopOverlay.open {
+    display: flex;
+  }
+
+  #shopPanel {
+    width: min(500px, calc(100vw - 36px));
+    max-height: calc(100vh - 36px);
+    background: #202820;
+    border: 3px solid #9a8756;
+    box-shadow:
+      0 0 0 2px #433b29 inset,
+      6px 6px 0 rgba(0,0,0,.38);
+    color: #fff6d4;
+    font-family: monospace;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #shopTop {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    border-bottom: 2px solid #5f573d;
+    background: #293329;
+  }
+
+  #shopTitle {
+    padding: 0 12px;
+    color: #fff2b5;
+    font: 13px/1 monospace;
+  }
+
+  #shopCoinCount {
+    margin-left: auto;
+    padding: 0 12px;
+    color: #ffd76a;
+    font: 11px/1 monospace;
+  }
+
+  #shopClose {
+    appearance: none;
+    width: 38px;
+    align-self: stretch;
+    border: 0;
+    border-left: 2px solid #5f573d;
+    background: #293329;
+    color: #d9cfaa;
+    font: 15px/1 monospace;
+    cursor: pointer;
+  }
+
+  #shopGrid {
+    padding: 12px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .shop-item {
+    appearance: none;
+    min-height: 68px;
+    padding: 6px;
+    border: 2px solid #5f573d;
+    background: #293329;
+    color: #fff6d4;
+    font-family: monospace;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 7px;
+    align-items: center;
+    text-align: left;
+  }
+
+  .shop-item img {
+    width: 28px;
+    height: 28px;
+    grid-row: 1 / span 2;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .shop-item-name {
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .shop-item-price {
+    color: #ffd76a;
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  .shop-item.owned {
+    opacity: .55;
+  }
+
+  .shop-item:disabled {
+    cursor: default;
+  }
+
+  .shop-item:not(:disabled):hover,
+  #shopClose:hover {
+    filter: brightness(1.14);
+  }
+
+  #shopFooter {
+    padding: 8px 12px;
+    border-top: 2px solid #5f573d;
+    color: #9f9878;
+    font: 8px/1 monospace;
+    text-align: center;
+  }
+
   #inventoryPanel {
     width: min(520px, calc(100vw - 36px));
     min-height: 300px;
@@ -319,6 +449,100 @@
     image-rendering: crisp-edges;
   }
 
+  .menu-item[data-hotbar-assignable="true"] {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .menu-item[data-hotbar-assignable="true"].hotbar-selected {
+    border-color: #e1c86e;
+    background: #3b4733;
+    box-shadow: 0 0 0 1px #fff0ad inset;
+  }
+
+  .menu-item[data-hotbar-slot-label]::after {
+    content: attr(data-hotbar-slot-label);
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 2px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #c7ae5d;
+    background: #202820;
+    color: #ffe38b;
+    font: 8px/1 monospace;
+  }
+
+  .hotbar-assign-panel {
+    display: none;
+    margin-top: 4px;
+    padding: 10px;
+    border: 2px solid #665d43;
+    background: #202820;
+  }
+
+  .hotbar-assign-panel.open {
+    display: block;
+  }
+
+  .hotbar-assign-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 9px;
+  }
+
+  .hotbar-assign-header img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .hotbar-assign-name {
+    color: #fff2b5;
+    font: 10px/1 monospace;
+  }
+
+  .hotbar-assign-help {
+    margin-top: 4px;
+    color: #9f9878;
+    font: 8px/1 monospace;
+  }
+
+  .hotbar-assign-buttons {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+
+  .hotbar-assign-buttons button {
+    appearance: none;
+    min-height: 28px;
+    border: 2px solid #665d43;
+    background: #293329;
+    color: #e9dfba;
+    font: 9px/1 monospace;
+    cursor: pointer;
+  }
+
+  .hotbar-assign-buttons button.active {
+    border-color: #e1c86e;
+    background: #3b4733;
+    color: #fff2b5;
+    box-shadow: 0 0 0 1px #fff0ad inset;
+  }
+
+  .hotbar-assign-buttons button:hover {
+    filter: brightness(1.14);
+  }
+
   .resource-menu-item {
     min-height: 58px;
     flex-direction: row;
@@ -335,6 +559,15 @@
   .resource-menu-count {
     color: #fff5ca;
     font-size: 13px;
+  }
+
+  .inventory-empty {
+    margin: -6px 0 16px;
+    padding: 9px 10px;
+    border: 1px dashed #665d43;
+    color: #8f896d;
+    font: 9px/1.25 monospace;
+    text-align: center;
   }
 
   .skill-card {
@@ -910,23 +1143,23 @@
 
   <div id="hotbar">
     <div class="hotbar-slot" id="slot1">
-      <img id="slotSwordImg" alt="Sword" />
+      <img class="hotbar-item-img" alt="" />
       <div class="hotbar-label">1</div>
     </div>
     <div class="hotbar-slot" id="slot2">
-      <img id="slotAxeImg" alt="Axe" />
+      <img class="hotbar-item-img" alt="" />
       <div class="hotbar-label">2</div>
     </div>
     <div class="hotbar-slot" id="slot3">
-      <img id="slotWandImg" alt="Wand" />
+      <img class="hotbar-item-img" alt="" />
       <div class="hotbar-label">3</div>
     </div>
     <div class="hotbar-slot" id="slot4">
-      <img id="slotRainWandImg" alt="Rain Wand" />
+      <img class="hotbar-item-img" alt="" />
       <div class="hotbar-label">4</div>
     </div>
     <div class="hotbar-slot" id="slot5">
-      <img id="slotKatanaImg" alt="Katana" />
+      <img class="hotbar-item-img" alt="" />
       <div class="hotbar-label">5</div>
     </div>
   </div>
@@ -947,40 +1180,62 @@
     <div id="inventoryPage" class="inventory-page active">
       <div class="menu-section-title">Resources</div>
       <div class="inventory-grid">
-        <div class="menu-item resource-menu-item">
+        <div class="menu-item resource-menu-item" data-resource-key="coins">
           <img id="inventoryCoinImg" alt="Coin" />
           <span class="resource-menu-count" id="inventoryCoinCount">0</span>
         </div>
-        <div class="menu-item resource-menu-item">
+        <div class="menu-item resource-menu-item" data-resource-key="wood">
           <img id="inventoryWoodImg" alt="Wood" />
           <span class="resource-menu-count" id="inventoryWoodCount">0</span>
         </div>
-        <div class="menu-item resource-menu-item">
+        <div class="menu-item resource-menu-item" data-resource-key="flowers">
           <img id="inventoryFlowerImg" alt="Flower" />
           <span class="resource-menu-count" id="inventoryFlowerCount">0</span>
         </div>
       </div>
+      <div id="inventoryResourcesEmpty" class="inventory-empty">No resources</div>
 
       <div class="menu-section-title">Gear</div>
       <div class="inventory-grid">
-        <div class="menu-item"><img id="inventorySwordImg" alt="Sword" /><span>Sword</span></div>
-        <div class="menu-item"><img id="inventoryKatanaImg" alt="Katana" /><span>Katana</span></div>
-        <div class="menu-item"><img id="inventoryAxeImg" alt="Axe" /><span>Axe</span></div>
-        <div class="menu-item"><img id="inventoryWandImg" alt="Wand" /><span>Wand</span></div>
-        <div class="menu-item"><img id="inventoryRainWandImg" alt="Rain Wand" /><span>Rain Wand</span></div>
-        <div class="menu-item"><img id="inventoryHatImg" alt="Hat" /><span>Hat</span></div>
-        <div class="menu-item"><img id="inventoryCapImg" alt="Blue Cap" /><span>Blue Cap</span></div>
-        <div class="menu-item"><img id="inventoryWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span></div>
-        <div class="menu-item"><img id="inventoryBandanaHatImg" alt="Bandana" /><span>Bandana</span></div>
-        <div class="menu-item"><img id="inventoryJesterHatImg" alt="Jester Hat" /><span>Jester Hat</span></div>
-        <div class="menu-item"><img id="inventoryJesterShirtImg" alt="Jester Shirt" /><span>Jester Shirt</span></div>
-        <div class="menu-item"><img id="inventoryJesterPantsImg" alt="Jester Pants" /><span>Jester Pants</span></div>
-        <div class="menu-item"><img id="inventoryNinjaHatImg" alt="Ninja Hat" /><span>Ninja Hat</span></div>
-        <div class="menu-item"><img id="inventoryNinjaShirtImg" alt="Ninja Shirt" /><span>Ninja Shirt</span></div>
-        <div class="menu-item"><img id="inventoryNinjaPantsImg" alt="Ninja Pants" /><span>Ninja Pants</span></div>
-        <div class="menu-item"><img id="inventoryKnightHatImg" alt="Knight Helm" /><span>Knight Helm</span></div>
-        <div class="menu-item"><img id="inventoryKnightShirtImg" alt="Knight Chest" /><span>Knight Chest</span></div>
-        <div class="menu-item"><img id="inventoryKnightPantsImg" alt="Knight Greaves" /><span>Knight Greaves</span></div>
+        <div class="menu-item" data-owned-item="weapon_sword" data-hotbar-assignable="true"><img id="inventorySwordImg" alt="Wood Sword" /><span>Wood Sword</span></div>
+        <div class="menu-item" data-owned-item="weapon_katana" data-hotbar-assignable="true"><img id="inventoryKatanaImg" alt="Katana" /><span>Katana</span></div>
+        <div class="menu-item" data-owned-item="weapon_axe" data-hotbar-assignable="true"><img id="inventoryAxeImg" alt="Axe" /><span>Axe</span></div>
+        <div class="menu-item" data-owned-item="weapon_wand" data-hotbar-assignable="true"><img id="inventoryWandImg" alt="Wand" /><span>Wand</span></div>
+        <div class="menu-item" data-owned-item="weapon_rainWand" data-hotbar-assignable="true"><img id="inventoryRainWandImg" alt="Rain Wand" /><span>Rain Wand</span></div>
+        <div class="menu-item" data-owned-item="hat_original"><img id="inventoryHatImg" alt="Hat" /><span>Hat</span></div>
+        <div class="menu-item" data-owned-item="hat_blueCap"><img id="inventoryCapImg" alt="Blue Cap" /><span>Blue Cap</span></div>
+        <div class="menu-item" data-owned-item="hat_wizard"><img id="inventoryWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span></div>
+        <div class="menu-item" data-owned-item="hat_bandana"><img id="inventoryBandanaHatImg" alt="Bandana" /><span>Bandana</span></div>
+        <div class="menu-item" data-owned-item="shirt_traveler"><img id="inventoryTravelerShirtImg" alt="Traveler Shirt" /><span>Traveler Shirt</span></div>
+        <div class="menu-item" data-owned-item="pants_traveler"><img id="inventoryTravelerPantsImg" alt="Traveler Pants" /><span>Traveler Pants</span></div>
+        <div class="menu-item" data-owned-item="hat_jester"><img id="inventoryJesterHatImg" alt="Jester Hat" /><span>Jester Hat</span></div>
+        <div class="menu-item" data-owned-item="shirt_jester"><img id="inventoryJesterShirtImg" alt="Jester Shirt" /><span>Jester Shirt</span></div>
+        <div class="menu-item" data-owned-item="pants_jester"><img id="inventoryJesterPantsImg" alt="Jester Pants" /><span>Jester Pants</span></div>
+        <div class="menu-item" data-owned-item="hat_ninja"><img id="inventoryNinjaHatImg" alt="Ninja Hat" /><span>Ninja Hat</span></div>
+        <div class="menu-item" data-owned-item="shirt_ninja"><img id="inventoryNinjaShirtImg" alt="Ninja Shirt" /><span>Ninja Shirt</span></div>
+        <div class="menu-item" data-owned-item="pants_ninja"><img id="inventoryNinjaPantsImg" alt="Ninja Pants" /><span>Ninja Pants</span></div>
+        <div class="menu-item" data-owned-item="hat_knight"><img id="inventoryKnightHatImg" alt="Knight Helm" /><span>Knight Helm</span></div>
+        <div class="menu-item" data-owned-item="shirt_knight"><img id="inventoryKnightShirtImg" alt="Knight Chest" /><span>Knight Chest</span></div>
+        <div class="menu-item" data-owned-item="pants_knight"><img id="inventoryKnightPantsImg" alt="Knight Greaves" /><span>Knight Greaves</span></div>
+      </div>
+      <div id="inventoryGearEmpty" class="inventory-empty">No gear or items</div>
+
+      <div id="hotbarAssignPanel" class="hotbar-assign-panel">
+        <div class="hotbar-assign-header">
+          <img id="hotbarAssignImg" alt="" />
+          <div>
+            <div id="hotbarAssignName" class="hotbar-assign-name">Select a usable item</div>
+            <div class="hotbar-assign-help">Choose a hotbar slot</div>
+          </div>
+        </div>
+        <div class="hotbar-assign-buttons">
+          <button type="button" data-hotbar-assign-slot="0">1</button>
+          <button type="button" data-hotbar-assign-slot="1">2</button>
+          <button type="button" data-hotbar-assign-slot="2">3</button>
+          <button type="button" data-hotbar-assign-slot="3">4</button>
+          <button type="button" data-hotbar-assign-slot="4">5</button>
+          <button type="button" id="hotbarAssignClear">Clear</button>
+        </div>
       </div>
     </div>
 
@@ -1005,7 +1260,7 @@
           <button type="button" class="equipped-box" data-gear-panel="gearWeaponPanel">
             <div class="equipped-slot-label">Hand</div>
             <img id="equippedWeaponImg" alt="Equipped weapon" />
-            <span id="equippedWeaponName">Sword</span>
+            <span id="equippedWeaponName">Empty Hands</span>
           </button>
         </div>
 
@@ -1016,25 +1271,25 @@
               <button class="equip-choice hat-choice" data-hat-index="-1">
                 <img id="equipBaseHatImg" alt="No headgear" /><span>Unequip</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="0">
+              <button class="equip-choice hat-choice" data-hat-index="0" data-owned-item="hat_original">
                 <img id="equipHatImg" alt="Hat" /><span>Hat</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="1">
+              <button class="equip-choice hat-choice" data-hat-index="1" data-owned-item="hat_blueCap">
                 <img id="equipCapImg" alt="Blue Cap" /><span>Blue Cap</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="2">
+              <button class="equip-choice hat-choice" data-hat-index="2" data-owned-item="hat_wizard">
                 <img id="equipWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="3">
+              <button class="equip-choice hat-choice" data-hat-index="3" data-owned-item="hat_jester">
                 <img id="equipJesterHatImg" alt="Jester Hat" /><span>Jester Hat</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="4">
+              <button class="equip-choice hat-choice" data-hat-index="4" data-owned-item="hat_ninja">
                 <img id="equipNinjaHatImg" alt="Ninja Hat" /><span>Ninja Hat</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="5">
+              <button class="equip-choice hat-choice" data-hat-index="5" data-owned-item="hat_knight">
                 <img id="equipKnightHatImg" alt="Knight Helm" /><span>Knight Helm</span>
               </button>
-              <button class="equip-choice hat-choice" data-hat-index="6">
+              <button class="equip-choice hat-choice" data-hat-index="6" data-owned-item="hat_bandana">
                 <img id="equipBandanaHatImg" alt="Bandana" /><span>Bandana</span>
               </button>
             </div>
@@ -1047,19 +1302,19 @@
                 <span style="width:28px;height:28px;display:grid;place-items:center;font-size:18px;">×</span>
                 <span>Empty Hands</span>
               </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="0">
-                <img id="equipSwordImg" alt="Sword" /><span>Sword</span>
+              <button class="equip-choice weapon-choice" data-weapon-index="0" data-owned-item="weapon_sword">
+                <img id="equipSwordImg" alt="Wood Sword" /><span>Wood Sword</span>
               </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="1">
+              <button class="equip-choice weapon-choice" data-weapon-index="1" data-owned-item="weapon_axe">
                 <img id="equipAxeImg" alt="Axe" /><span>Axe</span>
               </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="2">
+              <button class="equip-choice weapon-choice" data-weapon-index="2" data-owned-item="weapon_wand">
                 <img id="equipWandImg" alt="Wand" /><span>Wand</span>
               </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="3">
+              <button class="equip-choice weapon-choice" data-weapon-index="3" data-owned-item="weapon_rainWand">
                 <img id="equipRainWandImg" alt="Rain Wand" /><span>Rain Wand</span>
               </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="4">
+              <button class="equip-choice weapon-choice" data-weapon-index="4" data-owned-item="weapon_katana">
                 <img id="equipKatanaImg" alt="Katana" /><span>Katana</span>
               </button>
             </div>
@@ -1071,16 +1326,16 @@
               <button class="equip-choice shirt-choice" data-shirt-index="-1">
                 <img id="equipBaseShirtImg" alt="No shirt armor" /><span>Unequip</span>
               </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="0">
+              <button class="equip-choice shirt-choice" data-shirt-index="0" data-owned-item="shirt_traveler">
                 <img id="equipTravelerShirtImg" alt="Traveler Shirt" /><span>Traveler</span>
               </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="1">
+              <button class="equip-choice shirt-choice" data-shirt-index="1" data-owned-item="shirt_jester">
                 <img id="equipJesterShirtImg" alt="Jester Shirt" /><span>Jester</span>
               </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="2">
+              <button class="equip-choice shirt-choice" data-shirt-index="2" data-owned-item="shirt_ninja">
                 <img id="equipNinjaShirtImg" alt="Ninja Shirt" /><span>Ninja</span>
               </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="3">
+              <button class="equip-choice shirt-choice" data-shirt-index="3" data-owned-item="shirt_knight">
                 <img id="equipKnightShirtImg" alt="Knight Shirt" /><span>Knight</span>
               </button>
             </div>
@@ -1092,16 +1347,16 @@
               <button class="equip-choice pants-choice" data-pants-index="-1">
                 <img id="equipBasePantsImg" alt="No pants armor" /><span>Unequip</span>
               </button>
-              <button class="equip-choice pants-choice" data-pants-index="0">
+              <button class="equip-choice pants-choice" data-pants-index="0" data-owned-item="pants_traveler">
                 <img id="equipTravelerPantsImg" alt="Traveler Pants" /><span>Traveler</span>
               </button>
-              <button class="equip-choice pants-choice" data-pants-index="1">
+              <button class="equip-choice pants-choice" data-pants-index="1" data-owned-item="pants_jester">
                 <img id="equipJesterPantsImg" alt="Jester Pants" /><span>Jester</span>
               </button>
-              <button class="equip-choice pants-choice" data-pants-index="2">
+              <button class="equip-choice pants-choice" data-pants-index="2" data-owned-item="pants_ninja">
                 <img id="equipNinjaPantsImg" alt="Ninja Pants" /><span>Ninja</span>
               </button>
-              <button class="equip-choice pants-choice" data-pants-index="3">
+              <button class="equip-choice pants-choice" data-pants-index="3" data-owned-item="pants_knight">
                 <img id="equipKnightPantsImg" alt="Knight Pants" /><span>Knight</span>
               </button>
             </div>
@@ -1327,7 +1582,20 @@
   </div>
 </div>
 
-<script src="/shared/world-content.js"></script>
+<div id="shopOverlay" aria-hidden="true">
+  <div id="shopPanel">
+    <div id="shopTop">
+      <div id="shopTitle">Village Shop</div>
+      <div id="shopCoinCount">Coins 0</div>
+      <button id="shopClose" aria-label="Close shop">×</button>
+    </div>
+    <div id="shopGrid"></div>
+    <div id="shopFooter">Everything costs 1 Coin · Esc to close</div>
+  </div>
+</div>
+
+<script src="/shared/world-content.js?v=3"></script>
+<script src="/shared/combat-balance.js?v=1"></script>
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1455,11 +1723,11 @@ const sprite = {
 
 
 // -----------------------------------------------------------------------------
-// SWORD
+// WOOD SWORD
 // -----------------------------------------------------------------------------
-// Your 16x16 sword. You specified its zero-based pivot as (2, 7).
+// First crafted combat weapon. It keeps the existing sword pivot / combat logic.
 const swordImage = new Image();
-swordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdElEQVQ4T2NkoBAwwllkgmFmwH8kL4HYuACKt+EaumNMGUqXnAZz2tvbGSQkJKBSCPDixQuGyspKGBesF0T8L3BVZJAWF2F4+vINg35UHQMXOzuDnqEhTCEcXDp/nuHbz5/IBjFSxQUwQFEYkA1GDaBCGAAA194oEUjv6x0AAAAQZGVCRzRFQ0U0RDU3NEUxQzVDQjCb0v2LAAAAAElFTkSuQmCC";
+swordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZklEQVQ4T2NkoBAwwllkgmFmwH9yvAVT/H9TnhKD36R7UC4GwGkoSOJ/d7gMmKMuzsYgJi4OlUIAi+rjcDYaYIS7ANkQQgBmCchgZKeBw4CAV9AB3AXIAGQQNnGsgGiFuMCoAQwMAJ4PEhAZoz7TAAAAEGRlQkdDNkU2MjVENTdFRjZBNzE0qzz/cwAAAABJRU5ErkJgggAA";
 
 // Player-drawn 16x16 axe. It uses the same left-edge handle pivot convention
 // as the sword, so the existing stepped swing poses can be reused.
@@ -1468,6 +1736,13 @@ axeImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/
 
 const AXE_PIVOT_X = 2;
 const AXE_PIVOT_Y = 7;
+
+// Spawn-map tutorial NPC and first crafting bench.
+const tutorialNpcImage = new Image();
+tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
+
+const woodBenchImage = new Image();
+woodBenchImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbklEQVQ4T2NkYGBgyHWV+A+iSQWTd79gZARpFhHgYtBUkYdLEAOu33nI8ObDNwawAbYmmnAJUsDhM9dHDRg8YUBxOgAZQA5ASUggE2GC+ADMMpCLMQIRJABK32AODoCufhAYAHMWiCbkfBhAVg8A6slwD3hszMIAAAAQZGVCRzIyMzVDRjg3OTIwOEI5Q0GexihVAAAAAElFTkSuQmCC";
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -1489,11 +1764,6 @@ const WAND_PIVOT_X = 2;
 const WAND_PIVOT_Y = 7;
 
 // Feed the hotbar DOM with the same weapon art.
-document.getElementById("slotSwordImg").src = swordImage.src;
-document.getElementById("slotAxeImg").src = axeImage.src;
-document.getElementById("slotWandImg").src = wandImage.src;
-document.getElementById("slotRainWandImg").src = rainWandImage.src;
-document.getElementById("slotKatanaImg").src = katanaImage.src;
 
 const SWORD_PIVOT_X = 2;
 const SWORD_PIVOT_Y = 7;
@@ -2530,7 +2800,7 @@ function aimPlayerTowardPoint(targetX, targetY) {
 }
 
 function updateCanvasCursor() {
-  if (inventoryOpen) {
+  if (inventoryOpen || shopOpen) {
     canvas.style.cursor = "default";
     return;
   }
@@ -3001,6 +3271,14 @@ function igniteLivingNear(x, y, radius = 14) {
   }
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     if (!ghost.alive) continue;
 
     const dx = ghost.x - x;
@@ -3087,6 +3365,36 @@ function spreadFireFromBurningSources() {
   }
 }
 
+function calculateLocalCombatDamage(
+  entity,
+  source,
+  critical = false,
+  options = {}
+) {
+  if (
+    typeof COMBAT_BALANCE === "undefined"
+  ) {
+    return 1;
+  }
+
+  return COMBAT_BALANCE.calculateDamage({
+    source,
+    weaponIndex: player.weaponIndex,
+    playerLevel: player.level,
+    stats: player.stats,
+    monsterType:
+      entity.networkType ||
+      (entity.isGraveGhost
+        ? "ghost"
+        : "slime"),
+    monsterLevel:
+      entity.level || 1,
+    critical,
+    rainPower:
+      options.rainPower ?? 2
+  });
+}
+
 const RANGED_HIT_PROFILES = {
   slime: {
     damageTextOffsetY: -24,
@@ -3118,7 +3426,12 @@ function applyRangedHit(entity, projectile, entityType, attackType) {
   const attackProfile = GAME_CONFIG.projectileDamage[attackType];
   if (!entityProfile || !attackProfile) return;
 
-  const damage = randomIntInclusive(attackProfile.min, attackProfile.max);
+  const damage =
+    calculateLocalCombatDamage(
+      entity,
+      attackType,
+      false
+    );
 
   entity.hitFlash = attackProfile.hitFlash;
   entity.shakeTime = attackProfile.shakeTime;
@@ -3442,6 +3755,14 @@ function applyRainCloud(cloud) {
   }
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     if (!ghost.alive) continue;
 
     const dx = ghost.x - cloud.x;
@@ -3458,7 +3779,16 @@ function applyRainCloud(cloud) {
     // The restorative rain is harmful to spectral creatures.
     if (creatureTick) {
       if (ghost.isGraveGhost) {
-        const rainDamage = rainPower;
+        const rainDamage =
+          calculateLocalCombatDamage(
+            ghost,
+            "rain",
+            false,
+            {
+              rainPower
+            }
+          );
+
         ghost.hp -= rainDamage;
         ghost.hitFlash = Math.max(
           ghost.hitFlash,
@@ -5002,6 +5332,14 @@ function tryCastJesterBlink() {
   }
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     if (!ghost.alive) continue;
 
     if (
@@ -5190,6 +5528,8 @@ document.getElementById("inventoryHatImg").src = sprite.hat.src;
 document.getElementById("inventoryCapImg").src = sprite.blueCap.src;
 document.getElementById("inventoryWizardHatImg").src = sprite.wizardHat.src;
 document.getElementById("inventoryBandanaHatImg").src = sprite.bandanaHat.src;
+document.getElementById("inventoryTravelerShirtImg").src = sprite.torso.src;
+document.getElementById("inventoryTravelerPantsImg").src = sprite.leftLeg.src;
 document.getElementById("inventoryJesterHatImg").src = sprite.jesterHat.src;
 document.getElementById("inventoryJesterShirtImg").src = sprite.jesterTorso.src;
 document.getElementById("inventoryJesterPantsImg").src = sprite.jesterLeftLeg.src;
@@ -5226,8 +5566,16 @@ document.getElementById("equipKnightPantsImg").src = sprite.knightLeftLeg.src;
 
 slimeFlashImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVklEQVR4nO2TMQ4AIAgDhfj/L+OmoYApcbVjWy9CVMxsvGgWfkUVNLRxOM0QwMzjOloFLETR6EKyHbT0AQcQXhghwRt0ILuLIzAQ18l2cIOErPqN9DgLZicMIqXQ8kgAAAAASUVORK5CYII=";slimeImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAt0lEQVQ4T2NkoBAwwlmo4D+chQow1GMIgDTPvlbPcP7eCbgACBgqWTCkajWCmCh60A3AqhkGsBmCbMB/7wlaDPIqsnABbODhnccMWwuugZhgvTADwJpBgBgDQABmCPUNAAFchsA0gwBeA7bkX2XwmagN54MAuhiGAQaZogzS6qJgDkgS2UAQQBZ7evM1w4Xpr0FM6hkAAiiG4ALImuEEEsBrCLpmFAYSwGoINs0ggM0AEKAoM5EEAGibZRH6RFzgAAAAEGRlQkc4QTY1NkIwRTJBQzdBMDI0vGYFOwAAAABJRU5ErkJgggAA";
 
-function makeSlime(x, y, phase = 0, wanderRadiusX = 26, wanderRadiusY = 18) {
+function makeSlime(
+  x,
+  y,
+  phase = 0,
+  wanderRadiusX = 26,
+  wanderRadiusY = 18,
+  level = 1
+) {
   return {
+    level,
     x,
     y,
     homeX: x,
@@ -5290,8 +5638,14 @@ goblinImage.addEventListener("load", () => {
   goblinFlashImage.src = c.toDataURL("image/png");
 });
 
-function makeGoblin(x, y, phase = 0) {
+function makeGoblin(
+  x,
+  y,
+  phase = 0,
+  level = 3
+) {
   return {
+    level,
     x,
     y,
     homeX: x,
@@ -5314,8 +5668,8 @@ function makeGoblin(x, y, phase = 0) {
     wanderRadiusX: 24,
     wanderRadiusY: 18,
 
-    maxHp: 60,
-    hp: 60,
+    maxHp: 150,
+    hp: 150,
     alive: true,
     respawnTime: 0,
 
@@ -5438,8 +5792,14 @@ ghostImage.addEventListener("load", () => {
   ghostFlashImage.src = c.toDataURL("image/png");
 });
 
-function makeGhost(x, y, phase = 0) {
+function makeGhost(
+  x,
+  y,
+  phase = 0,
+  level = 5
+) {
   return {
+    level,
     x,
     y,
     homeX: x,
@@ -5478,11 +5838,9 @@ function makeGhost(x, y, phase = 0) {
   };
 }
 
-// Rare on purpose: they should feel different from ordinary slimes.
-const ghosts = [
-  makeGhost(525, 105, 0.4),
-  makeGhost(540, 330, 2.7)
-];
+// Active-map ghost collection. Natural ghosts are populated exclusively
+// from shared WORLD_CONTENT for the current map.
+const ghosts = [];
 
 function resetGhost(ghost) {
   ghost.x = ghost.homeX;
@@ -5607,9 +5965,10 @@ function makeMapHouse(x, y) {
   };
 }
 
-// Carve two walkable routes through the meadow's forest perimeter:
+// Carve three walkable routes through the meadow's forest perimeter:
 // WEST -> the safe spawn clearing
 // EAST -> Goblin Woods
+// NORTH -> Ghost Grove
 for (let i = trees.length - 1; i >= 0; i--) {
   const tree = trees[i];
 
@@ -5625,7 +5984,16 @@ for (let i = trees.length - 1; i >= 0; i--) {
     tree.x >= world.width - 62 &&
     insideGateY;
 
-  if (westOpening || eastOpening) {
+  const northOpening =
+    tree.y <= 100 &&
+    tree.x >= 270 &&
+    tree.x <= 370;
+
+  if (
+    westOpening ||
+    eastOpening ||
+    northOpening
+  ) {
     trees.splice(i, 1);
   }
 }
@@ -5636,7 +6004,7 @@ const meadowMap = {
   tallGrass: tallGrass.slice(),
   harvestFlowers: harvestFlowers.slice(),
   slimes: slimes.slice(),
-  ghosts: ghosts.slice(),
+  ghosts: [],
   goblins: [],
   graves: [],
   houses: [],
@@ -5707,6 +6075,20 @@ const spawnMapHouses = [
   // Nudged a little higher so a front path has room to breathe.
   makeMapHouse(275, 204)
 ];
+
+// First progression/tutorial fixtures.
+// These are deterministic map fixtures, not inventory/world-state entities.
+const tutorialNpc = {
+  x: 350,
+  y: 200,
+  interactionRadius: 24
+};
+
+const woodCraftBench = {
+  x: 376,
+  y: 201,
+  interactionRadius: 24
+};
 
 const spawnMap = {
   trees: spawnMapTrees,
@@ -5833,10 +6215,134 @@ const goblinWoodsMap = {
   }
 };
 
+// -----------------------------------------------------------------------------
+// GHOST GROVE
+// -----------------------------------------------------------------------------
+// Connected directly above Slime Meadow. Natural ghosts now live here instead
+// of sharing the Meadow with the starter slimes.
+const ghostGroveTrees = [];
+let ghostGroveTreePhase = 0.52;
+
+function addGhostGroveTree(x, y) {
+  ghostGroveTrees.push(
+    makeRuntimeTree(
+      x,
+      y,
+      ghostGroveTreePhase
+    )
+  );
+
+  ghostGroveTreePhase += 0.63;
+}
+
+// Thick top boundary.
+for (
+  let x = 12;
+  x <= world.width - 12;
+  x += 28
+) {
+  addGhostGroveTree(x, 28);
+  addGhostGroveTree(x + 14, 52);
+}
+
+// Bottom boundary, leaving the SOUTH entrance open around x=320.
+for (
+  let x = 12;
+  x <= world.width - 12;
+  x += 28
+) {
+  if (x < 276 || x > 364) {
+    addGhostGroveTree(
+      x,
+      world.height - 6
+    );
+  }
+}
+
+for (
+  let x = 26;
+  x <= world.width - 12;
+  x += 28
+) {
+  if (x < 276 || x > 364) {
+    addGhostGroveTree(
+      x,
+      world.height - 30
+    );
+  }
+}
+
+// Closed side walls.
+for (
+  let y = 78;
+  y <= world.height - 78;
+  y += 28
+) {
+  addGhostGroveTree(14, y);
+  addGhostGroveTree(
+    world.width - 14,
+    y
+  );
+}
+
+for (
+  let y = 92;
+  y <= world.height - 78;
+  y += 28
+) {
+  addGhostGroveTree(40, y);
+  addGhostGroveTree(
+    world.width - 40,
+    y
+  );
+}
+
+// A few loose clusters create a slightly eerie broken clearing without
+// introducing a new art set yet.
+[
+  [118, 126], [150, 144],
+  [502, 120], [535, 145],
+  [205, 255], [232, 278],
+  [420, 250], [454, 274],
+  [320, 105]
+].forEach(([x, y]) =>
+  addGhostGroveTree(x, y)
+);
+
+const ghostGroveGrass = [
+  makeMapGrass(176, 188, 0.5, 13),
+  makeMapGrass(205, 198, 1.3, 12, "white"),
+  makeMapGrass(268, 150, 2.1, 14),
+  makeMapGrass(355, 168, 2.9, 13, "blue"),
+  makeMapGrass(430, 190, 3.7, 12),
+  makeMapGrass(480, 220, 4.5, 14, "white"),
+  makeMapGrass(305, 285, 5.3, 13),
+  makeMapGrass(365, 305, 6.1, 12, "pink")
+];
+
+const ghostGroveMap = {
+  trees: ghostGroveTrees,
+  tallGrass: ghostGroveGrass,
+  harvestFlowers: [],
+  slimes: [],
+  ghosts: [],
+  goblins: [],
+  graves: [],
+  houses: [],
+
+  pond: {
+    x: -1000,
+    y: -1000,
+    width: 1,
+    height: 1
+  }
+};
+
 const mapStates = {
   spawn: spawnMap,
   meadow: meadowMap,
-  goblinWoods: goblinWoodsMap
+  goblinWoods: goblinWoodsMap,
+  ghostGrove: ghostGroveMap
 };
 
 // -----------------------------------------------------------------------------
@@ -5855,7 +6361,8 @@ const CLIENT_ENEMY_FACTORIES = {
       spawn.y,
       spawn.phase || 0,
       spawn.wanderRadiusX ?? 26,
-      spawn.wanderRadiusY ?? 18
+      spawn.wanderRadiusY ?? 18,
+      spawn.level ?? 1
     );
   },
 
@@ -5863,7 +6370,8 @@ const CLIENT_ENEMY_FACTORIES = {
     return makeGoblin(
       spawn.x,
       spawn.y,
-      spawn.phase || 0
+      spawn.phase || 0,
+      spawn.level ?? 3
     );
   },
 
@@ -5871,7 +6379,8 @@ const CLIENT_ENEMY_FACTORIES = {
     return makeGhost(
       spawn.x,
       spawn.y,
-      spawn.phase || 0
+      spawn.phase || 0,
+      spawn.level ?? 5
     );
   }
 };
@@ -5894,6 +6403,10 @@ function createClientEnemyFromWorldSpawn(
   const entity = factory(spawn);
 
   entity.entityId = spawn.id;
+  entity.level =
+    Number.isFinite(spawn.level)
+      ? spawn.level
+      : entity.level;
   entity.networkType = spawn.type;
   entity.networkMapId = mapId;
   entity.serverControlled = true;
@@ -5954,6 +6467,104 @@ function applySharedWorldContentToClientMaps() {
       }
     }
   }
+}
+
+function reconcileSharedEnemiesForMap(mapId) {
+  const state =
+    mapStates[mapId];
+
+  const definition =
+    typeof WORLD_CONTENT !== "undefined"
+      ? WORLD_CONTENT.maps?.[mapId]
+      : null;
+
+  if (!state || !definition) {
+    return;
+  }
+
+  for (
+    const [enemyType, collectionName]
+    of Object.entries(
+      CLIENT_ENEMY_COLLECTIONS
+    )
+  ) {
+    const currentCollection =
+      state[collectionName] || [];
+
+    const graveGhosts =
+      enemyType === "ghost"
+        ? currentCollection.filter(
+            enemy =>
+              enemy.isGraveGhost
+          )
+        : [];
+
+    const existingById =
+      new Map(
+        currentCollection
+          .filter(enemy =>
+            !enemy.isGraveGhost &&
+            enemy.entityId
+          )
+          .map(enemy => [
+            enemy.entityId,
+            enemy
+          ])
+      );
+
+    const rebuilt =
+      [...graveGhosts];
+
+    for (
+      const spawn
+      of definition.enemySpawns || []
+    ) {
+      if (spawn.type !== enemyType) {
+        continue;
+      }
+
+      let entity =
+        existingById.get(spawn.id);
+
+      if (!entity) {
+        entity =
+          createClientEnemyFromWorldSpawn(
+            mapId,
+            spawn
+          );
+      }
+
+      if (!entity) continue;
+
+      // Reassert identity every activation. This prevents stale objects from
+      // an old map from being rendered through the active-array view.
+      entity.entityId = spawn.id;
+      entity.networkType = enemyType;
+      entity.networkMapId = mapId;
+      entity.serverControlled = true;
+
+      rebuilt.push(entity);
+    }
+
+    state[collectionName] =
+      rebuilt;
+  }
+}
+
+function naturalEnemyBelongsToCurrentMap(
+  enemy
+) {
+  if (!enemy) return false;
+
+  if (enemy.isGraveGhost) {
+    return true;
+  }
+
+  return (
+    !enemy.networkMapId ||
+    enemy.networkMapId ===
+      currentMapId
+  );
 }
 
 function clientEnemyCollectionFor(
@@ -6266,6 +6877,46 @@ class OnlineClient {
       this.localPlayerId = message.id;
       ensureEntityId(player, `player:${message.id}`);
 
+      if (
+        Number.isFinite(message.worldContentVersion) &&
+        message.worldContentVersion !==
+          WORLD_CONTENT?.version
+      ) {
+        console.error(
+          "WORLD CONTENT VERSION MISMATCH",
+          {
+            client:
+              WORLD_CONTENT?.version,
+            server:
+              message.worldContentVersion
+          }
+        );
+
+        this.setStatus(
+          "WORLD DATA MISMATCH · REFRESH"
+        );
+      }
+
+      if (
+        Number.isFinite(message.combatBalanceVersion) &&
+        message.combatBalanceVersion !==
+          COMBAT_BALANCE?.version
+      ) {
+        console.error(
+          "COMBAT BALANCE VERSION MISMATCH",
+          {
+            client:
+              COMBAT_BALANCE?.version,
+            server:
+              message.combatBalanceVersion
+          }
+        );
+
+        this.setStatus(
+          "COMBAT DATA MISMATCH · REFRESH"
+        );
+      }
+
       if (Number.isFinite(message.coins)) {
         player.coins = message.coins;
       }
@@ -6288,6 +6939,18 @@ class OnlineClient {
 
       updateInventoryUi();
       this.sendEnvironmentCatalog();
+      return;
+    }
+
+    if (message.type === "craftResult") {
+      this.handleCraftResult(message);
+      return;
+    }
+
+    if (message.type === "shopPurchaseResult") {
+      this.handleShopPurchaseResult(
+        message
+      );
       return;
     }
 
@@ -6932,6 +7595,178 @@ class OnlineClient {
     return true;
   }
 
+  requestCraft(recipe) {
+    if (
+      !recipe ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "craftRequest",
+      recipe
+    }));
+
+    return true;
+  }
+
+  requestShopPurchase(itemId) {
+    if (
+      !itemId ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "shopPurchase",
+      itemId
+    }));
+
+    return true;
+  }
+
+  handleShopPurchaseResult(message) {
+    const itemId =
+      typeof message.itemId === "string"
+        ? message.itemId
+        : null;
+
+    player.shopPurchasePending = null;
+
+    if (Number.isFinite(message.totalCoins)) {
+      player.coins =
+        message.totalCoins;
+    }
+
+    if (
+      message.success &&
+      itemId &&
+      ALL_EQUIPMENT_ITEM_IDS.has(itemId)
+    ) {
+      if (!playerOwnsItem(itemId)) {
+        grantInventoryItem(
+          itemId,
+          1
+        );
+      }
+
+      spawnFloatingText(
+        tutorialNpc.x,
+        tutorialNpc.y - 26,
+        "PURCHASED!",
+        "#ffe38b",
+        0.85
+      );
+
+      updateShopUi();
+      updateInventoryUi();
+      updateHotbar();
+      return;
+    }
+
+    if (message.reason === "needCoin") {
+      spawnFloatingText(
+        tutorialNpc.x,
+        tutorialNpc.y - 26,
+        "NEED 1 COIN",
+        "#ffe38b",
+        0.85
+      );
+    } else if (message.reason === "tooFar") {
+      spawnFloatingText(
+        tutorialNpc.x,
+        tutorialNpc.y - 26,
+        "MOVE CLOSER",
+        "#ffe38b",
+        0.85
+      );
+    } else if (message.reason === "alreadyOwned") {
+      spawnFloatingText(
+        tutorialNpc.x,
+        tutorialNpc.y - 26,
+        "ALREADY OWNED",
+        "#ffe38b",
+        0.85
+      );
+    } else if (!message.success) {
+      spawnFloatingText(
+        tutorialNpc.x,
+        tutorialNpc.y - 26,
+        "PURCHASE FAILED",
+        "#ffe38b",
+        0.85
+      );
+    }
+
+    updateShopUi();
+  }
+
+  handleCraftResult(message) {
+    if (message.recipe !== "woodSword") {
+      return;
+    }
+
+    player.benchCraftPending = false;
+
+    if (Number.isFinite(message.totalWood)) {
+      player.wood = message.totalWood;
+    }
+
+    if (message.success) {
+      player.story.woodSwordCrafted = true;
+
+      if (!playerOwnsItem("weapon_sword")) {
+        grantInventoryItem(
+          "weapon_sword",
+          1
+        );
+      }
+
+      player.weaponIndex = 0;
+
+      spawnFloatingText(
+        woodCraftBench.x,
+        woodCraftBench.y - 24,
+        "WOOD SWORD CRAFTED!",
+        "#ffe38b",
+        1.2
+      );
+
+      updateInventoryUi();
+      updateHotbar();
+      return;
+    }
+
+    if (message.reason === "needWood") {
+      spawnFloatingText(
+        woodCraftBench.x,
+        woodCraftBench.y - 24,
+        "NEED 5 WOOD",
+        "#ffe38b",
+        0.9
+      );
+      return;
+    }
+
+    if (message.reason === "alreadyCrafted") {
+      player.story.woodSwordCrafted = true;
+
+      spawnFloatingText(
+        woodCraftBench.x,
+        woodCraftBench.y - 24,
+        "ALREADY CRAFTED",
+        "#ffe38b",
+        0.9
+      );
+    }
+  }
+
   handleResourcePicked(message) {
     this.removeSharedResource(
       message.resourceId
@@ -7312,6 +8147,10 @@ class OnlineClient {
       enemy.maxHp = Number.isFinite(state.maxHp)
         ? state.maxHp
         : enemy.maxHp;
+
+      enemy.level = Number.isFinite(state.level)
+        ? state.level
+        : enemy.level;
 
       enemy.alive = nextAlive;
       enemy.dir = state.dir === -1 ? -1 : 1;
@@ -7975,6 +8814,16 @@ class OnlineClient {
       pantsIndex: player.pantsIndex,
       weaponIndex: player.weaponIndex,
 
+      // Progression is still client-owned in this prototype, but combat damage
+      // is calculated server-side from these sanitized values.
+      level: player.level,
+      stats: {
+        strength: player.stats.strength,
+        dex: player.stats.dex,
+        luck: player.stats.luck,
+        int: player.stats.int
+      },
+
       walkTime: player.walkTime,
       firstRaisedLeg: player.firstRaisedLeg,
 
@@ -8337,7 +9186,32 @@ function activateMap(mapId, entrySide) {
 
   currentMapId = mapId;
 
+  // Ensure this map's natural enemy objects exactly match the shared registry
+  // before replacing the active collection views.
+  reconcileSharedEnemiesForMap(
+    mapId
+  );
+
   loadActiveMapCollections(state);
+
+  if (
+    mapId === "meadow" ||
+    mapId === "ghostGrove"
+  ) {
+    console.log(
+      `Activated ${mapId}:`,
+      {
+        ghosts:
+          ghosts.map(ghost => ({
+            id: ghost.entityId,
+            mapId:
+              ghost.networkMapId,
+            alive:
+              ghost.alive
+          }))
+      }
+    );
+  }
 
   pond.x = state.pond.x;
   pond.y = state.pond.y;
@@ -8366,6 +9240,12 @@ function activateMap(mapId, entrySide) {
     // the absolute world edge.
     player.x = 446;
     player.y = 200;
+  } else if (entrySide === "north") {
+    player.x = world.width / 2;
+    player.y = 26;
+  } else if (entrySide === "south") {
+    player.x = world.width / 2;
+    player.y = world.height - 26;
   } else {
     player.x = world.width - 26;
     player.y = 200;
@@ -8373,40 +9253,85 @@ function activateMap(mapId, entrySide) {
 }
 
 function updateMapConnection() {
-  const insideGateY =
+  const insideHorizontalGate =
     player.y >= 174 &&
     player.y <= 226;
 
-  if (!insideGateY) return;
+  const insideVerticalGate =
+    player.x >= 276 &&
+    player.x <= 364;
 
-  // Safe spawn clearing -> slime meadow.
+  // Safe spawn clearing -> Slime Meadow.
   if (
     currentMapId === "spawn" &&
+    insideHorizontalGate &&
     player.x >= 492
   ) {
-    activateMap("meadow", "west");
+    activateMap(
+      "meadow",
+      "west"
+    );
     return;
   }
 
-  // Slime meadow has two exits.
   if (currentMapId === "meadow") {
-    if (player.x <= 9) {
-      activateMap("spawn", "spawnEast");
+    if (
+      insideHorizontalGate &&
+      player.x <= 9
+    ) {
+      activateMap(
+        "spawn",
+        "spawnEast"
+      );
       return;
     }
 
-    if (player.x >= world.width - 9) {
-      activateMap("goblinWoods", "west");
+    if (
+      insideHorizontalGate &&
+      player.x >= world.width - 9
+    ) {
+      activateMap(
+        "goblinWoods",
+        "west"
+      );
+      return;
+    }
+
+    if (
+      insideVerticalGate &&
+      player.y <= 16
+    ) {
+      activateMap(
+        "ghostGrove",
+        "south"
+      );
       return;
     }
   }
 
-  // Goblin Woods -> slime meadow.
+  // Goblin Woods -> Slime Meadow.
   if (
     currentMapId === "goblinWoods" &&
+    insideHorizontalGate &&
     player.x <= 9
   ) {
-    activateMap("meadow", "east");
+    activateMap(
+      "meadow",
+      "east"
+    );
+    return;
+  }
+
+  // Ghost Grove -> Slime Meadow.
+  if (
+    currentMapId === "ghostGrove" &&
+    insideVerticalGate &&
+    player.y >= world.height - 9
+  ) {
+    activateMap(
+      "meadow",
+      "north"
+    );
   }
 }
 
@@ -8426,6 +9351,47 @@ function drawMapConnection(camX, camY) {
     ctx.fillRect(x + Math.max(20, width - 25), screenY + 4, 11, 2);
   }
 
+  function drawVerticalPath(y, height) {
+    const screenX =
+      Math.round(
+        world.width / 2 - camX
+      );
+
+    ctx.fillStyle = "#77934f";
+    ctx.fillRect(
+      screenX - 12,
+      y,
+      25,
+      height
+    );
+
+    ctx.fillStyle = "#9a8352";
+    ctx.fillRect(
+      screenX - 9,
+      y,
+      18,
+      height
+    );
+
+    ctx.fillStyle = "#b09a63";
+    ctx.fillRect(
+      screenX - 5,
+      y + 8,
+      2,
+      11
+    );
+
+    ctx.fillRect(
+      screenX + 4,
+      y + Math.max(
+        20,
+        height - 25
+      ),
+      2,
+      11
+    );
+  }
+
   if (currentMapId === "spawn") {
     // Quiet path from the house area through the middle of the safe clearing
     // and out the east gate.
@@ -8443,12 +9409,35 @@ function drawMapConnection(camX, camY) {
     // EAST -> Goblin Woods.
     const eastEdgeX = Math.round(world.width - camX);
     drawHorizontalPath(eastEdgeX - 48, 48);
+
+    // NORTH -> Ghost Grove.
+    drawVerticalPath(
+      Math.round(-camY),
+      48
+    );
+
     return;
   }
 
-  // Goblin Woods WEST -> meadow.
-  const westEdgeX = Math.round(-camX);
-  drawHorizontalPath(westEdgeX, 48);
+  if (currentMapId === "goblinWoods") {
+    // Goblin Woods WEST -> Meadow.
+    const westEdgeX = Math.round(-camX);
+    drawHorizontalPath(westEdgeX, 48);
+    return;
+  }
+
+  if (currentMapId === "ghostGrove") {
+    // Ghost Grove SOUTH -> Meadow.
+    const southEdgeY =
+      Math.round(
+        world.height - camY
+      );
+
+    drawVerticalPath(
+      southEdgeY - 48,
+      48
+    );
+  }
 }
 
 function chooseSlimeWanderTarget(slime) {
@@ -9111,6 +10100,14 @@ function tryHitGhost() {
   const originY = player.y - 8;
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     if (!ghost.alive) continue;
 
     const targetX = ghost.x;
@@ -9137,12 +10134,15 @@ function tryHitGhost() {
 
     if (insideAngle && insideRange) {
       if (ghost.isGraveGhost) {
-        const critical = player.shadowCritAttack;
-        const baseDamage =
-          8 + Math.floor(Math.random() * 5);
-        const damage = critical
-          ? Math.ceil(baseDamage * 1.75)
-          : baseDamage;
+        const critical =
+          player.shadowCritAttack;
+
+        const damage =
+          calculateLocalCombatDamage(
+            ghost,
+            "melee",
+            critical
+          );
 
         ghost.hitFlash = 0.12;
         ghost.shakeTime = 0.14;
@@ -9446,7 +10446,14 @@ function drawGoblin(goblin, camX, camY) {
 }
 
 function drawGhost(ghost, camX, camY) {
-  if (!ghost.alive) return;
+  if (
+    !naturalEnemyBelongsToCurrentMap(
+      ghost
+    ) ||
+    !ghost.alive
+  ) {
+    return;
+  }
 
   let screenX = Math.round(ghost.x - camX);
   const screenY = Math.round(ghost.y - camY);
@@ -9577,6 +10584,29 @@ const player = {
   wood: 0,
   flowers: 0,
 
+  // Count-based item ownership. Missing/zero means not owned.
+  // New players intentionally start with no gear or weapons.
+  items: {},
+
+  // Independent, player-arranged hotbar.
+  hotbarAssignments: [
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+
+  // Tiny first-progression quest state. Persistent storage comes later;
+  // for now these flags live for the current browser session.
+  story: {
+    axeReceived: false,
+    woodSwordCrafted: false
+  },
+
+  benchCraftPending: false,
+  shopPurchasePending: null,
+
   // Level progression.
   level: 1,
   exp: 0,
@@ -9610,10 +10640,662 @@ const player = {
   }
 };
 
-const HOTBAR_SLOTS = ["sword", "axe", "wand", "rainWand", "katana"];
+const HOTBAR_SLOT_COUNT = 5;
+const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight"];
+
+const WEAPON_ITEM_IDS = [
+  "weapon_sword",
+  "weapon_axe",
+  "weapon_wand",
+  "weapon_rainWand",
+  "weapon_katana"
+];
+
+const HAT_ITEM_IDS = [
+  "hat_original",
+  "hat_blueCap",
+  "hat_wizard",
+  "hat_jester",
+  "hat_ninja",
+  "hat_knight",
+  "hat_bandana"
+];
+
+const SHIRT_ITEM_IDS = [
+  "shirt_traveler",
+  "shirt_jester",
+  "shirt_ninja",
+  "shirt_knight"
+];
+
+const PANTS_ITEM_IDS = [
+  "pants_traveler",
+  "pants_jester",
+  "pants_ninja",
+  "pants_knight"
+];
+
+const ALL_EQUIPMENT_ITEM_IDS = new Set([
+  ...WEAPON_ITEM_IDS,
+  ...HAT_ITEM_IDS,
+  ...SHIRT_ITEM_IDS,
+  ...PANTS_ITEM_IDS
+]);
+
+const SHOP_ITEMS = [
+  { id: "weapon_sword", name: "Wood Sword" },
+  { id: "weapon_axe", name: "Axe" },
+  { id: "weapon_wand", name: "Fire Wand" },
+  { id: "weapon_rainWand", name: "Rain Wand" },
+  { id: "weapon_katana", name: "Katana" },
+
+  { id: "hat_original", name: "Hat" },
+  { id: "hat_blueCap", name: "Blue Cap" },
+  { id: "hat_wizard", name: "Wizard Hat" },
+  { id: "hat_jester", name: "Jester Hat" },
+  { id: "hat_ninja", name: "Ninja Hat" },
+  { id: "hat_knight", name: "Knight Helm" },
+  { id: "hat_bandana", name: "Bandana" },
+
+  { id: "shirt_traveler", name: "Traveler Shirt" },
+  { id: "shirt_jester", name: "Jester Shirt" },
+  { id: "shirt_ninja", name: "Ninja Shirt" },
+  { id: "shirt_knight", name: "Knight Chest" },
+
+  { id: "pants_traveler", name: "Traveler Pants" },
+  { id: "pants_jester", name: "Jester Pants" },
+  { id: "pants_ninja", name: "Ninja Pants" },
+  { id: "pants_knight", name: "Knight Greaves" }
+];
+
+function shopImageForItemId(itemId) {
+  const weaponIndex =
+    WEAPON_ITEM_IDS.indexOf(itemId);
+
+  if (weaponIndex >= 0) {
+    return weaponImageForIndex(
+      weaponIndex
+    );
+  }
+
+  const hatIndex =
+    HAT_ITEM_IDS.indexOf(itemId);
+
+  if (hatIndex >= 0) {
+    return hatImageForIndex(
+      hatIndex
+    );
+  }
+
+  const shirtIndex =
+    SHIRT_ITEM_IDS.indexOf(itemId);
+
+  if (shirtIndex >= 0) {
+    return shirtImageForIndex(
+      shirtIndex
+    );
+  }
+
+  const pantsIndex =
+    PANTS_ITEM_IDS.indexOf(itemId);
+
+  if (pantsIndex >= 0) {
+    return pantsImageForIndex(
+      pantsIndex
+    );
+  }
+
+  return null;
+}
+
+function inventoryItemCount(itemId) {
+  return Math.max(
+    0,
+    Math.floor(
+      Number(player.items?.[itemId]) || 0
+    )
+  );
+}
+
+function playerOwnsItem(itemId) {
+  return inventoryItemCount(itemId) > 0;
+}
+
+function playerOwnsWeaponIndex(index) {
+  return (
+    index >= 0 &&
+    index < WEAPON_ITEM_IDS.length &&
+    playerOwnsItem(WEAPON_ITEM_IDS[index])
+  );
+}
+
+function playerOwnsHatIndex(index) {
+  return (
+    index >= 0 &&
+    index < HAT_ITEM_IDS.length &&
+    playerOwnsItem(HAT_ITEM_IDS[index])
+  );
+}
+
+function playerOwnsShirtIndex(index) {
+  return (
+    index >= 0 &&
+    index < SHIRT_ITEM_IDS.length &&
+    playerOwnsItem(SHIRT_ITEM_IDS[index])
+  );
+}
+
+function playerOwnsPantsIndex(index) {
+  return (
+    index >= 0 &&
+    index < PANTS_ITEM_IDS.length &&
+    playerOwnsItem(PANTS_ITEM_IDS[index])
+  );
+}
+
+function weaponIndexForItemId(itemId) {
+  return WEAPON_ITEM_IDS.indexOf(itemId);
+}
+
+function weaponItemIdForIndex(index) {
+  return (
+    index >= 0 &&
+    index < WEAPON_ITEM_IDS.length
+  )
+    ? WEAPON_ITEM_IDS[index]
+    : null;
+}
+
+function isHotbarAssignableItem(itemId) {
+  return WEAPON_ITEM_IDS.includes(itemId);
+}
+
+function hotbarSlotForItem(itemId) {
+  return player.hotbarAssignments.indexOf(itemId);
+}
+
+function firstEmptyHotbarSlot() {
+  return player.hotbarAssignments.findIndex(
+    itemId => !itemId
+  );
+}
+
+function sanitizeHotbarAssignments() {
+  if (!Array.isArray(player.hotbarAssignments)) {
+    player.hotbarAssignments = [];
+  }
+
+  const seen = new Set();
+
+  player.hotbarAssignments =
+    Array.from(
+      { length: HOTBAR_SLOT_COUNT },
+      (_, index) => {
+        const itemId =
+          player.hotbarAssignments[index];
+
+        if (
+          !itemId ||
+          !isHotbarAssignableItem(itemId) ||
+          !playerOwnsItem(itemId) ||
+          seen.has(itemId)
+        ) {
+          return null;
+        }
+
+        seen.add(itemId);
+        return itemId;
+      }
+    );
+}
+
+function unequipItemIfNoLongerAssigned(itemId) {
+  if (!itemId) return false;
+
+  const equippedItemId =
+    weaponItemIdForIndex(
+      player.weaponIndex
+    );
+
+  if (
+    equippedItemId === itemId &&
+    hotbarSlotForItem(itemId) < 0
+  ) {
+    player.weaponIndex = -1;
+    return true;
+  }
+
+  return false;
+}
+
+function assignItemToHotbar(itemId, slotIndex) {
+  if (
+    !isHotbarAssignableItem(itemId) ||
+    !playerOwnsItem(itemId) ||
+    slotIndex < 0 ||
+    slotIndex >= HOTBAR_SLOT_COUNT
+  ) {
+    return false;
+  }
+
+  sanitizeHotbarAssignments();
+
+  const currentSlot =
+    hotbarSlotForItem(itemId);
+
+  if (currentSlot === slotIndex) {
+    return true;
+  }
+
+  const displacedItem =
+    player.hotbarAssignments[slotIndex];
+
+  // Moving an already-assigned item onto an occupied slot swaps the two.
+  if (currentSlot >= 0) {
+    player.hotbarAssignments[currentSlot] =
+      displacedItem || null;
+  }
+
+  // A previously unassigned item replaces the destination assignment.
+  player.hotbarAssignments[slotIndex] =
+    itemId;
+
+  // A normal move/swap keeps both items assigned. But if an unassigned item
+  // replaced an occupied slot, the displaced weapon may have left the hotbar
+  // entirely. It cannot remain held in that case.
+  unequipItemIfNoLongerAssigned(
+    displacedItem
+  );
+
+  updateHotbar();
+  updateInventoryUi();
+  return true;
+}
+
+function clearItemFromHotbar(itemId) {
+  let changed = false;
+
+  for (
+    let slotIndex = 0;
+    slotIndex < HOTBAR_SLOT_COUNT;
+    slotIndex++
+  ) {
+    if (
+      player.hotbarAssignments[slotIndex] ===
+      itemId
+    ) {
+      player.hotbarAssignments[slotIndex] = null;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    unequipItemIfNoLongerAssigned(
+      itemId
+    );
+
+    updateHotbar();
+    updateInventoryUi();
+  }
+
+  return changed;
+}
+
+function autoAssignHotbarItem(itemId) {
+  if (
+    !isHotbarAssignableItem(itemId) ||
+    hotbarSlotForItem(itemId) >= 0
+  ) {
+    return false;
+  }
+
+  const emptySlot =
+    firstEmptyHotbarSlot();
+
+  if (emptySlot < 0) {
+    return false;
+  }
+
+  player.hotbarAssignments[emptySlot] =
+    itemId;
+
+  return true;
+}
+
+// Ready for future drops, shops, chests, etc.
+function grantInventoryItem(itemId, count = 1) {
+  if (!ALL_EQUIPMENT_ITEM_IDS.has(itemId)) {
+    return false;
+  }
+
+  const amount = Math.max(
+    1,
+    Math.floor(Number(count) || 1)
+  );
+
+  const wasOwned =
+    playerOwnsItem(itemId);
+
+  player.items[itemId] =
+    inventoryItemCount(itemId) + amount;
+
+  if (!wasOwned) {
+    autoAssignHotbarItem(itemId);
+  }
+
+  updateInventoryUi();
+  updateHotbar();
+  return true;
+}
+
+function removeInventoryItem(itemId, count = 1) {
+  if (!ALL_EQUIPMENT_ITEM_IDS.has(itemId)) {
+    return false;
+  }
+
+  const current =
+    inventoryItemCount(itemId);
+
+  if (current <= 0) {
+    return false;
+  }
+
+  const amount = Math.max(
+    1,
+    Math.floor(Number(count) || 1)
+  );
+
+  const remaining =
+    Math.max(0, current - amount);
+
+  if (remaining > 0) {
+    player.items[itemId] = remaining;
+  } else {
+    delete player.items[itemId];
+    clearItemFromHotbar(itemId);
+  }
+
+  const weaponIndex =
+    WEAPON_ITEM_IDS.indexOf(itemId);
+
+  const hatIndex =
+    HAT_ITEM_IDS.indexOf(itemId);
+
+  const shirtIndex =
+    SHIRT_ITEM_IDS.indexOf(itemId);
+
+  const pantsIndex =
+    PANTS_ITEM_IDS.indexOf(itemId);
+
+  if (
+    weaponIndex >= 0 &&
+    player.weaponIndex === weaponIndex &&
+    !playerOwnsWeaponIndex(weaponIndex)
+  ) {
+    player.weaponIndex = -1;
+  }
+
+  if (
+    hatIndex >= 0 &&
+    player.hatIndex === hatIndex &&
+    !playerOwnsHatIndex(hatIndex)
+  ) {
+    player.hatIndex = -1;
+  }
+
+  if (
+    shirtIndex >= 0 &&
+    player.shirtIndex === shirtIndex &&
+    !playerOwnsShirtIndex(shirtIndex)
+  ) {
+    player.shirtIndex = -1;
+  }
+
+  if (
+    pantsIndex >= 0 &&
+    player.pantsIndex === pantsIndex &&
+    !playerOwnsPantsIndex(pantsIndex)
+  ) {
+    player.pantsIndex = -1;
+  }
+
+  updateInventoryUi();
+  updateHotbar();
+  return true;
+}
+
+function distanceToPlayer(x, y) {
+  return Math.hypot(
+    player.x - x,
+    player.y - y
+  );
+}
+
+function nearbySpawnInteraction() {
+  if (currentMapId !== "spawn") {
+    return null;
+  }
+
+  const candidates = [
+    {
+      kind: "npc",
+      x: tutorialNpc.x,
+      y: tutorialNpc.y,
+      radius:
+        tutorialNpc.interactionRadius
+    },
+    {
+      kind: "bench",
+      x: woodCraftBench.x,
+      y: woodCraftBench.y,
+      radius:
+        woodCraftBench.interactionRadius
+    }
+  ];
+
+  let nearest = null;
+  let nearestDistance = Infinity;
+
+  for (const candidate of candidates) {
+    const distance =
+      distanceToPlayer(
+        candidate.x,
+        candidate.y
+      );
+
+    if (
+      distance <= candidate.radius &&
+      distance < nearestDistance
+    ) {
+      nearest = candidate;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearest;
+}
+
+function interactWithTutorialNpc() {
+  if (!player.story.axeReceived) {
+    player.story.axeReceived = true;
+
+    if (!playerOwnsItem("weapon_axe")) {
+      grantInventoryItem(
+        "weapon_axe",
+        1
+      );
+    }
+
+    // The Axe is added to Inventory / Gear, but the player remains
+    // empty-handed until they deliberately equip it.
+    spawnFloatingText(
+      tutorialNpc.x,
+      tutorialNpc.y - 24,
+      "AXE RECEIVED!",
+      "#ffe38b",
+      1.1
+    );
+
+    spawnFloatingText(
+      tutorialNpc.x,
+      tutorialNpc.y - 34,
+      "BRING ME 5 WOOD",
+      "#fff1b0",
+      1.35
+    );
+
+    updateInventoryUi();
+    updateHotbar();
+    return;
+  }
+
+  if (
+    player.story.woodSwordCrafted ||
+    playerOwnsItem("weapon_sword")
+  ) {
+    setShopOpen(true);
+    return;
+  }
+
+  if (player.wood >= 5) {
+    spawnFloatingText(
+      tutorialNpc.x,
+      tutorialNpc.y - 24,
+      "USE THE BENCH!",
+      "#fff1b0",
+      1.0
+    );
+    return;
+  }
+
+  spawnFloatingText(
+    tutorialNpc.x,
+    tutorialNpc.y - 24,
+    "BRING ME 5 WOOD",
+    "#fff1b0",
+    1.0
+  );
+}
+
+function completeWoodSwordCraftOffline() {
+  if (
+    player.story.woodSwordCrafted ||
+    playerOwnsItem("weapon_sword")
+  ) {
+    spawnFloatingText(
+      woodCraftBench.x,
+      woodCraftBench.y - 24,
+      "ALREADY CRAFTED",
+      "#ffe38b",
+      0.9
+    );
+    return;
+  }
+
+  if (player.wood < 5) {
+    spawnFloatingText(
+      woodCraftBench.x,
+      woodCraftBench.y - 24,
+      "NEED 5 WOOD",
+      "#ffe38b",
+      0.9
+    );
+    return;
+  }
+
+  player.wood -= 5;
+  player.story.woodSwordCrafted = true;
+
+  grantInventoryItem(
+    "weapon_sword",
+    1
+  );
+
+  player.weaponIndex = 0;
+
+  spawnFloatingText(
+    woodCraftBench.x,
+    woodCraftBench.y - 24,
+    "WOOD SWORD CRAFTED!",
+    "#ffe38b",
+    1.2
+  );
+
+  updateInventoryUi();
+  updateHotbar();
+}
+
+function interactWithWoodBench() {
+  if (
+    player.story.woodSwordCrafted ||
+    playerOwnsItem("weapon_sword")
+  ) {
+    spawnFloatingText(
+      woodCraftBench.x,
+      woodCraftBench.y - 24,
+      "ALREADY CRAFTED",
+      "#ffe38b",
+      0.9
+    );
+    return;
+  }
+
+  if (player.wood < 5) {
+    spawnFloatingText(
+      woodCraftBench.x,
+      woodCraftBench.y - 24,
+      "NEED 5 WOOD",
+      "#ffe38b",
+      0.9
+    );
+    return;
+  }
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    if (player.benchCraftPending) {
+      return;
+    }
+
+    player.benchCraftPending = true;
+
+    if (!onlineClient.requestCraft("woodSword")) {
+      player.benchCraftPending = false;
+    }
+
+    return;
+  }
+
+  completeWoodSwordCraftOffline();
+}
+
+function interactWithNearbyObject() {
+  const interaction =
+    nearbySpawnInteraction();
+
+  if (!interaction) {
+    return false;
+  }
+
+  breakShadowHide();
+
+  if (interaction.kind === "npc") {
+    interactWithTutorialNpc();
+    return true;
+  }
+
+  if (interaction.kind === "bench") {
+    interactWithWoodBench();
+    return true;
+  }
+
+  return false;
+}
 
 const ACTIVE_SKILLS = {
   shadowHide: {
@@ -10317,8 +11999,18 @@ function killGhost(ghost) {
 }
 
 function equippedWeapon() {
-  if (player.weaponIndex < 0) return null;
-  return HOTBAR_SLOTS[player.weaponIndex];
+  if (
+    player.weaponIndex < 0 ||
+    !playerOwnsWeaponIndex(
+      player.weaponIndex
+    )
+  ) {
+    return null;
+  }
+
+  return WEAPON_STYLES[
+    player.weaponIndex
+  ];
 }
 
 function currentHatStyle() {
@@ -10390,29 +12082,145 @@ function tryEnterShadowHide() {
 }
 
 function cycleHat() {
-  player.hatIndex = (player.hatIndex + 1) % HAT_STYLES.length;
+  const ownedIndices =
+    HAT_ITEM_IDS
+      .map((itemId, index) =>
+        playerOwnsItem(itemId)
+          ? index
+          : -1
+      )
+      .filter(index => index >= 0);
+
+  if (!ownedIndices.length) {
+    player.hatIndex = -1;
+    return;
+  }
+
+  const currentPosition =
+    ownedIndices.indexOf(
+      player.hatIndex
+    );
+
+  player.hatIndex =
+    ownedIndices[
+      (currentPosition + 1) %
+      ownedIndices.length
+    ];
 }
 
-function selectHotbarSlot(index) {
-  // Weapon swaps are allowed while hidden.
+function equipWeaponIndex(index) {
+  if (player.attackTime > 0) return false;
 
-  // Don't swap tools halfway through an active swing.
-  if (player.attackTime > 0) return;
-  if (index < 0 || index >= HOTBAR_SLOTS.length) return;
+  if (
+    index < 0 ||
+    index >= WEAPON_ITEM_IDS.length ||
+    !playerOwnsWeaponIndex(index)
+  ) {
+    return false;
+  }
 
   player.weaponIndex = index;
+  return true;
+}
+
+function selectHotbarSlot(slotIndex) {
+  if (
+    slotIndex < 0 ||
+    slotIndex >= HOTBAR_SLOT_COUNT
+  ) {
+    return false;
+  }
+
+  sanitizeHotbarAssignments();
+
+  const itemId =
+    player.hotbarAssignments[slotIndex];
+
+  if (!itemId) {
+    return false;
+  }
+
+  return equipWeaponIndex(
+    weaponIndexForItemId(itemId)
+  );
 }
 
 function updateHotbar() {
-  for (let i = 0; i < HOTBAR_SLOTS.length; i++) {
-    const slot = document.getElementById(`slot${i + 1}`);
-    if (slot) {
-      slot.classList.toggle("active", player.weaponIndex === i);
+  sanitizeHotbarAssignments();
+
+  const equippedItemId =
+    weaponItemIdForIndex(
+      player.weaponIndex
+    );
+
+  for (
+    let slotIndex = 0;
+    slotIndex < HOTBAR_SLOT_COUNT;
+    slotIndex++
+  ) {
+    const slot =
+      document.getElementById(
+        `slot${slotIndex + 1}`
+      );
+
+    if (!slot) continue;
+
+    const itemId =
+      player.hotbarAssignments[slotIndex];
+
+    const valid =
+      Boolean(
+        itemId &&
+        isHotbarAssignableItem(itemId) &&
+        playerOwnsItem(itemId)
+      );
+
+    const image =
+      slot.querySelector(
+        ".hotbar-item-img"
+      );
+
+    slot.classList.toggle(
+      "active",
+      valid &&
+      equippedItemId === itemId
+    );
+
+    if (image) {
+      if (valid) {
+        const itemImage =
+          shopImageForItemId(itemId);
+
+        if (itemImage) {
+          image.src = itemImage.src;
+        }
+
+        const shopItem =
+          SHOP_ITEMS.find(
+            item => item.id === itemId
+          );
+
+        image.alt =
+          shopItem?.name || itemId;
+
+        image.style.visibility =
+          "visible";
+      } else {
+        image.removeAttribute("src");
+        image.alt = "";
+        image.style.visibility =
+          "hidden";
+      }
     }
+
+    slot.style.opacity =
+      valid ? "1" : "0.48";
   }
 }
 
 let inventoryOpen = false;
+let shopOpen = false;
+let selectedHotbarInventoryItemId = null;
 let enhancementUiSignature = "";
 
 function hatDisplayName(style) {
@@ -10448,7 +12256,7 @@ function weaponDisplayName(style) {
   if (style === "wand") return "Wand";
   if (style === "rainWand") return "Rain Wand";
   if (style === "katana") return "Katana";
-  return "Sword";
+  return "Wood Sword";
 }
 
 function hatImageForIndex(index) {
@@ -10561,6 +12369,93 @@ function weaponImageForIndex(index) {
   return swordImage;
 }
 
+function updateHotbarAssignmentUi() {
+  const panel =
+    document.getElementById(
+      "hotbarAssignPanel"
+    );
+
+  if (!panel) return;
+
+  const itemId =
+    selectedHotbarInventoryItemId;
+
+  const validSelection =
+    Boolean(
+      itemId &&
+      isHotbarAssignableItem(itemId) &&
+      playerOwnsItem(itemId)
+    );
+
+  panel.classList.toggle(
+    "open",
+    validSelection
+  );
+
+  if (!validSelection) {
+    selectedHotbarInventoryItemId =
+      null;
+    return;
+  }
+
+  const image =
+    document.getElementById(
+      "hotbarAssignImg"
+    );
+
+  const name =
+    document.getElementById(
+      "hotbarAssignName"
+    );
+
+  const itemImage =
+    shopImageForItemId(itemId);
+
+  if (image && itemImage) {
+    image.src = itemImage.src;
+  }
+
+  const shopItem =
+    SHOP_ITEMS.find(
+      item => item.id === itemId
+    );
+
+  if (name) {
+    const weaponIndex =
+      WEAPON_ITEM_IDS.indexOf(itemId);
+
+    const combatProfile =
+      typeof COMBAT_BALANCE !== "undefined"
+        ? COMBAT_BALANCE.weaponProfiles[
+            weaponIndex
+          ]
+        : null;
+
+    name.textContent =
+      `${shopItem?.name || itemId}${
+        combatProfile
+          ? ` · PWR ${combatProfile.power}`
+          : ""
+      }`;
+  }
+
+  const assignedSlot =
+    hotbarSlotForItem(itemId);
+
+  document
+    .querySelectorAll(
+      "[data-hotbar-assign-slot]"
+    )
+    .forEach(button => {
+      button.classList.toggle(
+        "active",
+        Number(
+          button.dataset.hotbarAssignSlot
+        ) === assignedSlot
+      );
+    });
+}
+
 function updateInventoryUi() {
   const coinCount = document.getElementById("inventoryCoinCount");
   const woodCount = document.getElementById("inventoryWoodCount");
@@ -10569,6 +12464,117 @@ function updateInventoryUi() {
   if (coinCount) coinCount.textContent = `${player.coins}`;
   if (woodCount) woodCount.textContent = `${player.wood}`;
   if (flowerCount) flowerCount.textContent = `${player.flowers}`;
+
+  let visibleResources = 0;
+
+  document
+    .querySelectorAll(
+      "[data-resource-key]"
+    )
+    .forEach(element => {
+      const key =
+        element.dataset.resourceKey;
+
+      const count = Math.max(
+        0,
+        Number(player[key]) || 0
+      );
+
+      const visible =
+        count > 0;
+
+      element.style.display =
+        visible ? "" : "none";
+
+      if (visible) {
+        visibleResources += 1;
+      }
+    });
+
+  const resourcesEmpty =
+    document.getElementById(
+      "inventoryResourcesEmpty"
+    );
+
+  if (resourcesEmpty) {
+    resourcesEmpty.style.display =
+      visibleResources === 0
+        ? "block"
+        : "none";
+  }
+
+  let visibleInventoryItems = 0;
+
+  document
+    .querySelectorAll(
+      "#inventoryPage [data-owned-item]"
+    )
+    .forEach(element => {
+      const visible =
+        playerOwnsItem(
+          element.dataset.ownedItem
+        );
+
+      element.style.display =
+        visible ? "" : "none";
+
+      if (visible) {
+        visibleInventoryItems += 1;
+      }
+    });
+
+  const gearEmpty =
+    document.getElementById(
+      "inventoryGearEmpty"
+    );
+
+  if (gearEmpty) {
+    gearEmpty.style.display =
+      visibleInventoryItems === 0
+        ? "block"
+        : "none";
+  }
+
+  document
+    .querySelectorAll(
+      '#inventoryPage [data-hotbar-assignable="true"]'
+    )
+    .forEach(element => {
+      const itemId =
+        element.dataset.ownedItem;
+
+      const slotIndex =
+        hotbarSlotForItem(itemId);
+
+      element.classList.toggle(
+        "hotbar-selected",
+        itemId ===
+          selectedHotbarInventoryItemId
+      );
+
+      if (slotIndex >= 0) {
+        element.dataset.hotbarSlotLabel =
+          `${slotIndex + 1}`;
+      } else {
+        delete element.dataset.hotbarSlotLabel;
+      }
+    });
+
+  updateHotbarAssignmentUi();
+
+  document
+    .querySelectorAll(
+      "#equipmentPage [data-owned-item]"
+    )
+    .forEach(element => {
+      const visible =
+        playerOwnsItem(
+          element.dataset.ownedItem
+        );
+
+      element.style.display =
+        visible ? "" : "none";
+    });
 
   const woodcuttingFill = document.getElementById("woodcuttingFill");
   const woodcuttingBarText = document.getElementById("woodcuttingBarText");
@@ -10746,9 +12752,208 @@ function updateInventoryUi() {
   updateSkillBindingUi();
 }
 
+function updateShopUi() {
+  const grid =
+    document.getElementById(
+      "shopGrid"
+    );
+
+  const coinText =
+    document.getElementById(
+      "shopCoinCount"
+    );
+
+  if (coinText) {
+    coinText.textContent =
+      `Coins ${player.coins}`;
+  }
+
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  for (const item of SHOP_ITEMS) {
+    const owned =
+      playerOwnsItem(item.id);
+
+    const pending =
+      player.shopPurchasePending ===
+      item.id;
+
+    const button =
+      document.createElement(
+        "button"
+      );
+
+    button.type = "button";
+    button.className =
+      `shop-item${owned ? " owned" : ""}`;
+
+    button.dataset.shopItemId =
+      item.id;
+
+    button.disabled =
+      owned ||
+      pending;
+
+    const image =
+      document.createElement("img");
+
+    const imageObject =
+      shopImageForItemId(
+        item.id
+      );
+
+    if (imageObject) {
+      image.src =
+        imageObject.src;
+    }
+
+    image.alt = item.name;
+
+    const name =
+      document.createElement("span");
+
+    name.className =
+      "shop-item-name";
+
+    name.textContent =
+      item.name;
+
+    const price =
+      document.createElement("span");
+
+    price.className =
+      "shop-item-price";
+
+    price.textContent =
+      owned
+        ? "OWNED"
+        : pending
+          ? "..."
+          : "1 COIN";
+
+    button.append(
+      image,
+      name,
+      price
+    );
+
+    grid.appendChild(button);
+  }
+}
+
+function setShopOpen(open) {
+  shopOpen = open;
+
+  const overlay =
+    document.getElementById(
+      "shopOverlay"
+    );
+
+  if (!overlay) return;
+
+  if (open && inventoryOpen) {
+    setInventoryOpen(false);
+  }
+
+  overlay.classList.toggle(
+    "open",
+    open
+  );
+
+  overlay.setAttribute(
+    "aria-hidden",
+    open ? "false" : "true"
+  );
+
+  inputController.clearKeys();
+
+  if (open) {
+    inputController.clearCommands();
+
+    // Keep server position fresh if the player immediately clicks Buy.
+    if (
+      typeof onlineClient !== "undefined" &&
+      onlineClient?.connected
+    ) {
+      onlineClient.sendLocalState(true);
+    }
+
+    updateShopUi();
+  }
+}
+
+function tryPurchaseShopItem(itemId) {
+  if (
+    !shopOpen ||
+    !ALL_EQUIPMENT_ITEM_IDS.has(
+      itemId
+    ) ||
+    playerOwnsItem(itemId) ||
+    player.shopPurchasePending
+  ) {
+    return;
+  }
+
+  if (player.coins < 1) {
+    spawnFloatingText(
+      tutorialNpc.x,
+      tutorialNpc.y - 26,
+      "NEED 1 COIN",
+      "#ffe38b",
+      0.85
+    );
+    return;
+  }
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    player.shopPurchasePending =
+      itemId;
+
+    if (
+      !onlineClient.requestShopPurchase(
+        itemId
+      )
+    ) {
+      player.shopPurchasePending =
+        null;
+    }
+
+    updateShopUi();
+    return;
+  }
+
+  player.coins -= 1;
+
+  grantInventoryItem(
+    itemId,
+    1
+  );
+
+  spawnFloatingText(
+    tutorialNpc.x,
+    tutorialNpc.y - 26,
+    "PURCHASED!",
+    "#ffe38b",
+    0.85
+  );
+
+  updateShopUi();
+  updateInventoryUi();
+  updateHotbar();
+}
+
 function setInventoryOpen(open) {
   // Inventory/equipment management is allowed while hidden.
   inventoryOpen = open;
+
+  if (open && shopOpen) {
+    setShopOpen(false);
+  }
 
   const overlay = document.getElementById("inventoryOverlay");
   overlay.classList.toggle("open", open);
@@ -10829,21 +13034,109 @@ document.getElementById("inventoryClose").addEventListener("click", () => {
   setInventoryOpen(false);
 });
 
+document.getElementById("shopClose").addEventListener("click", () => {
+  setShopOpen(false);
+});
+
+document.getElementById("shopGrid").addEventListener("click", event => {
+  const button =
+    event.target.closest(
+      "[data-shop-item-id]"
+    );
+
+  if (
+    !button ||
+    button.disabled
+  ) {
+    return;
+  }
+
+  tryPurchaseShopItem(
+    button.dataset.shopItemId
+  );
+});
+
+document.getElementById("inventoryPage").addEventListener("click", event => {
+  const itemElement =
+    event.target.closest(
+      '[data-hotbar-assignable="true"]'
+    );
+
+  if (!itemElement) return;
+
+  const itemId =
+    itemElement.dataset.ownedItem;
+
+  if (
+    !itemId ||
+    !playerOwnsItem(itemId)
+  ) {
+    return;
+  }
+
+  selectedHotbarInventoryItemId =
+    itemId;
+
+  updateInventoryUi();
+});
+
+document.querySelectorAll("[data-hotbar-assign-slot]").forEach(button => {
+  button.addEventListener("click", () => {
+    if (!selectedHotbarInventoryItemId) {
+      return;
+    }
+
+    assignItemToHotbar(
+      selectedHotbarInventoryItemId,
+      Number(
+        button.dataset.hotbarAssignSlot
+      )
+    );
+  });
+});
+
+document.getElementById("hotbarAssignClear").addEventListener("click", () => {
+  if (!selectedHotbarInventoryItemId) {
+    return;
+  }
+
+  clearItemFromHotbar(
+    selectedHotbarInventoryItemId
+  );
+});
+
 document.querySelectorAll(".hat-choice").forEach(button => {
   button.addEventListener("click", () => {
-    player.hatIndex = Number(button.dataset.hatIndex);
+    const index =
+      Number(
+        button.dataset.hatIndex
+      );
+
+    if (
+      index >= 0 &&
+      !playerOwnsHatIndex(index)
+    ) {
+      return;
+    }
+
+    player.hatIndex = index;
     updateInventoryUi();
   });
 });
 
 document.querySelectorAll(".weapon-choice").forEach(button => {
   button.addEventListener("click", () => {
-    const index = Number(button.dataset.weaponIndex);
+    const index =
+      Number(
+        button.dataset.weaponIndex
+      );
 
     if (index === -1) {
       player.weaponIndex = -1;
-    } else {
-      selectHotbarSlot(index);
+    } else if (
+      playerOwnsWeaponIndex(index)
+    ) {
+      equipWeaponIndex(index);
     }
 
     updateInventoryUi();
@@ -10853,14 +13146,38 @@ document.querySelectorAll(".weapon-choice").forEach(button => {
 
 document.querySelectorAll(".shirt-choice").forEach(button => {
   button.addEventListener("click", () => {
-    player.shirtIndex = Number(button.dataset.shirtIndex);
+    const index =
+      Number(
+        button.dataset.shirtIndex
+      );
+
+    if (
+      index >= 0 &&
+      !playerOwnsShirtIndex(index)
+    ) {
+      return;
+    }
+
+    player.shirtIndex = index;
     updateInventoryUi();
   });
 });
 
 document.querySelectorAll(".pants-choice").forEach(button => {
   button.addEventListener("click", () => {
-    player.pantsIndex = Number(button.dataset.pantsIndex);
+    const index =
+      Number(
+        button.dataset.pantsIndex
+      );
+
+    if (
+      index >= 0 &&
+      !playerOwnsPantsIndex(index)
+    ) {
+      return;
+    }
+
+    player.pantsIndex = index;
     updateInventoryUi();
   });
 });
@@ -11026,12 +13343,30 @@ function grantDebugProgressionPoints() {
 }
 
 function handleMenuKeyDown(key) {
-  if (key === "i") {
-    setInventoryOpen(!inventoryOpen);
+  if (
+    key === "escape" &&
+    shopOpen
+  ) {
+    setShopOpen(false);
     return true;
   }
 
-  if (key === "escape" && inventoryOpen) {
+  if (key === "i") {
+    if (shopOpen) {
+      setShopOpen(false);
+    }
+
+    setInventoryOpen(
+      !inventoryOpen
+    );
+
+    return true;
+  }
+
+  if (
+    key === "escape" &&
+    inventoryOpen
+  ) {
     setInventoryOpen(false);
     return true;
   }
@@ -11087,7 +13422,14 @@ function handleGameKeyDown(event) {
   }
 
   if (handleMenuKeyDown(key)) return;
-  if (inventoryOpen) return;
+  if (inventoryOpen || shopOpen) return;
+
+  if (key === "f") {
+    inputController.queueCommand(
+      "interact"
+    );
+    return;
+  }
 
   if (activeSkillKey === "space") {
     event.preventDefault();
@@ -11230,7 +13572,7 @@ function executePrimaryAttackCommand(payload) {
 }
 
 function handlePrimaryAttack(event) {
-  if (inventoryOpen || event.button !== 0) return;
+  if (inventoryOpen || shopOpen || event.button !== 0) return;
 
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
@@ -11312,10 +13654,53 @@ function hitsHouseObstacle(x, y, playerRadius = 4) {
   return false;
 }
 
+function hitsSpawnFixtureObstacle(
+  x,
+  y,
+  playerRadius = 4
+) {
+  if (currentMapId !== "spawn") {
+    return false;
+  }
+
+  // NPC feet/body footprint.
+  if (
+    circleRectCollision(
+      x,
+      y,
+      playerRadius,
+      tutorialNpc.x - 4,
+      tutorialNpc.y - 7,
+      8,
+      7
+    )
+  ) {
+    return true;
+  }
+
+  // Workbench footprint.
+  if (
+    circleRectCollision(
+      x,
+      y,
+      playerRadius,
+      woodCraftBench.x - 7,
+      woodCraftBench.y - 6,
+      14,
+      6
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function hitsSolidObstacle(x, y) {
   return (
     hitsTreeObstacle(x, y) ||
-    hitsHouseObstacle(x, y)
+    hitsHouseObstacle(x, y) ||
+    hitsSpawnFixtureObstacle(x, y)
   );
 }
 
@@ -11333,6 +13718,14 @@ function tryGhostContact() {
   let closestDy = 0;
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     if (!ghost.alive) continue;
 
     // Natural ghosts use server-authoritative contact damage. Grave ghosts
@@ -11570,6 +13963,14 @@ function updateGhosts(dt) {
   const blend = 1 - Math.exp(-14 * dt);
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     tickTimer(ghost, "hitFlash", dt);
     tickTimer(ghost, "shakeTime", dt);
 
@@ -12088,12 +14489,13 @@ function processGameCommand(command) {
   if (!command) return;
 
   if (command.type === "equipWeapon") {
-    const index = Number(command.payload.index);
+    const slotIndex =
+      Number(command.payload.index);
 
-    if (index < 0) {
+    if (slotIndex < 0) {
       player.weaponIndex = -1;
     } else {
-      selectHotbarSlot(index);
+      selectHotbarSlot(slotIndex);
     }
 
     return;
@@ -12101,6 +14503,11 @@ function processGameCommand(command) {
 
   if (command.type === "useActiveSkill") {
     triggerActiveSkillForKey(command.payload.key);
+    return;
+  }
+
+  if (command.type === "interact") {
+    interactWithNearbyObject();
     return;
   }
 
@@ -12125,9 +14532,13 @@ class GameSimulation {
   update(dt) {
     updateCanvasCursor();
 
-    if (inventoryOpen) {
+    if (inventoryOpen || shopOpen) {
       updateInventoryUi();
       updateHotbar();
+
+      // Do NOT rebuild the shop grid every frame. Replacing the buttons during
+      // an in-progress mouse click prevents the browser from firing "click".
+      // The shop refreshes when opened and after purchase state changes.
       return;
     }
 
@@ -13008,6 +15419,191 @@ function drawHouse(house, camX, camY) {
   );
 }
 
+function drawTutorialNpc(camX, camY) {
+  const screenX =
+    Math.round(tutorialNpc.x - camX);
+
+  const screenY =
+    Math.round(tutorialNpc.y - camY);
+
+  ctx.fillStyle =
+    "rgba(34, 46, 28, .32)";
+
+  ctx.fillRect(
+    screenX - 5,
+    screenY,
+    10,
+    2
+  );
+
+  ctx.drawImage(
+    tutorialNpcImage,
+    screenX - 8,
+    screenY - 15
+  );
+}
+
+function drawWoodCraftBench(camX, camY) {
+  const screenX =
+    Math.round(
+      woodCraftBench.x - camX
+    );
+
+  const screenY =
+    Math.round(
+      woodCraftBench.y - camY
+    );
+
+  ctx.fillStyle =
+    "rgba(34, 46, 28, .26)";
+
+  ctx.fillRect(
+    screenX - 7,
+    screenY,
+    14,
+    2
+  );
+
+  ctx.drawImage(
+    woodBenchImage,
+    screenX - 8,
+    screenY - 15
+  );
+}
+
+function drawStaticPixelText(
+  text,
+  centerX,
+  y,
+  color = "#fff3b0",
+  scale = 1
+) {
+  const value =
+    String(text).toUpperCase();
+
+  const charW = 3 * scale;
+  const gap = scale;
+  const spaceW = 2 * scale;
+
+  let totalWidth = 0;
+
+  for (const ch of value) {
+    totalWidth +=
+      ch === " "
+        ? spaceW
+        : charW;
+
+    totalWidth += gap;
+  }
+
+  totalWidth =
+    Math.max(0, totalWidth - gap);
+
+  let cursorX =
+    Math.round(
+      centerX - totalWidth / 2
+    );
+
+  const startY =
+    Math.round(y);
+
+  for (const ch of value) {
+    if (ch === " ") {
+      cursorX +=
+        spaceW + gap;
+      continue;
+    }
+
+    const glyph =
+      FLOAT_GLYPHS[ch];
+
+    if (!glyph) {
+      cursorX +=
+        charW + gap;
+      continue;
+    }
+
+    ctx.fillStyle = "#30251e";
+
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (
+          glyph[row][col] !== "1"
+        ) {
+          continue;
+        }
+
+        const px =
+          cursorX + col * scale;
+
+        const py =
+          startY + row * scale;
+
+        ctx.fillRect(
+          px - 1,
+          py - 1,
+          scale + 2,
+          scale + 2
+        );
+      }
+    }
+
+    ctx.fillStyle = color;
+
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (
+          glyph[row][col] !== "1"
+        ) {
+          continue;
+        }
+
+        ctx.fillRect(
+          cursorX + col * scale,
+          startY + row * scale,
+          scale,
+          scale
+        );
+      }
+    }
+
+    cursorX +=
+      charW + gap;
+  }
+}
+
+function drawInteractionPrompt(
+  camX,
+  camY
+) {
+  if (inventoryOpen || shopOpen) return;
+
+  const interaction =
+    nearbySpawnInteraction();
+
+  if (!interaction) return;
+
+  const screenX =
+    Math.round(
+      interaction.x - camX
+    );
+
+  const screenY =
+    Math.round(
+      interaction.y - camY
+    );
+
+  drawStaticPixelText(
+    interaction.kind === "npc"
+      ? "F TALK"
+      : "F CRAFT",
+    screenX,
+    screenY - 24,
+    "#fff3b0",
+    1
+  );
+}
+
 
 const REMOTE_PLAYER_DRAW_FIELDS = [
   "x",
@@ -13271,6 +15867,28 @@ function buildWorldDrawables(camX, camY) {
     addDrawable(drawables, house.y, () => drawHouse(house, camX, camY));
   }
 
+  if (currentMapId === "spawn") {
+    addDrawable(
+      drawables,
+      tutorialNpc.y,
+      () =>
+        drawTutorialNpc(
+          camX,
+          camY
+        )
+    );
+
+    addDrawable(
+      drawables,
+      woodCraftBench.y,
+      () =>
+        drawWoodCraftBench(
+          camX,
+          camY
+        )
+    );
+  }
+
   for (const flower of harvestFlowers) {
     addDrawable(
       drawables,
@@ -13365,6 +15983,14 @@ function buildWorldDrawables(camX, camY) {
   }
 
   for (const ghost of ghosts) {
+    if (
+      !naturalEnemyBelongsToCurrentMap(
+        ghost
+      )
+    ) {
+      continue;
+    }
+
     // Small foreground bias keeps hovering ghosts readable in dense grass.
     addDrawable(
       drawables,
@@ -13468,6 +16094,7 @@ function drawForegroundLayer(camX, camY) {
 
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
+  drawInteractionPrompt(camX, camY);
 }
 
 class GameRenderer {
@@ -13533,6 +16160,21 @@ class GameApp {
     requestAnimationFrame(this.loop);
   }
 }
+
+console.log(
+  "WORLD_CONTENT client registry:",
+  {
+    version: WORLD_CONTENT?.version,
+    meadowGhosts:
+      (WORLD_CONTENT?.maps?.meadow?.enemySpawns || [])
+        .filter(spawn => spawn.type === "ghost")
+        .map(spawn => spawn.id),
+    ghostGroveGhosts:
+      (WORLD_CONTENT?.maps?.ghostGrove?.enemySpawns || [])
+        .filter(spawn => spawn.type === "ghost")
+        .map(spawn => spawn.id)
+  }
+);
 
 applySharedWorldContentToClientMaps();
 assignPersistentEntityIds();

@@ -31,6 +31,7 @@
           {
             id: "meadow:slime:1",
             type: "slime",
+            level: 1,
             x: 265,
             y: 228,
             phase: 0.0
@@ -38,6 +39,7 @@
           {
             id: "meadow:slime:2",
             type: "slime",
+            level: 1,
             x: 82,
             y: 292,
             phase: 0.9,
@@ -47,6 +49,7 @@
           {
             id: "meadow:slime:3",
             type: "slime",
+            level: 1,
             x: 112,
             y: 318,
             phase: 2.2,
@@ -56,25 +59,12 @@
           {
             id: "meadow:slime:4",
             type: "slime",
+            level: 1,
             x: 143,
             y: 291,
             phase: 4.1,
             wanderRadiusX: 18,
             wanderRadiusY: 13
-          },
-          {
-            id: "meadow:ghost:1",
-            type: "ghost",
-            x: 525,
-            y: 105,
-            phase: 0.4
-          },
-          {
-            id: "meadow:ghost:2",
-            type: "ghost",
-            x: 540,
-            y: 330,
-            phase: 2.7
           }
         ],
 
@@ -95,6 +85,7 @@
           {
             id: "goblinWoods:goblin:1",
             type: "goblin",
+            level: 3,
             x: 270,
             y: 150,
             phase: 0.4
@@ -102,6 +93,7 @@
           {
             id: "goblinWoods:goblin:2",
             type: "goblin",
+            level: 3,
             x: 405,
             y: 215,
             phase: 2.0
@@ -109,9 +101,35 @@
           {
             id: "goblinWoods:goblin:3",
             type: "goblin",
+            level: 3,
             x: 500,
             y: 300,
             phase: 4.1
+          }
+        ],
+
+        collision: {
+          waterRects: []
+        }
+      },
+
+      ghostGrove: {
+        enemySpawns: [
+          {
+            id: "ghostGrove:ghost:1",
+            type: "ghost",
+            level: 5,
+            x: 235,
+            y: 170,
+            phase: 0.4
+          },
+          {
+            id: "ghostGrove:ghost:2",
+            type: "ghost",
+            level: 5,
+            x: 430,
+            y: 245,
+            phase: 2.7
           }
         ],
 
@@ -122,7 +140,10 @@
     };
 
     return Object.freeze({
-      version: 1,
+      // Bump this whenever shared map/enemy placement changes. The browser
+      // loads this file with the matching version in its URL so an old cached
+      // registry cannot disagree with the running Node server.
+      version: 3,
       maps
     });
   }
