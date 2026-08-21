@@ -539,3 +539,60 @@ Fix:
 
 This preserves multiplayer weapon animations, Hurl carry poses, reflections,
 and all v0.6.10 combat progression changes.
+
+
+## v0.6.10.2 original Sword restored
+
+The pre-Wood-Sword weapon art was recovered exactly from the older v0.6.6
+build and reintroduced as a completely separate weapon.
+
+Weapon indices remain backward-compatible:
+- 0 Wood Sword
+- 1 Axe
+- 2 Fire Wand
+- 3 Rain Wand
+- 4 Katana
+- 5 Sword
+
+Sword:
+- exact original 16x16 sprite
+- normal sword swing / cutting behavior
+- PWR 10
+- +0.55 damage per STR
+- +0.25 damage per DEX
+- physical damage type
+- available in the NPC shop for the current test price of 1 Coin
+- ownership-driven Inventory / Gear visibility
+- assignable to any hotbar slot
+- synced and rendered for remote multiplayer players
+
+Wood Sword remains unchanged as the tutorial-crafted first weapon.
+
+COMBAT_BALANCE version bumped from 1 to 2.
+
+
+## v0.6.10.3 map-bound Rain / Blink cleanup
+
+Rain Cloud and Jester Blink decoys now end immediately when their caster leaves
+the map.
+
+- local map transitions already clear the caster's own transient effects;
+- server detects the caster's map change and broadcasts an
+  `ownerTransientCleanup` event to players still on the OLD map;
+- old-map clients immediately remove that owner's Rain Cloud, travelling Rain
+  Orb, and Jester decoy;
+- remote player map-change handling performs the same cleanup as a fallback;
+- disconnecting also clears all caster-owned Rain/Blink visuals.
+
+Blink's gameplay taunt is now map-bound too:
+- Slime, Goblin, and Ghost decoy taunts track the caster player ID;
+- changing maps or disconnecting immediately cancels those taunts.
+
+### Balance constructor correction
+While validating this patch, a v0.6.10 constructor regression was found:
+Goblin/Ghost runtime HP and some client movement defaults did not match the
+intended balance. Client and server now agree on:
+- Goblin: 90 HP, speed 20, chase 34, detect 90, leash 120
+- Ghost: 150 HP, speed 10, chase 32, detect 110, leash 145
+
+The restored original Sword from v0.6.10.2 is retained.

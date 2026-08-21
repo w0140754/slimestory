@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 1;
+    const VERSION = 2;
 
     const LEVEL_GAP_PENALTY_PER_LEVEL = 0.07;
     const MIN_LEVEL_MULTIPLIER = 0.45;
@@ -66,6 +66,16 @@
         damageType: "physical",
         strengthScale: 0.30,
         dexScale: 0.65,
+        intScale: 0
+      }),
+
+      Object.freeze({
+        id: "weapon_oldSword",
+        name: "Sword",
+        power: 10,
+        damageType: "physical",
+        strengthScale: 0.55,
+        dexScale: 0.25,
         intScale: 0
       })
     ]);

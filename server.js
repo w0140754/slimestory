@@ -536,6 +536,7 @@ const SHOP_ITEM_IDS = new Set([
   "weapon_wand",
   "weapon_rainWand",
   "weapon_katana",
+  "weapon_oldSword",
 
   "hat_original",
   "hat_blueCap",
@@ -1454,8 +1455,8 @@ function makeServerGoblin(spawn) {
     wanderRadiusX: 24,
     wanderRadiusY: 18,
 
-    maxHp: 150,
-    hp: 150,
+    maxHp: 90,
+    hp: 90,
     alive: true,
     respawnTime: 0,
 
@@ -1480,6 +1481,7 @@ function makeServerGoblin(spawn) {
     tauntTime: 0,
     tauntX: x,
     tauntY: y,
+    tauntOwnerId: null,
 
     lastDamagePlayerId: null
   };
@@ -1519,8 +1521,8 @@ function makeServerGhost(spawn) {
     wanderAngle: Math.random() * Math.PI * 2,
     wanderTimer: 0.8 + Math.random() * 1.2,
 
-    maxHp: 90,
-    hp: 90,
+    maxHp: 150,
+    hp: 150,
     alive: true,
     respawnTime: 0,
 
@@ -1534,6 +1536,7 @@ function makeServerGhost(spawn) {
     tauntTime: 0,
     tauntX: x,
     tauntY: y,
+    tauntOwnerId: null,
 
     lastDamagePlayerId: null
   };
@@ -1843,6 +1846,7 @@ function resetServerGoblin(goblin) {
   goblin.knockbackY = 0;
 
   goblin.tauntTime = 0;
+  goblin.tauntOwnerId = null;
   goblin.lastDamagePlayerId = null;
 }
 
@@ -1869,6 +1873,7 @@ function resetServerGhost(ghost) {
   ghost.knockbackY = 0;
 
   ghost.tauntTime = 0;
+  ghost.tauntOwnerId = null;
   ghost.lastDamagePlayerId = null;
 }
 
@@ -3112,6 +3117,7 @@ function handleSharedEnemyAction(
     );
 
     enemy.tauntTime = 4.8;
+    enemy.tauntOwnerId = playerId;
     enemy.aggroTime = enemy.aggroDuration;
     return;
   }
@@ -4976,6 +4982,57 @@ function sanitizeVisualEffectPayload(
   return null;
 }
 
+function clearPlayerOwnedTransientWorldState(
+  playerId,
+  mapId = null
+) {
+  for (const slime of sharedSlimes) {
+    if (
+      slime.tauntOwnerId !== playerId ||
+      (mapId && slime.mapId !== mapId)
+    ) {
+      continue;
+    }
+
+    slime.tauntTime = 0;
+    slime.tauntOwnerId = null;
+  }
+
+  for (const enemy of [
+    ...sharedGoblins,
+    ...sharedGhosts
+  ]) {
+    if (
+      enemy.tauntOwnerId !== playerId ||
+      (mapId && enemy.mapId !== mapId)
+    ) {
+      continue;
+    }
+
+    enemy.tauntTime = 0;
+    enemy.tauntOwnerId = null;
+  }
+}
+
+function broadcastOwnerTransientCleanup(
+  playerId,
+  mapId,
+  excludeSocket = null
+) {
+  if (!mapId) return;
+
+  broadcast(
+    {
+      type: "visualEffect",
+      senderId: playerId,
+      mapId,
+      effect: "ownerTransientCleanup",
+      payload: {}
+    },
+    excludeSocket
+  );
+}
+
 function handleVisualEffect(
   playerId,
   socket,
@@ -5070,7 +5127,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     hatIndex: clampInteger(source.hatIndex, -1, 6, -1),
     shirtIndex: clampInteger(source.shirtIndex, -1, 3, -1),
     pantsIndex: clampInteger(source.pantsIndex, -1, 3, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 4, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 5, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -5392,11 +5449,34 @@ wss.on("connection", socket => {
       message.player &&
       typeof message.player === "object"
     ) {
+      const previousState =
+        players.get(id);
+
       const cleanState = sanitizePlayerState(
         id,
         message.player,
-        players.get(id)
+        previousState
       );
+
+      const mapChanged =
+        Boolean(
+          previousState &&
+          previousState.mapId !==
+            cleanState.mapId
+        );
+
+      if (mapChanged) {
+        clearPlayerOwnedTransientWorldState(
+          id,
+          previousState.mapId
+        );
+
+        broadcastOwnerTransientCleanup(
+          id,
+          previousState.mapId,
+          socket
+        );
+      }
 
       players.set(id, cleanState);
 
@@ -5486,6 +5566,22 @@ wss.on("connection", socket => {
   });
 
   socket.on("close", () => {
+    const previousState =
+      players.get(id);
+
+    if (previousState) {
+      clearPlayerOwnedTransientWorldState(
+        id,
+        previousState.mapId
+      );
+
+      broadcastOwnerTransientCleanup(
+        id,
+        previousState.mapId,
+        socket
+      );
+    }
+
     players.delete(id);
 
     broadcast({
