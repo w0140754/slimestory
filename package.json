@@ -1,8 +1,8 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.11",
+  "version": "0.6.11.12",
   "private": true,
-  "description": "Slime Story: lightweight server-authoritative tree and grass regrowth with pop animations",
+  "description": "Slime Story: Ranger set shop update, early shop unlock, F9 debug coins, and live bow build",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

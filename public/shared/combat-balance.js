@@ -77,6 +77,16 @@
         strengthScale: 0.55,
         dexScale: 0.25,
         intScale: 0
+      }),
+
+      Object.freeze({
+        id: "weapon_bow",
+        name: "Wood Bow",
+        power: 9,
+        damageType: "physical",
+        strengthScale: 0.15,
+        dexScale: 0.85,
+        intScale: 0
       })
     ]);
 
@@ -189,7 +199,8 @@
     ) {
       if (
         source === "melee" ||
-        source === "basic"
+        source === "basic" ||
+        source === "arrow"
       ) {
         return WEAPON_PROFILES[
           Math.floor(Number(weaponIndex))

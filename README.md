@@ -704,3 +704,242 @@ behavior.
 
 All v0.6.10.4 Rain self-cast, map-transition cleanup, combat progression,
 hotbar, shop, Ghost Grove, and multiplayer weapon fixes remain intact.
+
+
+## v0.6.11.1 Wood Bow visual test
+
+This build deliberately tests only how archery looks on the existing
+front-facing layered player sprite. There are no arrows, hits, damage, ammo,
+marking, or bow skills yet.
+
+### Test controls
+- Press F8 at any time to grant and immediately equip the Wood Bow.
+- Move the mouse to aim.
+- Hold left mouse to draw.
+- Release left mouse to let the string snap back.
+- Nothing is fired yet.
+
+The bow is also a normal owned Inventory/Gear/hotbar item after F8 grants it.
+
+### Art / pose
+Uses the exact uploaded 16x16 horizontal `wood_bow.png`.
+
+Because the supplied arch is horizontal:
+- its local upper/curved side is treated as forward;
+- the arch rotates perpendicular to the aim direction;
+- rotation is quantized to 22.5-degree increments to keep the tiny pixel art
+  relatively crisp;
+- the arm on the cursor side presents the bow;
+- the opposite existing arm sprite pulls back across the torso;
+- no new player-body art is used.
+
+The drawstring is procedural:
+- at zero draw it connects the two bow tips;
+- while holding click, the string centre moves toward the pulling hand;
+- full draw takes about 0.58 sec;
+- release snaps it back quickly.
+
+### Multiplayer
+`weaponIndex: 6`, aim angle, draw amount, drawing state, and release state are
+sanitized/rebroadcast by the server so another player can watch the bow pose
+during the visual test.
+
+The Wood Bow is intentionally not sold in the NPC shop yet and has no combat
+profile. F8 is the temporary test entry point.
+
+All v0.6.11 environment regrowth and earlier combat/multiplayer fixes are
+retained.
+
+
+## v0.6.11.2 Wood Bow pose pass 2
+
+Second visual-only archery pass based on the first in-game screenshots.
+
+Problems in pass 1:
+- the opposite/draw arm was lifted even while the bow was completely undrawn;
+- the draw arm was translated as an entire 16x16 layer;
+- at high draw amounts that translation visibly disconnected the arm from the
+  shoulder/body;
+- the string nock was interpolating toward that fictional translated hand
+  position.
+
+Pass 2:
+- undrawn bow: the opposite arm stays in its normal resting pose;
+- bow-holding arm movement was reduced to a maximum ~1 pixel nudge;
+- once drawing begins, the opposite arm ROTATES around a shoulder pivot rather
+  than translating away from the body;
+- left/right draw arms use mirrored shoulder pivots;
+- the arm pose is quantized into small retro animation steps;
+- the string now calculates the actual hand location produced by the rotated
+  arm and attaches its centre/nock to that point;
+- the string performs a short grab/ease during the first ~16% of the draw so
+  the transition from relaxed bow to drawing pose is not instantaneous.
+
+Still intentionally visual-only:
+- F8 grants/equips Wood Bow
+- hold left mouse to draw
+- release snaps back
+- no arrow, damage, ammo, Marked Target, or bow combat logic yet
+
+Everything from v0.6.11.1 and the v0.6.11 environment-regrowth baseline is
+retained.
+
+
+## v0.6.11.3 Wood Bow pose pass 3
+
+Follow-up to pass 2 after screenshot review.
+
+Problems in v0.6.11.2:
+- as draw increased, the off-hand actually moved CLOSER to the bow instead of
+  farther away;
+- strongly upward aim still looked awkward because the bow sat too far out at
+  the side of the body.
+
+This pass changes:
+- flipped draw-arm rotation direction so the draw hand retreats away from the
+  bow as draw strength increases;
+- when aiming strongly upward, the bow arm now tucks inward toward the face and
+  lifts upward a bit, so the bow reads more like it is being drawn over the
+  face/head area;
+- sideward bow-arm displacement is reduced during steep upward aim so the pose
+  does not fan outward so much.
+
+Still visual-only:
+- F8 grants/equips the Wood Bow
+- hold mouse to draw
+- release to relax
+- no arrow projectile or bow combat yet
+
+
+## v0.6.11.4 Wood Bow resting pose
+
+Bow visual-test pass 4.
+
+Changed idle behavior:
+- merely moving the mouse no longer makes the equipped bow rotate around;
+- while undrawn, the bow stays in the player's left hand in one fixed
+  vertical/resting orientation;
+- the resting bow sits a little lower than the active aiming pose;
+- the opposite arm remains in its ordinary idle position.
+
+Changed aiming transition:
+- pressing left mouse sets the aim direction and begins the draw;
+- while the button remains held, moving the mouse updates aim normally;
+- release keeps the last aiming pose while the string snaps back;
+- once the draw/release animation fully settles, the bow returns to the fixed
+  resting pose.
+
+Still visual-only:
+- F8 grants/equips the Wood Bow
+- no arrow projectile or damage yet
+
+
+## v0.6.11.5 Wood Bow geometry pass
+
+This pass addresses the v0.6.11.4 screenshot/video directly.
+
+### Draw direction
+The draw arm no longer uses a left/right-specific rotation guess.
+
+It now follows one physical rule:
+
+`draw direction = opposite aim direction`
+
+So:
+- aim left -> string hand retreats right
+- aim right -> string hand retreats left
+- aim up -> string hand retreats DOWN
+- aim down -> string hand retreats up
+
+The existing arm layer is still rotated around its shoulder, so the arm remains
+attached to the torso throughout the draw.
+
+### Upward aiming
+Strong upward aim now uses a shoulder-pivoted BOW arm too.
+
+Instead of translating that entire arm upward/off-body:
+- the holding arm pivots inward and upward from its shoulder;
+- its actual rotated hand moves across/in front of the face;
+- the bow is anchored to that exact hand position;
+- this raises the relaxed string high enough that an upward shot can genuinely
+  be pulled downward toward the player.
+
+### Resting pose
+- neither arm is displaced while the bow is idle;
+- the bow remains in the normal left hand;
+- it hangs at a modest 22.5-degree diagonal from vertical instead of looking
+  like a perfectly straight walking stick;
+- cursor movement still does nothing until left mouse is pressed.
+
+Still visual-only: no arrows or damage yet.
+
+
+## v0.6.11.6 Horizontal bow rest pose
+
+Small follow-up to the bow visual test.
+
+Changed:
+- while idle / not drawing, the bow no longer hangs in a vertical-ish staff pose;
+- instead it stays in a true horizontal carry pose, with the grip still anchored
+  directly in the player's hand;
+- aiming / drawing behavior is otherwise unchanged from v0.6.11.5.
+
+Still visual-only:
+- F8 grants/equips the Wood Bow
+- cursor movement does nothing until left mouse is pressed
+- no arrows or damage yet
+
+
+## v0.6.11.7 Vertical bow rest + hand overlay
+
+Small follow-up to the bow visual test.
+
+Changed:
+- idle / non-drawing bow pose is back to straight vertical;
+- when idle, the holding arm is redrawn after the bow so the player's hand sits
+  visually on top of the grip/handle;
+- active aiming / draw behavior is unchanged from v0.6.11.5.
+
+Still visual-only:
+- F8 grants/equips the Wood Bow
+- cursor movement does nothing until left mouse is pressed
+- no arrows or damage yet
+
+
+## v0.6.11.8 Idle bow nudge
+
+Small follow-up tweak to the vertical rest pose.
+
+Changed:
+- idle / non-drawing bow is nudged **1 pixel to the right**;
+- active aiming / draw pose is unchanged;
+- the idle hand-over-grip overlay remains in place.
+
+
+## v0.6.11.9 Idle bow right/up nudge
+
+Small follow-up tweak to the vertical rest pose.
+
+Changed:
+- idle / non-drawing bow is nudged **1 more pixel right** (2 px total from the original vertical rest pose);
+- idle / non-drawing bow is also nudged **1 pixel up**;
+- active aiming / draw pose is unchanged;
+- the idle hand-over-grip overlay remains in place.
+
+
+## v0.6.11.10 Bow aim guide
+
+Added a first pass at a subtle bow aiming UI helper.
+
+Changed:
+- while the bow is **actively being drawn**, the local player now sees a short dotted guide in the current firing direction;
+- the guide is intentionally subtle: tiny pixel dots only, not a full trajectory line;
+- the guide length scales with draw amount (roughly 2 to 5 dots);
+- the guide is **local-only** and does not render for remote players or reflections;
+- idle bow behaviour and bow pose are otherwise unchanged.
+
+## v6.11.11 – Bow live fire
+- Bow now fires real arrows on mouse release.
+- Arrow projectiles are synchronized to other players like other combat visuals.
+- Arrows can hit slimes, goblins, and ghosts using the shared combat progression formula.
+- Added a bow weapon profile so dexterity-based ranged damage works with monster level scaling and ghost physical resistance.

@@ -631,16 +631,19 @@ const SHOP_ITEM_IDS = new Set([
   "hat_ninja",
   "hat_knight",
   "hat_bandana",
+  "hat_ranger",
 
   "shirt_traveler",
   "shirt_jester",
   "shirt_ninja",
   "shirt_knight",
+  "shirt_ranger",
 
   "pants_traveler",
   "pants_jester",
   "pants_ninja",
-  "pants_knight"
+  "pants_knight",
+  "pants_ranger"
 ]);
 
 function handleShopPurchase(
@@ -681,7 +684,7 @@ function handleShopPurchase(
     return;
   }
 
-  // These two are guaranteed by the tutorial by the time the shop unlocks.
+  // The Axe and Wood Sword remain tutorial-only items and are never sold.
   if (
     itemId === "weapon_axe" ||
     itemId === "weapon_sword" ||
@@ -719,6 +722,27 @@ function handleShopPurchase(
     type: "shopPurchaseResult",
     itemId,
     success: true,
+    totalCoins: playerState.coins
+  });
+}
+
+const DEBUG_COIN_GRANT = 10;
+
+function handleDebugGrantCoins(
+  playerId,
+  socket
+) {
+  const playerState = players.get(playerId);
+  if (!playerState) return;
+
+  playerState.coins =
+    (Number.isFinite(playerState.coins)
+      ? playerState.coins
+      : 0) + DEBUG_COIN_GRANT;
+
+  sendJson(socket, {
+    type: "debugCoinGrant",
+    amount: DEBUG_COIN_GRANT,
     totalCoins: playerState.coins
   });
 }
@@ -3059,6 +3083,26 @@ function handleSharedEnemyDamageAction(
 
     knockback =
       enemy.type === "goblin" ? 17 : 14;
+  } else if (source === "arrow") {
+    if (
+      playerState.weaponIndex !== 6 ||
+      Math.hypot(
+        enemy.x - playerState.x,
+        enemy.y - playerState.y
+      ) > 320
+    ) {
+      return;
+    }
+
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "arrow"
+      );
+
+    knockback =
+      enemy.type === "goblin" ? 20 : 16;
   } else if (source === "fireball") {
     if (
       Math.hypot(
@@ -4678,6 +4722,25 @@ function handleSlimeDamageAction(playerId, slime, payload) {
       );
 
     knockback = 18;
+  } else if (source === "arrow") {
+    if (
+      playerState.weaponIndex !== 6 ||
+      Math.hypot(
+        slime.x - playerState.x,
+        slime.y - playerState.y
+      ) > 320
+    ) {
+      return;
+    }
+
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        slime,
+        "arrow"
+      );
+
+    knockback = 22;
   } else if (source === "fireball") {
     if (
       Math.hypot(
@@ -4952,7 +5015,7 @@ function sanitizeVisualPoint(value, fallback = 0) {
 }
 
 function sanitizeVisualVelocity(value) {
-  return clampNumber(value, -220, 220, 0);
+  return clampNumber(value, -320, 320, 0);
 }
 
 function sanitizeVisualEffectPayload(
@@ -4964,7 +5027,9 @@ function sanitizeVisualEffectPayload(
       projectileType:
         payload.projectileType === "rainWand"
           ? "rainWand"
-          : "wand",
+          : payload.projectileType === "arrow"
+            ? "arrow"
+            : "wand",
 
       x: sanitizeVisualPoint(payload.x),
       y: sanitizeVisualPoint(payload.y),
@@ -5008,7 +5073,9 @@ function sanitizeVisualEffectPayload(
       projectileType:
         payload.projectileType === "rainWand"
           ? "rainWand"
-          : "wand",
+          : payload.projectileType === "arrow"
+            ? "arrow"
+            : "wand",
 
       x: sanitizeVisualPoint(payload.x),
       y: sanitizeVisualPoint(payload.y)
@@ -5076,21 +5143,21 @@ function sanitizeVisualEffectPayload(
       hatIndex: clampInteger(
         payload.hatIndex,
         -1,
-        6,
+        7,
         -1
       ),
 
       shirtIndex: clampInteger(
         payload.shirtIndex,
         -1,
-        3,
+        4,
         -1
       ),
 
       pantsIndex: clampInteger(
         payload.pantsIndex,
         -1,
-        3,
+        4,
         -1
       )
     };
@@ -5241,10 +5308,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     x: clampNumber(source.x, 0, 640, 320),
     y: clampNumber(source.y, 0, 400, 200),
 
-    hatIndex: clampInteger(source.hatIndex, -1, 6, -1),
-    shirtIndex: clampInteger(source.shirtIndex, -1, 3, -1),
-    pantsIndex: clampInteger(source.pantsIndex, -1, 3, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 5, -1),
+    hatIndex: clampInteger(source.hatIndex, -1, 7, -1),
+    shirtIndex: clampInteger(source.shirtIndex, -1, 4, -1),
+    pantsIndex: clampInteger(source.pantsIndex, -1, 4, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 6, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -5303,6 +5370,26 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         source.attackAimAngle,
         -Math.PI * 4,
         Math.PI * 4,
+        0
+      ),
+
+    // Presentation-only bow prototype state.
+    bowDrawing:
+      Boolean(source.bowDrawing),
+
+    bowDrawAmount:
+      clampNumber(
+        source.bowDrawAmount,
+        0,
+        1,
+        0
+      ),
+
+    bowReleaseTime:
+      clampNumber(
+        source.bowReleaseTime,
+        0,
+        0.25,
         0
       ),
 
@@ -5670,6 +5757,14 @@ wss.on("connection", socket => {
         id,
         socket,
         message
+      );
+      return;
+    }
+
+    if (message.type === "debugGrantCoins") {
+      handleDebugGrantCoins(
+        id,
+        socket
       );
       return;
     }

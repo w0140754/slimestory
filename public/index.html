@@ -1199,6 +1199,7 @@
       <div class="inventory-grid">
         <div class="menu-item" data-owned-item="weapon_sword" data-hotbar-assignable="true"><img id="inventorySwordImg" alt="Wood Sword" /><span>Wood Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_oldSword" data-hotbar-assignable="true"><img id="inventoryOldSwordImg" alt="Sword" /><span>Sword</span></div>
+        <div class="menu-item" data-owned-item="weapon_bow" data-hotbar-assignable="true"><img id="inventoryBowImg" alt="Wood Bow" /><span>Wood Bow</span></div>
         <div class="menu-item" data-owned-item="weapon_katana" data-hotbar-assignable="true"><img id="inventoryKatanaImg" alt="Katana" /><span>Katana</span></div>
         <div class="menu-item" data-owned-item="weapon_axe" data-hotbar-assignable="true"><img id="inventoryAxeImg" alt="Axe" /><span>Axe</span></div>
         <div class="menu-item" data-owned-item="weapon_wand" data-hotbar-assignable="true"><img id="inventoryWandImg" alt="Wand" /><span>Wand</span></div>
@@ -1218,6 +1219,9 @@
         <div class="menu-item" data-owned-item="hat_knight"><img id="inventoryKnightHatImg" alt="Knight Helm" /><span>Knight Helm</span></div>
         <div class="menu-item" data-owned-item="shirt_knight"><img id="inventoryKnightShirtImg" alt="Knight Chest" /><span>Knight Chest</span></div>
         <div class="menu-item" data-owned-item="pants_knight"><img id="inventoryKnightPantsImg" alt="Knight Greaves" /><span>Knight Greaves</span></div>
+        <div class="menu-item" data-owned-item="hat_ranger"><img id="inventoryRangerHatImg" alt="Ranger Hat" /><span>Ranger Hat</span></div>
+        <div class="menu-item" data-owned-item="shirt_ranger"><img id="inventoryRangerShirtImg" alt="Ranger Shirt" /><span>Ranger Shirt</span></div>
+        <div class="menu-item" data-owned-item="pants_ranger"><img id="inventoryRangerPantsImg" alt="Ranger Pants" /><span>Ranger Pants</span></div>
       </div>
       <div id="inventoryGearEmpty" class="inventory-empty">No gear or items</div>
 
@@ -1293,6 +1297,9 @@
               <button class="equip-choice hat-choice" data-hat-index="6" data-owned-item="hat_bandana">
                 <img id="equipBandanaHatImg" alt="Bandana" /><span>Bandana</span>
               </button>
+              <button class="equip-choice hat-choice" data-hat-index="7" data-owned-item="hat_ranger">
+                <img id="equipRangerHatImg" alt="Ranger Hat" /><span>Ranger Hat</span>
+              </button>
             </div>
           </div>
 
@@ -1321,6 +1328,9 @@
               <button class="equip-choice weapon-choice" data-weapon-index="5" data-owned-item="weapon_oldSword">
                 <img id="equipOldSwordImg" alt="Sword" /><span>Sword</span>
               </button>
+              <button class="equip-choice weapon-choice" data-weapon-index="6" data-owned-item="weapon_bow">
+                <img id="equipBowImg" alt="Wood Bow" /><span>Wood Bow</span>
+              </button>
             </div>
           </div>
 
@@ -1342,6 +1352,9 @@
               <button class="equip-choice shirt-choice" data-shirt-index="3" data-owned-item="shirt_knight">
                 <img id="equipKnightShirtImg" alt="Knight Shirt" /><span>Knight</span>
               </button>
+              <button class="equip-choice shirt-choice" data-shirt-index="4" data-owned-item="shirt_ranger">
+                <img id="equipRangerShirtImg" alt="Ranger Shirt" /><span>Ranger</span>
+              </button>
             </div>
           </div>
 
@@ -1362,6 +1375,9 @@
               </button>
               <button class="equip-choice pants-choice" data-pants-index="3" data-owned-item="pants_knight">
                 <img id="equipKnightPantsImg" alt="Knight Pants" /><span>Knight</span>
+              </button>
+              <button class="equip-choice pants-choice" data-pants-index="4" data-owned-item="pants_ranger">
+                <img id="equipRangerPantsImg" alt="Ranger Pants" /><span>Ranger</span>
               </button>
             </div>
           </div>
@@ -1654,6 +1670,12 @@ const GAME_CONFIG = Object.freeze({
       max: 7,
       hitFlash: 0.10,
       shakeTime: 0.12
+    },
+    arrow: {
+      min: 6,
+      max: 9,
+      hitFlash: 0.11,
+      shakeTime: 0.13
     }
   }
 });
@@ -1722,7 +1744,15 @@ const sprite = {
   knightLeftLeg: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAS0lEQVQ4T2NkoBAwwllkglEDRsNg8KaD/9BUCgN4Uys2yf8bNmxgePXqFUNaWhqIj00NHGCTBBuwf/9+hokTJ4L42NTAATZJkrwAAMu8EBEqPCfAAAAAEGRlQkcwRUFFNzVEMEM0NUQ3MEQ5jVZ1vQAAAABJRU5ErkJgggAA"),
   knightRightArm: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVQ4T2NkoBAwwllkglEDhmoY/Ed2OanR+H/WrFkMaWlpIDZYL8kGfD+4hoHTPgTEJssAEKDICxhgGBgAAK0SChH2fQqwAAAAEGRlQkcxMzkwQTIyNzZCQUVFMDFFCBnlJgAAAABJRU5ErkJgggAA"),
   knightRightLeg: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQklEQVQ4T2NkoBAwwllkglEDRsNg6KSD/9BUCwMoqZeYpPx/1qxZDGJiYgwBAQEgPukG5OfnMzg6OpJvAJwFASh6APiAChE9RSQcAAAAEGRlQkc0RkU0MkVFRjE3QTQ5MjlDQ8iSdwAAAABJRU5ErkJgggAA"),
-  knightTorso: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAh0lEQVQ4T2NkoBAwwllkglEDaBQG/3GIgwCGHLrC//n5+QwTJ06ECyADJDm4PnQDQOD/rFmzGHT/9TC8lOgCC4i/KGO4zFTCkJaWBuLidQEIUG4AyKnajLMZGLQmQESuFTBc/Z+K4XwQwGqAIB8fg5y8PMOjhw/BAjD2+0+fQFyCBpAEBt4AAEz9MBE7/ubeAAAAEGRlQkdDRDY5OENFRDk2RUU0QzFGAdyrmwAAAABJRU5ErkJgggAA")
+  knightTorso: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAh0lEQVQ4T2NkoBAwwllkglEDaBQG/3GIgwCGHLrC//n5+QwTJ06ECyADJDm4PnQDQOD/rFmzGHT/9TC8lOgCC4i/KGO4zFTCkJaWBuLidQEIUG4AyKnajLMZGLQmQESuFTBc/Z+K4XwQwGqAIB8fg5y8PMOjhw/BAjD2+0+fQFyCBpAEBt4AAEz9MBE7/ubeAAAAEGRlQkdDRDY5OENFRDk2RUU0QzFGAdyrmwAAAABJRU5ErkJgggAA"),
+
+  // User-drawn bowman outfit, now the Ranger armor set.
+  rangerHat: loadImage("assets/ranger_hat.png"),
+  rangerTorso: loadImage("assets/ranger_torso.png"),
+  rangerLeftArm: loadImage("assets/ranger_leftarm.png"),
+  rangerRightArm: loadImage("assets/ranger_rightarm.png"),
+  rangerLeftLeg: loadImage("assets/ranger_leftleg.png"),
+  rangerRightLeg: loadImage("assets/ranger_rightleg.png")
 };
 
 
@@ -1736,6 +1766,16 @@ swordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf
 // Restored original pre-Wood-Sword weapon art as its own weapon.
 const oldSwordImage = new Image();
 oldSwordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdElEQVQ4T2NkoBAwwllkgmFmwH8kL4HYuACKt+EaumNMGUqXnAZz2tvbGSQkJKBSCPDixQuGyspKGBesF0T8L3BVZJAWF2F4+vINg35UHQMXOzuDnqEhTCEcXDp/nuHbz5/IBjFSxQUwQFEYkA1GDaBCGAAA194oEUjv6x0AAAAQZGVCRzRFQ0U0RDU3NEUxQzVDQjCb0v2LAAAAAElFTkSuQmCC";
+
+// Player-drawn 16x16 Wood Bow arch. The drawstring is procedural.
+const bowImage = new Image();
+bowImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjUlEQVQ4T2NkoBAwwllkgmFswH+4J1EBhpfRBcAaV+WoMJxP4WOQFpMHCz599ZDBcM4nhrApdyCqkPQhG/C/wkuEgZ/9H0Pl+ndwQWTQHijE8PEnE0PHtjcgLlgvzID/qdZcDLOPfoNyMVwGA2AXIqllBClE1oxLIzqA64G7gATNMADWQ6omDDBqAAMDAJKmJxCluA92AAAAEGRlQkdCMUNFQUU3NzJCNjFENDI3TC6AxwAAAABJRU5ErkJgggAA";
+
+// The supplied bow is horizontal, with its curved centre near the top.
+// Local -Y is treated as the bow's forward/arrow direction.
+const BOW_PIVOT_X = 8;
+const BOW_PIVOT_Y = 6;
+
 
 // Player-drawn 16x16 axe. It uses the same left-edge handle pivot convention
 // as the sword, so the existing stepped swing poses can be reused.
@@ -2980,7 +3020,9 @@ function spawnRemoteBasicProjectileImpact(
   const projectileType =
     payload.projectileType === "rainWand"
       ? "rainWand"
-      : "wand";
+      : payload.projectileType === "arrow"
+        ? "arrow"
+        : "wand";
 
   removeClosestRemoteProjectile(
     basicProjectiles,
@@ -3088,8 +3130,21 @@ function updateCanvasCursor() {
   canvas.style.cursor = "default";
 }
 
-function castBasicProjectile(type, angle) {
-  const startDistance = 11;
+function castBasicProjectile(type, angle, options = {}) {
+  const startDistance =
+    Number.isFinite(Number(options.startDistance))
+      ? Number(options.startDistance)
+      : 11;
+
+  const speed =
+    Number.isFinite(Number(options.speed))
+      ? Number(options.speed)
+      : 154;
+
+  const life =
+    Number.isFinite(Number(options.life))
+      ? Number(options.life)
+      : 1.2;
 
   const projectile = {
     type,
@@ -3102,9 +3157,17 @@ function castBasicProjectile(type, angle) {
       (player.y - 8) +
       Math.sin(angle) * startDistance,
 
-    vx: Math.cos(angle) * 154,
-    vy: Math.sin(angle) * 154,
-    life: 1.2
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    life,
+    angle,
+    drawAmount: Math.max(
+      0,
+      Math.min(
+        1,
+        Number(options.drawAmount) || 0
+      )
+    )
   };
 
   basicProjectiles.push(projectile);
@@ -3122,6 +3185,49 @@ function castBasicProjectile(type, angle) {
       }
     );
   }
+}
+
+function fireBowArrow(drawAmount, angle) {
+  const chargedAmount = Math.max(
+    0,
+    Math.min(1, Number(drawAmount) || 0)
+  );
+
+  if (chargedAmount < 0.08) {
+    return false;
+  }
+
+  const attackingFromShadowHide =
+    player.shadowHidden;
+
+  breakShadowHide();
+
+  player.shadowCritAttack =
+    attackingFromShadowHide;
+
+  const projectileSpeed =
+    168 + chargedAmount * 112;
+
+  const projectileLife =
+    0.58 + chargedAmount * 0.55;
+
+  castBasicProjectile(
+    "arrow",
+    angle,
+    {
+      startDistance: 12,
+      speed: projectileSpeed,
+      life: projectileLife,
+      drawAmount: chargedAmount
+    }
+  );
+
+  player.attackTime = 0.08;
+  player.attackCooldown = 0.42;
+  player.slashTime = 0;
+  player.shadowCritAttack = false;
+
+  return true;
 }
 
 function castRainOrb(targetX, targetY) {
@@ -3886,6 +3992,17 @@ function damageSlimeWithBasicProjectile(slime, projectile) {
   });
 }
 
+function damageSlimeWithArrow(slime, projectile) {
+  if (typeof onlineClient === "undefined") return;
+
+  onlineClient.sendSlimeAction("damage", slime, {
+    source: "arrow",
+    projectileX: projectile.x,
+    projectileY: projectile.y,
+    aimAngle: Math.atan2(projectile.vy, projectile.vx)
+  });
+}
+
 function damageGoblinWithBasicProjectile(goblin, projectile) {
   if (typeof onlineClient === "undefined") return;
 
@@ -3897,6 +4014,22 @@ function damageGoblinWithBasicProjectile(goblin, projectile) {
       source: "basic",
       projectileX: projectile.x,
       projectileY: projectile.y
+    }
+  );
+}
+
+function damageGoblinWithArrow(goblin, projectile) {
+  if (typeof onlineClient === "undefined") return;
+
+  onlineClient.sendSharedEnemyAction(
+    "goblin",
+    "damage",
+    goblin,
+    {
+      source: "arrow",
+      projectileX: projectile.x,
+      projectileY: projectile.y,
+      aimAngle: Math.atan2(projectile.vy, projectile.vx)
     }
   );
 }
@@ -3922,6 +4055,32 @@ function damageGhostWithBasicProjectile(ghost, projectile) {
       source: "basic",
       projectileX: projectile.x,
       projectileY: projectile.y
+    }
+  );
+}
+
+function damageGhostWithArrow(ghost, projectile) {
+  if (ghost.isGraveGhost) {
+    applyRangedHit(
+      ghost,
+      projectile,
+      "ghost",
+      "arrow"
+    );
+    return;
+  }
+
+  if (typeof onlineClient === "undefined") return;
+
+  onlineClient.sendSharedEnemyAction(
+    "ghost",
+    "damage",
+    ghost,
+    {
+      source: "arrow",
+      projectileX: projectile.x,
+      projectileY: projectile.y,
+      aimAngle: Math.atan2(projectile.vy, projectile.vx)
     }
   );
 }
@@ -4279,7 +4438,11 @@ function updateBasicProjectiles(dt) {
       const dy = projectile.y - (slime.y - 6);
 
       if (dx * dx + dy * dy <= 7 * 7) {
-        damageSlimeWithBasicProjectile(slime, projectile);
+        if (projectile.type === "arrow") {
+          damageSlimeWithArrow(slime, projectile);
+        } else {
+          damageSlimeWithBasicProjectile(slime, projectile);
+        }
         impact = true;
         break;
       }
@@ -4293,7 +4456,11 @@ function updateBasicProjectiles(dt) {
         const dy = projectile.y - (goblin.y - 11);
 
         if (dx * dx + dy * dy <= 8 * 8) {
-          damageGoblinWithBasicProjectile(goblin, projectile);
+          if (projectile.type === "arrow") {
+            damageGoblinWithArrow(goblin, projectile);
+          } else {
+            damageGoblinWithBasicProjectile(goblin, projectile);
+          }
           impact = true;
           break;
         }
@@ -4308,7 +4475,11 @@ function updateBasicProjectiles(dt) {
         const dy = projectile.y - (ghost.y - 11);
 
         if (dx * dx + dy * dy <= 8 * 8) {
-          damageGhostWithBasicProjectile(ghost, projectile);
+          if (projectile.type === "arrow") {
+            damageGhostWithArrow(ghost, projectile);
+          } else {
+            damageGhostWithBasicProjectile(ghost, projectile);
+          }
           impact = true;
           break;
         }
@@ -4751,6 +4922,30 @@ function updateFire(dt) {
 function drawBasicProjectile(projectile, camX, camY) {
   const x = Math.round(projectile.x - camX);
   const y = Math.round(projectile.y - camY);
+
+  if (projectile.type === "arrow") {
+    const angle = Math.atan2(
+      Number(projectile.vy) || 0,
+      Number(projectile.vx) || 0
+    );
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    ctx.fillStyle = "#5f4227";
+    ctx.fillRect(-4, -1, 6, 2);
+
+    ctx.fillStyle = "#d2c4a5";
+    ctx.fillRect(2, -1, 2, 2);
+
+    ctx.fillStyle = "#7dc7d8";
+    ctx.fillRect(-5, -2, 1, 1);
+    ctx.fillRect(-5, 1, 1, 1);
+
+    ctx.restore();
+    return;
+  }
 
   if (projectile.type === "rainWand") {
     ctx.fillStyle = "#28597a";
@@ -5753,6 +5948,113 @@ const dummy = {
   hits: 0
 };
 
+function drawLayerAroundPivot(
+  image,
+  baseX,
+  baseY,
+  pivotX,
+  pivotY,
+  angle
+) {
+  ctx.save();
+
+  ctx.translate(
+    Math.round(baseX + pivotX),
+    Math.round(baseY + pivotY)
+  );
+
+  ctx.rotate(angle);
+
+  ctx.drawImage(
+    image,
+    -pivotX,
+    -pivotY
+  );
+
+  ctx.restore();
+}
+
+function rotatedLayerPoint(
+  baseX,
+  baseY,
+  pivotX,
+  pivotY,
+  pointX,
+  pointY,
+  angle
+) {
+  const localX =
+    pointX - pivotX;
+
+  const localY =
+    pointY - pivotY;
+
+  const cosA =
+    Math.cos(angle);
+
+  const sinA =
+    Math.sin(angle);
+
+  return {
+    x:
+      baseX +
+      pivotX +
+      localX * cosA -
+      localY * sinA,
+
+    y:
+      baseY +
+      pivotY +
+      localX * sinA +
+      localY * cosA
+  };
+}
+
+function drawPixelLine(
+  x0,
+  y0,
+  x1,
+  y1,
+  color
+) {
+  x0 = Math.round(x0);
+  y0 = Math.round(y0);
+  x1 = Math.round(x1);
+  y1 = Math.round(y1);
+
+  const dx = Math.abs(x1 - x0);
+  const sx = x0 < x1 ? 1 : -1;
+  const dy = -Math.abs(y1 - y0);
+  const sy = y0 < y1 ? 1 : -1;
+
+  let error = dx + dy;
+
+  ctx.fillStyle = color;
+
+  while (true) {
+    ctx.fillRect(x0, y0, 1, 1);
+
+    if (
+      x0 === x1 &&
+      y0 === y1
+    ) {
+      break;
+    }
+
+    const e2 = error * 2;
+
+    if (e2 >= dy) {
+      error += dy;
+      x0 += sx;
+    }
+
+    if (e2 <= dx) {
+      error += dx;
+      y0 += sy;
+    }
+  }
+}
+
 function angleDifference(a, b) {
   let d = a - b;
 
@@ -5886,6 +6188,7 @@ document.getElementById("inventoryFlowerImg").src = flowerImage.src;
 
 document.getElementById("inventorySwordImg").src = swordImage.src;
 document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
+document.getElementById("inventoryBowImg").src = bowImage.src;
 document.getElementById("inventoryKatanaImg").src = katanaImage.src;
 document.getElementById("inventoryAxeImg").src = axeImage.src;
 document.getElementById("inventoryWandImg").src = wandImage.src;
@@ -5905,9 +6208,13 @@ document.getElementById("inventoryNinjaPantsImg").src = sprite.ninjaLeftLeg.src;
 document.getElementById("inventoryKnightHatImg").src = sprite.knightHat.src;
 document.getElementById("inventoryKnightShirtImg").src = sprite.knightTorso.src;
 document.getElementById("inventoryKnightPantsImg").src = sprite.knightLeftLeg.src;
+document.getElementById("inventoryRangerHatImg").src = sprite.rangerHat.src;
+document.getElementById("inventoryRangerShirtImg").src = sprite.rangerTorso.src;
+document.getElementById("inventoryRangerPantsImg").src = sprite.rangerLeftLeg.src;
 
 document.getElementById("equipSwordImg").src = swordImage.src;
 document.getElementById("equipOldSwordImg").src = oldSwordImage.src;
+document.getElementById("equipBowImg").src = bowImage.src;
 document.getElementById("equipAxeImg").src = axeImage.src;
 document.getElementById("equipWandImg").src = wandImage.src;
 document.getElementById("equipRainWandImg").src = rainWandImage.src;
@@ -5920,16 +6227,19 @@ document.getElementById("equipJesterHatImg").src = sprite.jesterHat.src;
 document.getElementById("equipNinjaHatImg").src = sprite.ninjaHat.src;
 document.getElementById("equipKnightHatImg").src = sprite.knightHat.src;
 document.getElementById("equipBandanaHatImg").src = sprite.bandanaHat.src;
+document.getElementById("equipRangerHatImg").src = sprite.rangerHat.src;
 document.getElementById("equipBaseShirtImg").src = sprite.baseTorso.src;
 document.getElementById("equipTravelerShirtImg").src = sprite.torso.src;
 document.getElementById("equipJesterShirtImg").src = sprite.jesterTorso.src;
 document.getElementById("equipNinjaShirtImg").src = sprite.ninjaTorso.src;
 document.getElementById("equipKnightShirtImg").src = sprite.knightTorso.src;
+document.getElementById("equipRangerShirtImg").src = sprite.rangerTorso.src;
 document.getElementById("equipBasePantsImg").src = sprite.baseLeftLeg.src;
 document.getElementById("equipTravelerPantsImg").src = sprite.leftLeg.src;
 document.getElementById("equipJesterPantsImg").src = sprite.jesterLeftLeg.src;
 document.getElementById("equipNinjaPantsImg").src = sprite.ninjaLeftLeg.src;
 document.getElementById("equipKnightPantsImg").src = sprite.knightLeftLeg.src;
+document.getElementById("equipRangerPantsImg").src = sprite.rangerLeftLeg.src;
 
 slimeFlashImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVklEQVR4nO2TMQ4AIAgDhfj/L+OmoYApcbVjWy9CVMxsvGgWfkUVNLRxOM0QwMzjOloFLETR6EKyHbT0AQcQXhghwRt0ILuLIzAQ18l2cIOErPqN9DgLZicMIqXQ8kgAAAAASUVORK5CYII=";slimeImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAt0lEQVQ4T2NkoBAwwlmo4D+chQow1GMIgDTPvlbPcP7eCbgACBgqWTCkajWCmCh60A3AqhkGsBmCbMB/7wlaDPIqsnABbODhnccMWwuugZhgvTADwJpBgBgDQABmCPUNAAFchsA0gwBeA7bkX2XwmagN54MAuhiGAQaZogzS6qJgDkgS2UAQQBZ7evM1w4Xpr0FM6hkAAiiG4ALImuEEEsBrCLpmFAYSwGoINs0ggM0AEKAoM5EEAGibZRH6RFzgAAAAEGRlQkc4QTY1NkIwRTJBQzdBMDI0vGYFOwAAAABJRU5ErkJgggAA";
 
@@ -7331,6 +7641,24 @@ class OnlineClient {
       return;
     }
 
+    if (message.type === "debugCoinGrant") {
+      if (Number.isFinite(message.totalCoins)) {
+        player.coins = message.totalCoins;
+      }
+
+      spawnFloatingText(
+        player.x,
+        player.y - 58,
+        `+${Math.max(0, Number(message.amount) || 0)} COINS`,
+        "#ffd760",
+        1.0
+      );
+
+      updateInventoryUi();
+      updateShopUi();
+      return;
+    }
+
     if (message.type === "snapshot") {
       for (const remote of message.players || []) {
         this.receiveRemotePlayer(remote);
@@ -8048,6 +8376,22 @@ class OnlineClient {
     this.socket.send(JSON.stringify({
       type: "craftRequest",
       recipe
+    }));
+
+    return true;
+  }
+
+  requestDebugCoins() {
+    if (
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "debugGrantCoins"
     }));
 
     return true;
@@ -8778,7 +9122,9 @@ class OnlineClient {
         type:
           payload.projectileType === "rainWand"
             ? "rainWand"
-            : "wand",
+            : payload.projectileType === "arrow"
+              ? "arrow"
+              : "wand",
 
         x: Number(payload.x) || 0,
         y: Number(payload.y) || 0,
@@ -9288,6 +9634,10 @@ class OnlineClient {
       attackDirection: player.attackDirection,
       attackHand: player.attackHand,
       attackAimAngle: player.attackAimAngle,
+
+      bowDrawing: player.bowDrawing,
+      bowDrawAmount: player.bowDrawAmount,
+      bowReleaseTime: player.bowReleaseTime,
 
       shadowHidden: player.shadowHidden,
       shadowHideRevealTime: player.shadowHideRevealTime,
@@ -10974,15 +11324,23 @@ const player = {
   // Cosmetic equipment can be mixed independently.
   // -1 means the armor slot is empty. The new base artwork is the
   // underlying appearance shown in that case.
-  hatIndex: -1,   // -1 none/base, 0 Hat, 1 Blue Cap, 2 Wizard, 3 Jester, 4 Ninja, 5 Knight, 6 Bandana
-  shirtIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight
-  pantsIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight
+  hatIndex: -1,   // -1 none/base, 0 Hat, 1 Blue Cap, 2 Wizard, 3 Jester, 4 Ninja, 5 Knight, 6 Bandana, 7 Ranger
+  shirtIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger
+  pantsIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger
   walkTime: 0,
   wasMoving: false,
   firstRaisedLeg: "left",
 
   // Equipped tool / attack state.
-  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword
+  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow
+
+  // Bow visual prototype only. No arrows/damage are implemented yet.
+  bowDrawing: false,
+  bowDrawAmount: 0,
+  bowDrawDuration: 0.58,
+  bowReleaseTime: 0,
+  bowReleaseDuration: 0.12,
+
   attackTime: 0,
   attackDuration: 0.30,
   attackCooldown: 0,
@@ -11098,10 +11456,10 @@ const player = {
 };
 
 const HOTBAR_SLOT_COUNT = 5;
-const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword"];
-const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat"];
-const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight"];
-const PANTS_STYLES = ["traveler", "jester", "ninja", "knight"];
+const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow"];
+const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat"];
+const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger"];
+const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger"];
 
 const WEAPON_ITEM_IDS = [
   "weapon_sword",
@@ -11109,7 +11467,8 @@ const WEAPON_ITEM_IDS = [
   "weapon_wand",
   "weapon_rainWand",
   "weapon_katana",
-  "weapon_oldSword"
+  "weapon_oldSword",
+  "weapon_bow"
 ];
 
 const HAT_ITEM_IDS = [
@@ -11119,21 +11478,24 @@ const HAT_ITEM_IDS = [
   "hat_jester",
   "hat_ninja",
   "hat_knight",
-  "hat_bandana"
+  "hat_bandana",
+  "hat_ranger"
 ];
 
 const SHIRT_ITEM_IDS = [
   "shirt_traveler",
   "shirt_jester",
   "shirt_ninja",
-  "shirt_knight"
+  "shirt_knight",
+  "shirt_ranger"
 ];
 
 const PANTS_ITEM_IDS = [
   "pants_traveler",
   "pants_jester",
   "pants_ninja",
-  "pants_knight"
+  "pants_knight",
+  "pants_ranger"
 ];
 
 const ALL_EQUIPMENT_ITEM_IDS = new Set([
@@ -11144,7 +11506,7 @@ const ALL_EQUIPMENT_ITEM_IDS = new Set([
 ]);
 
 const SHOP_ITEMS = [
-  { id: "weapon_sword", name: "Wood Sword" },
+  { id: "weapon_sword", name: "Wood Sword", questOnly: true },
   { id: "weapon_axe", name: "Axe" },
   { id: "weapon_wand", name: "Fire Wand" },
   { id: "weapon_rainWand", name: "Rain Wand" },
@@ -11158,16 +11520,19 @@ const SHOP_ITEMS = [
   { id: "hat_ninja", name: "Ninja Hat" },
   { id: "hat_knight", name: "Knight Helm" },
   { id: "hat_bandana", name: "Bandana" },
+  { id: "hat_ranger", name: "Ranger Hat" },
 
   { id: "shirt_traveler", name: "Traveler Shirt" },
   { id: "shirt_jester", name: "Jester Shirt" },
   { id: "shirt_ninja", name: "Ninja Shirt" },
   { id: "shirt_knight", name: "Knight Chest" },
+  { id: "shirt_ranger", name: "Ranger Shirt" },
 
   { id: "pants_traveler", name: "Traveler Pants" },
   { id: "pants_jester", name: "Jester Pants" },
   { id: "pants_ninja", name: "Ninja Pants" },
-  { id: "pants_knight", name: "Knight Greaves" }
+  { id: "pants_knight", name: "Knight Greaves" },
+  { id: "pants_ranger", name: "Ranger Pants" }
 ];
 
 function shopImageForItemId(itemId) {
@@ -11611,32 +11976,11 @@ function interactWithTutorialNpc() {
     return;
   }
 
-  if (
-    player.story.woodSwordCrafted ||
-    playerOwnsItem("weapon_sword")
-  ) {
-    setShopOpen(true);
-    return;
-  }
-
-  if (player.wood >= 5) {
-    spawnFloatingText(
-      tutorialNpc.x,
-      tutorialNpc.y - 24,
-      "USE THE BENCH!",
-      "#fff1b0",
-      1.0
-    );
-    return;
-  }
-
-  spawnFloatingText(
-    tutorialNpc.x,
-    tutorialNpc.y - 24,
-    "BRING ME 5 WOOD",
-    "#fff1b0",
-    1.0
-  );
+  // Once the NPC has handed over the Axe, their shop is immediately
+  // available. The 5-wood / Wood Sword quest can still be completed at
+  // the bench independently; it no longer gates shopping.
+  setShopOpen(true);
+  return;
 }
 
 function completeWoodSwordCraftOffline() {
@@ -12700,6 +13044,7 @@ function hatDisplayName(style) {
   if (style === "ninjaHat") return "Ninja Hat";
   if (style === "knightHat") return "Knight Helm";
   if (style === "bandanaHat") return "Bandana";
+  if (style === "rangerHat") return "Ranger Hat";
   return "Hat";
 }
 
@@ -12708,6 +13053,7 @@ function shirtDisplayName(style) {
   if (style === "jester") return "Jester Shirt";
   if (style === "ninja") return "Ninja Shirt";
   if (style === "knight") return "Knight Chest";
+  if (style === "ranger") return "Ranger Shirt";
   return "Traveler";
 }
 
@@ -12716,6 +13062,7 @@ function pantsDisplayName(style) {
   if (style === "jester") return "Jester Pants";
   if (style === "ninja") return "Ninja Pants";
   if (style === "knight") return "Knight Greaves";
+  if (style === "ranger") return "Ranger Pants";
   return "Traveler";
 }
 
@@ -12726,6 +13073,7 @@ function weaponDisplayName(style) {
   if (style === "rainWand") return "Rain Wand";
   if (style === "katana") return "Katana";
   if (style === "oldSword") return "Sword";
+  if (style === "bow") return "Wood Bow";
   return "Wood Sword";
 }
 
@@ -12737,6 +13085,7 @@ function hatImageForIndex(index) {
   if (index === 4) return sprite.ninjaHat;
   if (index === 5) return sprite.knightHat;
   if (index === 6) return sprite.bandanaHat;
+  if (index === 7) return sprite.rangerHat;
   return sprite.hat;
 }
 
@@ -12745,6 +13094,7 @@ function shirtImageForIndex(index) {
   if (index === 1) return sprite.jesterTorso;
   if (index === 2) return sprite.ninjaTorso;
   if (index === 3) return sprite.knightTorso;
+  if (index === 4) return sprite.rangerTorso;
   return sprite.torso;
 }
 
@@ -12753,6 +13103,7 @@ function pantsImageForIndex(index) {
   if (index === 1) return sprite.jesterLeftLeg;
   if (index === 2) return sprite.ninjaLeftLeg;
   if (index === 3) return sprite.knightLeftLeg;
+  if (index === 4) return sprite.rangerLeftLeg;
   return sprite.leftLeg;
 }
 
@@ -12763,9 +13114,11 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
   const jesterShirt = shirtStyle === "jester";
   const ninjaShirt = shirtStyle === "ninja";
   const knightShirt = shirtStyle === "knight";
+  const rangerShirt = shirtStyle === "ranger";
   const jesterPants = pantsStyle === "jester";
   const ninjaPants = pantsStyle === "ninja";
   const knightPants = pantsStyle === "knight";
+  const rangerPants = pantsStyle === "ranger";
 
   return {
     leftLeg: jesterPants
@@ -12774,7 +13127,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaLeftLeg
         : knightPants
           ? sprite.knightLeftLeg
-          : pantsStyle === "traveler"
+          : rangerPants
+            ? sprite.rangerLeftLeg
+            : pantsStyle === "traveler"
             ? sprite.leftLeg
             : sprite.baseLeftLeg,
 
@@ -12784,7 +13139,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaRightLeg
         : knightPants
           ? sprite.knightRightLeg
-          : pantsStyle === "traveler"
+          : rangerPants
+            ? sprite.rangerRightLeg
+            : pantsStyle === "traveler"
             ? sprite.rightLeg
             : sprite.baseRightLeg,
 
@@ -12794,7 +13151,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaTorso
         : knightShirt
           ? sprite.knightTorso
-          : shirtStyle === "traveler"
+          : rangerShirt
+            ? sprite.rangerTorso
+            : shirtStyle === "traveler"
             ? sprite.torso
             : sprite.baseTorso,
 
@@ -12804,7 +13163,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaLeftArm
         : knightShirt
           ? sprite.knightLeftArm
-          : shirtStyle === "traveler"
+          : rangerShirt
+            ? sprite.rangerLeftArm
+            : shirtStyle === "traveler"
             ? sprite.leftArm
             : sprite.baseLeftArm,
 
@@ -12814,7 +13175,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
         ? sprite.ninjaRightArm
         : knightShirt
           ? sprite.knightRightArm
-          : shirtStyle === "traveler"
+          : rangerShirt
+            ? sprite.rangerRightArm
+            : shirtStyle === "traveler"
             ? sprite.rightArm
             : sprite.baseRightArm,
 
@@ -12837,6 +13200,7 @@ function weaponImageForIndex(index) {
   if (index === 3) return rainWandImage;
   if (index === 4) return katanaImage;
   if (index === 5) return oldSwordImage;
+  if (index === 6) return bowImage;
   return swordImage;
 }
 
@@ -12902,8 +13266,13 @@ function updateHotbarAssignmentUi() {
           ]
         : null;
 
+    const itemDisplayName =
+      itemId === "weapon_bow"
+        ? "Wood Bow · VISUAL TEST"
+        : (shopItem?.name || itemId);
+
     name.textContent =
-      `${shopItem?.name || itemId}${
+      `${itemDisplayName}${
         combatProfile
           ? ` · PWR ${combatProfile.power}`
           : ""
@@ -13263,9 +13632,14 @@ function updateShopUi() {
     button.dataset.shopItemId =
       item.id;
 
+    const questLocked =
+      Boolean(item.questOnly) &&
+      !owned;
+
     button.disabled =
       owned ||
-      pending;
+      pending ||
+      questLocked;
 
     const image =
       document.createElement("img");
@@ -13300,9 +13674,11 @@ function updateShopUi() {
     price.textContent =
       owned
         ? "OWNED"
-        : pending
-          ? "..."
-          : "1 COIN";
+        : questLocked
+          ? "QUEST"
+          : pending
+            ? "..."
+            : "1 COIN";
 
     button.append(
       image,
@@ -13777,6 +14153,19 @@ function handleCanvasMouseMove(event) {
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
   mouseCanvasY = pointer.y;
+
+  if (
+    !inventoryOpen &&
+    !shopOpen &&
+    equippedWeapon() === "bow" &&
+    player.bowDrawing
+  ) {
+    updateAttackAimFromPointer(
+      pointer.x,
+      pointer.y
+    );
+  }
+
   updateCanvasCursor();
 }
 
@@ -13789,6 +14178,40 @@ const HOTBAR_KEY_TO_INDEX = Object.freeze({
   "4": 3,
   "5": 4
 });
+
+function grantBowVisualTest() {
+  if (!playerOwnsItem("weapon_bow")) {
+    grantInventoryItem(
+      "weapon_bow",
+      1
+    );
+  }
+
+  equipWeaponIndex(6);
+
+  player.bowDrawing = false;
+  player.bowDrawAmount = 0;
+  player.bowReleaseTime = 0;
+
+  spawnFloatingText(
+    player.x,
+    player.y - 38,
+    "BOW TEST",
+    "#f0d77d",
+    1.0
+  );
+
+  updateInventoryUi();
+  updateHotbar();
+
+  if (
+    typeof onlineClient !== "undefined"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+}
+
+const DEBUG_COIN_GRANT = 10;
 
 function grantDebugProgressionPoints() {
   player.skillPoints += 5;
@@ -13809,6 +14232,25 @@ function grantDebugProgressionPoints() {
     "#e5b8ff",
     1.0
   );
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.requestDebugCoins();
+  } else {
+    player.coins += DEBUG_COIN_GRANT;
+
+    spawnFloatingText(
+      player.x,
+      player.y - 58,
+      `+${DEBUG_COIN_GRANT} COINS`,
+      "#ffd760",
+      1.0
+    );
+
+    updateShopUi();
+  }
 
   updateInventoryUi();
 }
@@ -13884,6 +14326,13 @@ function handleGameKeyDown(event) {
   if (event.repeat) return;
 
   inputController.setKey(key, true);
+
+  // VISUAL TEST: grant/equip the Wood Bow without changing progression.
+  if (key === "f8") {
+    event.preventDefault();
+    grantBowVisualTest();
+    return;
+  }
 
   // TEST CHEAT: same AP/SP rewards as one normal level-up, without level/EXP.
   if (key === "f9") {
@@ -13986,6 +14435,13 @@ function executeWeaponAttack(weapon) {
 }
 
 function executePrimaryAttackCommand(payload) {
+  // Bow attacks are intentionally disabled in this visual-only prototype.
+  // Its mousedown/mouseup path is handled directly so we can judge the pose,
+  // procedural drawstring and movement before implementing actual arrows.
+  if (equippedWeapon() === "bow") {
+    return;
+  }
+
   const attackingFromShadowHide =
     player.shadowHidden;
 
@@ -14054,13 +14510,95 @@ function handlePrimaryAttack(event) {
   mouseCanvasY = pointer.y;
   updateCanvasCursor();
 
+  if (
+    equippedWeapon() === "bow" &&
+    !getLocalCarriedSlime()
+  ) {
+    if (player.attackCooldown > 0) {
+      return;
+    }
+
+    updateAttackAimFromPointer(
+      pointer.x,
+      pointer.y
+    );
+
+    player.bowDrawing = true;
+    player.bowReleaseTime = 0;
+
+    if (
+      typeof onlineClient !== "undefined"
+    ) {
+      onlineClient.sendLocalState(true);
+    }
+
+    return;
+  }
+
   inputController.queueCommand("primaryAttack", {
     pointerX: pointer.x,
     pointerY: pointer.y
   });
 }
 
+function handleBowVisualMouseUp(event) {
+  if (
+    event.button !== 0 ||
+    !player.bowDrawing
+  ) {
+    return;
+  }
+
+  const drawAmount = Math.max(
+    0,
+    Math.min(
+      1,
+      Number(player.bowDrawAmount) || 0
+    )
+  );
+
+  if (
+    equippedWeapon() === "bow"
+  ) {
+    const pointer =
+      getCanvasPointerPosition(event);
+
+    updateAttackAimFromPointer(
+      pointer.x,
+      pointer.y
+    );
+  }
+
+  player.bowDrawing = false;
+  player.bowReleaseTime =
+    player.bowReleaseDuration;
+
+  if (
+    equippedWeapon() === "bow" &&
+    !getLocalCarriedSlime() &&
+    player.attackCooldown <= 0
+  ) {
+    fireBowArrow(
+      drawAmount,
+      player.attackAimAngle
+    );
+  }
+
+  if (
+    typeof onlineClient !== "undefined"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+}
+
 canvas.addEventListener("mousedown", handlePrimaryAttack);
+window.addEventListener("mouseup", handleBowVisualMouseUp);
+window.addEventListener("blur", () => {
+  if (player.bowDrawing) {
+    player.bowDrawing = false;
+    player.bowReleaseTime = 0;
+  }
+});
 
 // -----------------------------------------------------------------------------
 // SLIME CONTACT
@@ -14779,7 +15317,62 @@ function updatePlayerBurnStatus(dt) {
   }
 }
 
+function updateBowVisualState(dt) {
+  const bowEquipped =
+    equippedWeapon() === "bow";
+
+  if (!bowEquipped) {
+    player.bowDrawing = false;
+    player.bowDrawAmount = 0;
+    player.bowReleaseTime = 0;
+    return;
+  }
+
+  if (player.bowDrawing) {
+    player.bowDrawAmount =
+      Math.min(
+        1,
+        player.bowDrawAmount +
+          dt /
+          Math.max(
+            0.05,
+            player.bowDrawDuration
+          )
+      );
+
+    player.bowReleaseTime = 0;
+    return;
+  }
+
+  if (player.bowReleaseTime > 0) {
+    player.bowReleaseTime =
+      Math.max(
+        0,
+        player.bowReleaseTime - dt
+      );
+
+    // Fast snap-back on release. There is deliberately no arrow yet.
+    player.bowDrawAmount =
+      Math.max(
+        0,
+        player.bowDrawAmount -
+          dt / 0.09
+      );
+
+    return;
+  }
+
+  player.bowDrawAmount =
+    Math.max(
+      0,
+      player.bowDrawAmount -
+        dt / 0.16
+    );
+}
+
 function updatePlayerStatusAndTimers(dt) {
+  updateBowVisualState(dt);
+
   tickTimer(player, "shadowHideRevealTime", dt);
   tickTimer(player, "contactCooldown", dt);
   tickTimer(player, "wetTime", dt);
@@ -15475,19 +16068,248 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   }
 
   // The swing hand comes from which side of the player's sprite was clicked.
+  const currentWeaponForPose =
+    equippedWeapon();
+
+  const bowPoseActive =
+    currentWeaponForPose === "bow";
+
+  const bowDrawAmount =
+    bowPoseActive
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            Number(player.bowDrawAmount) || 0
+          )
+        )
+      : 0;
+
+  const bowAimingActive =
+    bowPoseActive &&
+    (
+      player.bowDrawing ||
+      player.bowReleaseTime > 0 ||
+      bowDrawAmount > 0.025
+    );
+
   const attacking = player.attackTime > 0;
+
+  // At rest the bow stays in one consistent hand and does not chase the
+  // cursor. Once the player begins drawing, the cursor side chooses which arm
+  // presents the bow, just like the earlier visual tests.
   const useRightHand =
-    attackFrame >= 0 &&
-    player.attackHand === "right";
+    bowPoseActive
+      ? (
+          bowAimingActive
+            ? player.attackHand === "right"
+            : false
+        )
+      : (
+          attackFrame >= 0 &&
+          player.attackHand === "right"
+        );
 
   // Cosmetic body layers can now come from either the original traveler set
   // or the user-drawn Jester Magician set.
   const appearance = currentPlayerAppearance();
 
   let weaponArmX = 0;
-  let weaponArmY = useRightHand
-    ? rightArmOffsetY
-    : leftArmOffsetY;
+  let weaponArmY = 0;
+
+  let bowDrawArmAngle = 0;
+  let bowHoldArmAngle = 0;
+  let bowUpAimBlend = 0;
+
+  if (
+    bowPoseActive &&
+    !bowAimingActive
+  ) {
+    // True neutral rest: do not move either arm at all. The player body
+    // stays in the normal idle pose, and the bow itself remains upright in the
+    // hand until the player actually begins drawing.
+    weaponArmX = 0;
+    weaponArmY = 0;
+    bowDrawArmAngle = 0;
+    bowHoldArmAngle = 0;
+  } else if (bowPoseActive) {
+    const aimX =
+      Math.cos(
+        player.attackAimAngle || 0
+      );
+
+    const aimY =
+      Math.sin(
+        player.attackAimAngle || 0
+      );
+
+    bowUpAimBlend =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          (
+            -aimY - 0.35
+          ) / 0.65
+        )
+      );
+
+    // For ordinary left/right/down aim, the holding arm only nudges by about
+    // one pixel. As aim becomes steeply upward, this translation fades away
+    // and a shoulder pivot takes over instead.
+    weaponArmX =
+      Math.round(
+        aimX *
+        (
+          1 -
+          bowUpAimBlend
+        )
+      );
+
+    weaponArmY =
+      Math.round(
+        aimY *
+        (
+          1 -
+          bowUpAimBlend
+        )
+      );
+
+    const armStep =
+      Math.PI / 16;
+
+    // ---------------------------------------------------------------------
+    // HOLDING ARM
+    // ---------------------------------------------------------------------
+    // When aiming upward, rotate the bow hand inward/upward from its shoulder
+    // so the bow genuinely crosses the face instead of moving the whole arm
+    // sprite off the torso.
+    if (bowUpAimBlend > 0) {
+      const holdBaseX =
+        useRightHand ? 2 : -2;
+
+      const holdBaseY = 4;
+
+      const inwardX =
+        useRightHand ? -1 : 1;
+
+      const desiredHoldX =
+        holdBaseX +
+        inwardX *
+          3.0 *
+          bowUpAimBlend +
+        aimX *
+          1.2 *
+          bowUpAimBlend;
+
+      const desiredHoldY =
+        holdBaseY +
+        aimY *
+          5.0 *
+          bowUpAimBlend;
+
+      const baseHoldAngle =
+        Math.atan2(
+          holdBaseY,
+          holdBaseX
+        );
+
+      const targetHoldAngle =
+        Math.atan2(
+          desiredHoldY,
+          desiredHoldX
+        );
+
+      const holdDelta =
+        Math.atan2(
+          Math.sin(
+            targetHoldAngle -
+            baseHoldAngle
+          ),
+          Math.cos(
+            targetHoldAngle -
+            baseHoldAngle
+          )
+        );
+
+      bowHoldArmAngle =
+        Math.round(
+          holdDelta /
+          armStep
+        ) *
+        armStep;
+    }
+
+    // ---------------------------------------------------------------------
+    // DRAW ARM
+    // ---------------------------------------------------------------------
+    // The physical rule is simple: the string hand pulls OPPOSITE the arrow
+    // direction. This removes the side-specific guesswork from earlier
+    // passes:
+    //   aim left  -> pull right
+    //   aim right -> pull left
+    //   aim up    -> pull DOWN
+    //   aim down  -> pull up
+    const drawBaseX =
+      useRightHand ? -2 : 2;
+
+    const drawBaseY = 4;
+
+    const pullX = -aimX;
+    const pullY = -aimY;
+
+    const desiredDrawX =
+      drawBaseX +
+      pullX *
+        4.2 *
+        bowDrawAmount;
+
+    const desiredDrawY =
+      drawBaseY +
+      pullY *
+        4.2 *
+        bowDrawAmount;
+
+    const baseDrawAngle =
+      Math.atan2(
+        drawBaseY,
+        drawBaseX
+      );
+
+    const targetDrawAngle =
+      Math.atan2(
+        desiredDrawY,
+        desiredDrawX
+      );
+
+    let drawDelta =
+      Math.atan2(
+        Math.sin(
+          targetDrawAngle -
+          baseDrawAngle
+        ),
+        Math.cos(
+          targetDrawAngle -
+          baseDrawAngle
+        )
+      );
+
+    drawDelta =
+      Math.max(
+        -1.20,
+        Math.min(
+          1.20,
+          drawDelta
+        )
+      );
+
+    bowDrawArmAngle =
+      Math.round(
+        drawDelta /
+        armStep
+      ) *
+      armStep;
+  }
 
   // Whole-pixel arm poses.
   if (hurlReachEffort > 0) {
@@ -15561,7 +16383,91 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   ctx.drawImage(appearance.torso, baseX, baseY);
 
   if (!carryingSlime) {
-    if (hurlReachEffort > 0 && attackFrame < 0) {
+    if (bowPoseActive) {
+      const drawPoseStarted =
+        bowDrawAmount > 0.025;
+
+      if (useRightHand) {
+        // Left arm is the string/draw arm.
+        if (drawPoseStarted) {
+          drawLayerAroundPivot(
+            appearance.leftArm,
+            baseX,
+            baseY + leftArmOffsetY,
+            4,
+            7,
+            bowDrawArmAngle
+          );
+        } else {
+          ctx.drawImage(
+            appearance.leftArm,
+            baseX,
+            baseY + leftArmOffsetY
+          );
+        }
+
+        // Right arm holds the bow. Upward aiming uses a shoulder pivot so the
+        // hand can move across the face while remaining attached.
+        if (
+          bowAimingActive &&
+          Math.abs(bowHoldArmAngle) > 0.001
+        ) {
+          drawLayerAroundPivot(
+            appearance.rightArm,
+            baseX,
+            baseY + rightArmOffsetY,
+            11,
+            7,
+            bowHoldArmAngle
+          );
+        } else {
+          ctx.drawImage(
+            appearance.rightArm,
+            baseX + weaponArmX,
+            baseY + rightArmOffsetY + weaponArmY
+          );
+        }
+      } else {
+        // Left arm holds the bow.
+        if (
+          bowAimingActive &&
+          Math.abs(bowHoldArmAngle) > 0.001
+        ) {
+          drawLayerAroundPivot(
+            appearance.leftArm,
+            baseX,
+            baseY + leftArmOffsetY,
+            4,
+            7,
+            bowHoldArmAngle
+          );
+        } else {
+          ctx.drawImage(
+            appearance.leftArm,
+            baseX + weaponArmX,
+            baseY + leftArmOffsetY + weaponArmY
+          );
+        }
+
+        // Right arm is the string/draw arm.
+        if (drawPoseStarted) {
+          drawLayerAroundPivot(
+            appearance.rightArm,
+            baseX,
+            baseY + rightArmOffsetY,
+            11,
+            7,
+            bowDrawArmAngle
+          );
+        } else {
+          ctx.drawImage(
+            appearance.rightArm,
+            baseX,
+            baseY + rightArmOffsetY
+          );
+        }
+      }
+    } else if (hurlReachEffort > 0 && attackFrame < 0) {
       // For the no-target Hurl whiff, keep one arm anchored as a support arm
       // and let only one arm do the little reach. This avoids the detached
       // off-body look from moving both arms outward together.
@@ -15649,13 +16555,101 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   const rightHandX = baseX + 13;
   const rightHandY = baseY + 11;
 
+  const bowHoldHandPoint =
+    bowPoseActive &&
+    bowAimingActive &&
+    Math.abs(bowHoldArmAngle) > 0.001
+      ? (
+          useRightHand
+            ? rotatedLayerPoint(
+                baseX,
+                baseY + rightArmOffsetY,
+                11,
+                7,
+                13,
+                11,
+                bowHoldArmAngle
+              )
+            : rotatedLayerPoint(
+                baseX,
+                baseY + leftArmOffsetY,
+                4,
+                7,
+                2,
+                11,
+                bowHoldArmAngle
+              )
+        )
+      : {
+          x:
+            (
+              useRightHand
+                ? rightHandX
+                : leftHandX
+            ) +
+            weaponArmX,
+
+          y:
+            (
+              useRightHand
+                ? rightHandY +
+                  rightArmOffsetY
+                : leftHandY +
+                  leftArmOffsetY
+            ) +
+            weaponArmY
+        };
+
   const handX =
-    (useRightHand ? rightHandX : leftHandX) +
-    weaponArmX;
+    bowPoseActive
+      ? bowHoldHandPoint.x
+      : (
+          (
+            useRightHand
+              ? rightHandX
+              : leftHandX
+          ) +
+          weaponArmX
+        );
 
   const handY =
-    (useRightHand ? rightHandY : leftHandY) +
-    weaponArmY;
+    bowPoseActive
+      ? bowHoldHandPoint.y
+      : (
+          (
+            useRightHand
+              ? rightHandY
+              : leftHandY
+          ) +
+          weaponArmY
+        );
+
+  const bowDrawHandPoint =
+    useRightHand
+      ? rotatedLayerPoint(
+          baseX,
+          baseY + leftArmOffsetY,
+          4,
+          7,
+          2,
+          11,
+          bowDrawArmAngle
+        )
+      : rotatedLayerPoint(
+          baseX,
+          baseY + rightArmOffsetY,
+          11,
+          7,
+          13,
+          11,
+          bowDrawArmAngle
+        );
+
+  const bowDrawHandX =
+    bowDrawHandPoint.x;
+
+  const bowDrawHandY =
+    bowDrawHandPoint.y;
 
   // Idle = straight up in the left hand.
   // During attacks, keep the crisp 90-degree stepped animation.
@@ -15749,7 +16743,240 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   // Draw the equipped tool last so it stays visually in front.
   const currentWeapon = equippedWeapon();
 
-  if (currentWeapon && !carryingSlime) {
+  if (
+    currentWeapon === "bow" &&
+    !carryingSlime
+  ) {
+    const aim =
+      Number(player.attackAimAngle) || 0;
+
+    // The supplied sprite is a horizontal arch whose local -Y side is the
+    // front of the bow. Rotate that local forward direction toward the cursor.
+    // Quantizing to 22.5-degree steps keeps the tiny pixel arc reasonably
+    // crisp while still making diagonal aiming readable.
+    const rotationStep =
+      Math.PI / 8;
+
+    const bowRotation =
+      bowAimingActive
+        ? (
+            Math.round(
+              (
+                aim +
+                Math.PI / 2
+              ) /
+              rotationStep
+            ) *
+            rotationStep
+          )
+        : Math.PI / 2;
+
+    const cosR =
+      Math.cos(bowRotation);
+
+    const sinR =
+      Math.sin(bowRotation);
+
+    const bowRestOffsetX =
+      bowAimingActive
+        ? 0
+        : 2;
+
+    const bowRestOffsetY =
+      bowAimingActive
+        ? 0
+        : -1;
+
+    function bowLocalPoint(
+      localX,
+      localY
+    ) {
+      return {
+        x:
+          handX +
+          bowRestOffsetX +
+          localX * cosR -
+          localY * sinR,
+
+        y:
+          handY +
+          bowRestOffsetY +
+          localX * sinR +
+          localY * cosR
+      };
+    }
+
+    // Approximate endpoints of the user's 16x16 arch relative to pivot 8,6.
+    const tipA =
+      bowLocalPoint(-7, 4);
+
+    const tipB =
+      bowLocalPoint(7, 4);
+
+    const relaxedNock =
+      bowLocalPoint(0, 4);
+
+    // At rest the off hand hangs naturally and does not pretend to be touching
+    // the string. Once drawing begins, the nock catches up to the actual
+    // shoulder-pivoted hand very quickly; after that it stays attached to the
+    // hand rather than interpolating toward a fictional translated position.
+    const stringGrab =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          bowDrawAmount / 0.16
+        )
+      );
+
+    const grabEase =
+      stringGrab *
+      stringGrab *
+      (
+        3 -
+        2 * stringGrab
+      );
+
+    const nock = {
+      x:
+        relaxedNock.x +
+        (
+          bowDrawHandX -
+          relaxedNock.x
+        ) *
+        grabEase,
+
+      y:
+        relaxedNock.y +
+        (
+          bowDrawHandY -
+          relaxedNock.y
+        ) *
+        grabEase
+    };
+
+    drawPixelLine(
+      tipA.x,
+      tipA.y,
+      nock.x,
+      nock.y,
+      "#d8d0ae"
+    );
+
+    drawPixelLine(
+      nock.x,
+      nock.y,
+      tipB.x,
+      tipB.y,
+      "#d8d0ae"
+    );
+
+    // Tiny nock pixel makes the pull point easier to read at 320x180.
+    if (stringGrab > 0.45) {
+      ctx.fillStyle = "#eee5c5";
+      ctx.fillRect(
+        Math.round(nock.x),
+        Math.round(nock.y),
+        1,
+        1
+      );
+    }
+
+    ctx.save();
+
+    ctx.translate(
+      Math.round(
+        handX +
+        bowRestOffsetX
+      ),
+      Math.round(
+        handY +
+        bowRestOffsetY
+      )
+    );
+
+    ctx.rotate(
+      bowRotation
+    );
+
+    ctx.drawImage(
+      bowImage,
+      -BOW_PIVOT_X,
+      -BOW_PIVOT_Y
+    );
+
+    ctx.restore();
+
+    // Idle bow only: redraw the holding arm on top so the player's hand reads
+    // as gripping the handle instead of the bow sitting entirely over the hand.
+    if (!bowAimingActive) {
+      if (useRightHand) {
+        ctx.drawImage(
+          appearance.rightArm,
+          baseX + weaponArmX,
+          baseY + rightArmOffsetY + weaponArmY
+        );
+      } else {
+        ctx.drawImage(
+          appearance.leftArm,
+          baseX + weaponArmX,
+          baseY + leftArmOffsetY + weaponArmY
+        );
+      }
+    }
+
+    const shouldDrawBowAimGuide =
+      !reflectionMode &&
+      remotePlayerDrawDepth === 0 &&
+      player.bowDrawing &&
+      bowDrawAmount > 0.025;
+
+    if (shouldDrawBowAimGuide) {
+      const guideAngle = Number(player.attackAimAngle) || 0;
+      const guideDirX = Math.cos(guideAngle);
+      const guideDirY = Math.sin(guideAngle);
+      const guideStartX = handX + guideDirX * 8;
+      const guideStartY = handY + guideDirY * 8;
+      const guideDotCount = Math.max(
+        2,
+        Math.min(
+          5,
+          2 + Math.floor(bowDrawAmount * 4)
+        )
+      );
+      const guideSpacing = 5;
+
+      ctx.save();
+      ctx.globalAlpha *= 0.82;
+
+      for (let i = 0; i < guideDotCount; i++) {
+        const distance = 4 + (i + 1) * guideSpacing;
+        const dotX = Math.round(
+          guideStartX + guideDirX * distance
+        );
+        const dotY = Math.round(
+          guideStartY + guideDirY * distance
+        );
+
+        ctx.fillStyle =
+          i === guideDotCount - 1
+            ? "#f4efcf"
+            : "#ddd6b5";
+
+        ctx.fillRect(
+          dotX,
+          dotY,
+          1,
+          1
+        );
+      }
+
+      ctx.restore();
+    }
+  } else if (
+    currentWeapon &&
+    !carryingSlime
+  ) {
     const weaponImage =
       currentWeapon === "axe"
         ? axeImage
@@ -16163,6 +17390,9 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "attackDirection",
   "attackHand",
   "attackAimAngle",
+  "bowDrawing",
+  "bowDrawAmount",
+  "bowReleaseTime",
   "jesterBlinkFadeTime",
   "jesterBlinkFadeDuration",
   "shadowHidden",
@@ -16223,6 +17453,24 @@ function drawRemotePlayer(
   player.attackHand =
     remote.attackHand === "right" ? "right" : "left";
   player.attackAimAngle = Number(remote.attackAimAngle) || 0;
+
+  player.bowDrawing =
+    Boolean(remote.bowDrawing);
+
+  player.bowDrawAmount =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        Number(remote.bowDrawAmount) || 0
+      )
+    );
+
+  player.bowReleaseTime =
+    Math.max(
+      0,
+      Number(remote.bowReleaseTime) || 0
+    );
 
   player.jesterBlinkFadeTime = 0;
   player.jesterBlinkFadeDuration = 0.18;
