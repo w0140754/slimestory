@@ -1960,7 +1960,7 @@
   </div>
 </div>
 
-<script src="/shared/world-content.js?v=3"></script>
+<script src="/shared/world-content.js?v=4"></script>
 <script src="/shared/combat-balance.js?v=3"></script>
 <script>
 const canvas = document.getElementById("game");
@@ -6666,12 +6666,27 @@ function makeSlime(
   };
 }
 
-// One nearby slime, plus a small group of three in the south-west.
+// Natural meadow slimes: one original stray, the original south-west trio,
+// two additional roaming patches of three, plus two extra strays.
 const slimes = [
   makeSlime(world.width / 2 - 55, world.height / 2 + 28, 0.0),
   makeSlime(82,  292, 0.9, 18, 13),
   makeSlime(112, 318, 2.2, 18, 13),
-  makeSlime(143, 291, 4.1, 18, 13)
+  makeSlime(143, 291, 4.1, 18, 13),
+
+  // West-meadow patch.
+  makeSlime(172, 124, 0.5, 20, 14),
+  makeSlime(205, 138, 1.7, 20, 14),
+  makeSlime(232, 121, 3.0, 20, 14),
+
+  // East-meadow patch.
+  makeSlime(444, 211, 0.8, 20, 14),
+  makeSlime(474, 228, 2.4, 20, 14),
+  makeSlime(506, 207, 4.0, 20, 14),
+
+  // A couple of loners to make the map feel less arranged.
+  makeSlime(330, 172, 1.3, 24, 17),
+  makeSlime(455, 330, 3.6, 24, 17)
 ];
 
 // -----------------------------------------------------------------------------
@@ -7014,12 +7029,16 @@ function makeMapGrass(x, y, phase, width = 13, flowerType = null) {
 const houseImage = new Image();
 houseImage.src = "data:image/png;base64,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";
 
-function makeMapHouse(x, y) {
+const houseRedImage = new Image();
+houseRedImage.src = "./assets/house_red.png";
+
+function makeMapHouse(x, y, options = {}) {
   return {
     x,
     y,
     width: GAME_CONFIG.house.width,
     height: GAME_CONFIG.house.height,
+    image: options.image || houseImage,
 
     collision: {
       width: GAME_CONFIG.house.collisionWidth,
@@ -7067,15 +7086,33 @@ for (let i = trees.length - 1; i >= 0; i--) {
 }
 
 // Preserve the original meadow state. Goblins intentionally do NOT live here.
+const meadowHousePlacement = {
+  x: 556,
+  y: 112
+};
+
+const meadowMapHouses = [
+  // Tuck the new house into the east meadow where it is visible and readable,
+  // but still out of the main slime / pond travel lanes.
+  makeMapHouse(
+    meadowHousePlacement.x,
+    meadowHousePlacement.y,
+    { image: houseRedImage }
+  )
+];
+
 const meadowMap = {
-  trees: trees.slice(),
+  trees: trees.slice().filter(tree =>
+    Math.abs(tree.x - meadowHousePlacement.x) > 52 ||
+    Math.abs(tree.y - meadowHousePlacement.y) > 44
+  ),
   tallGrass: tallGrass.slice(),
   harvestFlowers: harvestFlowers.slice(),
   slimes: slimes.slice(),
   ghosts: [],
   goblins: [],
   graves: [],
-  houses: [],
+  houses: meadowMapHouses,
   pond: {
     x: pond.x,
     y: pond.y,
@@ -7141,20 +7178,20 @@ const spawnMapHouses = [
   // Bottom-center anchored. Slightly left of the path so it feels like a
   // peaceful little home in the safe clearing without blocking the exit lane.
   // Nudged a little higher so a front path has room to breathe.
-  makeMapHouse(275, 204)
+  makeMapHouse(275, 184)
 ];
 
 // First progression/tutorial fixtures.
 // These are deterministic map fixtures, not inventory/world-state entities.
 const tutorialNpc = {
   x: 350,
-  y: 200,
+  y: 180,
   interactionRadius: 24
 };
 
 const woodCraftBench = {
   x: 376,
-  y: 201,
+  y: 181,
   interactionRadius: 24
 };
 
@@ -13301,6 +13338,22 @@ function findNearestHurlableSlime(
 }
 
 function tryCastHurl() {
+  // Hurl takes priority over bow draw state. If the player activates Hurl
+  // while holding a bow, cancel any partial draw so carrying/throwing a
+  // slime cannot get trapped behind the bow's press/hold/release input path.
+  if (player.bowDrawing) {
+    player.bowDrawing = false;
+    player.bowDrawAmount = 0;
+    player.bowReleaseTime = 0;
+
+    if (
+      typeof onlineClient !== "undefined" &&
+      onlineClient?.connected
+    ) {
+      onlineClient.sendLocalState(true);
+    }
+  }
+
   if (
     typeof onlineClient === "undefined" ||
     !onlineClient.connected
@@ -15386,9 +15439,13 @@ function executeWeaponAttack(weapon) {
 }
 
 function executePrimaryAttackCommand(payload) {
-  // Bow input has its own press/hold/release path for drawing arrows and
-  // for the close-range bow slash fallback.
-  if (equippedWeapon() === "bow") {
+  // Bow input normally has its own press/hold/release path. A carried Hurl
+  // slime is the exception: primary click must be allowed through so the
+  // throw takes priority regardless of which weapon is equipped.
+  if (
+    equippedWeapon() === "bow" &&
+    !getLocalCarriedSlime()
+  ) {
     return;
   }
 
@@ -18274,11 +18331,60 @@ function drawHouse(house, camX, camY) {
   ctx.fillStyle = "rgba(34, 46, 28, .20)";
   ctx.fillRect(screenX - 19, screenY - 2, 38, 4);
 
+  const sprite = house.image || houseImage;
+
   ctx.drawImage(
-    houseImage,
+    sprite,
     screenX - Math.floor(house.width / 2),
     screenY - (house.height - 1)
   );
+}
+
+function drawNpcRoleMarker(screenX, screenY) {
+  const centerY = screenY - 27;
+
+  if (!player.story.axeReceived) {
+    // Simpler quest marker: just a clean floating exclamation with a tiny shadow.
+    ctx.fillStyle = "rgba(34, 46, 28, .28)";
+    ctx.fillRect(screenX - 1, centerY - 3, 3, 6);
+    ctx.fillRect(screenX - 1, centerY + 4, 3, 2);
+
+    ctx.fillStyle = "#ffe06a";
+    ctx.fillRect(screenX - 1, centerY - 4, 3, 6);
+    ctx.fillRect(screenX - 1, centerY + 3, 3, 2);
+    return;
+  }
+
+  // Cleaner shop cue: a small floating coin without the chunky badge box.
+  ctx.fillStyle = "rgba(34, 46, 28, .22)";
+  ctx.fillRect(screenX - 4, centerY - 3, 8, 8);
+  ctx.drawImage(
+    coinImage,
+    screenX - 4,
+    centerY - 4,
+    8,
+    8
+  );
+}
+
+function drawCraftRoleMarker(screenX, screenY) {
+  const centerY = screenY - 27;
+
+  // Simpler floating hammer with a tiny drop shadow.
+  ctx.fillStyle = "rgba(34, 46, 28, .28)";
+  ctx.fillRect(screenX - 4, centerY - 3, 7, 3);
+  ctx.fillRect(screenX, centerY - 1, 2, 2);
+  ctx.fillRect(screenX - 1, centerY + 1, 1, 2);
+  ctx.fillRect(screenX - 2, centerY + 3, 1, 1);
+
+  ctx.fillStyle = "#c8d0c4";
+  ctx.fillRect(screenX - 4, centerY - 4, 7, 3);
+  ctx.fillRect(screenX, centerY - 2, 2, 2);
+
+  ctx.fillStyle = "#9b6438";
+  ctx.fillRect(screenX - 1, centerY, 1, 2);
+  ctx.fillRect(screenX - 2, centerY + 2, 1, 2);
+  ctx.fillRect(screenX - 3, centerY + 4, 1, 1);
 }
 
 function drawTutorialNpc(camX, camY) {
@@ -18287,6 +18393,10 @@ function drawTutorialNpc(camX, camY) {
 
   const screenY =
     Math.round(tutorialNpc.y - camY);
+
+  // A tiny grounded sway reads better than a vertical bob for this sprite.
+  const swayOffset =
+    Math.round(Math.sin(worldTime * 1.0 + 0.35) * 1);
 
   ctx.fillStyle =
     "rgba(34, 46, 28, .32)";
@@ -18300,9 +18410,11 @@ function drawTutorialNpc(camX, camY) {
 
   ctx.drawImage(
     tutorialNpcImage,
-    screenX - 8,
+    screenX - 8 + swayOffset,
     screenY - 15
   );
+
+  drawNpcRoleMarker(screenX, screenY);
 }
 
 function drawWoodCraftBench(camX, camY) {
@@ -18331,6 +18443,8 @@ function drawWoodCraftBench(camX, camY) {
     screenX - 8,
     screenY - 15
   );
+
+  drawCraftRoleMarker(screenX, screenY);
 }
 
 function drawStaticPixelText(

@@ -66,6 +66,87 @@
             wanderRadiusX: 18,
             wanderRadiusY: 13
           }
+,
+          {
+            id: "meadow:slime:5",
+            type: "slime",
+            level: 1,
+            x: 172,
+            y: 124,
+            phase: 0.5,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          },
+          {
+            id: "meadow:slime:6",
+            type: "slime",
+            level: 1,
+            x: 205,
+            y: 138,
+            phase: 1.7,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          },
+          {
+            id: "meadow:slime:7",
+            type: "slime",
+            level: 1,
+            x: 232,
+            y: 121,
+            phase: 3.0,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          },
+          {
+            id: "meadow:slime:8",
+            type: "slime",
+            level: 1,
+            x: 444,
+            y: 211,
+            phase: 0.8,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          },
+          {
+            id: "meadow:slime:9",
+            type: "slime",
+            level: 1,
+            x: 474,
+            y: 228,
+            phase: 2.4,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          },
+          {
+            id: "meadow:slime:10",
+            type: "slime",
+            level: 1,
+            x: 506,
+            y: 207,
+            phase: 4.0,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          },
+          {
+            id: "meadow:slime:11",
+            type: "slime",
+            level: 1,
+            x: 330,
+            y: 172,
+            phase: 1.3,
+            wanderRadiusX: 24,
+            wanderRadiusY: 17
+          },
+          {
+            id: "meadow:slime:12",
+            type: "slime",
+            level: 1,
+            x: 455,
+            y: 330,
+            phase: 3.6,
+            wanderRadiusX: 24,
+            wanderRadiusY: 17
+          }
         ],
 
         collision: {
@@ -143,7 +224,7 @@
       // Bump this whenever shared map/enemy placement changes. The browser
       // loads this file with the matching version in its URL so an old cached
       // registry cannot disagree with the running Node server.
-      version: 3,
+      version: 4,
       maps
     });
   }
