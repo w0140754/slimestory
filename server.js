@@ -88,6 +88,14 @@ validateWorldContent();
 
 const players = new Map();
 
+// PvP is deliberately opt-in. Both players must have it enabled before the
+// server will accept any player-vs-player attack. Once combat begins, both
+// participants are locked in PvP for a short window so nobody can attack and
+// immediately toggle themselves safe.
+const PVP_DAMAGE_MULTIPLIER = 0.50;
+const PVP_COMBAT_LOCK_MS = 10_000;
+const pvpAttackRateLimits = new Map();
+
 
 // -----------------------------------------------------------------------------
 // SHARED ENVIRONMENT
@@ -542,7 +550,17 @@ function handleResourcePickup(
 
 const FIRST_BENCH_X = 376;
 const FIRST_BENCH_Y = 201;
-const WOOD_SWORD_COST = 5;
+
+const CRAFT_RECIPES = Object.freeze({
+  woodSword: Object.freeze({
+    cost: 5,
+    stateKey: "woodSwordCrafted"
+  }),
+  woodBow: Object.freeze({
+    cost: 5,
+    stateKey: "woodBowCrafted"
+  })
+});
 
 function handleCraftRequest(
   playerId,
@@ -552,9 +570,17 @@ function handleCraftRequest(
   const playerState =
     players.get(playerId);
 
+  const recipeId =
+    typeof message.recipe === "string"
+      ? message.recipe
+      : "";
+
+  const recipe =
+    CRAFT_RECIPES[recipeId];
+
   if (
     !playerState ||
-    message.recipe !== "woodSword"
+    !recipe
   ) {
     return;
   }
@@ -569,7 +595,7 @@ function handleCraftRequest(
   if (!validBench) {
     sendJson(socket, {
       type: "craftResult",
-      recipe: "woodSword",
+      recipe: recipeId,
       success: false,
       reason: "tooFar",
       totalWood: playerState.wood
@@ -577,10 +603,10 @@ function handleCraftRequest(
     return;
   }
 
-  if (playerState.woodSwordCrafted) {
+  if (playerState[recipe.stateKey]) {
     sendJson(socket, {
       type: "craftResult",
-      recipe: "woodSword",
+      recipe: recipeId,
       success: false,
       reason: "alreadyCrafted",
       totalWood: playerState.wood
@@ -588,10 +614,10 @@ function handleCraftRequest(
     return;
   }
 
-  if (playerState.wood < WOOD_SWORD_COST) {
+  if (playerState.wood < recipe.cost) {
     sendJson(socket, {
       type: "craftResult",
-      recipe: "woodSword",
+      recipe: recipeId,
       success: false,
       reason: "needWood",
       totalWood: playerState.wood
@@ -600,13 +626,13 @@ function handleCraftRequest(
   }
 
   playerState.wood -=
-    WOOD_SWORD_COST;
+    recipe.cost;
 
-  playerState.woodSwordCrafted = true;
+  playerState[recipe.stateKey] = true;
 
   sendJson(socket, {
     type: "craftResult",
-    recipe: "woodSword",
+    recipe: recipeId,
     success: true,
     totalWood: playerState.wood
   });
@@ -1584,6 +1610,7 @@ function makeServerGoblin(spawn) {
 
     aggroTime: 0,
     aggroDuration: 5.0,
+    aggroTargetId: null,
 
     wanderTargetX: x,
     wanderTargetY: y,
@@ -1654,6 +1681,7 @@ function makeServerGhost(spawn) {
 
     aggroTime: 0,
     aggroDuration: 5.5,
+    aggroTargetId: null,
 
     wanderAngle: Math.random() * Math.PI * 2,
     wanderTimer: 0.8 + Math.random() * 1.2,
@@ -1776,6 +1804,43 @@ function nearestVisiblePlayer(
         distance: bestDistance
       }
     : null;
+}
+
+function visibleAggroPlayerById(
+  playerId,
+  mapId
+) {
+  if (!playerId) return null;
+
+  const playerState = players.get(playerId);
+
+  if (
+    !playerState ||
+    playerState.mapId !== mapId ||
+    playerState.shadowHidden ||
+    playerState.hp <= 0
+  ) {
+    return null;
+  }
+
+  return playerState;
+}
+
+function setEnemyAggroTarget(
+  enemy,
+  playerId,
+  duration = enemy.aggroDuration ?? 4.5
+) {
+  enemy.aggroTargetId = playerId || null;
+  enemy.aggroTime = Math.max(
+    enemy.aggroTime || 0,
+    duration
+  );
+}
+
+function clearEnemyAggroTarget(enemy) {
+  enemy.aggroTargetId = null;
+  enemy.aggroTime = 0;
 }
 
 function serverCircleRectCollision(
@@ -1961,6 +2026,7 @@ function resetServerGoblin(goblin) {
   goblin.respawnTime = 0;
 
   goblin.aggroTime = 0;
+  goblin.aggroTargetId = null;
   goblin.wanderTargetX = goblin.homeX;
   goblin.wanderTargetY = goblin.homeY;
   goblin.wanderDecisionTime = 0;
@@ -1997,6 +2063,7 @@ function resetServerGhost(ghost) {
   ghost.respawnTime = 0;
 
   ghost.aggroTime = 0;
+  ghost.aggroTargetId = null;
   ghost.wanderAngle =
     Math.random() * Math.PI * 2;
 
@@ -2161,6 +2228,287 @@ function broadcastEnemyHitPlayer(
       contactCooldown
     }
   );
+}
+
+function pvpAttackRateLimited(
+  attackerId,
+  targetId,
+  source,
+  minimumMs
+) {
+  const key = `${attackerId}:${targetId}:${source}`;
+  const now = Date.now();
+  const previous = pvpAttackRateLimits.get(key) || 0;
+
+  if (now - previous < minimumMs) {
+    return true;
+  }
+
+  pvpAttackRateLimits.set(key, now);
+  return false;
+}
+
+function pvpAimHitsTarget(
+  attacker,
+  target,
+  aimAngle,
+  maxDistance,
+  halfArc
+) {
+  const dx = target.x - attacker.x;
+  const dy = (target.y - 8) - (attacker.y - 8);
+  const distance = Math.hypot(dx, dy);
+
+  if (distance > maxDistance) {
+    return false;
+  }
+
+  const cleanAim = Number(aimAngle);
+  if (!Number.isFinite(cleanAim)) {
+    return false;
+  }
+
+  const targetAngle = Math.atan2(dy, dx);
+
+  return (
+    Math.abs(
+      angleDifference(
+        targetAngle,
+        cleanAim
+      )
+    ) <= halfArc
+  );
+}
+
+function calculateServerPvpDamage(
+  attacker,
+  target,
+  source,
+  critical = false
+) {
+  const rawDamage = COMBAT_BALANCE.calculateDamage({
+    source,
+    weaponIndex: attacker.weaponIndex,
+    playerLevel: attacker.level || 1,
+    stats: attacker.stats || {},
+
+    // Reuse the neutral physical/magic multiplier from slime while still
+    // letting player level differences affect the first-pass PvP tuning.
+    monsterType: "slime",
+    monsterLevel: target.level || 1,
+    critical
+  });
+
+  return Math.max(
+    1,
+    Math.round(
+      rawDamage * PVP_DAMAGE_MULTIPLIER
+    )
+  );
+}
+
+function applyPvpCombatLock(attacker, target) {
+  const until = Date.now() + PVP_COMBAT_LOCK_MS;
+
+  attacker.pvpCombatUntil = Math.max(
+    Number(attacker.pvpCombatUntil) || 0,
+    until
+  );
+
+  target.pvpCombatUntil = Math.max(
+    Number(target.pvpCombatUntil) || 0,
+    until
+  );
+
+  broadcast({
+    type: "pvpCombatLock",
+    playerIds: [attacker.id, target.id],
+    until
+  });
+}
+
+function handlePvpToggle(
+  playerId,
+  socket,
+  message
+) {
+  const playerState = players.get(playerId);
+  if (!playerState) return;
+
+  const enabled = Boolean(message.enabled);
+  const now = Date.now();
+
+  if (
+    !enabled &&
+    playerState.pvpEnabled &&
+    now < (Number(playerState.pvpCombatUntil) || 0)
+  ) {
+    sendJson(socket, {
+      type: "pvpToggleResult",
+      ok: false,
+      enabled: true,
+      lockRemainingMs: Math.max(
+        0,
+        playerState.pvpCombatUntil - now
+      )
+    });
+    return;
+  }
+
+  playerState.pvpEnabled = enabled;
+
+  if (!enabled) {
+    playerState.pvpCombatUntil = 0;
+  }
+
+  sendJson(socket, {
+    type: "pvpToggleResult",
+    ok: true,
+    enabled: playerState.pvpEnabled,
+    lockRemainingMs: Math.max(
+      0,
+      (Number(playerState.pvpCombatUntil) || 0) - now
+    )
+  });
+
+  broadcast({
+    type: "playerState",
+    player: playerState
+  });
+}
+
+function handlePvpAttack(
+  attackerId,
+  message
+) {
+  const attacker = players.get(attackerId);
+  const target = players.get(
+    String(message.targetId || "")
+  );
+
+  if (
+    !attacker ||
+    !target ||
+    attacker.id === target.id ||
+    attacker.hp <= 0 ||
+    target.hp <= 0 ||
+    attacker.mapId !== target.mapId ||
+    !attacker.pvpEnabled ||
+    !target.pvpEnabled ||
+    target.shadowHidden
+  ) {
+    return;
+  }
+
+  const source = String(message.source || "");
+  const payload =
+    message.payload &&
+    typeof message.payload === "object"
+      ? message.payload
+      : {};
+
+  let minimumMs = 260;
+  let knockback = 12;
+  let valid = false;
+
+  if (source === "melee") {
+    // Wood Sword, Axe, Katana, and Sword all use the existing melee path.
+    if (![0, 1, 4, 5].includes(attacker.weaponIndex)) {
+      return;
+    }
+
+    const maxDistance =
+      attacker.weaponIndex === 4 ? 36 : 32;
+
+    valid = pvpAimHitsTarget(
+      attacker,
+      target,
+      payload.aimAngle,
+      maxDistance,
+      0.92
+    );
+
+    minimumMs = 260;
+    knockback =
+      attacker.weaponIndex === 1 ? 18 : 15;
+  } else if (source === "bowMelee") {
+    if (attacker.weaponIndex !== 6) {
+      return;
+    }
+
+    valid = pvpAimHitsTarget(
+      attacker,
+      target,
+      payload.aimAngle,
+      32,
+      1.05
+    );
+
+    minimumMs = 300;
+    knockback = 7;
+  } else if (source === "arrow") {
+    if (attacker.weaponIndex !== 6) {
+      return;
+    }
+
+    valid = pvpAimHitsTarget(
+      attacker,
+      target,
+      payload.aimAngle,
+      320,
+      0.72
+    );
+
+    minimumMs = 180;
+    knockback = 12;
+  } else {
+    // Magic/skills are deliberately not PvP-enabled in the first pass.
+    return;
+  }
+
+  if (!valid) return;
+
+  if (
+    pvpAttackRateLimited(
+      attacker.id,
+      target.id,
+      source,
+      minimumMs
+    )
+  ) {
+    return;
+  }
+
+  const critical = Boolean(payload.critical);
+  const damage = calculateServerPvpDamage(
+    attacker,
+    target,
+    source,
+    critical
+  );
+
+  const aimAngle = Number(payload.aimAngle);
+  const knockbackX =
+    Math.cos(aimAngle) * knockback;
+  const knockbackY =
+    Math.sin(aimAngle) * knockback;
+
+  const dealt = applyServerPlayerDamage(
+    target,
+    {
+      amount: damage,
+      mapId: target.mapId,
+      sourceType: `pvp:${source}`,
+      sourceId: attacker.id,
+      knockbackX,
+      knockbackY,
+      contactCooldown: 0.18
+    }
+  );
+
+  if (dealt > 0) {
+    applyPvpCombatLock(attacker, target);
+  }
 }
 
 function handlePlayerDamageRequest(
@@ -2387,6 +2735,7 @@ function killSharedEnemy(
   enemy.burnTickTimer = 0;
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
+  clearEnemyAggroTarget(enemy);
 
   if (enemy.type === "goblin") {
     enemy.respawnTime = 4.0;
@@ -2451,25 +2800,47 @@ function tickSharedGhosts(dt) {
       targetY = ghost.tauntY;
       ghost.aggroTime = ghost.aggroDuration;
     } else {
-      const nearby = nearestVisiblePlayer(
-        ghost.mapId,
-        ghost.x,
-        ghost.y,
-        ghost.detectionRadius
+      targetPlayer = visibleAggroPlayerById(
+        ghost.aggroTargetId,
+        ghost.mapId
       );
 
-      if (nearby) {
-        targetPlayer = nearby.player;
-        ghost.aggroTime = ghost.aggroDuration;
-      } else if (ghost.aggroTime > 0) {
-        const anyTarget = nearestVisiblePlayer(
-          ghost.mapId,
-          ghost.x,
-          ghost.y
+      if (targetPlayer) {
+        const targetDistance = Math.hypot(
+          targetPlayer.x - ghost.x,
+          targetPlayer.y - ghost.y
         );
 
-        if (anyTarget) {
-          targetPlayer = anyTarget.player;
+        // Staying close keeps the same target angry. Being farther away lets
+        // the existing aggro timer run out instead of switching to whoever is
+        // currently nearest.
+        if (targetDistance <= ghost.detectionRadius) {
+          ghost.aggroTime = ghost.aggroDuration;
+        } else if (ghost.aggroTime <= 0) {
+          ghost.aggroTargetId = null;
+          targetPlayer = null;
+        }
+      } else if (ghost.aggroTargetId) {
+        ghost.aggroTargetId = null;
+      }
+
+      // Only acquire a new proximity target when there is no valid remembered
+      // target. Damage always replaces this target with the actual attacker.
+      if (!targetPlayer) {
+        const nearby = nearestVisiblePlayer(
+          ghost.mapId,
+          ghost.x,
+          ghost.y,
+          ghost.detectionRadius
+        );
+
+        if (nearby) {
+          targetPlayer = nearby.player;
+          setEnemyAggroTarget(
+            ghost,
+            targetPlayer.id,
+            ghost.aggroDuration
+          );
         }
       }
 
@@ -2490,6 +2861,13 @@ function tickSharedGhosts(dt) {
     let moveX = 0;
     let moveY = 0;
     let speed = ghost.speed;
+
+    if (distanceFromHome >= ghost.leashRadius) {
+      clearEnemyAggroTarget(ghost);
+      targetPlayer = null;
+      targetX = null;
+      targetY = null;
+    }
 
     if (
       ghost.aggroTime > 0 &&
@@ -2716,26 +3094,42 @@ function tickSharedGoblins(dt) {
         targetY = goblin.tauntY;
         goblin.aggroTime = goblin.aggroDuration;
       } else {
-        const nearby = nearestVisiblePlayer(
-          goblin.mapId,
-          goblin.x,
-          goblin.y,
-          goblin.detectionRadius
+        targetPlayer = visibleAggroPlayerById(
+          goblin.aggroTargetId,
+          goblin.mapId
         );
 
-        if (nearby) {
-          targetPlayer = nearby.player;
-          goblin.aggroTime =
-            goblin.aggroDuration;
-        } else if (goblin.aggroTime > 0) {
-          const anyTarget = nearestVisiblePlayer(
-            goblin.mapId,
-            goblin.x,
-            goblin.y
+        if (targetPlayer) {
+          const targetDistance = Math.hypot(
+            targetPlayer.x - goblin.x,
+            targetPlayer.y - goblin.y
           );
 
-          if (anyTarget) {
-            targetPlayer = anyTarget.player;
+          if (targetDistance <= goblin.detectionRadius) {
+            goblin.aggroTime = goblin.aggroDuration;
+          } else if (goblin.aggroTime <= 0) {
+            goblin.aggroTargetId = null;
+            targetPlayer = null;
+          }
+        } else if (goblin.aggroTargetId) {
+          goblin.aggroTargetId = null;
+        }
+
+        if (!targetPlayer) {
+          const nearby = nearestVisiblePlayer(
+            goblin.mapId,
+            goblin.x,
+            goblin.y,
+            goblin.detectionRadius
+          );
+
+          if (nearby) {
+            targetPlayer = nearby.player;
+            setEnemyAggroTarget(
+              goblin,
+              targetPlayer.id,
+              goblin.aggroDuration
+            );
           }
         }
 
@@ -2820,7 +3214,8 @@ function tickSharedGoblins(dt) {
         if (
           distanceFromHome >= goblin.leashRadius
         ) {
-          goblin.aggroTime = 0;
+          clearEnemyAggroTarget(goblin);
+          targetPlayer = null;
         }
 
         if (goblin.pauseTime > 0) {
@@ -2989,6 +3384,47 @@ function validateSharedEnemyMeleeHit(
   );
 }
 
+function validateSharedEnemyBowMeleeHit(
+  playerState,
+  enemy,
+  payload
+) {
+  if (playerState.weaponIndex !== 6) {
+    return false;
+  }
+
+  const targetOffsetY = 11;
+  const bodyRadius =
+    enemy.type === "ghost" ? 8 : 7;
+
+  const dx =
+    enemy.x - playerState.x;
+  const dy =
+    (enemy.y - targetOffsetY) -
+    (playerState.y - 8);
+  const distance = Math.hypot(dx, dy);
+
+  if (distance > 24 + bodyRadius) {
+    return false;
+  }
+
+  const aimAngle = Number(payload.aimAngle);
+  if (!Number.isFinite(aimAngle)) {
+    return false;
+  }
+
+  const targetAngle = Math.atan2(dy, dx);
+
+  return (
+    Math.abs(
+      angleDifference(
+        targetAngle,
+        aimAngle
+      )
+    ) <= 1.05
+  );
+}
+
 function calculateServerPlayerDamage(
   playerState,
   enemy,
@@ -3063,6 +3499,30 @@ function handleSharedEnemyDamageAction(
 
     knockback =
       enemy.type === "goblin" ? 28 : 22;
+  } else if (source === "bowMelee") {
+    if (
+      !validateSharedEnemyBowMeleeHit(
+        playerState,
+        enemy,
+        payload
+      )
+    ) {
+      return;
+    }
+
+    minimumMs = 300;
+    critical = Boolean(payload.critical);
+
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "bowMelee",
+        critical
+      );
+
+    knockback =
+      enemy.type === "goblin" ? 13 : 10;
   } else if (source === "basic") {
     if (
       ![2, 3].includes(playerState.weaponIndex) ||
@@ -3142,7 +3602,11 @@ function handleSharedEnemyDamageAction(
     enemy.hp - damage
   );
 
-  enemy.aggroTime = enemy.aggroDuration;
+  setEnemyAggroTarget(
+    enemy,
+    playerId,
+    enemy.aggroDuration
+  );
   enemy.lastDamagePlayerId = playerId;
 
   if (source === "fireball") {
@@ -3243,8 +3707,11 @@ function handleSharedEnemyAction(
     enemy.burnTickTimer =
       enemy.burnTickInterval;
 
-    enemy.aggroTime =
-      enemy.aggroDuration;
+    setEnemyAggroTarget(
+      enemy,
+      playerId,
+      enemy.aggroDuration
+    );
 
     enemy.lastDamagePlayerId = playerId;
     return;
@@ -3344,7 +3811,11 @@ function handleSharedEnemyAction(
     enemy.burnTime = 0;
     enemy.burnTickTimer = 0;
 
-    enemy.aggroTime = enemy.aggroDuration;
+    setEnemyAggroTarget(
+      enemy,
+      playerId,
+      enemy.aggroDuration
+    );
     enemy.lastDamagePlayerId = playerId;
 
     broadcast({
@@ -3405,6 +3876,8 @@ function makeServerSlime(spawn) {
     chaseSpeed: 22,
 
     aggroTime: 0,
+    aggroDuration: 4.5,
+    aggroTargetId: null,
 
     // Jester Blink decoy. While active, the clone position has priority over
     // real players.
@@ -3681,6 +4154,7 @@ function resetServerSlime(slime) {
   slime.pauseTime = 0;
 
   slime.aggroTime = 0;
+  slime.aggroTargetId = null;
 
   slime.tauntTime = 0;
   slime.tauntX = slime.homeX;
@@ -3696,6 +4170,7 @@ function resetServerSlime(slime) {
 
   slime.knockbackX = 0;
   slime.knockbackY = 0;
+  clearEnemyAggroTarget(slime);
 
   slime.carriedBy = null;
   slime.pickupTime = 0;
@@ -3769,11 +4244,11 @@ function broadcastHurlSlimeDamage(
   slime.lastDamagePlayerId =
     attackerId;
 
-  slime.aggroTime =
-    Math.max(
-      slime.aggroTime,
-      4.5
-    );
+  setEnemyAggroTarget(
+    slime,
+    attackerId,
+    slime.aggroDuration
+  );
 
   broadcast({
     type: "slimeDamage",
@@ -3813,8 +4288,11 @@ function broadcastHurlGoblinDamage(
   goblin.lastDamagePlayerId =
     attackerId;
 
-  goblin.aggroTime =
-    goblin.aggroDuration;
+  setEnemyAggroTarget(
+    goblin,
+    attackerId,
+    goblin.aggroDuration
+  );
 
   const speed =
     Math.hypot(
@@ -4110,7 +4588,7 @@ function tickServerSlimeHurl(
 
     slime.knockbackX = 0;
     slime.knockbackY = 0;
-    slime.aggroTime = 0;
+    clearEnemyAggroTarget(slime);
     slime.tauntTime = 0;
 
     return true;
@@ -4245,7 +4723,7 @@ function handleSlimeHurlAction(
     slime.hurlThrownBy = null;
     slime.knockbackX = 0;
     slime.knockbackY = 0;
-    slime.aggroTime = 0;
+    clearEnemyAggroTarget(slime);
     slime.tauntTime = 0;
 
     return;
@@ -4299,7 +4777,7 @@ function handleSlimeHurlAction(
     slime.lastDamagePlayerId =
       playerId;
 
-    slime.aggroTime = 0;
+    clearEnemyAggroTarget(slime);
     slime.tauntTime = 0;
   }
 }
@@ -4520,20 +4998,39 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
-    const target =
-      nearestPlayerForSlime(slime);
+    let targetPlayer = visibleAggroPlayerById(
+      slime.aggroTargetId,
+      slime.mapId
+    );
+
+    if (!targetPlayer && slime.aggroTargetId) {
+      // The remembered attacker died, hid, disconnected, or changed maps.
+      clearEnemyAggroTarget(slime);
+    }
+
+    const targetDistance = targetPlayer
+      ? Math.hypot(
+          targetPlayer.x - slime.x,
+          targetPlayer.y - slime.y
+        )
+      : Infinity;
+
+    if (slime.aggroTime <= 0 && targetPlayer) {
+      slime.aggroTargetId = null;
+      targetPlayer = null;
+    }
 
     if (
       slime.aggroTime > 0 &&
-      target &&
-      target.distance > 1 &&
+      targetPlayer &&
+      targetDistance > 1 &&
       distanceFromHome < 90
     ) {
       const dx =
-        target.player.x - slime.x;
+        targetPlayer.x - slime.x;
 
       const dy =
-        target.player.y - slime.y;
+        targetPlayer.y - slime.y;
 
       const length =
         Math.hypot(dx, dy) || 1;
@@ -4558,7 +5055,7 @@ function tickSharedSlimes(dt) {
     }
 
     if (distanceFromHome >= 90) {
-      slime.aggroTime = 0;
+      clearEnemyAggroTarget(slime);
     }
 
     if (slime.pauseTime > 0) {
@@ -4661,6 +5158,40 @@ function validateMeleeSlimeHit(playerState, slime, payload) {
   );
 }
 
+function validateBowMeleeSlimeHit(
+  playerState,
+  slime,
+  payload
+) {
+  if (playerState.weaponIndex !== 6) {
+    return false;
+  }
+
+  const originX = playerState.x;
+  const originY = playerState.y - 8;
+  const targetX = slime.x;
+  const targetY = slime.y - 6;
+  const dx = targetX - originX;
+  const dy = targetY - originY;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance > 31) return false;
+
+  const aimAngle = Number(payload.aimAngle);
+  if (!Number.isFinite(aimAngle)) return false;
+
+  const targetAngle = Math.atan2(dy, dx);
+
+  return (
+    Math.abs(
+      angleDifference(
+        targetAngle,
+        aimAngle
+      )
+    ) <= 1.05
+  );
+}
+
 function handleSlimeDamageAction(playerId, slime, payload) {
   const playerState = players.get(playerId);
 
@@ -4703,6 +5234,29 @@ function handleSlimeDamageAction(playerId, slime, payload) {
       );
 
     knockback = 32;
+  } else if (source === "bowMelee") {
+    if (
+      !validateBowMeleeSlimeHit(
+        playerState,
+        slime,
+        payload
+      )
+    ) {
+      return;
+    }
+
+    minimumMs = 300;
+    critical = Boolean(payload.critical);
+
+    damage =
+      calculateServerPlayerDamage(
+        playerState,
+        slime,
+        "bowMelee",
+        critical
+      );
+
+    knockback = 12;
   } else if (source === "basic") {
     if (
       ![2, 3].includes(playerState.weaponIndex) ||
@@ -4775,7 +5329,11 @@ function handleSlimeDamageAction(playerId, slime, payload) {
   }
 
   slime.hp = Math.max(0, slime.hp - damage);
-  slime.aggroTime = 4.5;
+  setEnemyAggroTarget(
+    slime,
+    playerId,
+    slime.aggroDuration
+  );
   slime.lastDamagePlayerId = playerId;
 
   if (source === "fireball") {
@@ -4868,7 +5426,11 @@ function handleSlimeAction(playerId, message) {
 
     slime.burnTime = 3.0;
     slime.burnTickTimer = slime.burnTickInterval;
-    slime.aggroTime = 4.5;
+    setEnemyAggroTarget(
+      slime,
+      playerId,
+      slime.aggroDuration
+    );
     slime.lastDamagePlayerId = playerId;
     return;
   }
@@ -5291,6 +5853,11 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? Boolean(previous.woodSwordCrafted)
         : false,
 
+    woodBowCrafted:
+      previous
+        ? Boolean(previous.woodBowCrafted)
+        : false,
+
     shopPurchases:
       previous &&
       Array.isArray(previous.shopPurchases)
@@ -5304,6 +5871,18 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     hp: previous && Number.isFinite(previous.hp)
       ? previous.hp
       : 50,
+
+    // PvP permission and combat-lock time are server-owned. Normal movement
+    // packets cannot enable/disable PvP or clear an active lock.
+    pvpEnabled:
+      previous
+        ? Boolean(previous.pvpEnabled)
+        : false,
+
+    pvpCombatUntil:
+      previous && Number.isFinite(previous.pvpCombatUntil)
+        ? previous.pvpCombatUntil
+        : 0,
 
     x: clampNumber(source.x, 0, 640, 320),
     y: clampNumber(source.y, 0, 400, 200),
@@ -5587,6 +6166,8 @@ wss.on("connection", socket => {
     flowers: initialState.flowers,
     hp: initialState.hp,
     maxHp: initialState.maxHp,
+    pvpEnabled: initialState.pvpEnabled,
+    pvpCombatUntil: initialState.pvpCombatUntil,
     worldContentVersion:
       WORLD_CONTENT.version,
     combatBalanceVersion:
@@ -5707,6 +6288,16 @@ wss.on("connection", socket => {
       return;
     }
 
+    if (message.type === "pvpToggle") {
+      handlePvpToggle(id, socket, message);
+      return;
+    }
+
+    if (message.type === "pvpAttack") {
+      handlePvpAttack(id, message);
+      return;
+    }
+
     if (message.type === "playerHealRequest") {
       handlePlayerHealRequest(id, message);
       return;
@@ -5795,6 +6386,12 @@ wss.on("connection", socket => {
     }
 
     players.delete(id);
+
+    for (const key of [...pvpAttackRateLimits.keys()]) {
+      if (key.startsWith(`${id}:`) || key.includes(`:${id}:`)) {
+        pvpAttackRateLimits.delete(key);
+      }
+    }
 
     broadcast({
       type: "playerLeft",

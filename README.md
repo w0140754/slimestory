@@ -1,4 +1,23 @@
-# Slime Story Online v0.6.4 — Hurl Prototype
+# Slime Story Online v0.6.11.16 — Opt-in PvP
+
+## v6-11-16 PvP first pass
+
+- PvP is OFF by default and can be enabled from the new PvP menu tab.
+- Both players must opt in before player damage is allowed.
+- Wood Sword, Axe, Katana, Sword, Wood Bow arrows, and the close-range bow smack can hit opted-in players.
+- PvP damage is scaled to 50% of normal combat damage for the first tuning pass.
+- Successful PvP hits lock both participants in PvP for 10 seconds.
+- Opted-in players display a PVP marker and small HP bar overhead.
+- PvP hit validation and HP changes are server-authoritative.
+- Magic and active skills are intentionally excluded from PvP for this first test.
+
+## v6-11-13 crafting update
+
+- Pressing F at the woodworking bench now opens a crafting menu instead of instantly crafting.
+- Wood Sword and Wood Bow are both craftable for 5 Wood.
+- Crafting is server-validated in multiplayer and each recipe can only be crafted once per session.
+- Receiving the tutorial Axe now shows a large top-of-screen reward banner with the Axe icon and next-step hint.
+
 
 Built directly on the confirmed-working v0.6.3 baseline.
 
@@ -943,3 +962,11 @@ Changed:
 - Arrow projectiles are synchronized to other players like other combat visuals.
 - Arrows can hit slimes, goblins, and ghosts using the shared combat progression formula.
 - Added a bow weapon profile so dexterity-based ranged damage works with monster level scaling and ghost physical resistance.
+
+## v6-11-14 changes
+
+- Axe reward toast moved above the lower HUD.
+- Crafting recipes now use the Wood icon with green check/red X ingredient feedback.
+- Removed the crafting header Wood counter and NEED WOOD recipe status.
+- Inventory hotbar assignment controls stay docked at the bottom while the item list scrolls.
+- Wood Bow automatically uses a low-damage close-range slash when a monster is too close to draw.

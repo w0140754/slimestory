@@ -1,8 +1,8 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.11.12",
+  "version": "0.6.11.16",
   "private": true,
-  "description": "Slime Story: Ranger set shop update, early shop unlock, F9 debug coins, and live bow build",
+  "description": "Slime Story: opt-in server-authoritative PvP, attacker-locked monster aggro, crafting UI, Ranger shop, and bow combat",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

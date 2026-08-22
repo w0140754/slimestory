@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 2;
+    const VERSION = 3;
 
     const LEVEL_GAP_PENALTY_PER_LEVEL = 0.07;
     const MIN_LEVEL_MULTIPLIER = 0.45;
@@ -199,6 +199,7 @@
     ) {
       if (
         source === "melee" ||
+        source === "bowMelee" ||
         source === "basic" ||
         source === "arrow"
       ) {
@@ -282,6 +283,10 @@
           monsterType,
           profile.damageType
         );
+
+      if (source === "bowMelee") {
+        damage *= 0.40;
+      }
 
       if (critical) {
         damage *= 1.75;

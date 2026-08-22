@@ -333,6 +333,211 @@
     text-align: center;
   }
 
+  #craftOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 10, 0.46);
+    pointer-events: auto;
+    z-index: 22;
+  }
+
+  #craftOverlay.open {
+    display: flex;
+  }
+
+  #craftPanel {
+    width: min(420px, calc(100vw - 36px));
+    background: #202820;
+    border: 3px solid #9a8756;
+    box-shadow:
+      0 0 0 2px #433b29 inset,
+      6px 6px 0 rgba(0,0,0,.38);
+    color: #fff6d4;
+    font-family: monospace;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  #craftTop {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    border-bottom: 2px solid #5f573d;
+    background: #293329;
+  }
+
+  #craftTitle {
+    padding: 0 12px;
+    color: #fff2b5;
+    font: 13px/1 monospace;
+  }
+
+  #craftClose {
+    appearance: none;
+    margin-left: auto;
+    width: 40px;
+    align-self: stretch;
+    border: 0;
+    border-left: 2px solid #5f573d;
+    background: #293329;
+    color: #d9cfaa;
+    font: 15px/1 monospace;
+    cursor: pointer;
+  }
+
+  #craftGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .craft-recipe {
+    appearance: none;
+    min-height: 96px;
+    border: 2px solid #5f573d;
+    background: #293329;
+    color: #fff6d4;
+    font-family: monospace;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-rows: auto auto auto;
+    column-gap: 9px;
+    align-items: center;
+    padding: 9px;
+    text-align: left;
+  }
+
+  .craft-recipe > img {
+    width: 40px;
+    height: 40px;
+    grid-row: 1 / span 3;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .craft-recipe-name {
+    color: #fff2b5;
+    font: 11px/1.1 monospace;
+  }
+
+  .craft-recipe-cost {
+    color: #d7c18b;
+    font: 9px/1 monospace;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .craft-ingredient-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .craft-ingredient-check {
+    margin-left: 2px;
+    font: bold 12px/1 monospace;
+  }
+
+  .craft-ingredient-check.have {
+    color: #77e06f;
+  }
+
+  .craft-ingredient-check.missing {
+    color: #f06a64;
+  }
+
+  .craft-recipe-status {
+    color: #ffd76a;
+    font: 8px/1 monospace;
+  }
+
+  .craft-recipe:disabled {
+    cursor: default;
+    opacity: .58;
+  }
+
+  .craft-recipe:not(:disabled):hover,
+  #craftClose:hover {
+    filter: brightness(1.14);
+  }
+
+  #craftFooter {
+    border-top: 2px solid #5f573d;
+    padding: 8px 12px;
+    color: #9f9878;
+    font: 8px/1 monospace;
+    text-align: center;
+  }
+
+  #rewardToast {
+    position: fixed;
+    left: 50%;
+    bottom: 118px;
+    transform: translate(-50%, 12px);
+    z-index: 40;
+    min-width: min(360px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 3px solid #d8bd69;
+    background: #202820;
+    box-shadow:
+      0 0 0 2px #564a2e inset,
+      5px 5px 0 rgba(0,0,0,.38);
+    color: #fff6d4;
+    font-family: monospace;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s linear, transform .12s linear;
+  }
+
+  #rewardToast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  #rewardToast img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  #rewardToastText {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  #rewardToastTitle {
+    color: #ffe38b;
+    font: bold 13px/1 monospace;
+    letter-spacing: .5px;
+  }
+
+  #rewardToastDetail {
+    color: #d8cfaa;
+    font: 9px/1.3 monospace;
+  }
+
+  @media (max-width: 520px) {
+    #craftGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   #inventoryPanel {
     width: min(520px, calc(100vw - 36px));
     min-height: 300px;
@@ -401,6 +606,20 @@
   .inventory-page.active {
     display: block;
     flex: 1 1 auto;
+  }
+
+  #inventoryPage.active {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #inventoryScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 14px 0;
   }
 
   .menu-section-title {
@@ -479,15 +698,13 @@
   }
 
   .hotbar-assign-panel {
-    display: none;
-    margin-top: 4px;
-    padding: 10px;
-    border: 2px solid #665d43;
-    background: #202820;
-  }
-
-  .hotbar-assign-panel.open {
     display: block;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 10px 14px 12px;
+    border-top: 2px solid #665d43;
+    background: #202820;
+    box-shadow: 0 -3px 0 rgba(0,0,0,.16);
   }
 
   .hotbar-assign-header {
@@ -539,8 +756,13 @@
     box-shadow: 0 0 0 1px #fff0ad inset;
   }
 
-  .hotbar-assign-buttons button:hover {
+  .hotbar-assign-buttons button:hover:not(:disabled) {
     filter: brightness(1.14);
+  }
+
+  .hotbar-assign-buttons button:disabled {
+    opacity: .38;
+    cursor: default;
   }
 
   .resource-menu-item {
@@ -1085,12 +1307,86 @@
     font: 9px/1 monospace;
     text-align: right;
   }
+  .pvp-panel-card {
+    border: 2px solid #544c38;
+    background: #181713;
+    padding: 14px;
+    max-width: 360px;
+    margin: 8px auto 0;
+    box-shadow: inset 0 0 0 1px #292619;
+  }
+
+  .pvp-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #f1e7bf;
+    font: bold 13px/1 monospace;
+    margin-bottom: 12px;
+  }
+
+  .pvp-status-badge {
+    min-width: 42px;
+    padding: 4px 6px;
+    text-align: center;
+    border: 1px solid #675f48;
+    color: #bdb49a;
+    background: #242119;
+    font: bold 10px/1 monospace;
+  }
+
+  .pvp-status-badge.on {
+    color: #ff8a78;
+    border-color: #a34b3d;
+    background: #301b18;
+  }
+
+  .pvp-status-text {
+    color: #d8cfaa;
+    font: bold 11px/1.3 monospace;
+    margin-bottom: 8px;
+  }
+
+  .pvp-description,
+  .pvp-lock-text {
+    color: #9e967c;
+    font: 9px/1.45 monospace;
+  }
+
+  .pvp-toggle-button {
+    width: 100%;
+    margin: 14px 0 10px;
+    padding: 10px 8px;
+    border: 2px solid #766c4e;
+    background: #2a261b;
+    color: #f3e7b7;
+    font: bold 11px/1 monospace;
+    cursor: pointer;
+  }
+
+  .pvp-toggle-button.on {
+    border-color: #a34b3d;
+    background: #3a1f1b;
+    color: #ffad9f;
+  }
+
+  .pvp-toggle-button:disabled {
+    opacity: .5;
+    cursor: default;
+  }
+
 
   @media (max-width: 560px) {
     #inventoryPanel {
       min-height: 280px;
       width: min(520px, calc(100vw - 18px));
       max-height: calc(100vh - 18px);
+    }
+
+    .inventory-tab {
+      padding: 9px 8px;
+      font-size: 11px;
     }
 
     .inventory-grid {
@@ -1174,10 +1470,12 @@
       <button class="inventory-tab" data-page="skillsPage">Skills</button>
       <button class="inventory-tab" data-page="enhancementsPage">Enhance</button>
       <button class="inventory-tab" data-page="statsPage">Stats</button>
+      <button class="inventory-tab" data-page="pvpPage">PvP</button>
       <button id="inventoryClose" aria-label="Close">×</button>
     </div>
 
     <div id="inventoryPage" class="inventory-page active">
+      <div id="inventoryScroll">
       <div class="menu-section-title">Resources</div>
       <div class="inventory-grid">
         <div class="menu-item resource-menu-item" data-resource-key="coins">
@@ -1224,6 +1522,7 @@
         <div class="menu-item" data-owned-item="pants_ranger"><img id="inventoryRangerPantsImg" alt="Ranger Pants" /><span>Ranger Pants</span></div>
       </div>
       <div id="inventoryGearEmpty" class="inventory-empty">No gear or items</div>
+      </div>
 
       <div id="hotbarAssignPanel" class="hotbar-assign-panel">
         <div class="hotbar-assign-header">
@@ -1598,7 +1897,22 @@
       </div>
     </div>
 
-    <div id="inventoryFooter">I / Esc to close</div>
+    <div id="pvpPage" class="inventory-page">
+      <div class="pvp-panel-card">
+        <div class="pvp-panel-heading">
+          <div>Player vs Player</div>
+          <div id="pvpStatusBadge" class="pvp-status-badge">OFF</div>
+        </div>
+        <div id="pvpStatusText" class="pvp-status-text">PvP is disabled.</div>
+        <div class="pvp-description">
+          You can only damage players who also have PvP enabled. Physical weapons deal reduced damage against players.
+        </div>
+        <button id="pvpToggleButton" type="button" class="pvp-toggle-button">Enable PvP</button>
+        <div id="pvpLockText" class="pvp-lock-text">Sword, Axe, Katana and Bow attacks are enabled for this first test.</div>
+      </div>
+    </div>
+
+    <div id="inventoryFooter">Esc to close</div>
   </div>
 </div>
 
@@ -1614,8 +1928,40 @@
   </div>
 </div>
 
+<div id="craftOverlay" aria-hidden="true">
+  <div id="craftPanel">
+    <div id="craftTop">
+      <div id="craftTitle">Woodworking Bench</div>
+      <button id="craftClose" aria-label="Close crafting menu">×</button>
+    </div>
+    <div id="craftGrid">
+      <button class="craft-recipe" type="button" data-craft-recipe="woodSword">
+        <img id="craftWoodSwordImg" alt="Wood Sword" />
+        <span class="craft-recipe-name">Wood Sword</span>
+        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftSwordWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodBow">
+        <img id="craftWoodBowImg" alt="Wood Bow" />
+        <span class="craft-recipe-name">Wood Bow</span>
+        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
+    </div>
+    <div id="craftFooter">Choose a recipe · Esc to close</div>
+  </div>
+</div>
+
+<div id="rewardToast" role="status" aria-live="polite">
+  <img id="rewardToastImg" alt="" />
+  <div id="rewardToastText">
+    <div id="rewardToastTitle">ITEM RECEIVED!</div>
+    <div id="rewardToastDetail"></div>
+  </div>
+</div>
+
 <script src="/shared/world-content.js?v=3"></script>
-<script src="/shared/combat-balance.js?v=2"></script>
+<script src="/shared/combat-balance.js?v=3"></script>
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -3112,7 +3458,7 @@ function aimPlayerTowardPoint(targetX, targetY) {
 }
 
 function updateCanvasCursor() {
-  if (inventoryOpen || shopOpen) {
+  if (inventoryOpen || shopOpen || craftingOpen) {
     canvas.style.cursor = "default";
     return;
   }
@@ -4486,6 +4832,37 @@ function updateBasicProjectiles(dt) {
       }
     }
 
+    if (
+      !impact &&
+      projectile.type === "arrow" &&
+      player.pvpEnabled &&
+      typeof onlineClient !== "undefined"
+    ) {
+      for (const remote of onlineClient.playersOnCurrentMap()) {
+        if (!canAttackRemotePlayerWithPvp(remote)) continue;
+
+        const dx = projectile.x - remote.x;
+        const dy = projectile.y - (remote.y - 8);
+
+        if (dx * dx + dy * dy <= 8 * 8) {
+          onlineClient.sendPvpAttack(
+            remote.id,
+            "arrow",
+            {
+              critical: Boolean(projectile.critical),
+              aimAngle: Math.atan2(
+                projectile.vy,
+                projectile.vx
+              )
+            }
+          );
+
+          impact = true;
+          break;
+        }
+      }
+    }
+
     const outOfWorld =
       projectile.x < 0 ||
       projectile.y < 0 ||
@@ -5663,6 +6040,8 @@ function drawPlayerReflection(camX, camY) {
 // visual effect accurately shows the player's reach.
 const SWORD_REACH = 22;
 const SWORD_HALF_ARC = 0.62;
+const BOW_MELEE_TRIGGER_RANGE = 24;
+const BOW_MELEE_HALF_ARC = 1.05;
 
 function currentMeleeReach() {
   return equippedWeapon() === "katana" ? 27 : SWORD_REACH;
@@ -6185,6 +6564,8 @@ flowerImage.src = makeFlowerIcon();
 document.getElementById("inventoryCoinImg").src = coinImage.src;
 document.getElementById("inventoryWoodImg").src = woodImage.src;
 document.getElementById("inventoryFlowerImg").src = flowerImage.src;
+document.getElementById("craftSwordWoodIcon").src = woodImage.src;
+document.getElementById("craftBowWoodIcon").src = woodImage.src;
 
 document.getElementById("inventorySwordImg").src = swordImage.src;
 document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
@@ -7401,7 +7782,8 @@ class GameState {
         "pantsIndex",
         "burnTime",
         "wetTime",
-        "shadowHidden"
+        "shadowHidden",
+        "pvpEnabled"
       ]),
 
       entities: {
@@ -7528,6 +7910,9 @@ class OnlineClient {
       this.connected = false;
       this.localPlayerId = null;
       this.remotePlayers.clear();
+      player.pvpEnabled = false;
+      player.pvpCombatUntil = 0;
+      player.pvpTogglePending = false;
       this.sharedCoins.clear();
       this.sharedResources.clear();
       this.environmentCatalogSent = false;
@@ -7624,6 +8009,12 @@ class OnlineClient {
         player.hp = message.hp;
       }
 
+      player.pvpEnabled = Boolean(message.pvpEnabled);
+
+      if (Number.isFinite(message.pvpCombatUntil)) {
+        player.pvpCombatUntil = message.pvpCombatUntil;
+      }
+
       updateInventoryUi();
       this.sendEnvironmentCatalog();
       return;
@@ -7656,6 +8047,44 @@ class OnlineClient {
 
       updateInventoryUi();
       updateShopUi();
+      return;
+    }
+
+    if (message.type === "pvpToggleResult") {
+      player.pvpTogglePending = false;
+      player.pvpEnabled = Boolean(message.enabled);
+
+      if (Number.isFinite(message.lockRemainingMs)) {
+        player.pvpCombatUntil =
+          Date.now() + Math.max(0, message.lockRemainingMs);
+      }
+
+      if (!message.ok && player.pvpEnabled) {
+        spawnFloatingText(
+          player.x,
+          player.y - 38,
+          "PVP LOCKED",
+          "#ff9a86",
+          0.85
+        );
+      }
+
+      updatePvpUi();
+      return;
+    }
+
+    if (message.type === "pvpCombatLock") {
+      if (
+        Array.isArray(message.playerIds) &&
+        message.playerIds.includes(this.localPlayerId) &&
+        Number.isFinite(message.until)
+      ) {
+        player.pvpCombatUntil = Math.max(
+          player.pvpCombatUntil,
+          message.until
+        );
+        updatePvpUi();
+      }
       return;
     }
 
@@ -8492,36 +8921,41 @@ class OnlineClient {
   }
 
   handleCraftResult(message) {
-    if (message.recipe !== "woodSword") {
+    const recipe =
+      CRAFT_RECIPES[message.recipe];
+
+    if (!recipe) {
       return;
     }
 
-    player.benchCraftPending = false;
+    player.benchCraftPending = null;
 
     if (Number.isFinite(message.totalWood)) {
       player.wood = message.totalWood;
     }
 
     if (message.success) {
-      player.story.woodSwordCrafted = true;
+      player.story[recipe.storyKey] = true;
 
-      if (!playerOwnsItem("weapon_sword")) {
+      if (!playerOwnsItem(recipe.itemId)) {
         grantInventoryItem(
-          "weapon_sword",
+          recipe.itemId,
           1
         );
       }
 
-      player.weaponIndex = 0;
+      player.weaponIndex =
+        recipe.weaponIndex;
 
       spawnFloatingText(
         woodCraftBench.x,
         woodCraftBench.y - 24,
-        "WOOD SWORD CRAFTED!",
+        `${recipe.name.toUpperCase()} CRAFTED!`,
         "#ffe38b",
         1.2
       );
 
+      updateCraftingUi();
       updateInventoryUi();
       updateHotbar();
       return;
@@ -8531,15 +8965,19 @@ class OnlineClient {
       spawnFloatingText(
         woodCraftBench.x,
         woodCraftBench.y - 24,
-        "NEED 5 WOOD",
+        `NEED ${recipe.cost} WOOD`,
         "#ffe38b",
         0.9
       );
-      return;
-    }
+    } else if (message.reason === "alreadyCrafted") {
+      player.story[recipe.storyKey] = true;
 
-    if (message.reason === "alreadyCrafted") {
-      player.story.woodSwordCrafted = true;
+      if (!playerOwnsItem(recipe.itemId)) {
+        grantInventoryItem(
+          recipe.itemId,
+          1
+        );
+      }
 
       spawnFloatingText(
         woodCraftBench.x,
@@ -8548,7 +8986,28 @@ class OnlineClient {
         "#ffe38b",
         0.9
       );
+
+      updateInventoryUi();
+      updateHotbar();
+    } else if (message.reason === "tooFar") {
+      spawnFloatingText(
+        woodCraftBench.x,
+        woodCraftBench.y - 24,
+        "MOVE CLOSER",
+        "#ffe38b",
+        0.9
+      );
+    } else {
+      spawnFloatingText(
+        woodCraftBench.x,
+        woodCraftBench.y - 24,
+        "CRAFT FAILED",
+        "#ffe38b",
+        0.9
+      );
     }
+
+    updateCraftingUi();
   }
 
   handleResourcePicked(message) {
@@ -9260,6 +9719,20 @@ class OnlineClient {
       Number(message.amount) || 0
     );
 
+    if (
+      String(message.sourceType || "").startsWith("pvp:") &&
+      (
+        message.targetId === this.localPlayerId ||
+        message.sourceId === this.localPlayerId
+      )
+    ) {
+      player.pvpCombatUntil = Math.max(
+        player.pvpCombatUntil,
+        Date.now() + 10_000
+      );
+      updatePvpUi();
+    }
+
     // HP stays synchronized for everyone, but floating combat text only exists
     // on clients currently looking at the map where the hit happened.
     if (
@@ -9337,6 +9810,48 @@ class OnlineClient {
     }
 
     this.receiveRemotePlayer(state);
+  }
+
+  requestPvpToggle(enabled) {
+    if (
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "pvpToggle",
+      enabled: Boolean(enabled)
+    }));
+
+    return true;
+  }
+
+  sendPvpAttack(
+    targetId,
+    source,
+    payload = {}
+  ) {
+    if (
+      !targetId ||
+      !player.pvpEnabled ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "pvpAttack",
+      targetId,
+      source,
+      payload
+    }));
+
+    return true;
   }
 
   requestPlayerDamage(
@@ -10812,7 +11327,78 @@ function tryHitTree() {
   }
 }
 
-function tryHitSlime() {
+function canAttackRemotePlayerWithPvp(remote) {
+  return Boolean(
+    remote &&
+    player.pvpEnabled &&
+    remote.pvpEnabled &&
+    remote.mapId === currentMapId &&
+    (Number(remote.hp) || 0) > 0 &&
+    !remote.shadowHidden
+  );
+}
+
+function tryHitPvpPlayers(source = "melee") {
+  if (
+    typeof onlineClient === "undefined" ||
+    !onlineClient?.connected ||
+    !player.pvpEnabled
+  ) {
+    return;
+  }
+
+  const originX = player.x;
+  const originY = player.y - 8;
+
+  const horizontalSwing =
+    player.attackDirection === "left" ||
+    player.attackDirection === "right";
+
+  const hitHalfArc =
+    source === "bowMelee"
+      ? BOW_MELEE_HALF_ARC
+      : horizontalSwing
+        ? 0.88
+        : 0.74;
+
+  const reach =
+    source === "bowMelee"
+      ? BOW_MELEE_TRIGGER_RANGE
+      : currentMeleeReach();
+
+  for (const remote of onlineClient.playersOnCurrentMap()) {
+    if (!canAttackRemotePlayerWithPvp(remote)) continue;
+
+    const dx = remote.x - originX;
+    const dy = (remote.y - 8) - originY;
+    const distance = Math.hypot(dx, dy);
+    const targetAngle = Math.atan2(dy, dx);
+
+    const insideAngle =
+      Math.abs(
+        angleDifference(
+          targetAngle,
+          player.attackAimAngle
+        )
+      ) <= hitHalfArc;
+
+    const insideRange =
+      distance <= reach + 8;
+
+    if (!insideAngle || !insideRange) continue;
+
+    onlineClient.sendPvpAttack(
+      remote.id,
+      source,
+      {
+        critical: player.shadowCritAttack,
+        aimAngle: player.attackAimAngle
+      }
+    );
+  }
+}
+
+function tryHitSlime(source = "melee") {
   const originX = player.x;
   const originY = player.y - 8;
 
@@ -10835,7 +11421,11 @@ function tryHitSlime() {
       player.attackDirection === "right";
 
     const hitHalfArc =
-      horizontalSwing ? 0.80 : SWORD_HALF_ARC;
+      source === "bowMelee"
+        ? BOW_MELEE_HALF_ARC
+        : horizontalSwing
+          ? 0.80
+          : SWORD_HALF_ARC;
 
     const insideAngle =
       Math.abs(angleDifference(targetAngle, player.attackAimAngle))
@@ -10849,7 +11439,7 @@ function tryHitSlime() {
       if (typeof onlineClient === "undefined") continue;
 
       onlineClient.sendSlimeAction("damage", slime, {
-        source: "melee",
+        source,
         critical: player.shadowCritAttack,
         aimAngle: player.attackAimAngle
       });
@@ -10858,7 +11448,7 @@ function tryHitSlime() {
 }
 
 
-function tryHitGoblin() {
+function tryHitGoblin(source = "melee") {
   const originX = player.x;
   const originY = player.y - 8;
 
@@ -10877,7 +11467,12 @@ function tryHitGoblin() {
       player.attackDirection === "left" ||
       player.attackDirection === "right";
 
-    const hitHalfArc = horizontalSwing ? 0.80 : SWORD_HALF_ARC;
+    const hitHalfArc =
+      source === "bowMelee"
+        ? BOW_MELEE_HALF_ARC
+        : horizontalSwing
+          ? 0.80
+          : SWORD_HALF_ARC;
     const insideAngle =
       Math.abs(angleDifference(targetAngle, player.attackAimAngle))
       <= hitHalfArc;
@@ -10893,7 +11488,7 @@ function tryHitGoblin() {
         "damage",
         goblin,
         {
-          source: "melee",
+          source,
           critical: player.shadowCritAttack,
           aimAngle: player.attackAimAngle
         }
@@ -10902,7 +11497,7 @@ function tryHitGoblin() {
   }
 }
 
-function tryHitGhost() {
+function tryHitGhost(source = "melee") {
   const originX = player.x;
   const originY = player.y - 8;
 
@@ -10930,7 +11525,12 @@ function tryHitGhost() {
       player.attackDirection === "left" ||
       player.attackDirection === "right";
 
-    const hitHalfArc = horizontalSwing ? 0.80 : SWORD_HALF_ARC;
+    const hitHalfArc =
+      source === "bowMelee"
+        ? BOW_MELEE_HALF_ARC
+        : horizontalSwing
+          ? 0.80
+          : SWORD_HALF_ARC;
 
     const insideAngle =
       Math.abs(angleDifference(targetAngle, player.attackAimAngle))
@@ -10947,7 +11547,7 @@ function tryHitGhost() {
         const damage =
           calculateLocalCombatDamage(
             ghost,
-            "melee",
+            source,
             critical
           );
 
@@ -10985,7 +11585,7 @@ function tryHitGhost() {
         "damage",
         ghost,
         {
-          source: "melee",
+          source,
           critical: player.shadowCritAttack,
           aimAngle: player.attackAimAngle
         }
@@ -11334,7 +11934,7 @@ const player = {
   // Equipped tool / attack state.
   weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow
 
-  // Bow visual prototype only. No arrows/damage are implemented yet.
+  // Bow draw/release state, including close-range bow melee fallback.
   bowDrawing: false,
   bowDrawAmount: 0,
   bowDrawDuration: 0.58,
@@ -11362,6 +11962,12 @@ const player = {
   // Player health.
   maxHp: 50,
   hp: 50,
+
+  // Opt-in PvP state. Permission is authoritative on the server; the local
+  // fields mirror server messages so the menu and overhead marker stay clear.
+  pvpEnabled: false,
+  pvpCombatUntil: 0,
+  pvpTogglePending: false,
 
   // Fire debuff state. Player fire lasts longer than monster fire so
   // catching flame feels more consequential and gives the rain spell value.
@@ -11416,10 +12022,11 @@ const player = {
   // for now these flags live for the current browser session.
   story: {
     axeReceived: false,
-    woodSwordCrafted: false
+    woodSwordCrafted: false,
+    woodBowCrafted: false
   },
 
-  benchCraftPending: false,
+  benchCraftPending: null,
   shopPurchasePending: null,
 
   // Level progression.
@@ -11504,6 +12111,23 @@ const ALL_EQUIPMENT_ITEM_IDS = new Set([
   ...SHIRT_ITEM_IDS,
   ...PANTS_ITEM_IDS
 ]);
+
+const CRAFT_RECIPES = Object.freeze({
+  woodSword: Object.freeze({
+    name: "Wood Sword",
+    itemId: "weapon_sword",
+    weaponIndex: 0,
+    cost: 5,
+    storyKey: "woodSwordCrafted"
+  }),
+  woodBow: Object.freeze({
+    name: "Wood Bow",
+    itemId: "weapon_bow",
+    weaponIndex: 6,
+    cost: 5,
+    storyKey: "woodBowCrafted"
+  })
+});
 
 const SHOP_ITEMS = [
   { id: "weapon_sword", name: "Wood Sword", questOnly: true },
@@ -11942,6 +12566,59 @@ function nearbySpawnInteraction() {
   return nearest;
 }
 
+function showRewardToast(title, detail, imageObject) {
+  const toast =
+    document.getElementById(
+      "rewardToast"
+    );
+
+  if (!toast) return;
+
+  const image =
+    document.getElementById(
+      "rewardToastImg"
+    );
+
+  const titleElement =
+    document.getElementById(
+      "rewardToastTitle"
+    );
+
+  const detailElement =
+    document.getElementById(
+      "rewardToastDetail"
+    );
+
+  if (image && imageObject) {
+    image.src = imageObject.src;
+    image.style.display = "block";
+  } else if (image) {
+    image.removeAttribute("src");
+    image.style.display = "none";
+  }
+
+  if (titleElement) {
+    titleElement.textContent = title;
+  }
+
+  if (detailElement) {
+    detailElement.textContent = detail;
+  }
+
+  toast.classList.remove("show");
+  void toast.offsetWidth;
+  toast.classList.add("show");
+
+  if (rewardToastTimer) {
+    clearTimeout(rewardToastTimer);
+  }
+
+  rewardToastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+    rewardToastTimer = null;
+  }, 2800);
+}
+
 function interactWithTutorialNpc() {
   if (!player.story.axeReceived) {
     player.story.axeReceived = true;
@@ -11953,14 +12630,10 @@ function interactWithTutorialNpc() {
       );
     }
 
-    // The Axe is added to Inventory / Gear, but the player remains
-    // empty-handed until they deliberately equip it.
-    spawnFloatingText(
-      tutorialNpc.x,
-      tutorialNpc.y - 24,
+    showRewardToast(
       "AXE RECEIVED!",
-      "#ffe38b",
-      1.1
+      "Added to Inventory · Equip it and gather 5 Wood",
+      axeImage
     );
 
     spawnFloatingText(
@@ -11977,16 +12650,19 @@ function interactWithTutorialNpc() {
   }
 
   // Once the NPC has handed over the Axe, their shop is immediately
-  // available. The 5-wood / Wood Sword quest can still be completed at
-  // the bench independently; it no longer gates shopping.
+  // available. Crafting progression is handled separately at the bench.
   setShopOpen(true);
-  return;
 }
 
-function completeWoodSwordCraftOffline() {
+function craftRecipeOffline(recipeId) {
+  const recipe =
+    CRAFT_RECIPES[recipeId];
+
+  if (!recipe) return;
+
   if (
-    player.story.woodSwordCrafted ||
-    playerOwnsItem("weapon_sword")
+    player.story[recipe.storyKey] ||
+    playerOwnsItem(recipe.itemId)
   ) {
     spawnFloatingText(
       woodCraftBench.x,
@@ -11998,60 +12674,61 @@ function completeWoodSwordCraftOffline() {
     return;
   }
 
-  if (player.wood < 5) {
+  if (player.wood < recipe.cost) {
     spawnFloatingText(
       woodCraftBench.x,
       woodCraftBench.y - 24,
-      "NEED 5 WOOD",
-      "#ffe38b",
+      "MISSING INGREDIENTS",
+      "#f08a7f",
       0.9
     );
     return;
   }
 
-  player.wood -= 5;
-  player.story.woodSwordCrafted = true;
+  player.wood -= recipe.cost;
+  player.story[recipe.storyKey] = true;
 
   grantInventoryItem(
-    "weapon_sword",
+    recipe.itemId,
     1
   );
 
-  player.weaponIndex = 0;
+  player.weaponIndex =
+    recipe.weaponIndex;
 
   spawnFloatingText(
     woodCraftBench.x,
     woodCraftBench.y - 24,
-    "WOOD SWORD CRAFTED!",
+    `${recipe.name.toUpperCase()} CRAFTED!`,
     "#ffe38b",
     1.2
   );
 
+  updateCraftingUi();
   updateInventoryUi();
   updateHotbar();
 }
 
-function interactWithWoodBench() {
+function tryCraftRecipe(recipeId) {
+  const recipe =
+    CRAFT_RECIPES[recipeId];
+
   if (
-    player.story.woodSwordCrafted ||
-    playerOwnsItem("weapon_sword")
+    !recipe ||
+    !craftingOpen ||
+    player.benchCraftPending ||
+    player.story[recipe.storyKey] ||
+    playerOwnsItem(recipe.itemId)
   ) {
-    spawnFloatingText(
-      woodCraftBench.x,
-      woodCraftBench.y - 24,
-      "ALREADY CRAFTED",
-      "#ffe38b",
-      0.9
-    );
     return;
   }
 
-  if (player.wood < 5) {
+  if (player.wood < recipe.cost) {
     spawnFloatingText(
       woodCraftBench.x,
       woodCraftBench.y - 24,
-      "NEED 5 WOOD",
-      "#ffe38b",
+      "MISSING INGREDIENTS",
+      "#f08a7f",
       0.9
     );
     return;
@@ -12061,20 +12738,145 @@ function interactWithWoodBench() {
     typeof onlineClient !== "undefined" &&
     onlineClient?.connected
   ) {
-    if (player.benchCraftPending) {
-      return;
+    player.benchCraftPending = recipeId;
+
+    if (!onlineClient.requestCraft(recipeId)) {
+      player.benchCraftPending = null;
     }
 
-    player.benchCraftPending = true;
-
-    if (!onlineClient.requestCraft("woodSword")) {
-      player.benchCraftPending = false;
-    }
-
+    updateCraftingUi();
     return;
   }
 
-  completeWoodSwordCraftOffline();
+  craftRecipeOffline(recipeId);
+}
+
+function updateCraftingUi() {
+  for (const [recipeId, recipe] of
+    Object.entries(CRAFT_RECIPES)) {
+    const button =
+      document.querySelector(
+        `[data-craft-recipe="${recipeId}"]`
+      );
+
+    if (!button) continue;
+
+    const owned =
+      player.story[recipe.storyKey] ||
+      playerOwnsItem(recipe.itemId);
+
+    const pending =
+      player.benchCraftPending ===
+      recipeId;
+
+    const anyPending =
+      Boolean(player.benchCraftPending);
+
+    const hasIngredients =
+      player.wood >= recipe.cost;
+
+    button.disabled =
+      owned || anyPending || !hasIngredients;
+
+    const image =
+      button.querySelector("img");
+
+    const itemImage =
+      shopImageForItemId(recipe.itemId);
+
+    if (image && itemImage) {
+      image.src = itemImage.src;
+    }
+
+    const cost =
+      button.querySelector(
+        ".craft-recipe-cost"
+      );
+
+    if (cost) {
+      const value =
+        cost.querySelector(
+          ".craft-cost-value"
+        );
+
+      const check =
+        cost.querySelector(
+          ".craft-ingredient-check"
+        );
+
+      if (value) {
+        value.textContent =
+          `${recipe.cost}`;
+      }
+
+      if (check) {
+        check.textContent =
+          hasIngredients ? "✓" : "✕";
+        check.classList.toggle(
+          "have",
+          hasIngredients
+        );
+        check.classList.toggle(
+          "missing",
+          !hasIngredients
+        );
+      }
+    }
+
+    const status =
+      button.querySelector(
+        ".craft-recipe-status"
+      );
+
+    if (status) {
+      status.textContent =
+        owned
+          ? "CRAFTED"
+          : pending
+            ? "CRAFTING..."
+            : "CRAFT";
+    }
+  }
+}
+
+function setCraftingOpen(open) {
+  craftingOpen = open;
+
+  const overlay =
+    document.getElementById(
+      "craftOverlay"
+    );
+
+  if (!overlay) return;
+
+  if (open && inventoryOpen) {
+    setInventoryOpen(false);
+  }
+
+  if (open && shopOpen) {
+    setShopOpen(false);
+  }
+
+  overlay.classList.toggle(
+    "open",
+    open
+  );
+
+  overlay.setAttribute(
+    "aria-hidden",
+    open ? "false" : "true"
+  );
+
+  inputController.clearKeys();
+
+  if (open) {
+    inputController.clearCommands();
+    updateCraftingUi();
+  }
+}
+
+function interactWithWoodBench() {
+  setCraftingOpen(true);
 }
 
 function interactWithNearbyObject() {
@@ -13033,6 +13835,8 @@ function updateHotbar() {
 
 let inventoryOpen = false;
 let shopOpen = false;
+let craftingOpen = false;
+let rewardToastTimer = null;
 let selectedHotbarInventoryItemId = null;
 let enhancementUiSignature = "";
 
@@ -13222,17 +14026,6 @@ function updateHotbarAssignmentUi() {
       playerOwnsItem(itemId)
     );
 
-  panel.classList.toggle(
-    "open",
-    validSelection
-  );
-
-  if (!validSelection) {
-    selectedHotbarInventoryItemId =
-      null;
-    return;
-  }
-
   const image =
     document.getElementById(
       "hotbarAssignImg"
@@ -13243,11 +14036,50 @@ function updateHotbarAssignmentUi() {
       "hotbarAssignName"
     );
 
+  document
+    .querySelectorAll(
+      "[data-hotbar-assign-slot], #hotbarAssignClear"
+    )
+    .forEach(button => {
+      button.disabled =
+        !validSelection;
+    });
+
+  if (!validSelection) {
+    selectedHotbarInventoryItemId =
+      null;
+
+    if (image) {
+      image.removeAttribute("src");
+      image.style.visibility =
+        "hidden";
+    }
+
+    if (name) {
+      name.textContent =
+        "Select a usable item";
+    }
+
+    document
+      .querySelectorAll(
+        "[data-hotbar-assign-slot]"
+      )
+      .forEach(button => {
+        button.classList.remove(
+          "active"
+        );
+      });
+
+    return;
+  }
+
   const itemImage =
     shopImageForItemId(itemId);
 
   if (image && itemImage) {
     image.src = itemImage.src;
+    image.style.visibility =
+      "visible";
   }
 
   const shopItem =
@@ -13267,9 +14099,8 @@ function updateHotbarAssignmentUi() {
         : null;
 
     const itemDisplayName =
-      itemId === "weapon_bow"
-        ? "Wood Bow · VISUAL TEST"
-        : (shopItem?.name || itemId);
+      shopItem?.name ||
+      (itemId === "weapon_bow" ? "Wood Bow" : itemId);
 
     name.textContent =
       `${itemDisplayName}${
@@ -13294,6 +14125,66 @@ function updateHotbarAssignmentUi() {
         ) === assignedSlot
       );
     });
+}
+
+function updatePvpUi() {
+  const badge = document.getElementById("pvpStatusBadge");
+  const status = document.getElementById("pvpStatusText");
+  const button = document.getElementById("pvpToggleButton");
+  const lockText = document.getElementById("pvpLockText");
+
+  if (!badge || !status || !button || !lockText) {
+    return;
+  }
+
+  const connected =
+    Boolean(window.onlineClient?.connected);
+
+  const remainingMs = Math.max(
+    0,
+    (Number(player.pvpCombatUntil) || 0) - Date.now()
+  );
+
+  const locked =
+    player.pvpEnabled &&
+    remainingMs > 0;
+
+  badge.textContent =
+    player.pvpEnabled ? "ON" : "OFF";
+
+  badge.classList.toggle(
+    "on",
+    player.pvpEnabled
+  );
+
+  status.textContent =
+    player.pvpEnabled
+      ? "PvP is enabled. Other opted-in players can damage you."
+      : "PvP is disabled. Other players cannot damage you.";
+
+  button.classList.toggle(
+    "on",
+    player.pvpEnabled
+  );
+
+  button.textContent =
+    player.pvpEnabled
+      ? locked
+        ? `In Combat · ${Math.ceil(remainingMs / 1000)}s`
+        : "Disable PvP"
+      : "Enable PvP";
+
+  button.disabled =
+    !connected ||
+    player.pvpTogglePending ||
+    locked;
+
+  lockText.textContent =
+    !connected
+      ? "Connect to the multiplayer server to use PvP."
+      : locked
+        ? "PvP cannot be disabled while you are in combat."
+        : "Both players must opt in. PvP attacks deal 50% damage. Magic is not enabled for PvP yet.";
 }
 
 function updateInventoryUi() {
@@ -13590,6 +14481,7 @@ function updateInventoryUi() {
 
   updateAbilityTreeUi();
   updateSkillBindingUi();
+  updatePvpUi();
 }
 
 function updateShopUi() {
@@ -13704,6 +14596,10 @@ function setShopOpen(open) {
     setInventoryOpen(false);
   }
 
+  if (open && craftingOpen) {
+    setCraftingOpen(false);
+  }
+
   overlay.classList.toggle(
     "open",
     open
@@ -13802,6 +14698,10 @@ function setInventoryOpen(open) {
     setShopOpen(false);
   }
 
+  if (open && craftingOpen) {
+    setCraftingOpen(false);
+  }
+
   const overlay = document.getElementById("inventoryOverlay");
   overlay.classList.toggle("open", open);
   overlay.setAttribute("aria-hidden", open ? "false" : "true");
@@ -13828,6 +14728,36 @@ document.querySelectorAll(".inventory-tab").forEach(tab => {
     showInventoryPage(tab.dataset.page);
   });
 });
+
+const pvpToggleButton = document.getElementById("pvpToggleButton");
+if (pvpToggleButton) {
+  pvpToggleButton.addEventListener("click", () => {
+    if (
+      player.pvpTogglePending ||
+      typeof onlineClient === "undefined" ||
+      !onlineClient?.connected
+    ) {
+      return;
+    }
+
+    const remainingMs = Math.max(
+      0,
+      (Number(player.pvpCombatUntil) || 0) - Date.now()
+    );
+
+    if (player.pvpEnabled && remainingMs > 0) {
+      return;
+    }
+
+    player.pvpTogglePending = true;
+
+    if (!onlineClient.requestPvpToggle(!player.pvpEnabled)) {
+      player.pvpTogglePending = false;
+    }
+
+    updatePvpUi();
+  });
+}
 
 function showGearPanel(panelId) {
   document.querySelectorAll(".gear-panel").forEach(panel => {
@@ -13900,6 +14830,29 @@ document.getElementById("shopGrid").addEventListener("click", event => {
 
   tryPurchaseShopItem(
     button.dataset.shopItemId
+  );
+});
+
+
+document.getElementById("craftClose").addEventListener("click", () => {
+  setCraftingOpen(false);
+});
+
+document.getElementById("craftGrid").addEventListener("click", event => {
+  const button =
+    event.target.closest(
+      "[data-craft-recipe]"
+    );
+
+  if (
+    !button ||
+    button.disabled
+  ) {
+    return;
+  }
+
+  tryCraftRecipe(
+    button.dataset.craftRecipe
   );
 });
 
@@ -14157,6 +15110,7 @@ function handleCanvasMouseMove(event) {
   if (
     !inventoryOpen &&
     !shopOpen &&
+    !craftingOpen &&
     equippedWeapon() === "bow" &&
     player.bowDrawing
   ) {
@@ -14256,35 +15210,24 @@ function grantDebugProgressionPoints() {
 }
 
 function handleMenuKeyDown(key) {
-  if (
-    key === "escape" &&
-    shopOpen
-  ) {
+  if (key !== "escape") {
+    return false;
+  }
+
+  // Escape acts as the universal menu key. If a contextual station/shop is
+  // open, close that first. Otherwise toggle the main inventory/menu overlay.
+  if (craftingOpen) {
+    setCraftingOpen(false);
+    return true;
+  }
+
+  if (shopOpen) {
     setShopOpen(false);
     return true;
   }
 
-  if (key === "i") {
-    if (shopOpen) {
-      setShopOpen(false);
-    }
-
-    setInventoryOpen(
-      !inventoryOpen
-    );
-
-    return true;
-  }
-
-  if (
-    key === "escape" &&
-    inventoryOpen
-  ) {
-    setInventoryOpen(false);
-    return true;
-  }
-
-  return false;
+  setInventoryOpen(!inventoryOpen);
+  return true;
 }
 
 function handleActiveSkillKeyDown(event, activeSkillKey) {
@@ -14325,6 +15268,12 @@ function handleGameKeyDown(event) {
 
   if (event.repeat) return;
 
+  // Escape is the game's menu key. Prevent any browser-level handling from
+  // competing with the game UI.
+  if (key === "escape") {
+    event.preventDefault();
+  }
+
   inputController.setKey(key, true);
 
   // VISUAL TEST: grant/equip the Wood Bow without changing progression.
@@ -14342,7 +15291,7 @@ function handleGameKeyDown(event) {
   }
 
   if (handleMenuKeyDown(key)) return;
-  if (inventoryOpen || shopOpen) return;
+  if (inventoryOpen || shopOpen || craftingOpen) return;
 
   if (key === "f") {
     inputController.queueCommand(
@@ -14410,6 +15359,7 @@ function executeWeaponAttack(weapon) {
     tryHitSlime();
     tryHitGoblin();
     tryHitGhost();
+    tryHitPvpPlayers();
     tryCutHarvestFlowers();
     tryCutGrass();
     return;
@@ -14419,6 +15369,7 @@ function executeWeaponAttack(weapon) {
     tryHitSlime();
     tryHitGoblin();
     tryHitGhost();
+    tryHitPvpPlayers();
     tryHitGrave();
     tryHitTree();
     return;
@@ -14435,9 +15386,8 @@ function executeWeaponAttack(weapon) {
 }
 
 function executePrimaryAttackCommand(payload) {
-  // Bow attacks are intentionally disabled in this visual-only prototype.
-  // Its mousedown/mouseup path is handled directly so we can judge the pose,
-  // procedural drawstring and movement before implementing actual arrows.
+  // Bow input has its own press/hold/release path for drawing arrows and
+  // for the close-range bow slash fallback.
   if (equippedWeapon() === "bow") {
     return;
   }
@@ -14502,8 +15452,114 @@ function executePrimaryAttackCommand(payload) {
   player.shadowCritAttack = false;
 }
 
+function bowHasCloseMonsterInAim() {
+  const originX = player.x;
+  const originY = player.y - 8;
+  const aim = Number(player.attackAimAngle) || 0;
+
+  const candidates = [];
+
+  for (const slime of slimes) {
+    if (!slime.alive || slime.carriedBy) continue;
+    candidates.push({
+      x: slime.x,
+      y: slime.y - 6
+    });
+  }
+
+  for (const goblin of goblins) {
+    if (!goblin.alive) continue;
+    candidates.push({
+      x: goblin.x,
+      y: goblin.y - 11
+    });
+  }
+
+  for (const ghost of ghosts) {
+    if (
+      !ghost.alive ||
+      !naturalEnemyBelongsToCurrentMap(ghost)
+    ) {
+      continue;
+    }
+
+    candidates.push({
+      x: ghost.x,
+      y: ghost.y - 11
+    });
+  }
+
+  if (
+    player.pvpEnabled &&
+    typeof onlineClient !== "undefined"
+  ) {
+    for (const remote of onlineClient.playersOnCurrentMap()) {
+      if (!canAttackRemotePlayerWithPvp(remote)) continue;
+
+      candidates.push({
+        x: remote.x,
+        y: remote.y - 8
+      });
+    }
+  }
+
+  return candidates.some(target => {
+    const dx = target.x - originX;
+    const dy = target.y - originY;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > BOW_MELEE_TRIGGER_RANGE) {
+      return false;
+    }
+
+    const targetAngle = Math.atan2(dy, dx);
+
+    return (
+      Math.abs(
+        angleDifference(
+          targetAngle,
+          aim
+        )
+      ) <= BOW_MELEE_HALF_ARC
+    );
+  });
+}
+
+function executeBowMeleeAttack() {
+  const attackingFromShadowHide =
+    player.shadowHidden;
+
+  breakShadowHide();
+
+  player.shadowCritAttack =
+    attackingFromShadowHide;
+
+  player.bowDrawing = false;
+  player.bowDrawAmount = 0;
+  player.bowReleaseTime = 0;
+
+  player.attackTime =
+    player.attackDuration;
+  player.attackCooldown = 0.46;
+  player.slashTime =
+    player.slashDuration;
+
+  tryHitSlime("bowMelee");
+  tryHitGoblin("bowMelee");
+  tryHitGhost("bowMelee");
+  tryHitPvpPlayers("bowMelee");
+
+  player.shadowCritAttack = false;
+
+  if (
+    typeof onlineClient !== "undefined"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+}
+
 function handlePrimaryAttack(event) {
-  if (inventoryOpen || shopOpen || event.button !== 0) return;
+  if (inventoryOpen || shopOpen || craftingOpen || event.button !== 0) return;
 
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
@@ -14522,6 +15578,11 @@ function handlePrimaryAttack(event) {
       pointer.x,
       pointer.y
     );
+
+    if (bowHasCloseMonsterInAim()) {
+      executeBowMeleeAttack();
+      return;
+    }
 
     player.bowDrawing = true;
     player.bowReleaseTime = 0;
@@ -14593,12 +15654,35 @@ function handleBowVisualMouseUp(event) {
 
 canvas.addEventListener("mousedown", handlePrimaryAttack);
 window.addEventListener("mouseup", handleBowVisualMouseUp);
-window.addEventListener("blur", () => {
+
+function resetInputAfterFocusLoss() {
+  // A key released while another tab/window owns focus does not reliably send
+  // keyup back to the game. Clear every held input so the player cannot keep
+  // walking (or execute a queued action) while the page is unfocused.
+  inputController.clearKeys();
+  inputController.clearCommands();
+
   if (player.bowDrawing) {
     player.bowDrawing = false;
     player.bowReleaseTime = 0;
+    player.bowDrawAmount = 0;
+  }
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+}
+
+window.addEventListener("blur", resetInputAfterFocusLoss);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    resetInputAfterFocusLoss();
   }
 });
+window.addEventListener("pagehide", resetInputAfterFocusLoss);
 
 // -----------------------------------------------------------------------------
 // SLIME CONTACT
@@ -15666,7 +16750,7 @@ class GameSimulation {
   update(dt) {
     updateCanvasCursor();
 
-    if (inventoryOpen || shopOpen) {
+    if (inventoryOpen || shopOpen || craftingOpen) {
       updateInventoryUi();
       updateHotbar();
 
@@ -16093,6 +17177,12 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
       bowDrawAmount > 0.025
     );
 
+  const bowMeleeActive =
+    bowPoseActive &&
+    player.attackTime > 0 &&
+    !player.bowDrawing &&
+    player.bowReleaseTime <= 0;
+
   const attacking = player.attackTime > 0;
 
   // At rest the bow stays in one consistent hand and does not chase the
@@ -16101,7 +17191,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   const useRightHand =
     bowPoseActive
       ? (
-          bowAimingActive
+          (bowAimingActive || bowMeleeActive)
             ? player.attackHand === "right"
             : false
         )
@@ -16758,18 +17848,20 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
       Math.PI / 8;
 
     const bowRotation =
-      bowAimingActive
-        ? (
-            Math.round(
-              (
-                aim +
-                Math.PI / 2
-              ) /
+      bowMeleeActive
+        ? swordAngle
+        : bowAimingActive
+          ? (
+              Math.round(
+                (
+                  aim +
+                  Math.PI / 2
+                ) /
+                rotationStep
+              ) *
               rotationStep
-            ) *
-            rotationStep
-          )
-        : Math.PI / 2;
+            )
+          : Math.PI / 2;
 
     const cosR =
       Math.cos(bowRotation);
@@ -16778,12 +17870,12 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
       Math.sin(bowRotation);
 
     const bowRestOffsetX =
-      bowAimingActive
+      (bowAimingActive || bowMeleeActive)
         ? 0
         : 2;
 
     const bowRestOffsetY =
-      bowAimingActive
+      (bowAimingActive || bowMeleeActive)
         ? 0
         : -1;
 
@@ -17346,7 +18438,7 @@ function drawInteractionPrompt(
   camX,
   camY
 ) {
-  if (inventoryOpen || shopOpen) return;
+  if (inventoryOpen || shopOpen || craftingOpen) return;
 
   const interaction =
     nearbySpawnInteraction();
@@ -17407,6 +18499,45 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "hurlReachDirX",
   "hurlReachDirY"
 ];
+
+function drawPvpMarker(
+  entity,
+  camX,
+  camY
+) {
+  if (!entity?.pvpEnabled) return;
+
+  const screenX = Math.round(entity.x - camX);
+  const screenY = Math.round(entity.y - camY - 29);
+
+  drawStaticPixelText(
+    "PVP",
+    screenX,
+    screenY,
+    "#ff7968",
+    1
+  );
+
+  if (
+    Number.isFinite(entity.hp) &&
+    Number.isFinite(entity.maxHp) &&
+    entity.maxHp > 0
+  ) {
+    const width = 18;
+    const fill = Math.max(
+      0,
+      Math.min(
+        width,
+        Math.round(width * entity.hp / entity.maxHp)
+      )
+    );
+
+    ctx.fillStyle = "rgba(20, 18, 15, .82)";
+    ctx.fillRect(screenX - 9, screenY + 7, width, 3);
+    ctx.fillStyle = "#cf5b4d";
+    ctx.fillRect(screenX - 9, screenY + 7, fill, 2);
+  }
+}
 
 function drawRemotePlayer(
   remote,
@@ -17513,6 +18644,10 @@ function drawRemotePlayer(
     for (const key of REMOTE_PLAYER_DRAW_FIELDS) {
       player[key] = backup[key];
     }
+  }
+
+  if (!reflectionMode) {
+    drawPvpMarker(remote, camX, camY);
   }
 }
 
@@ -17870,7 +19005,10 @@ function buildWorldDrawables(camX, camY) {
   addDrawable(
     drawables,
     player.y,
-    () => drawPlayer(camX, camY)
+    () => {
+      drawPlayer(camX, camY);
+      drawPvpMarker(player, camX, camY);
+    }
   );
 
   return drawables;
