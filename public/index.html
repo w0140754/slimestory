@@ -48,7 +48,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  #toolbarRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
     pointer-events: none;
   }
 
@@ -122,10 +129,85 @@
     white-space: nowrap;
   }
 
+  #abilityBar {
+    display: flex;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .ability-slot {
+    width: 42px;
+    height: 42px;
+    position: relative;
+    background: rgba(20, 24, 20, 0.88);
+    border: 2px solid #6e6282;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.35);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .ability-slot img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    transform: translate(-50%, -50%);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .ability-slot.empty {
+    opacity: 0.42;
+    border-color: #5b5367;
+  }
+
+  .ability-slot.active {
+    border-color: #d9b9ff;
+    box-shadow: 0 0 0 1px rgba(253,238,255,.45) inset, 3px 3px 0 rgba(0,0,0,.35);
+    background: rgba(48, 38, 57, 0.92);
+  }
+
+  .ability-slot .hotbar-label {
+    bottom: -14px;
+    font: 9px/1 monospace;
+  }
+
   #hotbar {
     display: flex;
     gap: 8px;
     pointer-events: none;
+  }
+
+  #arrowHud {
+    height: 44px;
+    min-width: 48px;
+    padding: 0 7px;
+    box-sizing: border-box;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(20, 24, 20, 0.86);
+    border: 2px solid #6f674c;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.35);
+    color: #fff6d4;
+    font: 10px/1 monospace;
+    text-shadow: 1px 1px 0 rgba(0,0,0,.6);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  #arrowHud img {
+    width: 22px;
+    height: 22px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  #arrowHudCount {
+    min-width: 12px;
+    text-align: left;
   }
 
   .hotbar-slot {
@@ -149,8 +231,8 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     transform: translate(-50%, -50%) rotate(-90deg);
     transform-origin: center;
     image-rendering: pixelated;
@@ -565,10 +647,10 @@
     appearance: none;
     border: 0;
     border-right: 2px solid #5f573d;
-    padding: 10px 16px;
+    padding: 9px 10px;
     background: #293329;
     color: #cfc49a;
-    font: 13px/1 monospace;
+    font: 11px/1 monospace;
     cursor: pointer;
   }
 
@@ -961,39 +1043,26 @@
 
   .skill-tree-branches {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: 1fr;
+    gap: 10px;
     position: relative;
   }
 
   .skill-tree-branches::before {
-    content: "";
-    position: absolute;
-    left: 25%;
-    right: 25%;
-    top: -8px;
-    height: 2px;
-    background: #665d43;
+    display: none;
   }
 
   .skill-node {
     position: relative;
-    min-height: 146px;
-    padding: 10px;
+    min-height: 0;
+    padding: 11px 12px;
     box-sizing: border-box;
     border: 2px solid #665d43;
     background: #273027;
   }
 
   .skill-node::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: -10px;
-    width: 2px;
-    height: 10px;
-    background: #665d43;
-    transform: translateX(-50%);
+    display: none;
   }
 
   .skill-node.unlocked {
@@ -1012,15 +1081,30 @@
 
   .skill-node-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
     margin-bottom: 7px;
   }
 
+  .skill-node-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .skill-node-icon {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
   .skill-node-name {
     color: #fff2be;
-    font: 11px/1 monospace;
+    font: 11px/1.15 monospace;
   }
 
   .skill-status {
@@ -1030,10 +1114,53 @@
   }
 
   .skill-description {
-    min-height: 38px;
+    min-height: 0;
     color: #bdb494;
     font: 9px/1.35 monospace;
     margin-bottom: 8px;
+  }
+
+  .skill-progression {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+    margin: 9px 0;
+  }
+
+  .skill-progress-step {
+    min-height: 43px;
+    padding: 5px 4px;
+    box-sizing: border-box;
+    border: 1px solid #4f4937;
+    background: #202720;
+    text-align: center;
+  }
+
+  .skill-progress-step.reached {
+    border-color: #807149;
+    background: #303a2e;
+  }
+
+  .skill-progress-step.current {
+    border-color: #e1c86e;
+    box-shadow: 0 0 0 1px rgba(255,240,173,.18) inset;
+  }
+
+  .skill-progress-level {
+    display: block;
+    color: #f0d77d;
+    font: 8px/1 monospace;
+    margin-bottom: 4px;
+  }
+
+  .skill-progress-name {
+    display: block;
+    color: #cfc6a4;
+    font: 7px/1.15 monospace;
+  }
+
+  .skill-progress-step.reached .skill-progress-name {
+    color: #fff2be;
   }
 
   .skill-requirement {
@@ -1152,6 +1279,39 @@
     font: 8px/1.25 monospace;
   }
 
+  .enhancement-slot-entry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .enhancement-slot-icon,
+  .enhancement-icon {
+    width: 20px;
+    height: 20px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    flex: 0 0 auto;
+  }
+
+  .enhancement-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin-bottom: 5px;
+  }
+
+  .enhancement-card-copy {
+    min-width: 0;
+  }
+
+  .talent-panel-note {
+    margin-top: 10px;
+    color: #bdb494;
+    font: 8px/1.35 monospace;
+  }
+
   .enhancement-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1218,19 +1378,32 @@
   }
 
   .skill-key-slot {
-    min-height: 48px;
+    min-height: 72px;
     padding: 7px 5px;
     border: 2px solid #5d563e;
     background: #273027;
     text-align: center;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .skill-key-icon {
+    width: 22px;
+    height: 22px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    visibility: hidden;
   }
 
   .skill-key-name {
     display: block;
     color: #f0d77d;
     font: 10px/1 monospace;
-    margin-bottom: 6px;
+    margin-bottom: 0;
   }
 
   .skill-key-skill {
@@ -1241,6 +1414,67 @@
 
   .skill-section-gap {
     margin-top: 18px;
+  }
+
+  .skill-category-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 10px 0 12px;
+  }
+
+  .skill-category-tab {
+    appearance: none;
+    min-height: 30px;
+    padding: 0 7px;
+    border: 2px solid #5d563e;
+    background: #273027;
+    color: #cfc39a;
+    font: 9px/1 monospace;
+    cursor: pointer;
+  }
+
+  .skill-category-tab:hover {
+    filter: brightness(1.12);
+  }
+
+  .skill-category-tab.active {
+    color: #fff2be;
+    border-color: #9b8650;
+    background: #354132;
+    box-shadow: 0 0 0 1px rgba(225, 200, 110, .16) inset;
+  }
+
+  .skill-category-panel {
+    display: none;
+  }
+
+  .skill-category-panel.active {
+    display: block;
+  }
+
+  .skill-tree-branches.single-skill {
+    grid-template-columns: 1fr;
+    max-width: none;
+    margin: 0;
+  }
+
+  .skill-tree-branches.single-skill::before {
+    display: none;
+  }
+
+  .skill-category-empty {
+    min-height: 124px;
+    border: 2px dashed #4f4937;
+    background: #242a24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 18px;
+    box-sizing: border-box;
+    color: #8f896f;
+    font: 9px/1.45 monospace;
   }
 
   .stats-header {
@@ -1437,26 +1671,52 @@
     </div>
   </div>
 
-  <div id="hotbar">
-    <div class="hotbar-slot" id="slot1">
-      <img class="hotbar-item-img" alt="" />
-      <div class="hotbar-label">1</div>
+  <div id="toolbarRow">
+    <div id="abilityBar">
+      <div class="ability-slot empty" id="abilitySlotShift">
+        <img class="ability-slot-img" alt="" />
+        <div class="hotbar-label">Shift</div>
+      </div>
+      <div class="ability-slot empty" id="abilitySlotSpace">
+        <img class="ability-slot-img" alt="" />
+        <div class="hotbar-label">Space</div>
+      </div>
+      <div class="ability-slot empty" id="abilitySlotE">
+        <img class="ability-slot-img" alt="" />
+        <div class="hotbar-label">E</div>
+      </div>
+      <div class="ability-slot empty" id="abilitySlotR">
+        <img class="ability-slot-img" alt="" />
+        <div class="hotbar-label">R</div>
+      </div>
     </div>
-    <div class="hotbar-slot" id="slot2">
-      <img class="hotbar-item-img" alt="" />
-      <div class="hotbar-label">2</div>
+
+    <div id="hotbar">
+      <div class="hotbar-slot" id="slot1">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">1</div>
+      </div>
+      <div class="hotbar-slot" id="slot2">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">2</div>
+      </div>
+      <div class="hotbar-slot" id="slot3">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">3</div>
+      </div>
+      <div class="hotbar-slot" id="slot4">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">4</div>
+      </div>
+      <div class="hotbar-slot" id="slot5">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">5</div>
+      </div>
     </div>
-    <div class="hotbar-slot" id="slot3">
-      <img class="hotbar-item-img" alt="" />
-      <div class="hotbar-label">3</div>
-    </div>
-    <div class="hotbar-slot" id="slot4">
-      <img class="hotbar-item-img" alt="" />
-      <div class="hotbar-label">4</div>
-    </div>
-    <div class="hotbar-slot" id="slot5">
-      <img class="hotbar-item-img" alt="" />
-      <div class="hotbar-label">5</div>
+
+    <div id="arrowHud" title="Arrows">
+      <img id="arrowHudImg" alt="Arrows" />
+      <span id="arrowHudCount">0</span>
     </div>
   </div>
 
@@ -1466,8 +1726,9 @@
   <div id="inventoryPanel">
     <div id="inventoryTop">
       <button class="inventory-tab active" data-page="inventoryPage">Inventory</button>
-      <button class="inventory-tab" data-page="equipmentPage">Gear</button>
+      <button class="inventory-tab" data-page="equipmentPage">Armor</button>
       <button class="inventory-tab" data-page="skillsPage">Skills</button>
+      <button class="inventory-tab" data-page="talentsPage">Talents</button>
       <button class="inventory-tab" data-page="enhancementsPage">Enhance</button>
       <button class="inventory-tab" data-page="statsPage">Stats</button>
       <button class="inventory-tab" data-page="pvpPage">PvP</button>
@@ -1490,10 +1751,14 @@
           <img id="inventoryFlowerImg" alt="Flower" />
           <span class="resource-menu-count" id="inventoryFlowerCount">0</span>
         </div>
+        <div class="menu-item resource-menu-item" data-resource-key="arrows">
+          <img id="inventoryArrowImg" alt="Arrows" />
+          <span class="resource-menu-count" id="inventoryArrowCount">0</span>
+        </div>
       </div>
       <div id="inventoryResourcesEmpty" class="inventory-empty">No resources</div>
 
-      <div class="menu-section-title">Gear</div>
+      <div class="menu-section-title">Equipment</div>
       <div class="inventory-grid">
         <div class="menu-item" data-owned-item="weapon_sword" data-hotbar-assignable="true"><img id="inventorySwordImg" alt="Wood Sword" /><span>Wood Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_oldSword" data-hotbar-assignable="true"><img id="inventoryOldSwordImg" alt="Sword" /><span>Sword</span></div>
@@ -1561,11 +1826,6 @@
             <img id="equippedPantsImg" alt="Equipped pants" />
             <span id="equippedPantsName">Traveler</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearWeaponPanel">
-            <div class="equipped-slot-label">Hand</div>
-            <img id="equippedWeaponImg" alt="Equipped weapon" />
-            <span id="equippedWeaponName">Empty Hands</span>
-          </button>
         </div>
 
         <div>
@@ -1598,37 +1858,6 @@
               </button>
               <button class="equip-choice hat-choice" data-hat-index="7" data-owned-item="hat_ranger">
                 <img id="equipRangerHatImg" alt="Ranger Hat" /><span>Ranger Hat</span>
-              </button>
-            </div>
-          </div>
-
-          <div id="gearWeaponPanel" class="gear-panel">
-            <div class="menu-section-title">Weapon</div>
-            <div class="equip-options">
-              <button class="equip-choice weapon-choice" data-weapon-index="-1">
-                <span style="width:28px;height:28px;display:grid;place-items:center;font-size:18px;">×</span>
-                <span>Empty Hands</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="0" data-owned-item="weapon_sword">
-                <img id="equipSwordImg" alt="Wood Sword" /><span>Wood Sword</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="1" data-owned-item="weapon_axe">
-                <img id="equipAxeImg" alt="Axe" /><span>Axe</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="2" data-owned-item="weapon_wand">
-                <img id="equipWandImg" alt="Wand" /><span>Wand</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="3" data-owned-item="weapon_rainWand">
-                <img id="equipRainWandImg" alt="Rain Wand" /><span>Rain Wand</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="4" data-owned-item="weapon_katana">
-                <img id="equipKatanaImg" alt="Katana" /><span>Katana</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="5" data-owned-item="weapon_oldSword">
-                <img id="equipOldSwordImg" alt="Sword" /><span>Sword</span>
-              </button>
-              <button class="equip-choice weapon-choice" data-weapon-index="6" data-owned-item="weapon_bow">
-                <img id="equipBowImg" alt="Wood Bow" /><span>Wood Bow</span>
               </button>
             </div>
           </div>
@@ -1688,33 +1917,217 @@
       <div class="menu-section-title">Active Skill Keys</div>
       <div class="skill-key-strip">
         <div class="skill-key-slot">
+          <img class="skill-key-icon" id="skillSlotShiftIcon" alt="" />
           <span class="skill-key-name">Shift</span>
           <span class="skill-key-skill" id="skillSlotShift">Empty</span>
         </div>
         <div class="skill-key-slot">
+          <img class="skill-key-icon" id="skillSlotSpaceIcon" alt="" />
           <span class="skill-key-name">Space</span>
           <span class="skill-key-skill" id="skillSlotSpace">Empty</span>
         </div>
         <div class="skill-key-slot">
+          <img class="skill-key-icon" id="skillSlotEIcon" alt="" />
           <span class="skill-key-name">E</span>
           <span class="skill-key-skill" id="skillSlotE">Empty</span>
         </div>
         <div class="skill-key-slot">
+          <img class="skill-key-icon" id="skillSlotRIcon" alt="" />
           <span class="skill-key-name">R</span>
           <span class="skill-key-skill" id="skillSlotR">Empty</span>
         </div>
       </div>
 
       <div class="stats-header">
-        <div class="menu-section-title" style="margin:0;">Skill Tree</div>
+        <div class="menu-section-title" style="margin:0;">Skill Arts</div>
         <div id="abilityPointText">Ability Points 0</div>
       </div>
-      <div class="skill-tree">
-        <div class="skill-tree-root">Adventurer Arts</div>
-        <div class="skill-tree-branches">
-          <div class="skill-node locked" data-skill-node="shadowHide">
+
+      <div class="skill-category-tabs" role="tablist" aria-label="Skill categories">
+        <button type="button" class="skill-category-tab active" data-skill-category="might">Might</button>
+        <button type="button" class="skill-category-tab" data-skill-category="arcana">Arcana</button>
+        <button type="button" class="skill-category-tab" data-skill-category="precision">Precision</button>
+        <button type="button" class="skill-category-tab" data-skill-category="guile">Guile</button>
+      </div>
+
+      <div class="skill-category-panel active" data-skill-category-panel="might">
+        <div class="skill-tree">
+          <div class="skill-tree-root">Might Arts</div>
+          <div class="skill-tree-branches single-skill">
+<div class="skill-node locked" data-skill-node="hurl">
             <div class="skill-node-top">
-              <span class="skill-node-name">Shadow Hide</span>
+              <div class="skill-node-title">
+                <img class="skill-node-icon" data-skill-icon="hurl" alt="Hurl" />
+                <span class="skill-node-name">Hurl</span>
+              </div>
+              <span class="skill-status">Locked</span>
+            </div>
+            <div class="skill-description">
+              Grab a nearby slime, carry it overhead, then left-click to throw it. Thrown slimes can smash enemies and trees.
+            </div>
+            <div class="skill-requirement">Requires 10 Strength</div>
+            <div class="skill-level-row">
+              <span class="skill-level-text">LV 0 / 5</span>
+              <button class="ability-upgrade-button" data-ability-id="hurl">Unlock</button>
+            </div>
+            <div class="skill-bind-label">Bind key</div>
+            <div class="skill-bind-row">
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="shift">Shift</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="space">Space</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="e">E</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="r">R</button>
+              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="">Clear</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="skill-category-panel" data-skill-category-panel="arcana">
+        <div class="skill-tree">
+          <div class="skill-tree-root">Arcana Arts</div>
+          <div class="skill-tree-branches">
+<div class="skill-node locked" data-skill-node="fireball">
+            <div class="skill-node-top">
+              <div class="skill-node-title">
+                <img class="skill-node-icon" data-skill-icon="fireball" alt="Fireball" />
+                <span class="skill-node-name">Fireball</span>
+              </div>
+              <span class="skill-status">Locked</span>
+            </div>
+            <div class="skill-description">
+              Launch a fiery spell toward the cursor. It burns enemies and ignites flammable terrain.
+            </div>
+            <div class="skill-requirement">Requires 10 Int</div>
+            <div class="skill-level-row">
+              <span class="skill-level-text">LV 0 / 5</span>
+              <button class="ability-upgrade-button" data-ability-id="fireball">Unlock</button>
+            </div>
+            <div class="skill-bind-label">Bind key</div>
+            <div class="skill-bind-row">
+              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="shift">Shift</button>
+              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="space">Space</button>
+              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="e">E</button>
+              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="r">R</button>
+              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="">Clear</button>
+            </div>
+          </div>
+<div class="skill-node locked" data-skill-node="rainCloud">
+            <div class="skill-node-top">
+              <div class="skill-node-title">
+                <img class="skill-node-icon" data-skill-icon="rainCloud" alt="Rain Cloud" />
+                <span class="skill-node-name">Rain Cloud</span>
+              </div>
+              <span class="skill-status">Locked</span>
+            </div>
+            <div class="skill-description">
+              Summon a rain cloud at the cursor. It heals you and monsters, hurts ghosts, and puts out fire.
+            </div>
+            <div class="skill-requirement">Requires 10 Int</div>
+            <div class="skill-level-row">
+              <span class="skill-level-text">LV 0 / 5</span>
+              <button class="ability-upgrade-button" data-ability-id="rainCloud">Unlock</button>
+            </div>
+            <div class="skill-bind-label">Bind key</div>
+            <div class="skill-bind-row">
+              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="shift">Shift</button>
+              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="space">Space</button>
+              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="e">E</button>
+              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="r">R</button>
+              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="">Clear</button>
+            </div>
+          </div>
+<div class="skill-node locked" data-skill-node="jesterBlink">
+            <div class="skill-node-top">
+              <div class="skill-node-title">
+                <img class="skill-node-icon" data-skill-icon="jesterBlink" alt="Jester Blink" />
+                <span class="skill-node-name">Jester Blink</span>
+              </div>
+              <span class="skill-status">Locked</span>
+            </div>
+            <div class="skill-description">
+              Blink toward the cursor and leave a taunting decoy behind to distract nearby enemies.
+            </div>
+            <div class="skill-requirement">Requires 10 Int</div>
+            <div class="skill-level-row">
+              <span class="skill-level-text">LV 0 / 5</span>
+              <button class="ability-upgrade-button" data-ability-id="jesterBlink">Unlock</button>
+            </div>
+            <div class="skill-bind-label">Bind key</div>
+            <div class="skill-bind-row">
+              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="shift">Shift</button>
+              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="space">Space</button>
+              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="e">E</button>
+              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="r">R</button>
+              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="">Clear</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="skill-category-panel" data-skill-category-panel="precision">
+        <div class="skill-tree">
+          <div class="skill-tree-root">Precision Arts</div>
+          <div class="skill-tree-branches">
+            <div class="skill-node locked" data-skill-node="strafe">
+              <div class="skill-node-top">
+                <div class="skill-node-title">
+                  <img class="skill-node-icon" data-skill-icon="strafe" alt="Strafe" />
+                  <span class="skill-node-name">Strafe</span>
+                </div>
+                <span class="skill-status">Locked</span>
+              </div>
+              <div class="skill-description">
+                Move while drawing the Wood Bow. Without Strafe, drawing the bow roots you in place.
+              </div>
+              <div class="skill-requirement">Requires 10 Dex</div>
+              <div class="skill-level-row">
+                <span class="skill-level-text">LV 0 / 5</span>
+                <button class="ability-upgrade-button" data-ability-id="strafe">Unlock</button>
+              </div>
+              <div class="enhancement-note">Passive · movement speed increases with each level</div>
+            </div>
+            <div class="skill-node locked" data-skill-node="focusFire">
+              <div class="skill-node-top">
+                <div class="skill-node-title">
+                  <img class="skill-node-icon" data-skill-icon="focusFire" alt="Focus Fire" />
+                  <span class="skill-node-name">Focus Fire</span>
+                </div>
+                <span class="skill-status">Locked</span>
+              </div>
+              <div class="skill-description">
+                Hold to pulse a targeting ring, then release an arcing marker arrow. Land it on a monster to unleash a 5-second rapid-fire barrage.
+              </div>
+              <div class="skill-requirement">Requires 10 Dex · Wood Bow equipped to cast</div>
+              <div class="skill-level-row">
+                <span class="skill-level-text">LV 0 / 1</span>
+                <button class="ability-upgrade-button" data-ability-id="focusFire">Unlock</button>
+              </div>
+              <div class="skill-bind-label">Bind key</div>
+              <div class="skill-bind-row">
+                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="shift">Shift</button>
+                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="space">Space</button>
+                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="e">E</button>
+                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="r">R</button>
+                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="">Clear</button>
+              </div>
+              <div class="enhancement-note">Active · Wood Bow required · damage interrupts the channel</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="skill-category-panel" data-skill-category-panel="guile">
+        <div class="skill-tree">
+          <div class="skill-tree-root">Guile Arts</div>
+          <div class="skill-tree-branches">
+<div class="skill-node locked" data-skill-node="shadowHide">
+            <div class="skill-node-top">
+              <div class="skill-node-title">
+                <img class="skill-node-icon" data-skill-icon="shadowHide" alt="Shadow Hide" />
+                <span class="skill-node-name">Shadow Hide</span>
+              </div>
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
@@ -1735,102 +2148,19 @@
             </div>
           </div>
 
-
-          <div class="skill-node locked" data-skill-node="hurl">
-            <div class="skill-node-top">
-              <span class="skill-node-name">Hurl</span>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Grab a nearby slime, carry it overhead, then left-click to throw it. Thrown slimes can smash enemies and trees.
-            </div>
-            <div class="skill-requirement">Requires 10 Strength</div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
-              <button class="ability-upgrade-button" data-ability-id="hurl">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="hurl" data-skill-key="">Clear</button>
-            </div>
-          </div>
-
-          <div class="skill-node locked" data-skill-node="jesterBlink">
-            <div class="skill-node-top">
-              <span class="skill-node-name">Jester Blink</span>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Blink toward the cursor and leave a taunting decoy behind to distract nearby enemies.
-            </div>
-            <div class="skill-requirement">Requires 10 Int</div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
-              <button class="ability-upgrade-button" data-ability-id="jesterBlink">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="">Clear</button>
-            </div>
-          </div>
-
-          <div class="skill-node locked" data-skill-node="fireball">
-            <div class="skill-node-top">
-              <span class="skill-node-name">Fireball</span>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Launch a fiery spell toward the cursor. It burns enemies and ignites flammable terrain.
-            </div>
-            <div class="skill-requirement">Requires 10 Int</div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
-              <button class="ability-upgrade-button" data-ability-id="fireball">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="">Clear</button>
-            </div>
-          </div>
-
-          <div class="skill-node locked" data-skill-node="rainCloud">
-            <div class="skill-node-top">
-              <span class="skill-node-name">Rain Cloud</span>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Summon a rain cloud at the cursor. It heals you and monsters, hurts ghosts, and puts out fire.
-            </div>
-            <div class="skill-requirement">Requires 10 Int</div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
-              <button class="ability-upgrade-button" data-ability-id="rainCloud">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="">Clear</button>
-            </div>
           </div>
         </div>
       </div>
 
-      <div class="menu-section-title skill-section-gap">Gathering Skills</div>
+    </div>
+
+    <div id="talentsPage" class="inventory-page">
+      <div class="stats-header">
+        <div class="menu-section-title" style="margin:0;">Talents</div>
+        <div style="color:#d7c786;font:8px/1 monospace;">Gathering & utility growth</div>
+      </div>
+
+      <div class="menu-section-title">Gathering</div>
       <div class="skill-card">
         <div class="skill-card-top">
           <span>Woodcutting</span>
@@ -1839,6 +2169,16 @@
         <div class="skill-bar">
           <div class="skill-fill" id="woodcuttingFill"></div>
           <div class="skill-bar-text" id="woodcuttingBarText">0 / 5 EXP</div>
+        </div>
+      </div>
+
+      <div class="skill-card" style="margin-top:10px;">
+        <div class="skill-card-top">
+          <span>Flower Harvesting</span>
+          <span>Soon</span>
+        </div>
+        <div class="talent-panel-note">
+          Reserved for future flower gathering and other collection talents.
         </div>
       </div>
     </div>
@@ -1947,6 +2287,12 @@
         <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
         <span class="craft-recipe-status">CRAFT</span>
       </button>
+      <button class="craft-recipe" type="button" data-craft-recipe="arrows">
+        <img id="craftArrowsImg" alt="Arrows" />
+        <span class="craft-recipe-name">Arrows ×5</span>
+        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
     </div>
     <div id="craftFooter">Choose a recipe · Esc to close</div>
   </div>
@@ -1960,7 +2306,7 @@
   </div>
 </div>
 
-<script src="/shared/world-content.js?v=4"></script>
+<script src="/shared/world-content.js?v=5"></script>
 <script src="/shared/combat-balance.js?v=3"></script>
 <script>
 const canvas = document.getElementById("game");
@@ -2093,12 +2439,12 @@ const sprite = {
   knightTorso: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAh0lEQVQ4T2NkoBAwwllkglEDaBQG/3GIgwCGHLrC//n5+QwTJ06ECyADJDm4PnQDQOD/rFmzGHT/9TC8lOgCC4i/KGO4zFTCkJaWBuLidQEIUG4AyKnajLMZGLQmQESuFTBc/Z+K4XwQwGqAIB8fg5y8PMOjhw/BAjD2+0+fQFyCBpAEBt4AAEz9MBE7/ubeAAAAEGRlQkdDRDY5OENFRDk2RUU0QzFGAdyrmwAAAABJRU5ErkJgggAA"),
 
   // User-drawn bowman outfit, now the Ranger armor set.
-  rangerHat: loadImage("assets/ranger_hat.png"),
-  rangerTorso: loadImage("assets/ranger_torso.png"),
-  rangerLeftArm: loadImage("assets/ranger_leftarm.png"),
-  rangerRightArm: loadImage("assets/ranger_rightarm.png"),
-  rangerLeftLeg: loadImage("assets/ranger_leftleg.png"),
-  rangerRightLeg: loadImage("assets/ranger_rightleg.png")
+  rangerHat: loadImage("assets/ranger_hat_v2.png"),
+  rangerTorso: loadImage("assets/ranger_torso_v2.png"),
+  rangerLeftArm: loadImage("assets/ranger_leftarm_v2.png"),
+  rangerRightArm: loadImage("assets/ranger_rightarm_v2.png"),
+  rangerLeftLeg: loadImage("assets/ranger_leftleg_v2.png"),
+  rangerRightLeg: loadImage("assets/ranger_rightleg_v2.png")
 };
 
 
@@ -2134,6 +2480,7 @@ const AXE_PIVOT_Y = 7;
 // Spawn-map tutorial NPC and first crafting bench.
 const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
+const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 
 const woodBenchImage = new Image();
 woodBenchImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbklEQVQ4T2NkYGBgyHWV+A+iSQWTd79gZARpFhHgYtBUkYdLEAOu33nI8ObDNwawAbYmmnAJUsDhM9dHDRg8YUBxOgAZQA5ASUggE2GC+ADMMpCLMQIRJABK32AODoCufhAYAHMWiCbkfBhAVg8A6slwD3hszMIAAAAQZGVCRzIyMzVDRjg3OTIwOEI5Q0GexihVAAAAAElFTkSuQmCC";
@@ -3113,6 +3460,7 @@ const fireballs = [];
 const fireParticles = [];
 const growthParticles = [];
 const basicProjectiles = [];
+const focusFireOpeners = [];
 const rainOrbs = [];
 const rainClouds = [];
 const shadowSmokeParticles = [];
@@ -3513,6 +3861,20 @@ function castBasicProjectile(type, angle, options = {}) {
         1,
         Number(options.drawAmount) || 0
       )
+    ),
+    damageMultiplier: Math.max(
+      0,
+      Math.min(
+        1,
+        Number(options.damageMultiplier) || 1
+      )
+    ),
+    rangeMultiplier: Math.max(
+      0,
+      Math.min(
+        1,
+        Number(options.rangeMultiplier) || 1
+      )
     )
   };
 
@@ -3533,13 +3895,85 @@ function castBasicProjectile(type, angle, options = {}) {
   }
 }
 
-function fireBowArrow(drawAmount, angle) {
+function bowChargeStage(drawAmount) {
   const chargedAmount = Math.max(
     0,
     Math.min(1, Number(drawAmount) || 0)
   );
 
-  if (chargedAmount < 0.08) {
+  // One simple threshold: the bow becomes ready after the full one-second draw.
+  return chargedAmount >= 0.999 ? 1 : 0;
+}
+
+function bowShotProfile(drawAmount) {
+  const chargedAmount = Math.max(
+    0,
+    Math.min(1, Number(drawAmount) || 0)
+  );
+
+  // There is no partial-shot tier anymore. Releasing before the one-second
+  // draw completes cancels; once ready, every arrow uses normal bow stats.
+  if (chargedAmount < 0.999) {
+    return null;
+  }
+
+  const projectileSpeed = 280;
+  const projectileRange = 320;
+
+  return {
+    chargedAmount: 1,
+    ramp: 1,
+    damageMultiplier: 1,
+    rangeMultiplier: 1,
+    speedMultiplier: 1,
+    projectileSpeed,
+    projectileRange,
+    projectileLife:
+      projectileRange /
+      projectileSpeed
+  };
+}
+
+function spendArrowAmmo(showEmptyMessage = true) {
+  if ((Number(player.arrows) || 0) <= 0) {
+    if (showEmptyMessage) {
+      spawnFloatingText(
+        player.x,
+        player.y - 27,
+        "NO ARROWS",
+        "#ffe38b",
+        0.72
+      );
+    }
+    return false;
+  }
+
+  player.arrows = Math.max(
+    0,
+    Math.floor(Number(player.arrows) || 0) - 1
+  );
+  updateInventoryUi();
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.requestArrowUse();
+  }
+
+  return true;
+}
+
+function fireBowArrow(drawAmount, angle) {
+  const shot = bowShotProfile(drawAmount);
+
+  // Releasing before one full second cancels the draw. No projectile is
+  // created, no cooldown is applied, and most importantly no arrow is spent.
+  if (!shot) {
+    return false;
+  }
+
+  if (!spendArrowAmmo(true)) {
     return false;
   }
 
@@ -3551,20 +3985,16 @@ function fireBowArrow(drawAmount, angle) {
   player.shadowCritAttack =
     attackingFromShadowHide;
 
-  const projectileSpeed =
-    168 + chargedAmount * 112;
-
-  const projectileLife =
-    0.58 + chargedAmount * 0.55;
-
   castBasicProjectile(
     "arrow",
     angle,
     {
       startDistance: 12,
-      speed: projectileSpeed,
-      life: projectileLife,
-      drawAmount: chargedAmount
+      speed: shot.projectileSpeed,
+      life: shot.projectileLife,
+      drawAmount: shot.chargedAmount,
+      damageMultiplier: shot.damageMultiplier,
+      rangeMultiplier: shot.rangeMultiplier
     }
   );
 
@@ -3574,6 +4004,504 @@ function fireBowArrow(drawAmount, angle) {
   player.shadowCritAttack = false;
 
   return true;
+}
+
+const FOCUS_FIRE_MIN_RADIUS = 30;
+const FOCUS_FIRE_MAX_RADIUS = 150;
+const FOCUS_FIRE_PULSE_DURATION = 1.35;
+const FOCUS_FIRE_BARRAGE_DURATION = 5.0;
+const FOCUS_FIRE_SHOT_INTERVAL = 0.50;
+const FOCUS_FIRE_LANDING_RADIUS = 12;
+
+function focusFireIsCasting() {
+  return Boolean(
+    player.focusFireCharging ||
+    player.focusFireOpening ||
+    player.focusFireActive
+  );
+}
+
+function focusFirePulseProgress() {
+  const time = Math.max(
+    0,
+    Number(player.focusFireChargeTime) || 0
+  );
+
+  return (
+    (time % FOCUS_FIRE_PULSE_DURATION) /
+    FOCUS_FIRE_PULSE_DURATION
+  );
+}
+
+function focusFirePulseRadius() {
+  const progress = focusFirePulseProgress();
+  return (
+    FOCUS_FIRE_MIN_RADIUS +
+    (FOCUS_FIRE_MAX_RADIUS - FOCUS_FIRE_MIN_RADIUS) * progress
+  );
+}
+
+function clearFocusFireState(removeLocalOpener = true) {
+  player.focusFireCharging = false;
+  player.focusFireOpening = false;
+  player.focusFireActive = false;
+  player.focusFireChargeTime = 0;
+  player.focusFireBoundKey = null;
+  player.focusFireMapId = null;
+  player.focusFireTarget = null;
+  player.focusFireTargetType = null;
+  player.focusFireTargetId = null;
+  player.focusFireTime = 0;
+  player.focusFireShotTimer = 0;
+
+  if (removeLocalOpener) {
+    for (let i = focusFireOpeners.length - 1; i >= 0; i--) {
+      if (!focusFireOpeners[i].visualOnly) {
+        focusFireOpeners.splice(i, 1);
+      }
+    }
+  }
+}
+
+function cancelFocusFire(reason = "") {
+  if (!focusFireIsCasting()) return false;
+
+  clearFocusFireState(true);
+
+  if (reason === "hit") {
+    spawnFloatingText(
+      player.x,
+      player.y - 31,
+      "INTERRUPTED",
+      "#ffc6b0",
+      0.65
+    );
+  }
+
+  if (
+    typeof onlineClient !== "undefined"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function beginFocusFireCharge(boundKey = null) {
+  if (!isAbilityUnlocked("focusFire")) return false;
+
+  if (equippedWeapon() !== "bow") {
+    spawnFloatingText(
+      player.x,
+      player.y - 31,
+      "NEED BOW",
+      "#ffe38b",
+      0.72
+    );
+    return true;
+  }
+
+  if ((Number(player.arrows) || 0) <= 0) {
+    spawnFloatingText(
+      player.x,
+      player.y - 31,
+      "NO ARROWS",
+      "#ffe38b",
+      0.72
+    );
+    return true;
+  }
+
+  if (focusFireIsCasting()) {
+    return true;
+  }
+
+  breakShadowHide();
+
+  player.bowDrawing = false;
+  player.bowDrawAmount = 0;
+  player.bowReleaseTime = 0;
+
+  player.focusFireCharging = true;
+  player.focusFireOpening = false;
+  player.focusFireActive = false;
+  player.focusFireChargeTime = 0;
+  player.focusFireBoundKey = boundKey;
+  player.focusFireMapId = currentMapId;
+
+  const target = getCurrentWorldMouseTarget();
+  aimPlayerTowardPoint(target.x, target.y);
+
+  if (
+    typeof onlineClient !== "undefined"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function focusFireLandingPoint() {
+  const target = getCurrentWorldMouseTarget();
+  let dx = target.x - player.x;
+  let dy = target.y - (player.y - 8);
+  const length = Math.hypot(dx, dy) || 1;
+  dx /= length;
+  dy /= length;
+
+  const radius = focusFirePulseRadius();
+
+  return {
+    x: clampToWorld(
+      player.x + dx * radius,
+      4,
+      world.width - 4
+    ),
+    y: clampToWorld(
+      (player.y - 8) + dy * radius,
+      4,
+      world.height - 4
+    ),
+    angle: Math.atan2(dy, dx),
+    radius
+  };
+}
+
+function releaseFocusFireCharge() {
+  if (!player.focusFireCharging) return false;
+
+  if (
+    equippedWeapon() !== "bow" ||
+    currentMapId !== player.focusFireMapId
+  ) {
+    cancelFocusFire();
+    return true;
+  }
+
+  const landing = focusFireLandingPoint();
+
+  player.focusFireCharging = false;
+  player.focusFireOpening = true;
+  player.focusFireChargeTime = 0;
+  player.focusFireBoundKey = null;
+  player.attackAimAngle = landing.angle;
+  player.attackHand = Math.cos(landing.angle) >= 0 ? "right" : "left";
+
+  if (!spendArrowAmmo(true)) {
+    clearFocusFireState(true);
+    return true;
+  }
+
+  const startX = player.x + Math.cos(landing.angle) * 12;
+  const startY = (player.y - 8) + Math.sin(landing.angle) * 12;
+  const distance = Math.hypot(landing.x - startX, landing.y - startY);
+  const duration = Math.max(
+    0.28,
+    Math.min(0.72, distance / 220)
+  );
+
+  focusFireOpeners.push({
+    startX,
+    startY,
+    targetX: landing.x,
+    targetY: landing.y,
+    x: startX,
+    y: startY,
+    elapsed: 0,
+    duration,
+    arcHeight: Math.min(42, 13 + distance * 0.18),
+    angle: landing.angle,
+    visualOnly: false,
+    ownerId: null
+  });
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendVisualEffect(
+      "focusFireArc",
+      {
+        startX,
+        startY,
+        targetX: landing.x,
+        targetY: landing.y,
+        duration
+      }
+    );
+  }
+
+  player.attackTime = 0.08;
+  player.attackCooldown = Math.max(player.attackCooldown, 0.18);
+
+  if (
+    typeof onlineClient !== "undefined"
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function focusFireEnemyType(enemy) {
+  if (!enemy) return null;
+  if (slimes.includes(enemy)) return "slime";
+  if (goblins.includes(enemy)) return "goblin";
+  if (ghosts.includes(enemy)) return "ghost";
+  return null;
+}
+
+function findFocusFireLandingTarget(x, y) {
+  let best = null;
+  let bestDistanceSq = FOCUS_FIRE_LANDING_RADIUS * FOCUS_FIRE_LANDING_RADIUS;
+
+  const consider = (enemy, type, aimOffsetY) => {
+    if (!enemy || !enemy.alive) return;
+    if (type === "slime" && enemy.carriedBy) return;
+    if (type === "ghost" && !naturalEnemyBelongsToCurrentMap(enemy)) return;
+
+    const dx = enemy.x - x;
+    const dy = (enemy.y + aimOffsetY) - y;
+    const distanceSq = dx * dx + dy * dy;
+
+    if (distanceSq <= bestDistanceSq) {
+      bestDistanceSq = distanceSq;
+      best = { enemy, type };
+    }
+  };
+
+  for (const slime of slimes) consider(slime, "slime", -6);
+  for (const goblin of goblins) consider(goblin, "goblin", -11);
+  for (const ghost of ghosts) consider(ghost, "ghost", -11);
+
+  return best;
+}
+
+function focusFireAimPoint(enemy, type) {
+  const offsetY =
+    type === "slime" ? -6 : -11;
+
+  return {
+    x: enemy.x,
+    y: enemy.y + offsetY
+  };
+}
+
+function damageFocusFireTarget(enemy, type, projectile) {
+  if (type === "slime") {
+    damageSlimeWithArrow(enemy, projectile);
+    return;
+  }
+
+  if (type === "goblin") {
+    damageGoblinWithArrow(enemy, projectile);
+    return;
+  }
+
+  if (type === "ghost") {
+    damageGhostWithArrow(enemy, projectile);
+  }
+}
+
+function lockFocusFireTarget(enemy, type) {
+  if (!enemy || !enemy.alive) {
+    clearFocusFireState(false);
+    return;
+  }
+
+  player.focusFireOpening = false;
+  player.focusFireActive = true;
+  player.focusFireTarget = enemy;
+  player.focusFireTargetType = type;
+  player.focusFireTargetId = enemy.entityId || null;
+  player.focusFireTime = FOCUS_FIRE_BARRAGE_DURATION;
+  // Start the barrage a fraction of a second after the marker arrow lands,
+  // then fire every 0.5s. The small lead-in keeps the opener and first follow-up
+  // outside the server's normal arrow hit-rate guard while still yielding ten
+  // follow-up arrows inside the five-second channel.
+  player.focusFireShotTimer = 0.25;
+}
+
+function resolveFocusFireOpenerLanding(opener) {
+  if (
+    !player.focusFireOpening ||
+    opener.visualOnly ||
+    currentMapId !== player.focusFireMapId
+  ) {
+    return;
+  }
+
+  const hit = findFocusFireLandingTarget(
+    opener.targetX,
+    opener.targetY
+  );
+
+  if (!hit) {
+    spawnFloatingText(
+      opener.targetX,
+      opener.targetY - 7,
+      "MISS",
+      "#d8d2be",
+      0.55
+    );
+    clearFocusFireState(false);
+    return;
+  }
+
+  const pseudoProjectile = {
+    x: opener.targetX,
+    y: opener.targetY,
+    vx: Math.cos(opener.angle) * 280,
+    vy: Math.sin(opener.angle) * 280,
+    drawAmount: 1,
+    damageMultiplier: 1,
+    rangeMultiplier: 1,
+    critical: false
+  };
+
+  damageFocusFireTarget(
+    hit.enemy,
+    hit.type,
+    pseudoProjectile
+  );
+
+  if (!hit.enemy.alive) {
+    clearFocusFireState(false);
+    return;
+  }
+
+  lockFocusFireTarget(
+    hit.enemy,
+    hit.type
+  );
+}
+
+function focusFireCurrentTarget() {
+  const target = player.focusFireTarget;
+  if (!target) return null;
+
+  if (
+    player.focusFireTargetId &&
+    player.focusFireTargetType
+  ) {
+    const found = findClientWorldEnemy(
+      player.focusFireTargetId,
+      player.focusFireTargetType,
+      player.focusFireMapId
+    );
+    return found || target;
+  }
+
+  return target;
+}
+
+function fireFocusFireBarrageArrow() {
+  const target = focusFireCurrentTarget();
+  const type = player.focusFireTargetType;
+
+  if (!target || !target.alive) {
+    clearFocusFireState(true);
+    return false;
+  }
+
+  if (
+    type === "slime" &&
+    target.carriedBy
+  ) {
+    clearFocusFireState(true);
+    return false;
+  }
+
+  if ((Number(player.arrows) || 0) <= 0) {
+    spawnFloatingText(
+      player.x,
+      player.y - 29,
+      "NO ARROWS",
+      "#ffe38b",
+      0.65
+    );
+    clearFocusFireState(true);
+    return false;
+  }
+
+  const aim = focusFireAimPoint(target, type);
+  aimPlayerTowardPoint(aim.x, aim.y);
+  player.attackHand = Math.cos(player.attackAimAngle) >= 0 ? "right" : "left";
+
+  return fireBowArrow(
+    1,
+    player.attackAimAngle
+  );
+}
+
+function updateFocusFire(dt) {
+  if (player.focusFireCharging) {
+    if (
+      equippedWeapon() !== "bow" ||
+      currentMapId !== player.focusFireMapId
+    ) {
+      cancelFocusFire();
+    } else {
+      player.focusFireChargeTime += dt;
+      updateAttackAimFromPointer(
+        mouseCanvasX,
+        mouseCanvasY
+      );
+    }
+  }
+
+  for (let i = focusFireOpeners.length - 1; i >= 0; i--) {
+    const opener = focusFireOpeners[i];
+    opener.elapsed += dt;
+    const progress = Math.max(
+      0,
+      Math.min(1, opener.elapsed / Math.max(0.01, opener.duration))
+    );
+
+    opener.x = opener.startX + (opener.targetX - opener.startX) * progress;
+    opener.y = opener.startY + (opener.targetY - opener.startY) * progress;
+
+    if (progress >= 1) {
+      if (!opener.visualOnly) {
+        resolveFocusFireOpenerLanding(opener);
+      }
+      focusFireOpeners.splice(i, 1);
+    }
+  }
+
+  if (!player.focusFireActive) return;
+
+  if (
+    equippedWeapon() !== "bow" ||
+    currentMapId !== player.focusFireMapId
+  ) {
+    cancelFocusFire();
+    return;
+  }
+
+  const target = focusFireCurrentTarget();
+  if (!target || !target.alive) {
+    clearFocusFireState(true);
+    return;
+  }
+
+  player.focusFireTime = Math.max(0, player.focusFireTime - dt);
+  player.focusFireShotTimer -= dt;
+
+  while (
+    player.focusFireActive &&
+    player.focusFireTime > 0 &&
+    player.focusFireShotTimer <= 0
+  ) {
+    if (!fireFocusFireBarrageArrow()) {
+      break;
+    }
+    player.focusFireShotTimer += FOCUS_FIRE_SHOT_INTERVAL;
+  }
+
+  if (player.focusFireTime <= 0) {
+    clearFocusFireState(true);
+  }
 }
 
 function castRainOrb(targetX, targetY) {
@@ -3782,6 +4710,15 @@ function removeRemoteCasterEffectsForOwner(
   removeRemoteJesterForOwner(
     ownerId
   );
+
+  for (let i = focusFireOpeners.length - 1; i >= 0; i--) {
+    if (
+      focusFireOpeners[i].visualOnly &&
+      focusFireOpeners[i].ownerId === ownerId
+    ) {
+      focusFireOpeners.splice(i, 1);
+    }
+  }
 }
 
 function spawnRemoteRainCast(
@@ -4241,12 +5178,30 @@ function applyRangedHit(entity, projectile, entityType, attackType) {
   const attackProfile = GAME_CONFIG.projectileDamage[attackType];
   if (!entityProfile || !attackProfile) return;
 
-  const damage =
+  const baseDamage =
     calculateLocalCombatDamage(
       entity,
       attackType,
       false
     );
+
+  const projectileDamageMultiplier =
+    attackType === "arrow"
+      ? Math.max(
+          0.5,
+          Math.min(
+            1,
+            Number(projectile.damageMultiplier) || 1
+          )
+        )
+      : 1;
+
+  const damage = Math.max(
+    1,
+    Math.round(
+      baseDamage * projectileDamageMultiplier
+    )
+  );
 
   entity.hitFlash = attackProfile.hitFlash;
   entity.shakeTime = attackProfile.shakeTime;
@@ -4345,7 +5300,10 @@ function damageSlimeWithArrow(slime, projectile) {
     source: "arrow",
     projectileX: projectile.x,
     projectileY: projectile.y,
-    aimAngle: Math.atan2(projectile.vy, projectile.vx)
+    aimAngle: Math.atan2(projectile.vy, projectile.vx),
+    drawAmount: projectile.drawAmount,
+    damageMultiplier: projectile.damageMultiplier,
+    rangeMultiplier: projectile.rangeMultiplier
   });
 }
 
@@ -4375,7 +5333,10 @@ function damageGoblinWithArrow(goblin, projectile) {
       source: "arrow",
       projectileX: projectile.x,
       projectileY: projectile.y,
-      aimAngle: Math.atan2(projectile.vy, projectile.vx)
+      aimAngle: Math.atan2(projectile.vy, projectile.vx),
+      drawAmount: projectile.drawAmount,
+      damageMultiplier: projectile.damageMultiplier,
+      rangeMultiplier: projectile.rangeMultiplier
     }
   );
 }
@@ -4426,7 +5387,10 @@ function damageGhostWithArrow(ghost, projectile) {
       source: "arrow",
       projectileX: projectile.x,
       projectileY: projectile.y,
-      aimAngle: Math.atan2(projectile.vy, projectile.vx)
+      aimAngle: Math.atan2(projectile.vy, projectile.vx),
+      drawAmount: projectile.drawAmount,
+      damageMultiplier: projectile.damageMultiplier,
+      rangeMultiplier: projectile.rangeMultiplier
     }
   );
 }
@@ -4853,7 +5817,10 @@ function updateBasicProjectiles(dt) {
               aimAngle: Math.atan2(
                 projectile.vy,
                 projectile.vx
-              )
+              ),
+              drawAmount: projectile.drawAmount,
+              damageMultiplier: projectile.damageMultiplier,
+              rangeMultiplier: projectile.rangeMultiplier
             }
           );
 
@@ -5294,6 +6261,119 @@ function updateFire(dt) {
       fireParticles.splice(i, 1);
     }
   }
+}
+
+function drawFocusFireOpener(opener, camX, camY) {
+  const progress = Math.max(
+    0,
+    Math.min(
+      1,
+      (Number(opener.elapsed) || 0) /
+      Math.max(0.01, Number(opener.duration) || 0.4)
+    )
+  );
+
+  const arcLift =
+    4 * progress * (1 - progress) *
+    Math.max(8, Number(opener.arcHeight) || 24);
+
+  const groundX = Math.round(opener.x - camX);
+  const groundY = Math.round(opener.y - camY);
+  const arrowY = Math.round(groundY - arcLift);
+  const angle = Number(opener.angle) || 0;
+
+  // A tiny ground shadow makes the opener read as travelling OVER enemies
+  // instead of colliding with anything it visually crosses.
+  ctx.save();
+  ctx.globalAlpha *= 0.20 + 0.18 * (1 - progress);
+  ctx.fillStyle = "#26382b";
+  ctx.fillRect(groundX - 2, groundY, 4, 1);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(groundX, arrowY);
+  ctx.rotate(angle);
+
+  ctx.fillStyle = "#5f4227";
+  ctx.fillRect(-4, -1, 6, 2);
+
+  ctx.fillStyle = "#f1dfad";
+  ctx.fillRect(2, -1, 2, 2);
+
+  ctx.fillStyle = "#82d7dc";
+  ctx.fillRect(-5, -2, 1, 1);
+  ctx.fillRect(-5, 1, 1, 1);
+
+  ctx.restore();
+}
+
+function drawFocusFireTargeting(camX, camY) {
+  if (!player.focusFireCharging) return;
+
+  const radius = focusFirePulseRadius();
+  const progress = focusFirePulseProgress();
+  const centerX = Math.round(player.x - camX);
+  const centerY = Math.round(player.y - 8 - camY);
+  const pointCount = Math.max(20, Math.round(radius / 4.5));
+
+  ctx.save();
+  ctx.globalAlpha *= 0.34 + Math.sin(progress * Math.PI) * 0.14;
+  ctx.fillStyle = "#e5d99c";
+
+  for (let i = 0; i < pointCount; i++) {
+    const angle = (i / pointCount) * Math.PI * 2;
+    const x = Math.round(centerX + Math.cos(angle) * radius);
+    const y = Math.round(centerY + Math.sin(angle) * radius);
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const landing = focusFireLandingPoint();
+  const landingX = Math.round(landing.x - camX);
+  const landingY = Math.round(landing.y - camY);
+
+  // The landing reticle is the actual skill check. The opener lands exactly
+  // here when the bound skill key is released.
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = "#fff0af";
+  ctx.fillRect(landingX - 2, landingY, 2, 1);
+  ctx.fillRect(landingX + 1, landingY, 2, 1);
+  ctx.fillRect(landingX, landingY - 2, 1, 2);
+  ctx.fillRect(landingX, landingY + 1, 1, 2);
+
+  ctx.restore();
+}
+
+function drawFocusFireTargetMarker(camX, camY) {
+  if (!player.focusFireActive) return;
+
+  const target = focusFireCurrentTarget();
+  if (!target || !target.alive) return;
+
+  const type = player.focusFireTargetType;
+  const centerY =
+    target.y +
+    (type === "slime" ? -6 : -11);
+  const x = Math.round(target.x - camX);
+  const y = Math.round(centerY - camY);
+  const rx = type === "slime" ? 8 : 9;
+  const ry = type === "slime" ? 7 : 10;
+  const pulse = 0.72 + 0.20 * (0.5 + 0.5 * Math.sin(worldTime * 8));
+
+  ctx.save();
+  ctx.globalAlpha *= pulse;
+  ctx.fillStyle = "#f2e4a4";
+
+  // Four tiny corner brackets: readable lock feedback without a billboard.
+  ctx.fillRect(x - rx, y - ry, 3, 1);
+  ctx.fillRect(x - rx, y - ry, 1, 3);
+  ctx.fillRect(x + rx - 2, y - ry, 3, 1);
+  ctx.fillRect(x + rx, y - ry, 1, 3);
+  ctx.fillRect(x - rx, y + ry, 3, 1);
+  ctx.fillRect(x - rx, y + ry - 2, 1, 3);
+  ctx.fillRect(x + rx - 2, y + ry, 3, 1);
+  ctx.fillRect(x + rx, y + ry - 2, 1, 3);
+
+  ctx.restore();
 }
 
 function drawBasicProjectile(projectile, camX, camY) {
@@ -6523,10 +7603,15 @@ function drawDummy(camX, camY) {
 // -----------------------------------------------------------------------------
 // User-drawn 16x16 slime sprite.
 const slimeImage = new Image();
+const blueSlimeImage = loadImage("assets/slime_blue_v1.png");
+const purpleSlimeImage = loadImage("assets/slime_purple_v1.png");
 
 const slimeFlashImage = new Image();
 const coinImage = new Image();
-coinImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAsUlEQVQ4T92TsQ2DQBAEeVGN3YQroAQ7dyUkzp3bJVABTdjVWG/t6fe0dxAgkTEBHPe3+/oVX7p1qleR4lUjN0z4q09+B/pyZ+k6NagUfr5Ta0XOp8Hezci0NDCxCt+v2WtwvV28hhFNFgYUqgBoPxuE3THIIQXr6HGOJsFAxXockNeOaqBnZeokZ6MZgBDkOD4WIUIANMDV/4BQQPJaNgBmAvLuhKYU+0PYdZmUzdf5DxkDtQszwgC0AAAAEGRlQkcyQkYwNUFDNDk1OUY4N0Y1vljyhQAAAABJRU5ErkJgggAA";
+coinImage.src = "./assets/coin_native.png";
+
+const arrowResourceImage = new Image();
+arrowResourceImage.src = "./assets/arrow_resource.png";
 
 const woodImage = new Image();
 woodImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAe0lEQVQ4T2NkoBAwwllkgkFmgJI4y3+42/CAey//wF0OZ4A0ZwZqMZy99pRBSpQHJowVbDjyFG4ImIBpfv76I4OkKD+cxgVA8jBD4AYE2EgzPHv9BWw7SDMvDxdMPQb4/OUbw/T111ANoMgFIEBRGMAARbFALhg1gIEBAEAwSRFp34JXAAAAEGRlQkc1OERFQTUyNzFDOURCMUM4CKL2nwAAAABJRU5ErkJgggAA";
@@ -6563,9 +7648,13 @@ flowerImage.src = makeFlowerIcon();
 // Inventory / equipment menu uses the exact same game sprites.
 document.getElementById("inventoryCoinImg").src = coinImage.src;
 document.getElementById("inventoryWoodImg").src = woodImage.src;
+document.getElementById("inventoryArrowImg").src = arrowResourceImage.src;
+document.getElementById("arrowHudImg").src = arrowResourceImage.src;
 document.getElementById("inventoryFlowerImg").src = flowerImage.src;
 document.getElementById("craftSwordWoodIcon").src = woodImage.src;
 document.getElementById("craftBowWoodIcon").src = woodImage.src;
+document.getElementById("craftArrowWoodIcon").src = woodImage.src;
+document.getElementById("craftArrowsImg").src = arrowResourceImage.src;
 
 document.getElementById("inventorySwordImg").src = swordImage.src;
 document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
@@ -6593,13 +7682,6 @@ document.getElementById("inventoryRangerHatImg").src = sprite.rangerHat.src;
 document.getElementById("inventoryRangerShirtImg").src = sprite.rangerTorso.src;
 document.getElementById("inventoryRangerPantsImg").src = sprite.rangerLeftLeg.src;
 
-document.getElementById("equipSwordImg").src = swordImage.src;
-document.getElementById("equipOldSwordImg").src = oldSwordImage.src;
-document.getElementById("equipBowImg").src = bowImage.src;
-document.getElementById("equipAxeImg").src = axeImage.src;
-document.getElementById("equipWandImg").src = wandImage.src;
-document.getElementById("equipRainWandImg").src = rainWandImage.src;
-document.getElementById("equipKatanaImg").src = katanaImage.src;
 document.getElementById("equipBaseHatImg").src = sprite.baseHat.src;
 document.getElementById("equipHatImg").src = sprite.hat.src;
 document.getElementById("equipCapImg").src = sprite.blueCap.src;
@@ -6630,10 +7712,22 @@ function makeSlime(
   phase = 0,
   wanderRadiusX = 26,
   wanderRadiusY = 18,
-  level = 1
+  level = 1,
+  options = {}
 ) {
+  const variant = options.variant || "green";
+  const aggressiveOnSight = Boolean(options.aggressiveOnSight);
+  const maxHp =
+    variant === "purple"
+      ? 80
+      : variant === "blue"
+        ? 56
+        : 40;
+
   return {
     level,
+    variant,
+    aggressiveOnSight,
     x,
     y,
     homeX: x,
@@ -6653,8 +7747,8 @@ function makeSlime(
     shakeTime: 0,
     knockbackX: 0,
     knockbackY: 0,
-    maxHp: 40,
-    hp: 40,
+    maxHp,
+    hp: maxHp,
     alive: true,
     respawnTime: 0,
 
@@ -7052,10 +8146,11 @@ function makeMapHouse(x, y, options = {}) {
   };
 }
 
-// Carve three walkable routes through the meadow's forest perimeter:
+// Carve four walkable routes through the meadow's forest perimeter:
 // WEST -> the safe spawn clearing
 // EAST -> Goblin Woods
 // NORTH -> Ghost Grove
+// SOUTH -> Hunter Hollow
 for (let i = trees.length - 1; i >= 0; i--) {
   const tree = trees[i];
 
@@ -7076,36 +8171,26 @@ for (let i = trees.length - 1; i >= 0; i--) {
     tree.x >= 270 &&
     tree.x <= 370;
 
+  const southOpening =
+    tree.y >= world.height - 100 &&
+    tree.x >= 270 &&
+    tree.x <= 370;
+
   if (
     westOpening ||
     eastOpening ||
-    northOpening
+    northOpening ||
+    southOpening
   ) {
     trees.splice(i, 1);
   }
 }
 
 // Preserve the original meadow state. Goblins intentionally do NOT live here.
-const meadowHousePlacement = {
-  x: 556,
-  y: 112
-};
-
-const meadowMapHouses = [
-  // Tuck the new house into the east meadow where it is visible and readable,
-  // but still out of the main slime / pond travel lanes.
-  makeMapHouse(
-    meadowHousePlacement.x,
-    meadowHousePlacement.y,
-    { image: houseRedImage }
-  )
-];
+const meadowMapHouses = [];
 
 const meadowMap = {
-  trees: trees.slice().filter(tree =>
-    Math.abs(tree.x - meadowHousePlacement.x) > 52 ||
-    Math.abs(tree.y - meadowHousePlacement.y) > 44
-  ),
+  trees: trees.slice(),
   tallGrass: tallGrass.slice(),
   harvestFlowers: harvestFlowers.slice(),
   slimes: slimes.slice(),
@@ -7186,6 +8271,12 @@ const spawnMapHouses = [
 const tutorialNpc = {
   x: 350,
   y: 180,
+  interactionRadius: 24
+};
+
+const hunterNpc = {
+  x: 311,
+  y: 183,
   interactionRadius: 24
 };
 
@@ -7321,6 +8412,98 @@ const goblinWoodsMap = {
 };
 
 // -----------------------------------------------------------------------------
+// HUNTER HOLLOW
+// -----------------------------------------------------------------------------
+// Connected directly below Slime Meadow. This lower field is home to stronger
+// blue and purple slimes, and serves as the next step after the starter area.
+const hunterHollowHousePlacement = {
+  x: 525,
+  y: 112
+};
+
+hunterNpc.x = 485;
+hunterNpc.y = 126;
+
+const hunterHollowTrees = [];
+let hunterHollowTreePhase = 0.24;
+
+function addHunterHollowTree(x, y) {
+  hunterHollowTrees.push(
+    makeRuntimeTree(x, y, hunterHollowTreePhase)
+  );
+  hunterHollowTreePhase += 0.59;
+}
+
+for (let x = 12; x <= world.width - 12; x += 28) {
+  if (x < 276 || x > 364) {
+    addHunterHollowTree(x, 28);
+  }
+  addHunterHollowTree(x, world.height - 6);
+}
+
+for (let x = 26; x <= world.width - 12; x += 28) {
+  if (x < 276 || x > 364) {
+    addHunterHollowTree(x, 52);
+  }
+  addHunterHollowTree(x, world.height - 30);
+}
+
+for (let y = 78; y <= world.height - 78; y += 28) {
+  addHunterHollowTree(14, y);
+  addHunterHollowTree(world.width - 14, y);
+}
+
+for (let y = 92; y <= world.height - 78; y += 28) {
+  addHunterHollowTree(40, y);
+  addHunterHollowTree(world.width - 40, y);
+}
+
+[
+  [120, 124], [154, 146], [184, 118],
+  [246, 280], [274, 306],
+  [392, 154], [422, 136],
+  [430, 280], [462, 304]
+].forEach(([x, y]) => addHunterHollowTree(x, y));
+
+const hunterHollowGrass = [
+  makeMapGrass(158, 210, 0.4, 13),
+  makeMapGrass(188, 220, 1.1, 14, "blue"),
+  makeMapGrass(222, 208, 1.8, 12),
+  makeMapGrass(330, 178, 2.6, 13),
+  makeMapGrass(360, 188, 3.3, 14, "white"),
+  makeMapGrass(420, 238, 4.0, 13, "pink"),
+  makeMapGrass(468, 252, 4.7, 14, "blue"),
+  makeMapGrass(512, 218, 5.4, 12),
+  makeMapGrass(340, 324, 0.9, 13),
+  makeMapGrass(514, 344, 1.7, 12, "white")
+];
+
+const hunterHollowHouses = [
+  makeMapHouse(
+    hunterHollowHousePlacement.x,
+    hunterHollowHousePlacement.y,
+    { image: houseRedImage }
+  )
+];
+
+const hunterHollowMap = {
+  trees: hunterHollowTrees,
+  tallGrass: hunterHollowGrass,
+  harvestFlowers: [],
+  slimes: [],
+  ghosts: [],
+  goblins: [],
+  graves: [],
+  houses: hunterHollowHouses,
+  pond: {
+    x: -1000,
+    y: -1000,
+    width: 1,
+    height: 1
+  }
+};
+
+// -----------------------------------------------------------------------------
 // GHOST GROVE
 // -----------------------------------------------------------------------------
 // Connected directly above Slime Meadow. Natural ghosts now live here instead
@@ -7446,6 +8629,7 @@ const ghostGroveMap = {
 const mapStates = {
   spawn: spawnMap,
   meadow: meadowMap,
+  hunterHollow: hunterHollowMap,
   goblinWoods: goblinWoodsMap,
   ghostGrove: ghostGroveMap
 };
@@ -7467,7 +8651,11 @@ const CLIENT_ENEMY_FACTORIES = {
       spawn.phase || 0,
       spawn.wanderRadiusX ?? 26,
       spawn.wanderRadiusY ?? 18,
-      spawn.level ?? 1
+      spawn.level ?? 1,
+      {
+        variant: spawn.variant || "green",
+        aggressiveOnSight: Boolean(spawn.aggressiveOnSight)
+      }
     );
   },
 
@@ -7512,6 +8700,12 @@ function createClientEnemyFromWorldSpawn(
     Number.isFinite(spawn.level)
       ? spawn.level
       : entity.level;
+  if (spawn.type === "slime") {
+    entity.variant = spawn.variant || entity.variant || "green";
+    entity.aggressiveOnSight = Boolean(
+      spawn.aggressiveOnSight ?? entity.aggressiveOnSight
+    );
+  }
   entity.networkType = spawn.type;
   entity.networkMapId = mapId;
   entity.serverControlled = true;
@@ -7644,6 +8838,12 @@ function reconcileSharedEnemiesForMap(mapId) {
       // Reassert identity every activation. This prevents stale objects from
       // an old map from being rendered through the active-array view.
       entity.entityId = spawn.id;
+      if (enemyType === "slime") {
+        entity.variant = spawn.variant || entity.variant || "green";
+        entity.aggressiveOnSight = Boolean(
+          spawn.aggressiveOnSight ?? entity.aggressiveOnSight
+        );
+      }
       entity.networkType = enemyType;
       entity.networkMapId = mapId;
       entity.serverControlled = true;
@@ -8038,6 +9238,10 @@ class OnlineClient {
         player.flowers = message.flowers;
       }
 
+      if (Number.isFinite(message.arrows)) {
+        player.arrows = message.arrows;
+      }
+
       if (Number.isFinite(message.maxHp)) {
         player.maxHp = message.maxHp;
       }
@@ -8054,6 +9258,14 @@ class OnlineClient {
 
       updateInventoryUi();
       this.sendEnvironmentCatalog();
+      return;
+    }
+
+    if (message.type === "arrowUseResult") {
+      if (Number.isFinite(message.totalArrows)) {
+        player.arrows = Math.max(0, Math.floor(message.totalArrows));
+        updateInventoryUi();
+      }
       return;
     }
 
@@ -8084,6 +9296,23 @@ class OnlineClient {
 
       updateInventoryUi();
       updateShopUi();
+      return;
+    }
+
+    if (message.type === "debugArrowGrant") {
+      if (Number.isFinite(message.totalArrows)) {
+        player.arrows = Math.max(0, Math.floor(message.totalArrows));
+      }
+
+      spawnFloatingText(
+        player.x,
+        player.y - 50,
+        `+${Math.max(0, Number(message.amount) || 0)} ARROWS`,
+        "#e9e1c7",
+        0.9
+      );
+
+      updateInventoryUi();
       return;
     }
 
@@ -8267,7 +9496,7 @@ class OnlineClient {
     }
 
     if (message.type === "coinSpawn") {
-      this.receiveSharedCoin(message.coin);
+      this.receiveSharedCoin(message.coin, true);
       return;
     }
 
@@ -8829,6 +10058,22 @@ class OnlineClient {
     return true;
   }
 
+  requestArrowUse() {
+    if (
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "arrowUse"
+    }));
+
+    return true;
+  }
+
   requestCraft(recipe) {
     if (
       !recipe ||
@@ -8858,6 +10103,22 @@ class OnlineClient {
 
     this.socket.send(JSON.stringify({
       type: "debugGrantCoins"
+    }));
+
+    return true;
+  }
+
+  requestDebugArrows() {
+    if (
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "debugGrantArrows"
     }));
 
     return true;
@@ -8971,18 +10232,30 @@ class OnlineClient {
       player.wood = message.totalWood;
     }
 
+    if (Number.isFinite(message.totalArrows)) {
+      player.arrows = Math.max(0, Math.floor(message.totalArrows));
+    }
+
     if (message.success) {
-      player.story[recipe.storyKey] = true;
+      if (recipe.resourceKey) {
+        if (!Number.isFinite(message.totalArrows)) {
+          player[recipe.resourceKey] =
+            Math.max(0, Number(player[recipe.resourceKey]) || 0) +
+            Math.max(1, Number(recipe.outputCount) || 1);
+        }
+      } else {
+        player.story[recipe.storyKey] = true;
 
-      if (!playerOwnsItem(recipe.itemId)) {
-        grantInventoryItem(
-          recipe.itemId,
-          1
-        );
+        if (!playerOwnsItem(recipe.itemId)) {
+          grantInventoryItem(
+            recipe.itemId,
+            1
+          );
+        }
+
+        player.weaponIndex =
+          recipe.weaponIndex;
       }
-
-      player.weaponIndex =
-        recipe.weaponIndex;
 
       spawnFloatingText(
         woodCraftBench.x,
@@ -9196,7 +10469,7 @@ class OnlineClient {
     }
   }
 
-  receiveSharedCoin(serverCoin) {
+  receiveSharedCoin(serverCoin, sparkle = false) {
     if (!serverCoin || !serverCoin.id) return;
 
     this.sharedCoins.set(serverCoin.id, {
@@ -9204,7 +10477,8 @@ class OnlineClient {
       mapId: serverCoin.mapId,
       x: Number(serverCoin.x) || 0,
       y: Number(serverCoin.y) || 0,
-      life: Math.max(0, Number(serverCoin.life) || 0)
+      life: Math.max(0, Number(serverCoin.life) || 0),
+      sparkle: Boolean(sparkle)
     });
 
     this.syncSharedCoinVisuals();
@@ -9216,7 +10490,7 @@ class OnlineClient {
     for (const serverCoin of serverCoins || []) {
       if (!serverCoin || !serverCoin.id) continue;
       incomingIds.add(serverCoin.id);
-      this.receiveSharedCoin(serverCoin);
+      this.receiveSharedCoin(serverCoin, false);
     }
 
     for (const coinId of [...this.sharedCoins.keys()]) {
@@ -9283,9 +10557,11 @@ class OnlineClient {
             shared: true,
             entityId: serverCoin.id,
             mapId: serverCoin.mapId,
-            life: serverCoin.life
+            life: serverCoin.life,
+            sparkle: Boolean(serverCoin.sparkle)
           }
         );
+        serverCoin.sparkle = false;
       } else {
         coin.x = serverCoin.x;
         coin.y = serverCoin.y;
@@ -9639,6 +10915,37 @@ class OnlineClient {
       return;
     }
 
+    if (message.effect === "focusFireArc") {
+      const startX = Number(payload.startX) || 0;
+      const startY = Number(payload.startY) || 0;
+      const targetX = Number(payload.targetX) || 0;
+      const targetY = Number(payload.targetY) || 0;
+      const duration = Math.max(
+        0.18,
+        Math.min(0.9, Number(payload.duration) || 0.4)
+      );
+      const dx = targetX - startX;
+      const dy = targetY - startY;
+      const distance = Math.hypot(dx, dy);
+
+      focusFireOpeners.push({
+        startX,
+        startY,
+        targetX,
+        targetY,
+        x: startX,
+        y: startY,
+        elapsed: 0,
+        duration,
+        arcHeight: Math.min(42, 13 + distance * 0.18),
+        angle: Math.atan2(dy, dx),
+        visualOnly: true,
+        ownerId: message.senderId
+      });
+
+      return;
+    }
+
     if (message.effect === "fireball") {
       fireballs.push({
         x: Number(payload.x) || 0,
@@ -9797,6 +11104,10 @@ class OnlineClient {
       player.contactCooldown,
       Number(message.contactCooldown) || 0
     );
+
+    if (damage > 0 && focusFireIsCasting()) {
+      cancelFocusFire("hit");
+    }
 
     if (player.hp <= 0) {
       handlePlayerDeath();
@@ -10036,6 +11347,11 @@ class OnlineClient {
           ? state.maxHp
           : slime.maxHp;
 
+      slime.serverVariant = state.variant || slime.variant || "green";
+      slime.aggressiveOnSight = Boolean(
+        state.aggressiveOnSight ?? slime.aggressiveOnSight
+      );
+
       slime.alive = nextAlive;
       slime.dir = state.dir === -1 ? -1 : 1;
 
@@ -10190,6 +11506,7 @@ class OnlineClient {
       bowDrawing: player.bowDrawing,
       bowDrawAmount: player.bowDrawAmount,
       bowReleaseTime: player.bowReleaseTime,
+      focusFireCasting: focusFireIsCasting(),
 
       shadowHidden: player.shadowHidden,
       shadowHideRevealTime: player.shadowHideRevealTime,
@@ -10519,6 +11836,8 @@ function clearTransientWorldEffects() {
   fireballs.length = 0;
   fireParticles.length = 0;
   basicProjectiles.length = 0;
+  focusFireOpeners.length = 0;
+  clearFocusFireState(false);
   rainOrbs.length = 0;
   rainClouds.length = 0;
   shadowSmokeParticles.length = 0;
@@ -10665,6 +11984,29 @@ function updateMapConnection() {
       );
       return;
     }
+
+    if (
+      insideVerticalGate &&
+      player.y >= world.height - 9
+    ) {
+      activateMap(
+        "hunterHollow",
+        "north"
+      );
+      return;
+    }
+  }
+
+  if (
+    currentMapId === "hunterHollow" &&
+    insideVerticalGate &&
+    player.y <= 16
+  ) {
+    activateMap(
+      "meadow",
+      "south"
+    );
+    return;
   }
 
   // Goblin Woods -> Slime Meadow.
@@ -11125,7 +12467,8 @@ function spawnCoin(x, y, options = {}) {
     shared: Boolean(options.shared),
     entityId: options.entityId || null,
     mapId: options.mapId || currentMapId,
-    pickupRequestCooldown: 0
+    pickupRequestCooldown: 0,
+    sparkleTime: options.sparkle === false ? 0 : 0.38
   };
 
   coins.push(coin);
@@ -11135,6 +12478,11 @@ function spawnCoin(x, y, options = {}) {
 function updateCoins(dt) {
   for (let i = coins.length - 1; i >= 0; i--) {
     const coin = coins[i];
+
+    coin.sparkleTime = Math.max(
+      0,
+      (Number(coin.sparkleTime) || 0) - dt
+    );
 
     if (coin.shared) {
       coin.pickupRequestCooldown = Math.max(
@@ -11187,6 +12535,37 @@ function collectCoins() {
   }
 }
 
+function drawCoinDropSparkles(coin, centerX, centerY) {
+  const t = Math.max(0, Math.min(0.38, Number(coin.sparkleTime) || 0));
+  if (t <= 0) return;
+
+  const age = 0.38 - t;
+  const phase = Math.floor(age * 18);
+
+  // Tiny glints that stay tight to the 16x16 coin instead of exploding outward.
+  const glints = phase % 2 === 0
+    ? [
+        { x: centerX + 4, y: centerY - 4, bright: true },
+        { x: centerX - 4, y: centerY + 3, bright: false }
+      ]
+    : [
+        { x: centerX - 3, y: centerY - 4, bright: true },
+        { x: centerX + 4, y: centerY + 2, bright: false }
+      ];
+
+  for (const glint of glints) {
+    ctx.fillStyle = glint.bright ? "#fff7bd" : "#ffd85e";
+    ctx.fillRect(glint.x, glint.y, 1, 1);
+
+    if (glint.bright) {
+      ctx.fillRect(glint.x - 1, glint.y, 1, 1);
+      ctx.fillRect(glint.x + 1, glint.y, 1, 1);
+      ctx.fillRect(glint.x, glint.y - 1, 1, 1);
+      ctx.fillRect(glint.x, glint.y + 1, 1, 1);
+    }
+  }
+}
+
 function drawCoins(camX, camY) {
   for (let i = 0; i < coins.length; i++) {
     const coin = coins[i];
@@ -11195,17 +12574,17 @@ function drawCoins(camX, camY) {
     const screenX = Math.round(coin.x - camX);
     const screenY = Math.round(coin.y - camY);
 
-    // Small planted shadow.
+    // Native-size 16x16 coin: the new sprite is already drawn small enough.
     ctx.fillStyle = "rgba(35, 52, 37, .28)";
-    ctx.fillRect(screenX - 2, screenY + 1, 4, 2);
+    ctx.fillRect(screenX - 3, screenY + 1, 6, 2);
 
     ctx.drawImage(
       coinImage,
-      screenX - 4,
-      screenY - 7 + bob,
-      8,
-      8
+      screenX - 8,
+      screenY - 15 + bob
     );
+
+    drawCoinDropSparkles(coin, screenX, screenY - 7 + bob);
   }
 }
 
@@ -11775,8 +13154,15 @@ function drawSlime(slime, camX, camY) {
   const drawX = Math.round(screenX - drawWidth / 2);
   const drawY = Math.round(screenY - hopHeight - drawHeight + 1);
 
+  const baseSlimeImage =
+    slime.variant === "purple"
+      ? purpleSlimeImage
+      : slime.variant === "blue"
+        ? blueSlimeImage
+        : slimeImage;
+
   ctx.drawImage(
-    slimeImage,
+    baseSlimeImage,
     drawX,
     drawY,
     drawWidth,
@@ -11974,9 +13360,25 @@ const player = {
   // Bow draw/release state, including close-range bow melee fallback.
   bowDrawing: false,
   bowDrawAmount: 0,
-  bowDrawDuration: 0.58,
+  // A bow shot requires one full second of draw time. Releasing before the
+  // draw completes cancels the shot without consuming an arrow.
+  bowDrawDuration: 1.0,
   bowReleaseTime: 0,
   bowReleaseDuration: 0.12,
+
+  // Precision skill: Focus Fire. The opener is aimed with a cycling pulse;
+  // a successful landing locks one monster for a five-second barrage.
+  focusFireCharging: false,
+  focusFireOpening: false,
+  focusFireActive: false,
+  focusFireChargeTime: 0,
+  focusFireBoundKey: null,
+  focusFireMapId: null,
+  focusFireTarget: null,
+  focusFireTargetType: null,
+  focusFireTargetId: null,
+  focusFireTime: 0,
+  focusFireShotTimer: 0,
 
   attackTime: 0,
   attackDuration: 0.30,
@@ -12041,6 +13443,7 @@ const player = {
   coins: 0,
   wood: 0,
   flowers: 0,
+  arrows: 0,
 
   // Count-based item ownership. Missing/zero means not owned.
   // New players intentionally start with no gear or weapons.
@@ -12078,6 +13481,8 @@ const player = {
     hurl: 0,
     jesterBlink: 0,
     fireball: 0,
+    strafe: 0,
+    focusFire: 0,
     rainCloud: 0
   },
 
@@ -12155,14 +13560,23 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "weapon_sword",
     weaponIndex: 0,
     cost: 5,
-    storyKey: "woodSwordCrafted"
+    storyKey: "woodSwordCrafted",
+    repeatable: false
   }),
   woodBow: Object.freeze({
     name: "Wood Bow",
     itemId: "weapon_bow",
     weaponIndex: 6,
     cost: 5,
-    storyKey: "woodBowCrafted"
+    storyKey: "woodBowCrafted",
+    repeatable: false
+  }),
+  arrows: Object.freeze({
+    name: "5 Arrows",
+    resourceKey: "arrows",
+    outputCount: 5,
+    cost: 1,
+    repeatable: true
   })
 });
 
@@ -12560,26 +13974,40 @@ function distanceToPlayer(x, y) {
 }
 
 function nearbySpawnInteraction() {
-  if (currentMapId !== "spawn") {
-    return null;
+  const candidates = [];
+
+  if (currentMapId === "spawn") {
+    candidates.push(
+      {
+        kind: "npc",
+        x: tutorialNpc.x,
+        y: tutorialNpc.y,
+        radius:
+          tutorialNpc.interactionRadius
+      },
+      {
+        kind: "bench",
+        x: woodCraftBench.x,
+        y: woodCraftBench.y,
+        radius:
+          woodCraftBench.interactionRadius
+      }
+    );
   }
 
-  const candidates = [
-    {
-      kind: "npc",
-      x: tutorialNpc.x,
-      y: tutorialNpc.y,
+  if (currentMapId === "hunterHollow") {
+    candidates.push({
+      kind: "hunterNpc",
+      x: hunterNpc.x,
+      y: hunterNpc.y,
       radius:
-        tutorialNpc.interactionRadius
-    },
-    {
-      kind: "bench",
-      x: woodCraftBench.x,
-      y: woodCraftBench.y,
-      radius:
-        woodCraftBench.interactionRadius
-    }
-  ];
+        hunterNpc.interactionRadius
+    });
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
 
   let nearest = null;
   let nearestDistance = Infinity;
@@ -12691,16 +14119,36 @@ function interactWithTutorialNpc() {
   setShopOpen(true);
 }
 
+function interactWithHunterNpc() {
+  showRewardToast(
+    "Hunter",
+    "Come talk to me when you're ready to become a real hunter.",
+    hunterNpcImage
+  );
+
+  spawnFloatingText(
+    hunterNpc.x,
+    hunterNpc.y - 26,
+    "REAL HUNTER?",
+    "#fff1b0",
+    1.0
+  );
+}
+
 function craftRecipeOffline(recipeId) {
   const recipe =
     CRAFT_RECIPES[recipeId];
 
   if (!recipe) return;
 
-  if (
-    player.story[recipe.storyKey] ||
-    playerOwnsItem(recipe.itemId)
-  ) {
+  const alreadyOwned =
+    !recipe.repeatable &&
+    (
+      player.story[recipe.storyKey] ||
+      playerOwnsItem(recipe.itemId)
+    );
+
+  if (alreadyOwned) {
     spawnFloatingText(
       woodCraftBench.x,
       woodCraftBench.y - 24,
@@ -12723,15 +14171,22 @@ function craftRecipeOffline(recipeId) {
   }
 
   player.wood -= recipe.cost;
-  player.story[recipe.storyKey] = true;
 
-  grantInventoryItem(
-    recipe.itemId,
-    1
-  );
+  if (recipe.resourceKey) {
+    player[recipe.resourceKey] =
+      Math.max(0, Number(player[recipe.resourceKey]) || 0) +
+      Math.max(1, Number(recipe.outputCount) || 1);
+  } else {
+    player.story[recipe.storyKey] = true;
 
-  player.weaponIndex =
-    recipe.weaponIndex;
+    grantInventoryItem(
+      recipe.itemId,
+      1
+    );
+
+    player.weaponIndex =
+      recipe.weaponIndex;
+  }
 
   spawnFloatingText(
     woodCraftBench.x,
@@ -12754,8 +14209,13 @@ function tryCraftRecipe(recipeId) {
     !recipe ||
     !craftingOpen ||
     player.benchCraftPending ||
-    player.story[recipe.storyKey] ||
-    playerOwnsItem(recipe.itemId)
+    (
+      !recipe.repeatable &&
+      (
+        player.story[recipe.storyKey] ||
+        playerOwnsItem(recipe.itemId)
+      )
+    )
   ) {
     return;
   }
@@ -12799,8 +14259,11 @@ function updateCraftingUi() {
     if (!button) continue;
 
     const owned =
-      player.story[recipe.storyKey] ||
-      playerOwnsItem(recipe.itemId);
+      !recipe.repeatable &&
+      (
+        player.story[recipe.storyKey] ||
+        playerOwnsItem(recipe.itemId)
+      );
 
     const pending =
       player.benchCraftPending ===
@@ -12819,7 +14282,9 @@ function updateCraftingUi() {
       button.querySelector("img");
 
     const itemImage =
-      shopImageForItemId(recipe.itemId);
+      recipe.resourceKey === "arrows"
+        ? arrowResourceImage
+        : shopImageForItemId(recipe.itemId);
 
     if (image && itemImage) {
       image.src = itemImage.src;
@@ -12879,6 +14344,10 @@ function updateCraftingUi() {
 function setCraftingOpen(open) {
   craftingOpen = open;
 
+  if (open && focusFireIsCasting()) {
+    cancelFocusFire();
+  }
+
   const overlay =
     document.getElementById(
       "craftOverlay"
@@ -12931,6 +14400,11 @@ function interactWithNearbyObject() {
     return true;
   }
 
+  if (interaction.kind === "hunterNpc") {
+    interactWithHunterNpc();
+    return true;
+  }
+
   if (interaction.kind === "bench") {
     interactWithWoodBench();
     return true;
@@ -12976,6 +14450,39 @@ const ACTIVE_SKILLS = {
     enhancementName: "Fireball Enhancement",
     enhancementEffect: "Reserved for future fireball bonuses."
   },
+  strafe: {
+    name: "Strafe",
+    requirementStat: "dex",
+    requirementLabel: "Dex",
+    requirementValue: 10,
+    maxLevel: 5,
+    passive: true,
+    levelProgression: [
+      { name: "30% Move", effectText: "Move at 30% of normal speed while drawing the bow. Unlocks Strafe Enhancement LV1." },
+      { name: "35% Move", effectText: "Move at 35% of normal speed while drawing the bow. Strafe Enhancement upgrades to LV2." },
+      { name: "40% Move", effectText: "Move at 40% of normal speed while drawing the bow. Strafe Enhancement upgrades to LV3." },
+      { name: "45% Move", effectText: "Move at 45% of normal speed while drawing the bow. Strafe Enhancement upgrades to LV4." },
+      { name: "50% Move", effectText: "Move at 50% of normal speed while drawing the bow. Strafe Enhancement upgrades to LV5." }
+    ],
+    enhancementName: "Strafe Enhancement",
+    enhancementEffect: "Reserved for a future Strafe-specific bonus.",
+    singleScalingEnhancement: true,
+    enhancementUnlockLevel: 1
+  },
+  focusFire: {
+    name: "Focus Fire",
+    requirementStat: "dex",
+    requirementLabel: "Dex",
+    requirementValue: 10,
+    maxLevel: 1,
+    noEnhancements: true,
+    levelProgression: [
+      {
+        name: "Focus Fire",
+        effectText: "Hold to set distance, release an arcing marker arrow, then fire every 0.5s for 5s if it lands on a monster. Damage interrupts the skill."
+      }
+    ]
+  },
   rainCloud: {
     name: "Rain Cloud",
     requirementStat: "int",
@@ -13004,6 +14511,65 @@ const ACTIVE_SKILLS = {
     ]
   }
 };
+
+const SKILL_ICON_PATHS = {
+  shadowHide: "./assets/skills/shadow_hide_approved.png",
+  hurl: "./assets/skills/hurl_approved.png",
+  jesterBlink: "./assets/skills/jester_blink_approved.png",
+  fireball: "./assets/skills/fireball_approved.png",
+  strafe: "./assets/skills/strafe_approved.png",
+  focusFire: "./assets/skills/focus_fire_approved.png",
+  rainCloud: "./assets/skills/rain_cloud_approved.png"
+};
+
+function skillIconPath(skillId) {
+  return SKILL_ICON_PATHS[skillId] || "";
+}
+
+function enhancementIconMarkup(skillId, className = "enhancement-icon") {
+  const src = skillIconPath(skillId);
+  if (!src) return "";
+  const name = ACTIVE_SKILLS[skillId]?.name || "Skill";
+  return `<img class="${className}" src="${src}" alt="${name}" />`;
+}
+
+function skillLevelProgression(skillId) {
+  const skill = ACTIVE_SKILLS[skillId];
+  if (!skill) return [];
+
+  if (Array.isArray(skill.levelProgression)) {
+    return Array.from(
+      { length: skill.maxLevel },
+      (_, index) => {
+        const custom = skill.levelProgression[index] || {};
+        return {
+          level: index + 1,
+          name: custom.name || `LV ${index + 1}`,
+          effectText: custom.effectText || ""
+        };
+      }
+    );
+  }
+
+  const entries = [
+    { level: 1, name: "Unlock Ability", effectText: "Unlocks the base ability." }
+  ];
+
+  for (let level = 2; level <= skill.maxLevel; level++) {
+    const tier = level - 1;
+    const custom = Array.isArray(skill.enhancementUnlocks)
+      ? skill.enhancementUnlocks[tier - 1]
+      : null;
+
+    entries.push({
+      level,
+      name: custom?.name || `Enhancement ${romanTier(tier)}`,
+      effectText: custom?.effectText || skill.enhancementEffect
+    });
+  }
+
+  return entries;
+}
 
 // Active abilities are independent of equipped weapons/armor.
 // Skills begin locked and are manually assigned after being unlocked.
@@ -13064,7 +14630,56 @@ function getAvailableEnhancements() {
   for (const [skillId, skill] of Object.entries(ACTIVE_SKILLS)) {
     const level = abilityLevel(skillId);
 
-    // LV1 unlocks the base ability. Extra ranks unlock equipable enhancements.
+    if (skill.noEnhancements) {
+      continue;
+    }
+
+    // Some skills (currently Strafe) own one enhancement that levels alongside
+    // the skill instead of spawning a new enhancement entry at each rank.
+    if (skill.singleScalingEnhancement) {
+      const unlockLevel = Math.max(1, Number(skill.enhancementUnlockLevel) || 1);
+
+      if (level >= unlockLevel) {
+        list.push({
+          id: `${skillId}_enh_1`,
+          skillId,
+          tier: 1,
+          enhancementLevel: level,
+          maxEnhancementLevel: skill.maxLevel,
+          scaling: true,
+          unlockLevel,
+          name: skill.enhancementName || `${skill.name} Enhancement`,
+          effectText:
+            `${skill.enhancementEffect} Enhancement LV ${level} / ${skill.maxLevel}.`
+        });
+      }
+
+      continue;
+    }
+
+    if (Array.isArray(skill.enhancementUnlockLevels)) {
+      skill.enhancementUnlockLevels.forEach((unlockLevel, index) => {
+        if (level < unlockLevel) return;
+
+        const tier = index + 1;
+        const custom = Array.isArray(skill.enhancementUnlocks)
+          ? skill.enhancementUnlocks[index]
+          : null;
+
+        list.push({
+          id: `${skillId}_enh_${tier}`,
+          skillId,
+          tier,
+          unlockLevel,
+          name: custom?.name || skill.enhancementName || `${skill.name} Enhancement`,
+          effectText: custom?.effectText || skill.enhancementEffect
+        });
+      });
+
+      continue;
+    }
+
+    // Default active-skill progression: LV2-LV5 unlock one enhancement each.
     for (let tier = 1; tier <= Math.max(0, level - 1); tier++) {
       const custom = Array.isArray(skill.enhancementUnlocks)
         ? skill.enhancementUnlocks[tier - 1]
@@ -13210,6 +14825,34 @@ function updateAbilityTreeUi() {
         "Locked";
     }
 
+    let progression = node.querySelector(".skill-progression");
+    if (!progression) {
+      progression = document.createElement("div");
+      progression.className = "skill-progression";
+      const levelRow = node.querySelector(".skill-level-row");
+      if (levelRow) {
+        node.insertBefore(progression, levelRow);
+      }
+    }
+
+    if (progression) {
+      const progressionSignature = `${skillId}:${level}`;
+      if (progression.dataset.signature !== progressionSignature) {
+        progression.dataset.signature = progressionSignature;
+        progression.innerHTML = skillLevelProgression(skillId).map(entry => {
+          const reached = level >= entry.level;
+          const current = level === entry.level;
+          return `
+            <div class="skill-progress-step ${reached ? "reached" : ""} ${current ? "current" : ""}"
+                 title="${entry.effectText}">
+              <span class="skill-progress-level">LV ${entry.level}</span>
+              <span class="skill-progress-name">${entry.name}</span>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
     const requirement = node.querySelector(".skill-requirement");
     if (requirement) {
       requirement.textContent =
@@ -13240,20 +14883,64 @@ function updateAbilityTreeUi() {
 
 function updateSkillBindingUi() {
   const slotIds = {
-    shift: "skillSlotShift",
-    space: "skillSlotSpace",
-    e: "skillSlotE",
-    r: "skillSlotR"
+    shift: { text: "skillSlotShift", icon: "skillSlotShiftIcon", hud: "abilitySlotShift" },
+    space: { text: "skillSlotSpace", icon: "skillSlotSpaceIcon", hud: "abilitySlotSpace" },
+    e: { text: "skillSlotE", icon: "skillSlotEIcon", hud: "abilitySlotE" },
+    r: { text: "skillSlotR", icon: "skillSlotRIcon", hud: "abilitySlotR" }
   };
 
-  for (const [key, elementId] of Object.entries(slotIds)) {
-    const el = document.getElementById(elementId);
+  document.querySelectorAll("[data-skill-icon]").forEach(icon => {
+    const skillId = icon.dataset.skillIcon;
+    const path = skillIconPath(skillId);
+    if (path) icon.src = path;
+  });
+
+  for (const [key, targets] of Object.entries(slotIds)) {
     const boundSkill = skillBindings[key];
-    if (el) {
-      el.textContent =
-        boundSkill && isAbilityUnlocked(boundSkill)
-          ? skillDisplayName(boundSkill)
-          : "Empty";
+    const validSkill =
+      boundSkill && isAbilityUnlocked(boundSkill)
+        ? boundSkill
+        : null;
+
+    const textEl = document.getElementById(targets.text);
+    if (textEl) {
+      textEl.textContent = validSkill
+        ? skillDisplayName(validSkill)
+        : "Empty";
+    }
+
+    const iconEl = document.getElementById(targets.icon);
+    if (iconEl) {
+      if (validSkill) {
+        iconEl.src = skillIconPath(validSkill);
+        iconEl.alt = skillDisplayName(validSkill);
+        iconEl.style.visibility = "visible";
+      } else {
+        iconEl.removeAttribute("src");
+        iconEl.alt = "";
+        iconEl.style.visibility = "hidden";
+      }
+    }
+
+    const hudSlot = document.getElementById(targets.hud);
+    if (hudSlot) {
+      hudSlot.classList.toggle("empty", !validSkill);
+      hudSlot.classList.toggle("active", Boolean(validSkill));
+      const hudImg = hudSlot.querySelector(".ability-slot-img");
+      if (hudImg) {
+        if (validSkill) {
+          hudImg.src = skillIconPath(validSkill);
+          hudImg.alt = skillDisplayName(validSkill);
+          hudImg.style.visibility = "visible";
+        } else {
+          hudImg.removeAttribute("src");
+          hudImg.alt = "";
+          hudImg.style.visibility = "hidden";
+        }
+      }
+      hudSlot.title = validSkill
+        ? `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: ${skillDisplayName(validSkill)}`
+        : `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: Empty`;
     }
   }
 
@@ -13481,6 +15168,10 @@ function triggerActiveSkillForKey(key) {
   const skillId = skillBindings[key];
   if (!skillId || !isAbilityUnlocked(skillId)) return false;
 
+  if (focusFireIsCasting()) {
+    return true;
+  }
+
   const carriedSlime =
     getLocalCarriedSlime();
 
@@ -13512,6 +15203,11 @@ function triggerActiveSkillForKey(key) {
     // Any non-movement action reveals a hidden player before the blink.
     breakShadowHide();
     return tryCastJesterBlink();
+  }
+
+  if (skillId === "focusFire") {
+    breakShadowHide();
+    return beginFocusFireCharge(key);
   }
 
   if (skillId === "fireball") {
@@ -13811,6 +15507,47 @@ function selectHotbarSlot(slotIndex) {
   return equipWeaponIndex(
     weaponIndexForItemId(itemId)
   );
+}
+
+function nextOccupiedHotbarSlot(direction) {
+  sanitizeHotbarAssignments();
+
+  const occupied = [];
+  for (let i = 0; i < HOTBAR_SLOT_COUNT; i++) {
+    const itemId = player.hotbarAssignments[i];
+    if (itemId && playerOwnsItem(itemId)) {
+      occupied.push(i);
+    }
+  }
+
+  if (!occupied.length) return -1;
+
+  const equippedItemId = weaponItemIdForIndex(player.weaponIndex);
+  const currentSlot = equippedItemId ? hotbarSlotForItem(equippedItemId) : -1;
+
+  if (currentSlot < 0) {
+    return direction > 0 ? occupied[0] : occupied[occupied.length - 1];
+  }
+
+  const currentIndex = occupied.indexOf(currentSlot);
+  if (currentIndex < 0) {
+    return direction > 0 ? occupied[0] : occupied[occupied.length - 1];
+  }
+
+  return occupied[
+    (currentIndex + (direction > 0 ? 1 : -1) + occupied.length) % occupied.length
+  ];
+}
+
+function cycleHotbarSelection(direction) {
+  const slotIndex = nextOccupiedHotbarSlot(direction);
+  if (slotIndex < 0) return false;
+
+  inputController.queueCommand("equipWeapon", {
+    index: slotIndex
+  });
+
+  return true;
 }
 
 function updateHotbar() {
@@ -14244,10 +15981,18 @@ function updateInventoryUi() {
   const coinCount = document.getElementById("inventoryCoinCount");
   const woodCount = document.getElementById("inventoryWoodCount");
   const flowerCount = document.getElementById("inventoryFlowerCount");
+  const arrowCount = document.getElementById("inventoryArrowCount");
+  const arrowHud = document.getElementById("arrowHud");
+  const arrowHudCount = document.getElementById("arrowHudCount");
 
   if (coinCount) coinCount.textContent = `${player.coins}`;
   if (woodCount) woodCount.textContent = `${player.wood}`;
   if (flowerCount) flowerCount.textContent = `${player.flowers}`;
+  if (arrowCount) arrowCount.textContent = `${player.arrows}`;
+  if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
+  if (arrowHud) {
+    arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
+  }
 
   let visibleResources = 0;
 
@@ -14476,7 +16221,18 @@ function updateInventoryUi() {
     if (!slotEl) return;
     const enhId = player.equippedEnhancements[index];
     const enh = enhId ? enhancementById(enhId) : null;
-    slotEl.textContent = enh ? enh.name : "Empty";
+
+    if (!enh) {
+      slotEl.textContent = "Empty";
+      return;
+    }
+
+    slotEl.innerHTML = `
+      <span class="enhancement-slot-entry">
+        ${enhancementIconMarkup(enh.skillId, "enhancement-slot-icon")}
+        <span>${enh.name}</span>
+      </span>
+    `;
   });
 
   const countText = document.getElementById("enhancementCountText");
@@ -14487,7 +16243,10 @@ function updateInventoryUi() {
 
   if (listEl) {
     const nextEnhancementUiSignature = JSON.stringify({
-      available: availableEnhancements.map(enh => enh.id),
+      available: availableEnhancements.map(enh => ({
+        id: enh.id,
+        enhancementLevel: enh.enhancementLevel || null
+      })),
       equipped: player.equippedEnhancements,
       slots: player.enhancementSlots
     });
@@ -14503,7 +16262,7 @@ function updateInventoryUi() {
           <div class="enhancement-card">
             <div class="enhancement-name">No Enhancements Yet</div>
             <div class="enhancement-desc">
-              Raise an ability above LV 1 to unlock enhancement choices here.
+              Level abilities to unlock enhancement choices here.
             </div>
           </div>
         `;
@@ -14513,8 +16272,15 @@ function updateInventoryUi() {
           const canEquip = !equipped && canEquipMoreEnhancements();
           return `
             <div class="enhancement-card ${equipped ? "equipped" : ""}">
-              <div class="enhancement-name">${enh.name}</div>
-              <div class="enhancement-meta">${ACTIVE_SKILLS[enh.skillId].name} • Tier ${enh.tier}</div>
+              <div class="enhancement-card-top">
+                ${enhancementIconMarkup(enh.skillId)}
+                <div class="enhancement-card-copy">
+                  <div class="enhancement-name">${enh.name}</div>
+                  <div class="enhancement-meta">${enh.scaling
+                    ? `${ACTIVE_SKILLS[enh.skillId].name} • LV ${enh.enhancementLevel} / ${enh.maxEnhancementLevel}`
+                    : `${ACTIVE_SKILLS[enh.skillId].name} • Tier ${enh.tier}`}</div>
+                </div>
+              </div>
               <div class="enhancement-desc">${enh.effectText}</div>
               <div class="enhancement-actions">
                 <button class="enhancement-button"
@@ -14638,6 +16404,10 @@ function updateShopUi() {
 function setShopOpen(open) {
   shopOpen = open;
 
+  if (open && focusFireIsCasting()) {
+    cancelFocusFire();
+  }
+
   const overlay =
     document.getElementById(
       "shopOverlay"
@@ -14747,6 +16517,10 @@ function setInventoryOpen(open) {
   // Inventory/equipment management is allowed while hidden.
   inventoryOpen = open;
 
+  if (open && focusFireIsCasting()) {
+    cancelFocusFire();
+  }
+
   if (open && shopOpen) {
     setShopOpen(false);
   }
@@ -14779,6 +16553,42 @@ function showInventoryPage(pageId) {
 document.querySelectorAll(".inventory-tab").forEach(tab => {
   tab.addEventListener("click", () => {
     showInventoryPage(tab.dataset.page);
+  });
+});
+
+window.addEventListener("wheel", event => {
+  if (inventoryOpen || shopOpen || craftingOpen) {
+    return;
+  }
+
+  if (!Number.isFinite(event.deltaY) || Math.abs(event.deltaY) < 1) {
+    return;
+  }
+
+  const direction = event.deltaY > 0 ? 1 : -1;
+  if (!cycleHotbarSelection(direction)) {
+    return;
+  }
+
+  event.preventDefault();
+}, { passive: false });
+
+function showSkillCategory(categoryId) {
+  document.querySelectorAll(".skill-category-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.skillCategory === categoryId);
+  });
+
+  document.querySelectorAll(".skill-category-panel").forEach(panel => {
+    panel.classList.toggle(
+      "active",
+      panel.dataset.skillCategoryPanel === categoryId
+    );
+  });
+}
+
+document.querySelectorAll(".skill-category-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    showSkillCategory(tab.dataset.skillCategory);
   });
 });
 
@@ -15165,7 +16975,7 @@ function handleCanvasMouseMove(event) {
     !shopOpen &&
     !craftingOpen &&
     equippedWeapon() === "bow" &&
-    player.bowDrawing
+    (player.bowDrawing || player.focusFireCharging)
   ) {
     updateAttackAimFromPointer(
       pointer.x,
@@ -15186,6 +16996,8 @@ const HOTBAR_KEY_TO_INDEX = Object.freeze({
   "5": 4
 });
 
+const DEBUG_ARROW_GRANT = 99;
+
 function grantBowVisualTest() {
   if (!playerOwnsItem("weapon_bow")) {
     grantInventoryItem(
@@ -15199,6 +17011,31 @@ function grantBowVisualTest() {
   player.bowDrawing = false;
   player.bowDrawAmount = 0;
   player.bowReleaseTime = 0;
+
+  let requestedServerArrows = false;
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    requestedServerArrows =
+      onlineClient.requestDebugArrows();
+  }
+
+  // Offline/local fallback. In multiplayer the server owns arrow totals.
+  if (!requestedServerArrows) {
+    player.arrows =
+      Math.max(0, Math.floor(Number(player.arrows) || 0)) +
+      DEBUG_ARROW_GRANT;
+
+    spawnFloatingText(
+      player.x,
+      player.y - 50,
+      `+${DEBUG_ARROW_GRANT} ARROWS`,
+      "#e9e1c7",
+      0.9
+    );
+  }
 
   spawnFloatingText(
     player.x,
@@ -15329,7 +17166,7 @@ function handleGameKeyDown(event) {
 
   inputController.setKey(key, true);
 
-  // VISUAL TEST: grant/equip the Wood Bow without changing progression.
+  // TEST CHEAT: grant/equip the Wood Bow and add 99 arrows.
   if (key === "f8") {
     event.preventDefault();
     grantBowVisualTest();
@@ -15364,7 +17201,26 @@ function handleGameKeyDown(event) {
 window.addEventListener("keydown", handleGameKeyDown);
 
 function handleGameKeyUp(event) {
-  inputController.setKey(event.key.toLowerCase(), false);
+  const key = event.key.toLowerCase();
+  const activeSkillKey = normalizeActiveSkillKey(event);
+  inputController.setKey(key, false);
+
+  if (
+    activeSkillKey &&
+    skillBindings[activeSkillKey] === "focusFire"
+  ) {
+    if (activeSkillKey === "space") {
+      event.preventDefault();
+    }
+
+    // Queue the release even if the key was tapped between animation frames.
+    // The command queue preserves keydown -> keyup order, so Focus Fire cannot
+    // become stuck charging from an extremely quick tap.
+    inputController.queueCommand(
+      "releaseFocusFire",
+      { key: activeSkillKey }
+    );
+  }
 }
 
 window.addEventListener("keyup", handleGameKeyUp);
@@ -15617,6 +17473,7 @@ function executeBowMeleeAttack() {
 
 function handlePrimaryAttack(event) {
   if (inventoryOpen || shopOpen || craftingOpen || event.button !== 0) return;
+  if (focusFireIsCasting()) return;
 
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
@@ -15641,6 +17498,20 @@ function handlePrimaryAttack(event) {
       return;
     }
 
+    if ((Number(player.arrows) || 0) <= 0) {
+      spawnFloatingText(
+        player.x,
+        player.y - 27,
+        "NO ARROWS",
+        "#ffe38b",
+        0.72
+      );
+      return;
+    }
+
+    // Every click starts a fresh one-second draw. Do not inherit residual
+    // bowDrawAmount from the previous release animation.
+    player.bowDrawAmount = 0;
     player.bowDrawing = true;
     player.bowReleaseTime = 0;
 
@@ -15723,6 +17594,10 @@ function resetInputAfterFocusLoss() {
     player.bowDrawing = false;
     player.bowReleaseTime = 0;
     player.bowDrawAmount = 0;
+  }
+
+  if (focusFireIsCasting()) {
+    cancelFocusFire();
   }
 
   if (
@@ -15813,6 +17688,18 @@ function hitsSpawnFixtureObstacle(
   y,
   playerRadius = 4
 ) {
+  if (currentMapId === "hunterHollow") {
+    return circleRectCollision(
+      x,
+      y,
+      playerRadius,
+      hunterNpc.x - 5,
+      hunterNpc.y - 8,
+      10,
+      8
+    );
+  }
+
   if (currentMapId !== "spawn") {
     return false;
   }
@@ -15932,6 +17819,10 @@ function tryGhostContact() {
     0,
     player.hp - damage
   );
+
+  if (damage > 0 && focusFireIsCasting()) {
+    cancelFocusFire("hit");
+  }
 
   spawnDamageNumber(
     player.x,
@@ -16301,6 +18192,7 @@ function updateTransientSystems(dt) {
   updateCoins(dt);
   updateWoodDrops(dt);
   updateFlowerDrops(dt);
+  updateFocusFire(dt);
   updateBasicProjectiles(dt);
   updateRainMagic(dt);
   updateFire(dt);
@@ -16435,6 +18327,10 @@ function updatePlayerBurnStatus(dt) {
         0,
         player.hp - burnDamage
       );
+
+      if (burnDamage > 0 && focusFireIsCasting()) {
+        cancelFocusFire("hit");
+      }
 
       spawnDamageNumber(
         player.x,
@@ -16673,6 +18569,10 @@ function updateSlimes(dt) {
     tickTimer(slime, "hitFlash", dt);
     tickTimer(slime, "shakeTime", dt);
 
+    if (slime.serverVariant) {
+      slime.variant = slime.serverVariant;
+    }
+
     if (
       Number.isFinite(slime.serverTargetX) &&
       Number.isFinite(slime.serverTargetY)
@@ -16709,10 +18609,31 @@ function readMovementInput() {
   return inputController.getMovementVector();
 }
 
+function bowStrafeMovementMultiplier() {
+  const bowMovementRestricted =
+    player.bowDrawing ||
+    focusFireIsCasting();
+
+  if (!bowMovementRestricted) return 1;
+
+  // Learning Strafe upgrades the single Strafe Enhancement, but the movement
+  // benefit only applies while that enhancement is actually equipped. Focus
+  // Fire intentionally uses the same Strafe rule for targeting and barrage.
+  if (!hasEnhancement("strafe_enh_1")) return 0;
+
+  const level = Math.max(0, Math.min(5, abilityLevel("strafe")));
+  if (level <= 0) return 0;
+
+  // LV1-LV5: 30%, 35%, 40%, 45%, 50%.
+  return 0.25 + level * 0.05;
+}
+
 function updatePlayerMovement(dt) {
   const movement = readMovementInput();
+  const strafeMultiplier = bowStrafeMovementMultiplier();
+  const canActuallyMove = movement.moving && strafeMultiplier > 0;
 
-  if (movement.moving) {
+  if (canActuallyMove) {
     if (!player.wasMoving) {
       player.firstRaisedLeg = movement.dx > 0 ? "right" : "left";
       player.walkTime = 0;
@@ -16720,18 +18641,19 @@ function updatePlayerMovement(dt) {
 
     const moveSpeed =
       player.speed *
+      strafeMultiplier *
       (playerIsWet() ? GAME_CONFIG.player.wetSpeedMultiplier : 1);
 
     const nextX = player.x + movement.dx * moveSpeed * dt;
     const nextY = player.y + movement.dy * moveSpeed * dt;
 
     moveWithWorldCollision(player, nextX, nextY);
-    player.walkTime += dt * 10;
+    player.walkTime += dt * 10 * strafeMultiplier;
   } else {
     player.walkTime = 0;
   }
 
-  player.wasMoving = movement.moving;
+  player.wasMoving = canActuallyMove;
 
   player.x = clampToWorld(player.x, 8, world.width - 8);
   player.y = clampToWorld(player.y, 15, world.height - 1);
@@ -16764,6 +18686,10 @@ function processGameCommand(command) {
   if (!command) return;
 
   if (command.type === "equipWeapon") {
+    if (focusFireIsCasting()) {
+      cancelFocusFire();
+    }
+
     const slotIndex =
       Number(command.payload.index);
 
@@ -16778,6 +18704,11 @@ function processGameCommand(command) {
 
   if (command.type === "useActiveSkill") {
     triggerActiveSkillForKey(command.payload.key);
+    return;
+  }
+
+  if (command.type === "releaseFocusFire") {
+    releaseFocusFireCharge();
     return;
   }
 
@@ -17215,20 +19146,29 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   const bowPoseActive =
     currentWeaponForPose === "bow";
 
+  const focusFireBowPose =
+    bowPoseActive &&
+    focusFireIsCasting();
+
   const bowDrawAmount =
     bowPoseActive
-      ? Math.max(
-          0,
-          Math.min(
-            1,
-            Number(player.bowDrawAmount) || 0
-          )
+      ? (
+          focusFireBowPose
+            ? 1
+            : Math.max(
+                0,
+                Math.min(
+                  1,
+                  Number(player.bowDrawAmount) || 0
+                )
+              )
         )
       : 0;
 
   const bowAimingActive =
     bowPoseActive &&
     (
+      focusFireBowPose ||
       player.bowDrawing ||
       player.bowReleaseTime > 0 ||
       bowDrawAmount > 0.025
@@ -17236,6 +19176,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
 
   const bowMeleeActive =
     bowPoseActive &&
+    !focusFireBowPose &&
     player.attackTime > 0 &&
     !player.bowDrawing &&
     player.bowReleaseTime <= 0;
@@ -18078,28 +20019,29 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
       !reflectionMode &&
       remotePlayerDrawDepth === 0 &&
       player.bowDrawing &&
+      !player.focusFireCharging &&
       bowDrawAmount > 0.025;
 
     if (shouldDrawBowAimGuide) {
       const guideAngle = Number(player.attackAimAngle) || 0;
       const guideDirX = Math.cos(guideAngle);
       const guideDirY = Math.sin(guideAngle);
-      const guideStartX = handX + guideDirX * 8;
-      const guideStartY = handY + guideDirY * 8;
-      const guideDotCount = Math.max(
-        2,
-        Math.min(
-          5,
-          2 + Math.floor(bowDrawAmount * 4)
-        )
-      );
+      const guideStartX = handX + guideDirX * 9;
+      const guideStartY = handY + guideDirY * 9;
+      const chargeStage = bowChargeStage(bowDrawAmount);
+      const guideDotCount = 5;
       const guideSpacing = 5;
+      const firstDotDistance = 7;
+
+      const guideAlpha = chargeStage === 0 ? 0.48 : 0.92;
+      const guideColor = chargeStage === 0 ? "#b8b29b" : "#eadf9d";
+      const endpointColor = chargeStage === 0 ? "#c8c1a6" : "#fff4bf";
 
       ctx.save();
-      ctx.globalAlpha *= 0.82;
+      ctx.globalAlpha *= guideAlpha;
 
       for (let i = 0; i < guideDotCount; i++) {
-        const distance = 4 + (i + 1) * guideSpacing;
+        const distance = firstDotDistance + i * guideSpacing;
         const dotX = Math.round(
           guideStartX + guideDirX * distance
         );
@@ -18109,15 +20051,10 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
 
         ctx.fillStyle =
           i === guideDotCount - 1
-            ? "#f4efcf"
-            : "#ddd6b5";
+            ? endpointColor
+            : guideColor;
 
-        ctx.fillRect(
-          dotX,
-          dotY,
-          1,
-          1
-        );
+        ctx.fillRect(dotX, dotY, 1, 1);
       }
 
       ctx.restore();
@@ -18305,31 +20242,82 @@ function drawHouseGround(house, camX, camY) {
   const screenX = Math.round(house.x - camX);
   const screenY = Math.round(house.y - camY);
 
-  // Front dirt path leading from the main clearing toward the door.
-  const pathW = house.path.width;
-  const pathH = house.path.height;
-  const pathX = Math.round(screenX - pathW / 2);
+  // Short, worn path: broad at the doorstep, then gently narrows and wanders
+  // without tapering into an arrow point.
   const pathY = Math.round(screenY - 1);
+  const pathRows = [
+    { offsetX: -8, width: 16 },
+    { offsetX: -8, width: 16 },
+    { offsetX: -9, width: 17 },
+    { offsetX: -9, width: 17 },
+    { offsetX: -8, width: 16 },
+    { offsetX: -8, width: 16 },
+    { offsetX: -7, width: 15 },
+    { offsetX: -7, width: 15 },
+    { offsetX: -7, width: 14 },
+    { offsetX: -6, width: 14 },
+    { offsetX: -6, width: 13 },
+    { offsetX: -7, width: 13 },
+    { offsetX: -7, width: 12 },
+    { offsetX: -6, width: 12 },
+    { offsetX: -6, width: 12 },
+    { offsetX: -5, width: 11 },
+    { offsetX: -5, width: 11 },
+    { offsetX: -5, width: 10 }
+  ];
 
-  ctx.fillStyle = "#8d7a4a";
-  ctx.fillRect(pathX, pathY, pathW, pathH);
+  for (let i = 0; i < pathRows.length; i++) {
+    const row = pathRows[i];
 
-  ctx.fillStyle = "#a69059";
-  ctx.fillRect(pathX + 2, pathY + 2, pathW - 4, pathH - 6);
+    ctx.fillStyle = "#8b7949";
+    ctx.fillRect(
+      screenX + row.offsetX,
+      pathY + i,
+      row.width,
+      1
+    );
 
-  ctx.fillStyle = "#b6a36a";
-  ctx.fillRect(pathX + 4, pathY + 5, 4, 2);
-  ctx.fillRect(pathX + pathW - 8, pathY + 10, 3, 2);
-  ctx.fillRect(pathX + 5, pathY + pathH - 7, 5, 2);
+    if (row.width >= 8) {
+      ctx.fillStyle = i < 6 ? "#ab9661" : "#a28d58";
+      ctx.fillRect(
+        screenX + row.offsetX + 2,
+        pathY + i,
+        Math.max(3, row.width - 4),
+        1
+      );
+    }
+  }
+
+  // A few irregular worn/paver pixels keep the path from reading as one block.
+  ctx.fillStyle = "#c1ae72";
+  ctx.fillRect(screenX - 3, pathY + 4, 5, 2);
+  ctx.fillRect(screenX + 1, pathY + 10, 3, 2);
+  ctx.fillRect(screenX - 4, pathY + 15, 4, 2);
+
+  // Grass encroaches unevenly around the sides and at the blunt end.
+  ctx.fillStyle = "#5b8a45";
+  ctx.fillRect(screenX - 9, pathY + 7, 2, 2);
+  ctx.fillRect(screenX + 6, pathY + 9, 2, 2);
+  ctx.fillRect(screenX - 7, pathY + 13, 1, 2);
+  ctx.fillRect(screenX + 5, pathY + 14, 1, 2);
+  ctx.fillRect(screenX - 4, pathY + 17, 2, 1);
+  ctx.fillRect(screenX + 3, pathY + 17, 2, 1);
 }
 
 function drawHouse(house, camX, camY) {
   const screenX = Math.round(house.x - camX);
   const screenY = Math.round(house.y - camY);
 
-  // A soft little grounding shadow helps the house feel planted.
-  ctx.fillStyle = "rgba(34, 46, 28, .20)";
-  ctx.fillRect(screenX - 19, screenY - 2, 38, 4);
+  // Layered contact shadow so the house feels planted instead of sticker-like.
+  ctx.fillStyle = "rgba(34, 46, 28, .11)";
+  ctx.fillRect(screenX - 25, screenY - 2, 50, 1);
+  ctx.fillRect(screenX - 23, screenY - 1, 46, 2);
+
+  ctx.fillStyle = "rgba(34, 46, 28, .18)";
+  ctx.fillRect(screenX - 20, screenY, 40, 2);
+
+  ctx.fillStyle = "rgba(34, 46, 28, .26)";
+  ctx.fillRect(screenX - 16, screenY + 1, 32, 1);
 
   const sprite = house.image || houseImage;
 
@@ -18338,6 +20326,21 @@ function drawHouse(house, camX, camY) {
     screenX - Math.floor(house.width / 2),
     screenY - (house.height - 1)
   );
+
+  // A few tiny foreground tufts help the foundation blend into the grass.
+  ctx.fillStyle = "#406b38";
+  ctx.fillRect(screenX - 26, screenY - 5, 1, 3);
+  ctx.fillRect(screenX - 24, screenY - 7, 1, 5);
+  ctx.fillRect(screenX - 22, screenY - 5, 1, 3);
+  ctx.fillRect(screenX + 21, screenY - 5, 1, 3);
+  ctx.fillRect(screenX + 23, screenY - 7, 1, 5);
+  ctx.fillRect(screenX + 25, screenY - 5, 1, 3);
+
+  ctx.fillStyle = "#6ea05a";
+  ctx.fillRect(screenX - 24, screenY - 6, 1, 3);
+  ctx.fillRect(screenX - 22, screenY - 4, 1, 2);
+  ctx.fillRect(screenX + 23, screenY - 6, 1, 3);
+  ctx.fillRect(screenX + 25, screenY - 4, 1, 2);
 }
 
 function drawNpcRoleMarker(screenX, screenY) {
@@ -18355,15 +20358,13 @@ function drawNpcRoleMarker(screenX, screenY) {
     return;
   }
 
-  // Cleaner shop cue: a small floating coin without the chunky badge box.
+  // Shop cue uses the new coin at its native 16x16 size.
   ctx.fillStyle = "rgba(34, 46, 28, .22)";
-  ctx.fillRect(screenX - 4, centerY - 3, 8, 8);
+  ctx.fillRect(screenX - 5, centerY + 6, 10, 2);
   ctx.drawImage(
     coinImage,
-    screenX - 4,
-    centerY - 4,
-    8,
-    8
+    screenX - 8,
+    centerY - 8
   );
 }
 
@@ -18415,6 +20416,33 @@ function drawTutorialNpc(camX, camY) {
   );
 
   drawNpcRoleMarker(screenX, screenY);
+}
+
+function drawHunterNpc(camX, camY) {
+  const screenX =
+    Math.round(hunterNpc.x - camX);
+
+  const screenY =
+    Math.round(hunterNpc.y - camY);
+
+  const swayOffset =
+    Math.round(Math.sin(worldTime * 0.95 + 1.15) * 1);
+
+  ctx.fillStyle =
+    "rgba(34, 46, 28, .28)";
+
+  ctx.fillRect(
+    screenX - 5,
+    screenY + 1,
+    10,
+    2
+  );
+
+  ctx.drawImage(
+    hunterNpcImage,
+    screenX - 8 + swayOffset,
+    screenY - 19
+  );
 }
 
 function drawWoodCraftBench(camX, camY) {
@@ -18570,9 +20598,9 @@ function drawInteractionPrompt(
     );
 
   drawStaticPixelText(
-    interaction.kind === "npc"
-      ? "F TALK"
-      : "F CRAFT",
+    interaction.kind === "bench"
+      ? "F CRAFT"
+      : "F TALK",
     screenX,
     screenY - 24,
     "#fff3b0",
@@ -18599,6 +20627,9 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "bowDrawing",
   "bowDrawAmount",
   "bowReleaseTime",
+  "focusFireCharging",
+  "focusFireOpening",
+  "focusFireActive",
   "jesterBlinkFadeTime",
   "jesterBlinkFadeDuration",
   "shadowHidden",
@@ -18716,6 +20747,10 @@ function drawRemotePlayer(
       0,
       Number(remote.bowReleaseTime) || 0
     );
+
+  player.focusFireCharging = Boolean(remote.focusFireCasting);
+  player.focusFireOpening = false;
+  player.focusFireActive = false;
 
   player.jesterBlinkFadeTime = 0;
   player.jesterBlinkFadeDuration = 0.18;
@@ -18939,6 +20974,18 @@ function buildWorldDrawables(camX, camY) {
     );
   }
 
+  if (currentMapId === "hunterHollow") {
+    addDrawable(
+      drawables,
+      hunterNpc.y,
+      () =>
+        drawHunterNpc(
+          camX,
+          camY
+        )
+    );
+  }
+
   for (const flower of harvestFlowers) {
     addDrawable(
       drawables,
@@ -18964,15 +21011,16 @@ function buildWorldDrawables(camX, camY) {
       const screenY = Math.round(coin.y - camY);
 
       ctx.fillStyle = "rgba(35, 52, 37, .28)";
-      ctx.fillRect(screenX - 2, screenY + 1, 4, 2);
+      ctx.fillRect(screenX - 4, screenY + 1, 8, 2);
 
+      // Native 16x16: this coin sprite was drawn specifically for world use.
       ctx.drawImage(
         coinImage,
-        screenX - 4,
-        screenY - 7 + bob,
-        8,
-        8
+        screenX - 8,
+        screenY - 15 + bob
       );
+
+      drawCoinDropSparkles(coin, screenX, screenY - 7 + bob);
     });
   });
 
@@ -19146,6 +21194,12 @@ function drawForegroundLayer(camX, camY) {
   drawShadowSmoke(camX, camY);
   drawJesterConfetti(camX, camY);
 
+  for (const opener of focusFireOpeners) {
+    drawFocusFireOpener(opener, camX, camY);
+  }
+
+  drawFocusFireTargeting(camX, camY);
+  drawFocusFireTargetMarker(camX, camY);
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
   drawInteractionPrompt(camX, camY);

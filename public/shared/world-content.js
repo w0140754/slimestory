@@ -161,6 +161,111 @@
         }
       },
 
+      hunterHollow: {
+        enemySpawns: [
+          {
+            id: "hunterHollow:slime:1",
+            type: "slime",
+            variant: "blue",
+            aggressiveOnSight: true,
+            level: 2,
+            x: 162,
+            y: 168,
+            phase: 0.4,
+            wanderRadiusX: 18,
+            wanderRadiusY: 14
+          },
+          {
+            id: "hunterHollow:slime:2",
+            type: "slime",
+            variant: "blue",
+            aggressiveOnSight: true,
+            level: 2,
+            x: 196,
+            y: 184,
+            phase: 1.7,
+            wanderRadiusX: 18,
+            wanderRadiusY: 14
+          },
+          {
+            id: "hunterHollow:slime:3",
+            type: "slime",
+            variant: "blue",
+            aggressiveOnSight: true,
+            level: 2,
+            x: 228,
+            y: 165,
+            phase: 3.0,
+            wanderRadiusX: 18,
+            wanderRadiusY: 14
+          },
+          {
+            id: "hunterHollow:slime:4",
+            type: "slime",
+            variant: "purple",
+            aggressiveOnSight: true,
+            level: 4,
+            x: 404,
+            y: 214,
+            phase: 0.9,
+            wanderRadiusX: 20,
+            wanderRadiusY: 15
+          },
+          {
+            id: "hunterHollow:slime:5",
+            type: "slime",
+            variant: "purple",
+            aggressiveOnSight: true,
+            level: 4,
+            x: 439,
+            y: 231,
+            phase: 2.2,
+            wanderRadiusX: 20,
+            wanderRadiusY: 15
+          },
+          {
+            id: "hunterHollow:slime:6",
+            type: "slime",
+            variant: "purple",
+            aggressiveOnSight: true,
+            level: 4,
+            x: 472,
+            y: 211,
+            phase: 4.1,
+            wanderRadiusX: 20,
+            wanderRadiusY: 15
+          },
+          {
+            id: "hunterHollow:slime:7",
+            type: "slime",
+            variant: "blue",
+            aggressiveOnSight: true,
+            level: 2,
+            x: 310,
+            y: 300,
+            phase: 1.1,
+            wanderRadiusX: 22,
+            wanderRadiusY: 16
+          },
+          {
+            id: "hunterHollow:slime:8",
+            type: "slime",
+            variant: "purple",
+            aggressiveOnSight: true,
+            level: 4,
+            x: 515,
+            y: 320,
+            phase: 3.4,
+            wanderRadiusX: 22,
+            wanderRadiusY: 16
+          }
+        ],
+
+        collision: {
+          waterRects: []
+        }
+      },
+
       goblinWoods: {
         enemySpawns: [
           {
@@ -224,7 +329,7 @@
       // Bump this whenever shared map/enemy placement changes. The browser
       // loads this file with the matching version in its URL so an old cached
       // registry cannot disagree with the running Node server.
-      version: 4,
+      version: 5,
       maps
     });
   }

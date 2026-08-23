@@ -554,11 +554,19 @@ const FIRST_BENCH_Y = 201;
 const CRAFT_RECIPES = Object.freeze({
   woodSword: Object.freeze({
     cost: 5,
-    stateKey: "woodSwordCrafted"
+    stateKey: "woodSwordCrafted",
+    repeatable: false
   }),
   woodBow: Object.freeze({
     cost: 5,
-    stateKey: "woodBowCrafted"
+    stateKey: "woodBowCrafted",
+    repeatable: false
+  }),
+  arrows: Object.freeze({
+    cost: 1,
+    repeatable: true,
+    resourceKey: "arrows",
+    outputCount: 5
   })
 });
 
@@ -598,18 +606,24 @@ function handleCraftRequest(
       recipe: recipeId,
       success: false,
       reason: "tooFar",
-      totalWood: playerState.wood
+      totalWood: playerState.wood,
+      totalArrows: playerState.arrows
     });
     return;
   }
 
-  if (playerState[recipe.stateKey]) {
+  if (
+    !recipe.repeatable &&
+    recipe.stateKey &&
+    playerState[recipe.stateKey]
+  ) {
     sendJson(socket, {
       type: "craftResult",
       recipe: recipeId,
       success: false,
       reason: "alreadyCrafted",
-      totalWood: playerState.wood
+      totalWood: playerState.wood,
+      totalArrows: playerState.arrows
     });
     return;
   }
@@ -620,7 +634,8 @@ function handleCraftRequest(
       recipe: recipeId,
       success: false,
       reason: "needWood",
-      totalWood: playerState.wood
+      totalWood: playerState.wood,
+      totalArrows: playerState.arrows
     });
     return;
   }
@@ -628,13 +643,39 @@ function handleCraftRequest(
   playerState.wood -=
     recipe.cost;
 
-  playerState[recipe.stateKey] = true;
+  if (recipe.resourceKey === "arrows") {
+    playerState.arrows +=
+      Math.max(1, Number(recipe.outputCount) || 1);
+  } else if (recipe.stateKey) {
+    playerState[recipe.stateKey] = true;
+  }
 
   sendJson(socket, {
     type: "craftResult",
     recipe: recipeId,
     success: true,
-    totalWood: playerState.wood
+    totalWood: playerState.wood,
+    totalArrows: playerState.arrows
+  });
+}
+
+function handleArrowUse(playerId, socket) {
+  const playerState = players.get(playerId);
+  if (!playerState) return;
+
+  // Weapon selection is synced on the ordinary player-state cadence, so the
+  // server only authoritatively owns the ammo count here. The client sends
+  // this request only after a real bow projectile is created.
+  const hasArrow = playerState.arrows > 0;
+
+  if (hasArrow) {
+    playerState.arrows -= 1;
+  }
+
+  sendJson(socket, {
+    type: "arrowUseResult",
+    success: hasArrow,
+    totalArrows: playerState.arrows
   });
 }
 
@@ -753,6 +794,7 @@ function handleShopPurchase(
 }
 
 const DEBUG_COIN_GRANT = 10;
+const DEBUG_ARROW_GRANT = 99;
 
 function handleDebugGrantCoins(
   playerId,
@@ -770,6 +812,24 @@ function handleDebugGrantCoins(
     type: "debugCoinGrant",
     amount: DEBUG_COIN_GRANT,
     totalCoins: playerState.coins
+  });
+}
+
+function handleDebugGrantArrows(
+  playerId,
+  socket
+) {
+  const playerState = players.get(playerId);
+  if (!playerState) return;
+
+  playerState.arrows =
+    Math.max(0, Math.floor(Number(playerState.arrows) || 0)) +
+    DEBUG_ARROW_GRANT;
+
+  sendJson(socket, {
+    type: "debugArrowGrant",
+    amount: DEBUG_ARROW_GRANT,
+    totalArrows: playerState.arrows
   });
 }
 
@@ -2410,6 +2470,7 @@ function handlePvpAttack(
   let minimumMs = 260;
   let knockback = 12;
   let valid = false;
+  let arrowCharge = null;
 
   if (source === "melee") {
     // Wood Sword, Axe, Katana, and Sword all use the existing melee path.
@@ -2451,11 +2512,14 @@ function handlePvpAttack(
       return;
     }
 
+    arrowCharge =
+      arrowChargeProfileFromPayload(payload);
+
     valid = pvpAimHitsTarget(
       attacker,
       target,
       payload.aimAngle,
-      320,
+      arrowCharge.maxDistance + 12,
       0.72
     );
 
@@ -2480,12 +2544,20 @@ function handlePvpAttack(
   }
 
   const critical = Boolean(payload.critical);
-  const damage = calculateServerPvpDamage(
+  const baseDamage = calculateServerPvpDamage(
     attacker,
     target,
     source,
     critical
   );
+
+  const damage =
+    source === "arrow"
+      ? scaleArrowDamage(
+          baseDamage,
+          payload
+        )
+      : baseDamage;
 
   const aimAngle = Number(payload.aimAngle);
   const knockbackX =
@@ -3450,6 +3522,27 @@ function calculateServerPlayerDamage(
   });
 }
 
+function arrowChargeProfileFromPayload(payload = {}) {
+  // Bow charge is now binary: the client only sends an arrow after the full
+  // one-second draw. Every fired arrow uses standard bow damage and range.
+  return {
+    drawAmount: 1,
+    damageMultiplier: 1,
+    rangeMultiplier: 1,
+    maxDistance: 320
+  };
+}
+
+function scaleArrowDamage(
+  baseDamage,
+  payload
+) {
+  return Math.max(
+    1,
+    Math.round(baseDamage)
+  );
+}
+
 function handleSharedEnemyDamageAction(
   playerId,
   enemy,
@@ -3544,22 +3637,27 @@ function handleSharedEnemyDamageAction(
     knockback =
       enemy.type === "goblin" ? 17 : 14;
   } else if (source === "arrow") {
+    const arrowCharge =
+      arrowChargeProfileFromPayload(payload);
+
     if (
       playerState.weaponIndex !== 6 ||
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
-      ) > 320
+      ) > arrowCharge.maxDistance + 12
     ) {
       return;
     }
 
-    damage =
+    damage = scaleArrowDamage(
       calculateServerPlayerDamage(
         playerState,
         enemy,
         "arrow"
-      );
+      ),
+      payload
+    );
 
     knockback =
       enemy.type === "goblin" ? 20 : 16;
@@ -3855,7 +3953,9 @@ function makeServerSlime(spawn) {
     phase = 0,
     wanderRadiusX = 26,
     wanderRadiusY = 18,
-    level = 1
+    level = 1,
+    variant = "green",
+    aggressiveOnSight = false
   } = spawn;
 
   return {
@@ -3863,6 +3963,8 @@ function makeServerSlime(spawn) {
     mapId,
     type: "slime",
     level,
+    variant,
+    aggressiveOnSight,
 
     x,
     y,
@@ -3893,8 +3995,18 @@ function makeServerSlime(spawn) {
     wanderRadiusX,
     wanderRadiusY,
 
-    maxHp: 40,
-    hp: 40,
+    maxHp:
+      variant === "purple"
+        ? 80
+        : variant === "blue"
+          ? 56
+          : 40,
+    hp:
+      variant === "purple"
+        ? 80
+        : variant === "blue"
+          ? 56
+          : 40,
     alive: true,
     respawnTime: 0,
 
@@ -3985,6 +4097,8 @@ function slimeSnapshot() {
     y: Number(slime.y.toFixed(2)),
     dir: slime.dir,
     level: slime.level,
+    variant: slime.variant || "green",
+    aggressiveOnSight: Boolean(slime.aggressiveOnSight),
     hp: slime.hp,
     maxHp: slime.maxHp,
     alive: slime.alive,
@@ -4823,7 +4937,11 @@ function tryServerSlimeContact(slime) {
   }
 
   const damage =
-    4 + Math.floor(Math.random() * 4);
+    slime.variant === "purple"
+      ? 8 + Math.floor(Math.random() * 3)
+      : slime.variant === "blue"
+        ? 6 + Math.floor(Math.random() * 3)
+        : 4 + Math.floor(Math.random() * 4);
 
   setPlayerContactCooldown(
     target.player.id,
@@ -4910,6 +5028,21 @@ function tickSharedSlimes(dt) {
 
       if (slime.tauntTime <= 0) {
         slime.tauntOwnerId = null;
+      }
+    }
+
+    if (slime.aggressiveOnSight && slime.tauntTime <= 0) {
+      const nearest = nearestPlayerForSlime(slime);
+
+      if (
+        nearest &&
+        nearest.distance <= 72
+      ) {
+        setEnemyAggroTarget(
+          slime,
+          nearest.player.id,
+          slime.aggroDuration
+        );
       }
     }
 
@@ -5277,22 +5410,27 @@ function handleSlimeDamageAction(playerId, slime, payload) {
 
     knockback = 18;
   } else if (source === "arrow") {
+    const arrowCharge =
+      arrowChargeProfileFromPayload(payload);
+
     if (
       playerState.weaponIndex !== 6 ||
       Math.hypot(
         slime.x - playerState.x,
         slime.y - playerState.y
-      ) > 320
+      ) > arrowCharge.maxDistance + 12
     ) {
       return;
     }
 
-    damage =
+    damage = scaleArrowDamage(
       calculateServerPlayerDamage(
         playerState,
         slime,
         "arrow"
-      );
+      ),
+      payload
+    );
 
     knockback = 22;
   } else if (source === "fireball") {
@@ -5607,6 +5745,21 @@ function sanitizeVisualEffectPayload(
     };
   }
 
+  if (effect === "focusFireArc") {
+    return {
+      startX: sanitizeVisualPoint(payload.startX),
+      startY: sanitizeVisualPoint(payload.startY),
+      targetX: sanitizeVisualPoint(payload.targetX),
+      targetY: sanitizeVisualPoint(payload.targetY),
+      duration: clampNumber(
+        payload.duration,
+        0.18,
+        0.9,
+        0.4
+      )
+    };
+  }
+
   if (effect === "fireball") {
     return {
       x: sanitizeVisualPoint(payload.x),
@@ -5792,6 +5945,7 @@ function handleVisualEffect(
   const allowedEffects = new Set([
     "basicProjectile",
     "basicProjectileImpact",
+    "focusFireArc",
     "fireball",
     "fireballImpact",
     "levelUp",
@@ -5844,6 +5998,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     flowers: previous && Number.isFinite(previous.flowers)
       ? previous.flowers
+      : 0,
+
+    arrows: previous && Number.isFinite(previous.arrows)
+      ? previous.arrows
       : 0,
 
     // Session-only first crafting progression. Wood is server-owned, so the
@@ -5971,6 +6129,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         0.25,
         0
       ),
+
+    focusFireCasting:
+      Boolean(source.focusFireCasting),
 
     shadowHidden: Boolean(source.shadowHidden),
     shadowHideRevealTime:
@@ -6164,6 +6325,7 @@ wss.on("connection", socket => {
     coins: initialState.coins,
     wood: initialState.wood,
     flowers: initialState.flowers,
+    arrows: initialState.arrows,
     hp: initialState.hp,
     maxHp: initialState.maxHp,
     pvpEnabled: initialState.pvpEnabled,
@@ -6334,6 +6496,14 @@ wss.on("connection", socket => {
       return;
     }
 
+    if (message.type === "arrowUse") {
+      handleArrowUse(
+        id,
+        socket
+      );
+      return;
+    }
+
     if (message.type === "craftRequest") {
       handleCraftRequest(
         id,
@@ -6354,6 +6524,14 @@ wss.on("connection", socket => {
 
     if (message.type === "debugGrantCoins") {
       handleDebugGrantCoins(
+        id,
+        socket
+      );
+      return;
+    }
+
+    if (message.type === "debugGrantArrows") {
+      handleDebugGrantArrows(
         id,
         socket
       );
