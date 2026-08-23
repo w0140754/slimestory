@@ -1964,7 +1964,7 @@
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Grab a nearby slime, carry it overhead, then left-click to throw it. Thrown slimes can smash enemies and trees.
+              Grab a nearby hurlable enemy, carry it overhead, then left-click to throw it. Thrown enemies can smash monsters and trees.
             </div>
             <div class="skill-requirement">Requires 10 Strength</div>
             <div class="skill-level-row">
@@ -2725,9 +2725,10 @@ function playerIsPveEngaged() {
 
   if (!localId) return false;
 
-  for (const enemy of [...slimes, ...goblins, ...ghosts]) {
-    if (!enemy?.alive) continue;
-
+  for (
+    const { enemy }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
     if (
       enemy.aggroTargetId === localId &&
       (Number(enemy.aggroTime) || 0) > 0
@@ -2747,18 +2748,16 @@ function playerIsPveEngaged() {
 }
 
 function closeMonsterCanRevealCamouflage() {
-  for (const enemy of [...slimes, ...goblins, ...ghosts]) {
-    if (!enemy?.alive) continue;
-
-    const bodyY =
-      enemy.networkType === "slime" || slimes.includes(enemy)
-        ? enemy.y - 6
-        : enemy.y - 9;
+  for (
+    const { enemy }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    const body = enemyBodyPoint(enemy);
 
     if (
       Math.hypot(
-        enemy.x - player.x,
-        bodyY - (player.y - 7)
+        body.x - player.x,
+        body.y - (player.y - 7)
       ) <= CAMOUFLAGE_CLOSE_REVEAL_DISTANCE
     ) {
       return true;
@@ -4631,63 +4630,50 @@ function releaseFocusFireCharge() {
 }
 
 function focusFireEnemyType(enemy) {
-  if (!enemy) return null;
-  if (slimes.includes(enemy)) return "slime";
-  if (goblins.includes(enemy)) return "goblin";
-  if (ghosts.includes(enemy)) return "ghost";
-  return null;
+  return enemyTypeOf(enemy);
 }
 
 function findFocusFireLandingTarget(x, y) {
   let best = null;
-  let bestDistanceSq = FOCUS_FIRE_LANDING_RADIUS * FOCUS_FIRE_LANDING_RADIUS;
+  let bestDistanceSq =
+    FOCUS_FIRE_LANDING_RADIUS *
+    FOCUS_FIRE_LANDING_RADIUS;
 
-  const consider = (enemy, type, aimOffsetY) => {
-    if (!enemy || !enemy.alive) return;
-    if (type === "slime" && enemy.carriedBy) return;
-    if (type === "ghost" && !naturalEnemyBelongsToCurrentMap(enemy)) return;
+  for (
+    const { enemy, type, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    if (
+      profile.canFocusFire &&
+      !profile.canFocusFire(enemy)
+    ) {
+      continue;
+    }
 
-    const dx = enemy.x - x;
-    const dy = (enemy.y + aimOffsetY) - y;
+    const body = enemyBodyPoint(enemy);
+    const dx = body.x - x;
+    const dy = body.y - y;
     const distanceSq = dx * dx + dy * dy;
 
     if (distanceSq <= bestDistanceSq) {
       bestDistanceSq = distanceSq;
       best = { enemy, type };
     }
-  };
-
-  for (const slime of slimes) consider(slime, "slime", -6);
-  for (const goblin of goblins) consider(goblin, "goblin", -11);
-  for (const ghost of ghosts) consider(ghost, "ghost", -11);
+  }
 
   return best;
 }
 
 function focusFireAimPoint(enemy, type) {
-  const offsetY =
-    type === "slime" ? -6 : -11;
-
-  return {
-    x: enemy.x,
-    y: enemy.y + offsetY
-  };
+  return enemyBodyPoint(enemy);
 }
 
 function damageFocusFireTarget(enemy, type, projectile) {
-  if (type === "slime") {
-    damageSlimeWithArrow(enemy, projectile);
-    return;
-  }
-
-  if (type === "goblin") {
-    damageGoblinWithArrow(enemy, projectile);
-    return;
-  }
-
-  if (type === "ghost") {
-    damageGhostWithArrow(enemy, projectile);
-  }
+  damageEnemyWithProjectile(
+    enemy,
+    projectile,
+    "arrow"
+  );
 }
 
 function lockFocusFireTarget(enemy, type) {
@@ -4792,9 +4778,12 @@ function fireFocusFireBarrageArrow() {
     return false;
   }
 
+  const targetProfile =
+    enemyProfile(target);
+
   if (
-    type === "slime" &&
-    target.carriedBy
+    targetProfile?.canFocusFire &&
+    !targetProfile.canFocusFire(target)
   ) {
     clearFocusFireState(true);
     return false;
@@ -5352,45 +5341,6 @@ function igniteVegetationNear(
   }
 }
 
-function igniteSlimeFromSpread(slime) {
-  if (!slime.alive || slime.burnTime > 0) return;
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendSlimeAction("ignite", slime);
-  }
-}
-
-function igniteGhostFromSpread(ghost) {
-  if (!ghost.alive || ghost.burnTime > 0) return;
-
-  if (ghost.isGraveGhost) {
-    ghost.burnTime = ghost.burnDuration;
-    ghost.burnTickTimer = ghost.burnTickInterval;
-    ghost.aggroTime = ghost.aggroDuration;
-    return;
-  }
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendSharedEnemyAction(
-      "ghost",
-      "ignite",
-      ghost
-    );
-  }
-}
-
-function igniteGoblinFromSpread(goblin) {
-  if (!goblin.alive || goblin.burnTime > 0) return;
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendSharedEnemyAction(
-      "goblin",
-      "ignite",
-      goblin
-    );
-  }
-}
-
 function ignitePlayerFromSpread() {
   if (player.burnTime > 0 || playerIsWet()) return;
 
@@ -5399,44 +5349,19 @@ function ignitePlayerFromSpread() {
 }
 
 function igniteLivingNear(x, y, radius = 14) {
-  for (const slime of slimes) {
-    if (!slime.alive) continue;
+  for (
+    const { enemy }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    const body = enemyBodyPoint(enemy);
+    const dx = body.x - x;
+    const dy = body.y - y;
 
-    const dx = slime.x - x;
-    const dy = (slime.y - 6) - y;
-
-    if (dx * dx + dy * dy <= radius * radius) {
-      igniteSlimeFromSpread(slime);
-    }
-  }
-
-  for (const ghost of ghosts) {
     if (
-      !naturalEnemyBelongsToCurrentMap(
-        ghost
-      )
+      dx * dx + dy * dy <=
+      radius * radius
     ) {
-      continue;
-    }
-
-    if (!ghost.alive) continue;
-
-    const dx = ghost.x - x;
-    const dy = (ghost.y - 11) - y;
-
-    if (dx * dx + dy * dy <= radius * radius) {
-      igniteGhostFromSpread(ghost);
-    }
-  }
-
-  for (const goblin of goblins) {
-    if (!goblin.alive) continue;
-
-    const dx = goblin.x - x;
-    const dy = (goblin.y - 11) - y;
-
-    if (dx * dx + dy * dy <= radius * radius) {
-      igniteGoblinFromSpread(goblin);
+      igniteEnemyFromSpread(enemy);
     }
   }
 
@@ -5475,22 +5400,20 @@ function spreadFireFromBurningSources() {
   }
 
   // Burning monsters can carry fire into vegetation as they move through it.
-  for (const slime of slimes) {
-    if (slime.alive && slime.burnTime > 0) {
-      sources.push({ x: slime.x, y: slime.y - 6, radius: 13, chance: 0.42 });
-    }
-  }
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    if (enemy.burnTime <= 0) continue;
 
-  for (const ghost of ghosts) {
-    if (ghost.alive && ghost.burnTime > 0) {
-      sources.push({ x: ghost.x, y: ghost.y - 11, radius: 13, chance: 0.38 });
-    }
-  }
+    const body = enemyBodyPoint(enemy);
 
-  for (const goblin of goblins) {
-    if (goblin.alive && goblin.burnTime > 0) {
-      sources.push({ x: goblin.x, y: goblin.y - 11, radius: 13, chance: 0.42 });
-    }
+    sources.push({
+      x: body.x,
+      y: body.y,
+      radius: 13,
+      chance: profile.burnSpreadChance ?? 0.42
+    });
   }
 
   if (player.burnTime > 0) {
@@ -5524,9 +5447,7 @@ function calculateLocalCombatDamage(
     stats: player.stats,
     monsterType:
       entity.networkType ||
-      (entity.isGraveGhost
-        ? "ghost"
-        : "slime"),
+      "slime",
     monsterLevel:
       entity.level || 1,
     critical,
@@ -5621,171 +5542,6 @@ function applyRangedHit(entity, projectile, entityType, attackType) {
   }
 }
 
-function damageSlimeWithFireball(slime, fireball) {
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSlimeAction("damage", slime, {
-    source: "fireball",
-    projectileX: fireball.x,
-    projectileY: fireball.y
-  });
-}
-
-function damageGoblinWithFireball(goblin, fireball) {
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSharedEnemyAction(
-    "goblin",
-    "damage",
-    goblin,
-    {
-      source: "fireball",
-      projectileX: fireball.x,
-      projectileY: fireball.y
-    }
-  );
-}
-
-function damageGhostWithFireball(ghost, fireball) {
-  if (ghost.isGraveGhost) {
-    applyRangedHit(
-      ghost,
-      fireball,
-      "ghost",
-      "fireball"
-    );
-    return;
-  }
-
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSharedEnemyAction(
-    "ghost",
-    "damage",
-    ghost,
-    {
-      source: "fireball",
-      projectileX: fireball.x,
-      projectileY: fireball.y
-    }
-  );
-}
-
-function damageSlimeWithBasicProjectile(slime, projectile) {
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSlimeAction("damage", slime, {
-    source: "basic",
-    projectileX: projectile.x,
-    projectileY: projectile.y
-  });
-}
-
-function damageSlimeWithArrow(slime, projectile) {
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSlimeAction("damage", slime, {
-    source: "arrow",
-    projectileX: projectile.x,
-    projectileY: projectile.y,
-    aimAngle: Math.atan2(projectile.vy, projectile.vx),
-    drawAmount: projectile.drawAmount,
-    damageMultiplier: projectile.damageMultiplier,
-    rangeMultiplier: projectile.rangeMultiplier,
-    camouflageOpening: Boolean(projectile.camouflageOpening)
-  });
-}
-
-function damageGoblinWithBasicProjectile(goblin, projectile) {
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSharedEnemyAction(
-    "goblin",
-    "damage",
-    goblin,
-    {
-      source: "basic",
-      projectileX: projectile.x,
-      projectileY: projectile.y
-    }
-  );
-}
-
-function damageGoblinWithArrow(goblin, projectile) {
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSharedEnemyAction(
-    "goblin",
-    "damage",
-    goblin,
-    {
-      source: "arrow",
-      projectileX: projectile.x,
-      projectileY: projectile.y,
-      aimAngle: Math.atan2(projectile.vy, projectile.vx),
-      drawAmount: projectile.drawAmount,
-      damageMultiplier: projectile.damageMultiplier,
-      rangeMultiplier: projectile.rangeMultiplier,
-      camouflageOpening: Boolean(projectile.camouflageOpening)
-    }
-  );
-}
-
-function damageGhostWithBasicProjectile(ghost, projectile) {
-  if (ghost.isGraveGhost) {
-    applyRangedHit(
-      ghost,
-      projectile,
-      "ghost",
-      "basic"
-    );
-    return;
-  }
-
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSharedEnemyAction(
-    "ghost",
-    "damage",
-    ghost,
-    {
-      source: "basic",
-      projectileX: projectile.x,
-      projectileY: projectile.y
-    }
-  );
-}
-
-function damageGhostWithArrow(ghost, projectile) {
-  if (ghost.isGraveGhost) {
-    applyRangedHit(
-      ghost,
-      projectile,
-      "ghost",
-      "arrow"
-    );
-    return;
-  }
-
-  if (typeof onlineClient === "undefined") return;
-
-  onlineClient.sendSharedEnemyAction(
-    "ghost",
-    "damage",
-    ghost,
-    {
-      source: "arrow",
-      projectileX: projectile.x,
-      projectileY: projectile.y,
-      aimAngle: Math.atan2(projectile.vy, projectile.vx),
-      drawAmount: projectile.drawAmount,
-      damageMultiplier: projectile.damageMultiplier,
-      rangeMultiplier: projectile.rangeMultiplier,
-      camouflageOpening: Boolean(projectile.camouflageOpening)
-    }
-  );
-}
-
 function fireballHitsWater(fireball) {
   return (
     fireball.x > pond.x + 2 &&
@@ -5806,38 +5562,6 @@ function playerIsWet() {
 
 function applyWetStatus() {
   player.wetTime = player.wetDuration;
-}
-
-function extinguishSlime(slime) {
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendSlimeAction("extinguish", slime);
-  }
-}
-
-function extinguishGhost(ghost) {
-  if (ghost.isGraveGhost) {
-    ghost.burnTime = 0;
-    ghost.burnTickTimer = 0;
-    return;
-  }
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendSharedEnemyAction(
-      "ghost",
-      "extinguish",
-      ghost
-    );
-  }
-}
-
-function extinguishGoblin(goblin) {
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendSharedEnemyAction(
-      "goblin",
-      "extinguish",
-      goblin
-    );
-  }
 }
 
 function restoreGrass(clump) {
@@ -5917,125 +5641,56 @@ function applyRainCloud(cloud) {
   const preciseRain = rainCloudHasPrecisionEnhancement();
   let affectedCreatureThisTick = false;
 
-  for (const slime of slimes) {
-    if (!slime.alive) continue;
-
-    const dx = slime.x - cloud.x;
-    const dy = (slime.y - 6) - cloud.y;
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    const body = enemyBodyPoint(enemy);
+    const inset = profile.rainRadiusInset ?? 2;
+    const dx = body.x - cloud.x;
+    const dy = body.y - cloud.y;
+    const hitRadius = Math.max(1, radius - inset);
     const inside =
-      dx * dx + dy * dy <= (radius - 3) * (radius - 3);
+      dx * dx + dy * dy <=
+      hitRadius * hitRadius;
 
     if (!inside) continue;
 
-    if (!preciseRain && slime.burnTime > 0) {
-      extinguishSlime(slime);
-    }
-
-    // Slime HP is server-authoritative. The rain client reports its overlap,
-    // while the server applies the actual heal.
-    if (!preciseRain && creatureTick && slime.hp < slime.maxHp) {
-      if (typeof onlineClient !== "undefined") {
-        onlineClient.sendSlimeAction("rainHeal", slime, {
-          power: rainPower
-        });
+    if (profile.rainEffect === "damage") {
+      // Restorative rain is harmful to spectral creatures.
+      if (enemy.burnTime > 0) {
+        extinguishEnemy(enemy);
       }
 
-      affectedCreatureThisTick = true;
-    }
-  }
+      if (!creatureTick) continue;
 
-  for (const goblin of goblins) {
-    if (!goblin.alive) continue;
-
-    const dx = goblin.x - cloud.x;
-    const dy = (goblin.y - 11) - cloud.y;
-    const inside =
-      dx * dx + dy * dy <= (radius - 2) * (radius - 2);
-
-    if (!inside) continue;
-
-    if (!preciseRain && goblin.burnTime > 0) {
-      extinguishGoblin(goblin);
-    }
-
-    // Goblin HP is server-authoritative.
-    if (
-      !preciseRain &&
-      creatureTick &&
-      goblin.hp < goblin.maxHp
-    ) {
-      if (typeof onlineClient !== "undefined") {
-        onlineClient.sendSharedEnemyAction(
-          "goblin",
-          "rainHeal",
-          goblin,
-          { power: rainPower }
-        );
-      }
+      sendEnemyAction(
+        enemy,
+        "rainDamage",
+        { power: rainPower }
+      );
 
       affectedCreatureThisTick = true;
-    }
-  }
-
-  for (const ghost of ghosts) {
-    if (
-      !naturalEnemyBelongsToCurrentMap(
-        ghost
-      )
-    ) {
       continue;
     }
 
-    if (!ghost.alive) continue;
-
-    const dx = ghost.x - cloud.x;
-    const dy = (ghost.y - 11) - cloud.y;
-    const inside =
-      dx * dx + dy * dy <= (radius - 2) * (radius - 2);
-
-    if (!inside) continue;
-
-    if (ghost.burnTime > 0) {
-      extinguishGhost(ghost);
+    if (
+      !preciseRain &&
+      enemy.burnTime > 0
+    ) {
+      extinguishEnemy(enemy);
     }
 
-    // The restorative rain is harmful to spectral creatures.
-    if (creatureTick) {
-      if (ghost.isGraveGhost) {
-        const rainDamage =
-          calculateLocalCombatDamage(
-            ghost,
-            "rain",
-            false,
-            {
-              rainPower
-            }
-          );
-
-        ghost.hp -= rainDamage;
-        ghost.hitFlash = Math.max(
-          ghost.hitFlash,
-          0.07
-        );
-        ghost.aggroTime = ghost.aggroDuration;
-
-        spawnDamageNumber(
-          ghost.x,
-          ghost.y - 31,
-          rainDamage
-        );
-
-        if (ghost.hp <= 0) {
-          killGhost(ghost);
-        }
-      } else if (typeof onlineClient !== "undefined") {
-        onlineClient.sendSharedEnemyAction(
-          "ghost",
-          "rainDamage",
-          ghost,
-          { power: rainPower }
-        );
-      }
+    if (
+      !preciseRain &&
+      creatureTick &&
+      enemy.hp < enemy.maxHp
+    ) {
+      sendEnemyAction(
+        enemy,
+        "rainHeal",
+        { power: rainPower }
+      );
 
       affectedCreatureThisTick = true;
     }
@@ -6132,58 +5787,30 @@ function updateBasicProjectiles(dt) {
 
     let impact = false;
 
-    for (const slime of slimes) {
-      if (!slime.alive) continue;
+    for (
+      const { enemy, profile }
+      of activeEnemyRecords({ aliveOnly: true })
+    ) {
+      const body = enemyBodyPoint(enemy);
+      const dx = projectile.x - body.x;
+      const dy = projectile.y - body.y;
+      const hitRadius =
+        profile.projectileHitRadius ?? 8;
 
-      const dx = projectile.x - slime.x;
-      const dy = projectile.y - (slime.y - 6);
+      if (
+        dx * dx + dy * dy <=
+        hitRadius * hitRadius
+      ) {
+        damageEnemyWithProjectile(
+          enemy,
+          projectile,
+          projectile.type === "arrow"
+            ? "arrow"
+            : "basic"
+        );
 
-      if (dx * dx + dy * dy <= 7 * 7) {
-        if (projectile.type === "arrow") {
-          damageSlimeWithArrow(slime, projectile);
-        } else {
-          damageSlimeWithBasicProjectile(slime, projectile);
-        }
         impact = true;
         break;
-      }
-    }
-
-    if (!impact) {
-      for (const goblin of goblins) {
-        if (!goblin.alive) continue;
-
-        const dx = projectile.x - goblin.x;
-        const dy = projectile.y - (goblin.y - 11);
-
-        if (dx * dx + dy * dy <= 8 * 8) {
-          if (projectile.type === "arrow") {
-            damageGoblinWithArrow(goblin, projectile);
-          } else {
-            damageGoblinWithBasicProjectile(goblin, projectile);
-          }
-          impact = true;
-          break;
-        }
-      }
-    }
-
-    if (!impact) {
-      for (const ghost of ghosts) {
-        if (!ghost.alive) continue;
-
-        const dx = projectile.x - ghost.x;
-        const dy = projectile.y - (ghost.y - 11);
-
-        if (dx * dx + dy * dy <= 8 * 8) {
-          if (projectile.type === "arrow") {
-            damageGhostWithArrow(ghost, projectile);
-          } else {
-            damageGhostWithBasicProjectile(ghost, projectile);
-          }
-          impact = true;
-          break;
-        }
       }
     }
 
@@ -6557,46 +6184,28 @@ function updateFire(dt) {
       }
     }
 
-    // Fireballs can hurt monsters too.
+    // Fireballs can hurt any registered monster species.
     if (!impact) {
-      for (const slime of slimes) {
-        if (!slime.alive) continue;
+      for (
+        const { enemy, profile }
+        of activeEnemyRecords({ aliveOnly: true })
+      ) {
+        const body = enemyBodyPoint(enemy);
+        const dx = fireball.x - body.x;
+        const dy = fireball.y - body.y;
+        const hitRadius =
+          profile.projectileHitRadius ?? 8;
 
-        const dx = fireball.x - slime.x;
-        const dy = fireball.y - (slime.y - 6);
+        if (
+          dx * dx + dy * dy <=
+          hitRadius * hitRadius
+        ) {
+          damageEnemyWithProjectile(
+            enemy,
+            fireball,
+            "fireball"
+          );
 
-        if (dx * dx + dy * dy <= 7 * 7) {
-          damageSlimeWithFireball(slime, fireball);
-          impact = true;
-          break;
-        }
-      }
-    }
-
-    if (!impact) {
-      for (const goblin of goblins) {
-        if (!goblin.alive) continue;
-
-        const dx = fireball.x - goblin.x;
-        const dy = fireball.y - (goblin.y - 11);
-
-        if (dx * dx + dy * dy <= 8 * 8) {
-          damageGoblinWithFireball(goblin, fireball);
-          impact = true;
-          break;
-        }
-      }
-    }
-
-    if (!impact) {
-      for (const ghost of ghosts) {
-        if (!ghost.alive) continue;
-
-        const dx = fireball.x - ghost.x;
-        const dy = fireball.y - (ghost.y - 11);
-
-        if (dx * dx + dy * dy <= 8 * 8) {
-          damageGhostWithFireball(ghost, fireball);
           impact = true;
           break;
         }
@@ -6740,14 +6349,14 @@ function drawFocusFireTargetMarker(camX, camY) {
   const target = focusFireCurrentTarget();
   if (!target || !target.alive) return;
 
-  const type = player.focusFireTargetType;
-  const centerY =
-    target.y +
-    (type === "slime" ? -6 : -11);
-  const x = Math.round(target.x - camX);
-  const y = Math.round(centerY - camY);
-  const rx = type === "slime" ? 8 : 9;
-  const ry = type === "slime" ? 7 : 10;
+  const profile = enemyProfile(target);
+  if (!profile) return;
+
+  const center = enemyBodyPoint(target);
+  const x = Math.round(center.x - camX);
+  const y = Math.round(center.y - camY);
+  const rx = profile.lockRadiusX ?? 9;
+  const ry = profile.lockRadiusY ?? 10;
   const pulse = 0.72 + 0.20 * (0.5 + 0.5 * Math.sin(worldTime * 8));
 
   ctx.save();
@@ -7303,40 +6912,20 @@ function drawFireLighting(camX, camY) {
     );
   }
 
-  // Burning slimes carry their light around.
-  for (const slime of slimes) {
-    if (!slime.alive || slime.burnTime <= 0) continue;
+  // Burning monsters carry their light around.
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    if (enemy.burnTime <= 0) continue;
 
     drawPixelGlow(
-      slime.x - camX,
-      slime.y - camY - 7,
-      9,
-      0.12,
-      slime.phase
-    );
-  }
-
-  for (const ghost of ghosts) {
-    if (!ghost.alive || ghost.burnTime <= 0) continue;
-
-    drawPixelGlow(
-      ghost.x - camX,
-      ghost.y - camY - 12,
-      11,
-      0.13,
-      ghost.phase
-    );
-  }
-
-  for (const goblin of goblins) {
-    if (!goblin.alive || goblin.burnTime <= 0) continue;
-
-    drawPixelGlow(
-      goblin.x - camX,
-      goblin.y - camY - 12,
-      10,
-      0.12,
-      goblin.phase
+      enemy.x - camX,
+      enemy.y - camY +
+        (profile.burnGlowOffsetY || 0),
+      profile.burnGlowRadius || 10,
+      profile.burnGlowAlpha || 0.12,
+      enemy.phase || 0
     );
   }
 
@@ -7720,70 +7309,22 @@ function tryCastJesterBlink() {
 
   spawnFloatingText(startX, startY - 22, "Trick!", "#eba8ff", 0.9);
 
-  for (const slime of slimes) {
-    if (!slime.alive) continue;
-
+  for (
+    const { enemy }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
     if (
-      Math.hypot(slime.x - startX, slime.y - startY)
-      <= JESTER_CLONE_TAUNT_RADIUS
+      Math.hypot(
+        enemy.x - startX,
+        enemy.y - startY
+      ) <= JESTER_CLONE_TAUNT_RADIUS
     ) {
-      if (typeof onlineClient !== "undefined") {
-        onlineClient.sendSlimeAction(
-          "taunt",
-          slime,
-          {
-            x: startX,
-            y: startY,
-            duration: JESTER_CLONE_DURATION
-          }
-        );
-      }
-    }
-  }
-
-  for (const ghost of ghosts) {
-    if (
-      !naturalEnemyBelongsToCurrentMap(
-        ghost
-      )
-    ) {
-      continue;
-    }
-
-    if (!ghost.alive) continue;
-
-    if (
-      Math.hypot(ghost.x - startX, ghost.y - startY)
-      <= JESTER_CLONE_TAUNT_RADIUS
-    ) {
-      if (ghost.isGraveGhost) {
-        ghost.aggroTime = ghost.aggroDuration;
-      } else if (typeof onlineClient !== "undefined") {
-        onlineClient.sendSharedEnemyAction(
-          "ghost",
-          "taunt",
-          ghost,
-          { x: startX, y: startY }
-        );
-      }
-    }
-  }
-
-  for (const goblin of goblins) {
-    if (!goblin.alive) continue;
-
-    if (
-      Math.hypot(goblin.x - startX, goblin.y - startY)
-      <= JESTER_CLONE_TAUNT_RADIUS
-    ) {
-      if (typeof onlineClient !== "undefined") {
-        onlineClient.sendSharedEnemyAction(
-          "goblin",
-          "taunt",
-          goblin,
-          { x: startX, y: startY }
-        );
-      }
+      tauntEnemy(
+        enemy,
+        startX,
+        startY,
+        JESTER_CLONE_DURATION
+      );
     }
   }
 
@@ -8127,6 +7668,8 @@ function makeSlime(
     dir: 1,
     speed: 16,
     chaseSpeed: 22,
+    patrolLeashRadius: 90,
+    combatLeashRadius: 240,
     aggroTime: 0,
     wanderTargetX: x,
     wanderTargetY: y,
@@ -8216,6 +7759,7 @@ function makeGoblin(
     chaseSpeed: 34,
     detectionRadius: 90,
     leashRadius: 120,
+    combatLeashRadius: 260,
 
     aggroTime: 0,
     aggroDuration: 5.0,
@@ -8370,6 +7914,7 @@ function makeGhost(
     chaseSpeed: 32,
     detectionRadius: 110,
     leashRadius: 145,
+    combatLeashRadius: 280,
 
     // Once the ghost notices the player, it keeps pursuing for a while.
     // This prevents terrain/roaming boundaries from accidentally acting
@@ -8453,10 +7998,7 @@ function resetSlime(slime) {
 // monster health/state remain attached to the map where they belong.
 let currentMapId = "meadow";
 
-// Graves are map-local world objects, just like trees and enemies.
-const graves = [];
 const houses = [];
-let nextGraveId = 1;
 
 function makeRuntimeTree(x, y, phase = 0) {
   return {
@@ -8588,7 +8130,6 @@ const meadowMap = {
   slimes: slimes.slice(),
   ghosts: [],
   goblins: [],
-  graves: [],
   houses: meadowMapHouses,
   pond: {
     x: pond.x,
@@ -8685,7 +8226,6 @@ const spawnMap = {
   slimes: [],
   ghosts: [],
   goblins: [],
-  graves: [],
   houses: spawnMapHouses,
 
   // No pond in the safe clearing for now.
@@ -8790,7 +8330,6 @@ const goblinWoodsMap = {
   slimes: [],
   ghosts: [],
   goblins: goblinMapGoblins,
-  graves: [],
   houses: [],
 
   // No pond in this first Goblin Woods pass. Moving it far off-map lets the
@@ -8885,7 +8424,6 @@ const hunterHollowMap = {
   slimes: [],
   ghosts: [],
   goblins: [],
-  graves: [],
   houses: hunterHollowHouses,
   pond: {
     x: -1000,
@@ -9007,7 +8545,6 @@ const ghostGroveMap = {
   slimes: [],
   ghosts: [],
   goblins: [],
-  graves: [],
   houses: [],
 
   pond: {
@@ -9070,6 +8607,437 @@ const CLIENT_ENEMY_FACTORIES = {
   }
 };
 
+
+// -----------------------------------------------------------------------------
+// GENERIC ACTIVE ENEMY RUNTIME
+// -----------------------------------------------------------------------------
+// Shared gameplay systems should use this registry instead of manually
+// enumerating slime/goblin/ghost arrays. Species-specific AI and sprite drawing
+// remain isolated behind each profile. Adding a new enemy species should mostly
+// mean adding one collection/factory/profile rather than editing every skill.
+const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
+  slime: Object.freeze({
+    bodyOffsetY: -6,
+    projectileHitRadius: 7,
+    lockRadiusX: 8,
+    lockRadiusY: 7,
+    meleeBodyRadius: 5,
+    horizontalMeleeBodyRadius: 6,
+    rainRadiusInset: 3,
+    rainEffect: "heal",
+    burnSpreadChance: 0.42,
+    burnGlowOffsetY: -7,
+    burnGlowRadius: 9,
+    burnGlowAlpha: 0.12,
+    damageTextOffsetY: -24,
+    respawnSeconds: 30,
+    expAward: 1,
+    hurlable: true,
+    patrolLeashRadius: 90,
+    combatLeashRadius: 240,
+    draw: drawSlime,
+    update: updateSlimes,
+    updatePriority: 30,
+    drawSortY(enemy) {
+      if (
+        enemy.carriedBy &&
+        typeof onlineClient !== "undefined"
+      ) {
+        const carrier =
+          onlineClient.playerForNetworkId(
+            enemy.carriedBy
+          );
+
+        if (carrier) {
+          return carrier.y + 0.25;
+        }
+      }
+
+      return enemy.y;
+    },
+    canFocusFire(enemy) {
+      return !enemy.carriedBy;
+    },
+    applySpawnData(enemy, spawn) {
+      enemy.variant =
+        spawn.variant ||
+        enemy.variant ||
+        "green";
+
+      enemy.aggressiveOnSight =
+        Boolean(
+          spawn.aggressiveOnSight ??
+          enemy.aggressiveOnSight
+        );
+    }
+  }),
+
+  goblin: Object.freeze({
+    bodyOffsetY: -11,
+    projectileHitRadius: 8,
+    lockRadiusX: 9,
+    lockRadiusY: 10,
+    meleeBodyRadius: 6,
+    horizontalMeleeBodyRadius: 7,
+    rainRadiusInset: 2,
+    rainEffect: "heal",
+    burnSpreadChance: 0.42,
+    burnGlowOffsetY: -12,
+    burnGlowRadius: 10,
+    burnGlowAlpha: 0.12,
+    damageTextOffsetY: -31,
+    respawnSeconds: 40,
+    expAward: 2,
+    hurlable: true,
+    patrolLeashRadius: 120,
+    combatLeashRadius: 260,
+    draw: drawGoblin,
+    update: updateGoblins,
+    updatePriority: 20,
+    applyNetworkSnapshot(enemy, state) {
+      enemy.moving = Boolean(state.moving);
+      enemy.walkTime =
+        Number(state.walkTime) || 0;
+      enemy.lungeTime = Math.max(
+        0,
+        Number(state.lungeTime) || 0
+      );
+      enemy.lungeDirX =
+        Number(state.lungeDirX) || 0;
+      enemy.lungeDirY =
+        Number(state.lungeDirY) || 0;
+    },
+    onKilledLocal(enemy) {
+      enemy.lungeTime = 0;
+      enemy.moving = false;
+    },
+    canFocusFire(enemy) {
+      return !enemy.carriedBy;
+    },
+    drawSortY(enemy) {
+      return enemy.y;
+    }
+  }),
+
+  ghost: Object.freeze({
+    bodyOffsetY: -11,
+    projectileHitRadius: 8,
+    lockRadiusX: 9,
+    lockRadiusY: 10,
+    meleeBodyRadius: 7,
+    horizontalMeleeBodyRadius: 8,
+    rainRadiusInset: 2,
+    rainEffect: "damage",
+    burnSpreadChance: 0.38,
+    burnGlowOffsetY: -12,
+    burnGlowRadius: 11,
+    burnGlowAlpha: 0.13,
+    damageTextOffsetY: -31,
+    respawnSeconds: 50,
+    expAward: 5,
+    hurlable: false,
+    patrolLeashRadius: 145,
+    combatLeashRadius: 280,
+    draw: drawGhost,
+    update: updateGhosts,
+    updatePriority: 10,
+    drawSortY(enemy) {
+      return enemy.y + 7;
+    },
+    belongsToCurrentMap(enemy) {
+      return naturalEnemyBelongsToCurrentMap(enemy);
+    }
+  })
+});
+
+function enemyProfileForType(enemyType) {
+  return (
+    CLIENT_ENEMY_RUNTIME_PROFILES[enemyType] ||
+    null
+  );
+}
+
+function enemyCollectionForMap(
+  mapId,
+  enemyType
+) {
+  const collectionName =
+    CLIENT_ENEMY_COLLECTIONS[enemyType];
+
+  if (!collectionName) return [];
+
+  const state = mapStates[mapId];
+  if (!state) return [];
+
+  return Array.isArray(state[collectionName])
+    ? state[collectionName]
+    : [];
+}
+
+function currentEnemyCollection(enemyType) {
+  return enemyCollectionForMap(
+    currentMapId,
+    enemyType
+  );
+}
+
+function enemyTypeOf(enemy) {
+  if (!enemy) return null;
+
+  if (
+    typeof enemy.networkType === "string" &&
+    CLIENT_ENEMY_COLLECTIONS[enemy.networkType]
+  ) {
+    return enemy.networkType;
+  }
+
+  for (
+    const enemyType
+    of Object.keys(CLIENT_ENEMY_COLLECTIONS)
+  ) {
+    if (
+      currentEnemyCollection(enemyType)
+        .includes(enemy)
+    ) {
+      return enemyType;
+    }
+  }
+
+  return null;
+}
+
+function enemyProfile(enemy) {
+  return enemyProfileForType(
+    enemyTypeOf(enemy)
+  );
+}
+
+function ensureEnemyHurlState(enemy) {
+  if (!enemy) return enemy;
+
+  enemy.carriedBy =
+    typeof enemy.carriedBy === "string"
+      ? enemy.carriedBy
+      : null;
+  enemy.pickupTime = Math.max(0, Number(enemy.pickupTime) || 0);
+  enemy.pickupDuration = Math.max(0.01, Number(enemy.pickupDuration) || 0.18);
+  enemy.pickupDirX = Number(enemy.pickupDirX) || 0;
+  enemy.pickupDirY = Number(enemy.pickupDirY) || 0;
+  enemy.hurlTime = Math.max(0, Number(enemy.hurlTime) || 0);
+  enemy.hurlDuration = Math.max(0.01, Number(enemy.hurlDuration) || 0.58);
+  return enemy;
+}
+
+function enemyIsHurlable(enemy) {
+  const profile = enemyProfile(enemy);
+  return Boolean(
+    enemy &&
+    enemy.alive &&
+    profile &&
+    (
+      typeof enemy.hurlable === "boolean"
+        ? enemy.hurlable
+        : profile.hurlable !== false
+    )
+  );
+}
+
+function enemyBelongsToCurrentMap(enemy) {
+  const profile = enemyProfile(enemy);
+  if (!profile) return false;
+
+  return profile.belongsToCurrentMap
+    ? profile.belongsToCurrentMap(enemy)
+    : true;
+}
+
+function activeEnemyRecords({
+  aliveOnly = false
+} = {}) {
+  const records = [];
+
+  for (
+    const enemyType
+    of Object.keys(CLIENT_ENEMY_COLLECTIONS)
+  ) {
+    const profile =
+      enemyProfileForType(enemyType);
+
+    if (!profile) continue;
+
+    for (
+      const enemy
+      of currentEnemyCollection(enemyType)
+    ) {
+      if (!enemy) continue;
+      if (aliveOnly && !enemy.alive) continue;
+      if (
+        profile.belongsToCurrentMap &&
+        !profile.belongsToCurrentMap(enemy)
+      ) {
+        continue;
+      }
+
+      records.push({
+        enemy,
+        type: enemyType,
+        profile
+      });
+    }
+  }
+
+  return records;
+}
+
+function enemyBodyPoint(enemy) {
+  const profile = enemyProfile(enemy);
+
+  return {
+    x: enemy?.x || 0,
+    y:
+      (enemy?.y || 0) +
+      (profile?.bodyOffsetY || 0)
+  };
+}
+
+function sendEnemyAction(
+  enemy,
+  action,
+  payload = {}
+) {
+  if (
+    !enemy ||
+    typeof onlineClient === "undefined"
+  ) {
+    return false;
+  }
+
+  const type = enemyTypeOf(enemy);
+  if (!type) return false;
+
+  if (type === "slime") {
+    return Boolean(
+      onlineClient.sendSlimeAction(
+        action,
+        enemy,
+        payload
+      )
+    );
+  }
+
+  return Boolean(
+    onlineClient.sendSharedEnemyAction(
+      type,
+      action,
+      enemy,
+      payload
+    )
+  );
+}
+
+function damageEnemyWithProjectile(
+  enemy,
+  projectile,
+  attackType
+) {
+  const type = enemyTypeOf(enemy);
+  if (!type) return;
+
+  const payload = {
+    source: attackType,
+    projectileX: projectile.x,
+    projectileY: projectile.y
+  };
+
+  if (attackType === "arrow") {
+    payload.aimAngle =
+      Math.atan2(
+        projectile.vy,
+        projectile.vx
+      );
+    payload.drawAmount =
+      projectile.drawAmount;
+    payload.damageMultiplier =
+      projectile.damageMultiplier;
+    payload.rangeMultiplier =
+      projectile.rangeMultiplier;
+    payload.camouflageOpening =
+      Boolean(
+        projectile.camouflageOpening
+      );
+  }
+
+  sendEnemyAction(
+    enemy,
+    "damage",
+    payload
+  );
+}
+
+function igniteEnemyFromSpread(enemy) {
+  if (
+    !enemy?.alive ||
+    enemy.burnTime > 0
+  ) {
+    return;
+  }
+
+  sendEnemyAction(
+    enemy,
+    "ignite"
+  );
+}
+
+function extinguishEnemy(enemy) {
+  if (!enemy) return;
+
+  sendEnemyAction(
+    enemy,
+    "extinguish"
+  );
+}
+
+function tauntEnemy(
+  enemy,
+  x,
+  y,
+  duration = JESTER_CLONE_DURATION
+) {
+  if (!enemy?.alive) return;
+
+  sendEnemyAction(
+    enemy,
+    "taunt",
+    {
+      x,
+      y,
+      duration
+    }
+  );
+}
+
+function damageEnemyWithMelee(
+  enemy,
+  source
+) {
+  const type = enemyTypeOf(enemy);
+  const profile = enemyProfile(enemy);
+
+  if (!type || !profile) return;
+
+  sendEnemyAction(
+    enemy,
+    "damage",
+    {
+      source,
+      critical:
+        player.shadowCritAttack,
+      aimAngle:
+        player.attackAimAngle
+    }
+  );
+}
+
 function createClientEnemyFromWorldSpawn(
   mapId,
   spawn
@@ -9086,18 +9054,28 @@ function createClientEnemyFromWorldSpawn(
   }
 
   const entity = factory(spawn);
+  ensureEnemyHurlState(entity);
+  if (typeof spawn.hurlable === "boolean") {
+    entity.hurlable = spawn.hurlable;
+  }
 
   entity.entityId = spawn.id;
   entity.level =
     Number.isFinite(spawn.level)
       ? spawn.level
       : entity.level;
-  if (spawn.type === "slime") {
-    entity.variant = spawn.variant || entity.variant || "green";
-    entity.aggressiveOnSight = Boolean(
-      spawn.aggressiveOnSight ?? entity.aggressiveOnSight
+  const runtimeProfile =
+    enemyProfileForType(spawn.type);
+
+  if (
+    runtimeProfile?.applySpawnData
+  ) {
+    runtimeProfile.applySpawnData(
+      entity,
+      spawn
     );
   }
+
   entity.networkType = spawn.type;
   entity.networkMapId = mapId;
   entity.serverControlled = true;
@@ -9130,13 +9108,14 @@ function applySharedWorldContentToClientMaps() {
       continue;
     }
 
-    const localGraveGhosts =
-      (state.ghosts || [])
-        .filter(ghost => ghost.isGraveGhost);
-
-    state.slimes = [];
-    state.goblins = [];
-    state.ghosts = localGraveGhosts;
+    for (
+      const [, collectionName]
+      of Object.entries(
+        CLIENT_ENEMY_COLLECTIONS
+      )
+    ) {
+      state[collectionName] = [];
+    }
 
     for (
       const spawn
@@ -9146,6 +9125,10 @@ function applySharedWorldContentToClientMaps() {
         CLIENT_ENEMY_COLLECTIONS[spawn.type];
 
       if (!collectionName) continue;
+
+      if (!Array.isArray(state[collectionName])) {
+        state[collectionName] = [];
+      }
 
       const entity =
         createClientEnemyFromWorldSpawn(
@@ -9182,29 +9165,17 @@ function reconcileSharedEnemiesForMap(mapId) {
     const currentCollection =
       state[collectionName] || [];
 
-    const graveGhosts =
-      enemyType === "ghost"
-        ? currentCollection.filter(
-            enemy =>
-              enemy.isGraveGhost
-          )
-        : [];
-
     const existingById =
       new Map(
         currentCollection
-          .filter(enemy =>
-            !enemy.isGraveGhost &&
-            enemy.entityId
-          )
+          .filter(enemy => enemy.entityId)
           .map(enemy => [
             enemy.entityId,
             enemy
           ])
       );
 
-    const rebuilt =
-      [...graveGhosts];
+    const rebuilt = [];
 
     for (
       const spawn
@@ -9230,12 +9201,21 @@ function reconcileSharedEnemiesForMap(mapId) {
       // Reassert identity every activation. This prevents stale objects from
       // an old map from being rendered through the active-array view.
       entity.entityId = spawn.id;
-      if (enemyType === "slime") {
-        entity.variant = spawn.variant || entity.variant || "green";
-        entity.aggressiveOnSight = Boolean(
-          spawn.aggressiveOnSight ?? entity.aggressiveOnSight
+      if (typeof spawn.hurlable === "boolean") {
+        entity.hurlable = spawn.hurlable;
+      }
+      const runtimeProfile =
+        enemyProfileForType(enemyType);
+
+      if (
+        runtimeProfile?.applySpawnData
+      ) {
+        runtimeProfile.applySpawnData(
+          entity,
+          spawn
         );
       }
+
       entity.networkType = enemyType;
       entity.networkMapId = mapId;
       entity.serverControlled = true;
@@ -9252,10 +9232,6 @@ function naturalEnemyBelongsToCurrentMap(
   enemy
 ) {
   if (!enemy) return false;
-
-  if (enemy.isGraveGhost) {
-    return true;
-  }
 
   return (
     !enemy.networkMapId ||
@@ -9327,7 +9303,7 @@ function replaceActiveArray(activeArray, mapArray) {
 // -----------------------------------------------------------------------------
 // ENTITY IDENTITY / GAME STATE
 // -----------------------------------------------------------------------------
-// entityId is separate from existing gameplay IDs (for example grave.id).
+// entityId stays separate from species-specific gameplay state and IDs.
 // That means networking can gain stable identifiers without changing any
 // current combat or persistence behavior.
 function ensureEntityId(entity, entityId) {
@@ -9347,7 +9323,6 @@ function assignPersistentEntityIds() {
       ["slime", state.slimes],
       ["ghost", state.ghosts],
       ["goblin", state.goblins],
-      ["grave", state.graves],
       ["house", state.houses || []]
     ];
 
@@ -9437,9 +9412,6 @@ class GameState {
           )
         ),
 
-        graves: graves.map(entity =>
-          makeNetworkEntitySnapshot(entity, ["x", "y", "hp"])
-        ),
 
         houses: houses.map(entity =>
           makeNetworkEntitySnapshot(entity, ["x", "y"])
@@ -11012,12 +10984,7 @@ class OnlineClient {
       mapId
     );
 
-    return (
-      enemy &&
-      !enemy.isGraveGhost
-    )
-      ? enemy
-      : null;
+    return enemy || null;
   }
 
   sendSharedEnemyAction(
@@ -11144,40 +11111,44 @@ class OnlineClient {
         Number(state.burnTime) || 0
       );
 
+      ensureEnemyHurlState(enemy);
+      enemy.carriedBy =
+        typeof state.carriedBy === "string"
+          ? state.carriedBy
+          : null;
+      enemy.pickupTime = Math.max(0, Number(state.pickupTime) || 0);
+      enemy.pickupDuration = Math.max(0.01, Number(state.pickupDuration) || 0.18);
+      enemy.pickupDirX = Number(state.pickupDirX) || 0;
+      enemy.pickupDirY = Number(state.pickupDirY) || 0;
+      enemy.hurlTime = Math.max(0, Number(state.hurlTime) || 0);
+      enemy.hurlDuration = Math.max(0.01, Number(state.hurlDuration) || 0.58);
+
       enemy.respawnTime = Math.max(
         0,
         Number(state.respawnTime) || 0
       );
 
-      if (enemyType === "goblin") {
-        enemy.moving = Boolean(state.moving);
-        enemy.walkTime = Number(state.walkTime) || 0;
-        enemy.lungeTime = Math.max(
-          0,
-          Number(state.lungeTime) || 0
-        );
+      const runtimeProfile =
+        enemyProfileForType(enemyType);
 
-        enemy.lungeDirX = Number(state.lungeDirX) || 0;
-        enemy.lungeDirY = Number(state.lungeDirY) || 0;
+      if (
+        runtimeProfile?.applyNetworkSnapshot
+      ) {
+        runtimeProfile.applyNetworkSnapshot(
+          enemy,
+          state
+        );
       }
     }
   }
 
   handleEnemyConfused(message) {
-    let enemy = null;
-
-    if (message.enemyType === "slime") {
-      enemy = this.findSharedSlime(
+    const enemy =
+      findClientWorldEnemy(
         message.enemyId,
-        message.mapId
-      );
-    } else {
-      enemy = this.findSharedEnemy(
         message.enemyType,
-        message.enemyId,
         message.mapId
       );
-    }
 
     if (!enemy || currentMapId !== message.mapId) return;
 
@@ -11190,8 +11161,13 @@ class OnlineClient {
         ? message.attackerId
         : enemy.confusionTargetId;
 
+    const profile =
+      enemyProfile(enemy);
+
     const confusionY =
-      enemy.y - (message.enemyType === "slime" ? 27 : 34);
+      enemy.y +
+      (profile?.damageTextOffsetY ?? -31) -
+      3;
 
     const confusionDuration =
       Math.max(
@@ -11257,9 +11233,12 @@ class OnlineClient {
 
     if (amount <= 0) return;
 
+    const profile = enemyProfile(enemy);
+
     spawnDamageNumber(
       enemy.x,
-      enemy.y - 31,
+      enemy.y +
+        (profile?.damageTextOffsetY ?? -31),
       message.critical ? `${amount}!` : amount,
       message.critical
         ? { critical: true, duration: 0.84 }
@@ -11289,9 +11268,12 @@ class OnlineClient {
 
     if (amount <= 0) return;
 
+    const profile = enemyProfile(enemy);
+
     spawnFloatingText(
       enemy.x,
-      enemy.y - 32,
+      enemy.y +
+        (profile?.damageTextOffsetY ?? -31) - 1,
       `+${amount}`,
       "#89d9b8",
       0.85
@@ -11299,34 +11281,37 @@ class OnlineClient {
   }
 
   handleSharedEnemyKilled(message) {
-    const enemy = this.findSharedEnemy(
-      message.enemyType,
+    const enemy = findClientWorldEnemy(
       message.enemyId,
+      message.enemyType,
       message.mapId
     );
+
+    const profile =
+      enemyProfileForType(
+        message.enemyType
+      );
 
     if (enemy) {
       enemy.hp = 0;
       enemy.alive = false;
       enemy.burnTime = 0;
       enemy.respawnTime =
-        message.enemyType === "goblin" ? 4.0 : 6.0;
+        profile?.respawnSeconds ?? 30;
 
-      if (message.enemyType === "goblin") {
-        enemy.lungeTime = 0;
-        enemy.moving = false;
+      if (profile?.onKilledLocal) {
+        profile.onKilledLocal(enemy);
       }
     }
 
-    if (message.killerId !== this.localPlayerId) {
+    if (
+      message.killerId !== this.localPlayerId ||
+      !profile
+    ) {
       return;
     }
 
-    if (message.enemyType === "goblin") {
-      awardExp(2);
-    } else if (message.enemyType === "ghost") {
-      awardExp(5);
-    }
+    awardExp(profile.expAward || 0);
   }
 
   sendVisualEffect(effect, payload = {}) {
@@ -12130,7 +12115,6 @@ const ACTIVE_MAP_COLLECTIONS = [
   [slimes, "slimes"],
   [ghosts, "ghosts"],
   [goblins, "goblins"],
-  [graves, "graves"],
   [houses, "houses"]
 ];
 
@@ -12144,192 +12128,6 @@ function mapStateForCurrentMap() {
   return mapStates[currentMapId];
 }
 
-function makePlayerGrave(x, y) {
-  const grave = {
-    id: nextGraveId++,
-    x,
-    y,
-    maxHp: 3,
-    hp: 3,
-    shakeTime: 0
-  };
-
-  ensureEntityId(grave, `${currentMapId}:grave:${grave.id}`);
-  return grave;
-}
-
-function graveStillExists(graveId, state = mapStateForCurrentMap()) {
-  return !!state &&
-    state.graves.some(grave => grave.id === graveId);
-}
-
-function spawnGraveGhost(grave, state) {
-  // Spawn just to the side of the stone so it visually reads as emerging
-  // from / haunting the grave rather than occupying the same pixels.
-  const side = grave.id % 2 === 0 ? -1 : 1;
-  const ghost = makeGhost(
-    grave.x + side * 15,
-    grave.y - 2,
-    grave.id * 0.83
-  );
-
-  ghost.homeX = ghost.x;
-  ghost.homeY = ghost.y;
-  ghost.isGraveGhost = true;
-  ghost.graveId = grave.id;
-  ghost.aggroTime = ghost.aggroDuration;
-  ensureEntityId(ghost, `${currentMapId}:graveGhost:${grave.id}`);
-
-  state.ghosts.push(ghost);
-  ghosts.push(ghost);
-
-  return ghost;
-}
-
-function spawnPlayerGrave(x, y) {
-  const state = mapStateForCurrentMap();
-  if (!state) return;
-
-  const grave = makePlayerGrave(
-    Math.max(10, Math.min(world.width - 10, x)),
-    Math.max(18, Math.min(world.height - 4, y))
-  );
-
-  state.graves.push(grave);
-  graves.push(grave);
-
-  spawnGraveGhost(grave, state);
-}
-
-function destroyPlayerGrave(grave) {
-  const state = mapStateForCurrentMap();
-  if (!state) return;
-
-  for (let i = graves.length - 1; i >= 0; i--) {
-    if (graves[i].id === grave.id) {
-      graves.splice(i, 1);
-    }
-  }
-
-  for (let i = state.graves.length - 1; i >= 0; i--) {
-    if (state.graves[i].id === grave.id) {
-      state.graves.splice(i, 1);
-    }
-  }
-
-  // Breaking the grave ends the haunting completely.
-  for (let i = ghosts.length - 1; i >= 0; i--) {
-    if (ghosts[i].isGraveGhost && ghosts[i].graveId === grave.id) {
-      ghosts.splice(i, 1);
-    }
-  }
-
-  for (let i = state.ghosts.length - 1; i >= 0; i--) {
-    if (state.ghosts[i].isGraveGhost && state.ghosts[i].graveId === grave.id) {
-      state.ghosts.splice(i, 1);
-    }
-  }
-
-  spawnFloatingText(
-    grave.x,
-    grave.y - 18,
-    "FREE",
-    "#d9e5de",
-    0.9
-  );
-}
-
-function tryHitGrave() {
-  const originX = player.x;
-  const originY = player.y - 8;
-
-  const horizontalSwing =
-    player.attackDirection === "left" ||
-    player.attackDirection === "right";
-
-  const hitHalfArc = horizontalSwing ? 0.88 : 0.74;
-
-  let bestGrave = null;
-  let bestDistance = Infinity;
-
-  for (const grave of graves) {
-    const targetX = grave.x;
-    const targetY = grave.y - 7;
-
-    const dx = targetX - originX;
-    const dy = targetY - originY;
-    const distance = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
-
-    const insideAngle =
-      Math.abs(angleDifference(targetAngle, player.attackAimAngle))
-      <= hitHalfArc;
-
-    const insideRange =
-      distance <= currentMeleeReach() + (horizontalSwing ? 8 : 7);
-
-    if (insideAngle && insideRange && distance < bestDistance) {
-      bestGrave = grave;
-      bestDistance = distance;
-    }
-  }
-
-  if (!bestGrave) return;
-
-  bestGrave.hp -= 1;
-  bestGrave.shakeTime = 0.16;
-
-  if (bestGrave.hp <= 0) {
-    destroyPlayerGrave(bestGrave);
-  }
-}
-
-function drawPlayerGrave(grave, camX, camY) {
-  let sx = Math.round(grave.x - camX);
-  const sy = Math.round(grave.y - camY);
-
-  if (grave.shakeTime > 0) {
-    sx += Math.sin(grave.shakeTime * 145) > 0 ? 1 : -1;
-  }
-
-  // Small chunky shadow.
-  ctx.fillStyle = "rgba(31, 39, 32, .30)";
-  ctx.fillRect(sx - 6, sy, 12, 2);
-
-  // Dirt mound.
-  ctx.fillStyle = "#6f6042";
-  ctx.fillRect(sx - 6, sy - 2, 12, 3);
-  ctx.fillStyle = "#8c7951";
-  ctx.fillRect(sx - 4, sy - 3, 8, 1);
-
-  // Pixel gravestone.
-  ctx.fillStyle = "#4b5251";
-  ctx.fillRect(sx - 5, sy - 12, 10, 10);
-  ctx.fillRect(sx - 4, sy - 14, 8, 2);
-  ctx.fillRect(sx - 3, sy - 15, 6, 1);
-
-  ctx.fillStyle = "#747d79";
-  ctx.fillRect(sx - 3, sy - 13, 5, 1);
-  ctx.fillRect(sx - 4, sy - 11, 1, 6);
-
-  // Simple inset cross.
-  ctx.fillStyle = "#353b3a";
-  ctx.fillRect(sx - 1, sy - 11, 2, 6);
-  ctx.fillRect(sx - 3, sy - 9, 6, 2);
-
-  // Axe damage becomes visible as cracks.
-  if (grave.hp <= 2) {
-    ctx.fillStyle = "#292f2e";
-    ctx.fillRect(sx + 2, sy - 7, 1, 3);
-    ctx.fillRect(sx + 1, sy - 5, 2, 1);
-  }
-
-  if (grave.hp <= 1) {
-    ctx.fillRect(sx - 4, sy - 6, 2, 1);
-    ctx.fillRect(sx - 3, sy - 5, 1, 2);
-  }
-}
-
 function handlePlayerDeath() {
   player.hp = player.maxHp;
   player.knockbackX = 0;
@@ -12341,8 +12139,6 @@ function handlePlayerDeath() {
   player.shadowHideRevealTime = 0;
 
   // Simple death flow: respawn directly in the safe clearing.
-  // The old grave helpers remain dormant for compatibility, but death no
-  // longer creates a grave or a grave-bound ghost.
   activateMap(
     "spawn",
     "center"
@@ -13348,197 +13144,55 @@ function tryHitPvpPlayers(source = "melee") {
   }
 }
 
-function tryHitSlime(source = "melee") {
+function tryHitEnemies(source = "melee") {
   const originX = player.x;
   const originY = player.y - 8;
 
-  for (const slime of slimes) {
-    if (!slime.alive) continue;
+  const horizontalSwing =
+    player.attackDirection === "left" ||
+    player.attackDirection === "right";
 
-    const targetX = slime.x;
-    const targetY = slime.y - 6;
+  const hitHalfArc =
+    source === "bowMelee"
+      ? BOW_MELEE_HALF_ARC
+      : horizontalSwing
+        ? 0.80
+        : SWORD_HALF_ARC;
 
-    const dx = targetX - originX;
-    const dy = targetY - originY;
-
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    const target = enemyBodyPoint(enemy);
+    const dx = target.x - originX;
+    const dy = target.y - originY;
     const distance = Math.hypot(dx, dy);
     const targetAngle = Math.atan2(dy, dx);
 
-    // Left/right swings get a slightly wider forgiving hit cone.
-    // The visible animation stays the same; only the collision check is eased.
-    const horizontalSwing =
-      player.attackDirection === "left" ||
-      player.attackDirection === "right";
-
-    const hitHalfArc =
-      source === "bowMelee"
-        ? BOW_MELEE_HALF_ARC
-        : horizontalSwing
-          ? 0.80
-          : SWORD_HALF_ARC;
-
     const insideAngle =
-      Math.abs(angleDifference(targetAngle, player.attackAimAngle))
-      <= hitHalfArc;
+      Math.abs(
+        angleDifference(
+          targetAngle,
+          player.attackAimAngle
+        )
+      ) <= hitHalfArc;
 
-    // Horizontal swings also get 1 extra pixel of effective target radius.
-    const slimeBodyRadius = horizontalSwing ? 6 : 5;
-    const insideRange = distance <= currentMeleeReach() + slimeBodyRadius;
+    const bodyRadius = horizontalSwing
+      ? profile.horizontalMeleeBodyRadius ?? 6
+      : profile.meleeBodyRadius ?? 5;
 
-    if (insideAngle && insideRange) {
-      if (typeof onlineClient === "undefined") continue;
+    const insideRange =
+      distance <=
+      currentMeleeReach() +
+      bodyRadius;
 
-      onlineClient.sendSlimeAction("damage", slime, {
-        source,
-        critical: player.shadowCritAttack,
-        aimAngle: player.attackAimAngle
-      });
-    }
-  }
-}
-
-
-function tryHitGoblin(source = "melee") {
-  const originX = player.x;
-  const originY = player.y - 8;
-
-  for (const goblin of goblins) {
-    if (!goblin.alive) continue;
-
-    const targetX = goblin.x;
-    const targetY = goblin.y - 11;
-
-    const dx = targetX - originX;
-    const dy = targetY - originY;
-    const distance = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
-
-    const horizontalSwing =
-      player.attackDirection === "left" ||
-      player.attackDirection === "right";
-
-    const hitHalfArc =
-      source === "bowMelee"
-        ? BOW_MELEE_HALF_ARC
-        : horizontalSwing
-          ? 0.80
-          : SWORD_HALF_ARC;
-    const insideAngle =
-      Math.abs(angleDifference(targetAngle, player.attackAimAngle))
-      <= hitHalfArc;
-
-    const bodyRadius = horizontalSwing ? 7 : 6;
-    const insideRange = distance <= currentMeleeReach() + bodyRadius;
-
-    if (insideAngle && insideRange) {
-      if (typeof onlineClient === "undefined") continue;
-
-      onlineClient.sendSharedEnemyAction(
-        "goblin",
-        "damage",
-        goblin,
-        {
-          source,
-          critical: player.shadowCritAttack,
-          aimAngle: player.attackAimAngle
-        }
-      );
-    }
-  }
-}
-
-function tryHitGhost(source = "melee") {
-  const originX = player.x;
-  const originY = player.y - 8;
-
-  for (const ghost of ghosts) {
     if (
-      !naturalEnemyBelongsToCurrentMap(
-        ghost
-      )
+      insideAngle &&
+      insideRange
     ) {
-      continue;
-    }
-
-    if (!ghost.alive) continue;
-
-    const targetX = ghost.x;
-    const targetY = ghost.y - 11;
-
-    const dx = targetX - originX;
-    const dy = targetY - originY;
-
-    const distance = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
-
-    const horizontalSwing =
-      player.attackDirection === "left" ||
-      player.attackDirection === "right";
-
-    const hitHalfArc =
-      source === "bowMelee"
-        ? BOW_MELEE_HALF_ARC
-        : horizontalSwing
-          ? 0.80
-          : SWORD_HALF_ARC;
-
-    const insideAngle =
-      Math.abs(angleDifference(targetAngle, player.attackAimAngle))
-      <= hitHalfArc;
-
-    const ghostBodyRadius = horizontalSwing ? 8 : 7;
-    const insideRange = distance <= currentMeleeReach() + ghostBodyRadius;
-
-    if (insideAngle && insideRange) {
-      if (ghost.isGraveGhost) {
-        const critical =
-          player.shadowCritAttack;
-
-        const damage =
-          calculateLocalCombatDamage(
-            ghost,
-            source,
-            critical
-          );
-
-        ghost.hitFlash = 0.12;
-        ghost.shakeTime = 0.14;
-        ghost.hp -= damage;
-        ghost.aggroTime = ghost.aggroDuration;
-
-        spawnDamageNumber(
-          ghost.x,
-          ghost.y - 31,
-          critical ? `${damage}!` : damage,
-          critical
-            ? { critical: true, duration: 0.84 }
-            : undefined
-        );
-
-        const pushAngle = player.attackAimAngle;
-        ghost.knockbackX =
-          Math.cos(pushAngle) * 22;
-        ghost.knockbackY =
-          Math.sin(pushAngle) * 22;
-
-        if (ghost.hp <= 0) {
-          killGhost(ghost);
-        }
-
-        continue;
-      }
-
-      if (typeof onlineClient === "undefined") continue;
-
-      onlineClient.sendSharedEnemyAction(
-        "ghost",
-        "damage",
-        ghost,
-        {
-          source,
-          critical: player.shadowCritAttack,
-          aimAngle: player.attackAimAngle
-        }
+      damageEnemyWithMelee(
+        enemy,
+        source
       );
     }
   }
@@ -13744,8 +13398,17 @@ function drawSlime(slime, camX, camY) {
 function drawGoblin(goblin, camX, camY) {
   if (!goblin.alive) return;
 
-  let screenX = Math.round(goblin.x - camX);
-  const screenY = Math.round(goblin.y - camY);
+  const carrier =
+    goblin.carriedBy &&
+    typeof onlineClient !== "undefined"
+      ? onlineClient.playerForNetworkId(goblin.carriedBy)
+      : null;
+
+  const baseWorldX = carrier ? carrier.x : goblin.x;
+  const baseWorldY = carrier ? carrier.y : goblin.y;
+
+  let screenX = Math.round(baseWorldX - camX);
+  const screenY = Math.round(baseWorldY - camY);
 
   if (goblin.shakeTime > 0) {
     screenX += Math.sin(goblin.shakeTime * 130) > 0 ? 1 : -1;
@@ -13775,8 +13438,16 @@ function drawGoblin(goblin, camX, camY) {
     drawHeight = 23;
   }
 
+  let hurlLift = carrier ? 15 : 0;
+
+  if (!carrier && goblin.hurlTime > 0) {
+    const duration = Math.max(0.01, goblin.hurlDuration || 0.58);
+    const progress = Math.max(0, Math.min(1, 1 - goblin.hurlTime / duration));
+    hurlLift = Math.round(Math.sin(progress * Math.PI) * 13);
+  }
+
   const drawX = Math.round(screenX - drawWidth / 2 + sway);
-  const drawY = Math.round(screenY - drawHeight + 1 - bob);
+  const drawY = Math.round(screenY - drawHeight + 1 - bob - hurlLift);
 
   ctx.drawImage(
     goblinImage,
@@ -15536,19 +15207,19 @@ function normalizeActiveSkillKey(event) {
 const HURL_GRAB_RANGE = 22;
 
 
-function getCarriedSlimeForPlayerId(playerId) {
+function getCarriedEnemyForPlayerId(playerId) {
   if (!playerId) return null;
 
-  return (
-    slimes.find(
-      slime =>
-        slime.alive &&
-        slime.carriedBy === playerId
-    ) || null
-  );
+  for (const { enemy } of activeEnemyRecords({ aliveOnly: true })) {
+    if (enemy.carriedBy === playerId) {
+      return enemy;
+    }
+  }
+
+  return null;
 }
 
-function getLocalCarriedSlime() {
+function getLocalCarriedEnemy() {
   if (
     typeof onlineClient === "undefined" ||
     !onlineClient.localPlayerId
@@ -15556,33 +15227,36 @@ function getLocalCarriedSlime() {
     return null;
   }
 
-  return getCarriedSlimeForPlayerId(
+  return getCarriedEnemyForPlayerId(
     onlineClient.localPlayerId
   );
 }
 
-function findNearestHurlableSlime(
+function findNearestHurlableEnemy(
   maxDistance = HURL_GRAB_RANGE
 ) {
   let best = null;
   let bestDistance = maxDistance;
 
-  for (const slime of slimes) {
+  for (
+    const { enemy }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
     if (
-      !slime.alive ||
-      slime.carriedBy ||
-      slime.hurlTime > 0
+      !enemyIsHurlable(enemy) ||
+      enemy.carriedBy ||
+      enemy.hurlTime > 0
     ) {
       continue;
     }
 
     const distance = Math.hypot(
-      slime.x - player.x,
-      slime.y - player.y
+      enemy.x - player.x,
+      enemy.y - player.y
     );
 
     if (distance <= bestDistance) {
-      best = slime;
+      best = enemy;
       bestDistance = distance;
     }
   }
@@ -15590,10 +15264,29 @@ function findNearestHurlableSlime(
   return best;
 }
 
+function sendHurlEnemyAction(enemy, action, payload = {}) {
+  if (
+    !enemy ||
+    typeof onlineClient === "undefined"
+  ) {
+    return false;
+  }
+
+  const enemyType = enemyTypeOf(enemy);
+  if (!enemyType) return false;
+
+  // Hurl uses one generic enemy action path for every species, including
+  // slimes. Slimes can keep their older damage snapshot without Hurl caring.
+  return onlineClient.sendSharedEnemyAction(
+    enemyType,
+    action,
+    enemy,
+    payload
+  );
+}
+
 function tryCastHurl() {
-  // Hurl takes priority over bow draw state. If the player activates Hurl
-  // while holding a bow, cancel any partial draw so carrying/throwing a
-  // slime cannot get trapped behind the bow's press/hold/release input path.
+  // Hurl takes priority over bow draw state.
   if (player.bowDrawing) {
     player.bowDrawing = false;
     player.bowDrawAmount = 0;
@@ -15618,11 +15311,10 @@ function tryCastHurl() {
       "#ffe38b",
       0.75
     );
-
     return true;
   }
 
-  const carried = getLocalCarriedSlime();
+  const carried = getLocalCarriedEnemy();
 
   if (carried) {
     spawnFloatingText(
@@ -15632,63 +15324,36 @@ function tryCastHurl() {
       "#ffd28a",
       0.75
     );
-
     return true;
   }
 
-  const slime =
-    findNearestHurlableSlime();
+  const enemy = findNearestHurlableEnemy();
 
-  if (!slime) {
-    const target =
-      getCurrentWorldMouseTarget();
-
-    aimPlayerTowardPoint(
-      target.x,
-      target.y
-    );
-
-    startHurlReachAnimation(
-      target.x,
-      target.y
-    );
-
+  if (!enemy) {
+    const target = getCurrentWorldMouseTarget();
+    aimPlayerTowardPoint(target.x, target.y);
+    startHurlReachAnimation(target.x, target.y);
     spawnFloatingText(
       player.x,
       player.y - 27,
-      "No slime nearby",
+      "Nothing hurlable nearby",
       "#ffe38b",
       0.72
     );
-
     return true;
   }
 
-  onlineClient.sendSlimeAction(
-    "hurlGrab",
-    slime
-  );
-
+  sendHurlEnemyAction(enemy, "hurlGrab");
   return true;
 }
 
-function tryThrowCarriedSlime(
-  aimAngle
-) {
-  const slime =
-    getLocalCarriedSlime();
+function tryThrowCarriedEnemy(aimAngle) {
+  const enemy = getLocalCarriedEnemy();
+  if (!enemy) return false;
 
-  if (!slime) return false;
-
-  if (
-    typeof onlineClient === "undefined"
-  ) {
-    return false;
-  }
-
-  return onlineClient.sendSlimeAction(
+  return sendHurlEnemyAction(
+    enemy,
     "hurlThrow",
-    slime,
     { aimAngle }
   );
 }
@@ -15738,11 +15403,11 @@ function triggerActiveSkillForKey(key) {
     return true;
   }
 
-  const carriedSlime =
-    getLocalCarriedSlime();
+  const carriedEnemy =
+    getLocalCarriedEnemy();
 
   if (
-    carriedSlime &&
+    carriedEnemy &&
     skillId !== "hurl"
   ) {
     spawnFloatingText(
@@ -15901,21 +15566,8 @@ function killGoblin(goblin) {
 }
 
 function killGhost(ghost) {
+  // Shared ghost deaths are finalized by the server.
   if (!ghost) return;
-
-  // Natural ghosts are shared/server-authoritative. Grave ghosts remain local
-  // until graves themselves move to the server.
-  if (!ghost.isGraveGhost) {
-    return;
-  }
-
-  if (!ghost.alive) return;
-
-  ghost.hp = 0;
-  ghost.alive = false;
-  ghost.respawnTime = 50.0;
-  ghost.burnTime = 0;
-  ghost.burnTickTimer = 0;
 }
 
 let remotePlayerDrawDepth = 0;
@@ -17505,7 +17157,7 @@ class InputController {
   getMovementVector() {
     // While carrying a slime, the player is rooted in place for now.
     // A future enhancement can explicitly relax this rule.
-    if (typeof getLocalCarriedSlime === "function" && getLocalCarriedSlime()) {
+    if (typeof getLocalCarriedEnemy === "function" && getLocalCarriedEnemy()) {
       return { dx: 0, dy: 0, moving: false };
     }
 
@@ -17835,9 +17487,7 @@ function executeWeaponAttack(weapon) {
     weapon === "oldSword" ||
     weapon === "katana"
   ) {
-    tryHitSlime();
-    tryHitGoblin();
-    tryHitGhost();
+    tryHitEnemies();
     tryHitPvpPlayers();
     tryCutHarvestFlowers();
     tryCutGrass();
@@ -17845,11 +17495,8 @@ function executeWeaponAttack(weapon) {
   }
 
   if (weapon === "axe") {
-    tryHitSlime();
-    tryHitGoblin();
-    tryHitGhost();
+    tryHitEnemies();
     tryHitPvpPlayers();
-    tryHitGrave();
     tryHitTree();
     return;
   }
@@ -17870,7 +17517,7 @@ function executePrimaryAttackCommand(payload) {
   // throw takes priority regardless of which weapon is equipped.
   if (
     equippedWeapon() === "bow" &&
-    !getLocalCarriedSlime()
+    !getLocalCarriedEnemy()
   ) {
     return;
   }
@@ -17884,14 +17531,14 @@ function executePrimaryAttackCommand(payload) {
     attackingFromShadowHide;
 
   // Hurl occupies both hands. A primary click becomes the throw.
-  if (getLocalCarriedSlime()) {
+  if (getLocalCarriedEnemy()) {
     updateAttackAimFromPointer(
       payload.pointerX,
       payload.pointerY
     );
 
     if (
-      tryThrowCarriedSlime(
+      tryThrowCarriedEnemy(
         player.attackAimAngle
       )
     ) {
@@ -17942,34 +17589,20 @@ function bowHasCloseMonsterInAim() {
 
   const candidates = [];
 
-  for (const slime of slimes) {
-    if (!slime.alive || slime.carriedBy) continue;
-    candidates.push({
-      x: slime.x,
-      y: slime.y - 6
-    });
-  }
-
-  for (const goblin of goblins) {
-    if (!goblin.alive) continue;
-    candidates.push({
-      x: goblin.x,
-      y: goblin.y - 11
-    });
-  }
-
-  for (const ghost of ghosts) {
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
     if (
-      !ghost.alive ||
-      !naturalEnemyBelongsToCurrentMap(ghost)
+      profile.canFocusFire &&
+      !profile.canFocusFire(enemy)
     ) {
       continue;
     }
 
-    candidates.push({
-      x: ghost.x,
-      y: ghost.y - 11
-    });
+    candidates.push(
+      enemyBodyPoint(enemy)
+    );
   }
 
   if (
@@ -18027,9 +17660,7 @@ function executeBowMeleeAttack() {
   player.slashTime =
     player.slashDuration;
 
-  tryHitSlime("bowMelee");
-  tryHitGoblin("bowMelee");
-  tryHitGhost("bowMelee");
+  tryHitEnemies("bowMelee");
   tryHitPvpPlayers("bowMelee");
 
   player.shadowCritAttack = false;
@@ -18052,7 +17683,7 @@ function handlePrimaryAttack(event) {
 
   if (
     equippedWeapon() === "bow" &&
-    !getLocalCarriedSlime()
+    !getLocalCarriedEnemy()
   ) {
     if (player.attackCooldown > 0) {
       return;
@@ -18134,7 +17765,7 @@ function handleBowVisualMouseUp(event) {
 
   if (
     equippedWeapon() === "bow" &&
-    !getLocalCarriedSlime() &&
+    !getLocalCarriedEnemy() &&
     player.attackCooldown <= 0
   ) {
     fireBowArrow(
@@ -18185,14 +17816,6 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", resetInputAfterFocusLoss);
-
-// -----------------------------------------------------------------------------
-// SLIME CONTACT
-// -----------------------------------------------------------------------------
-function trySlimeContact() {
-  // Natural slime contact damage is server-authoritative in online play.
-}
-
 
 // -----------------------------------------------------------------------------
 // COLLISION
@@ -18315,265 +17938,6 @@ function hitsSolidObstacle(x, y) {
   );
 }
 
-function tryGhostContact() {
-  if (player.shadowHidden) return;
-  if (player.contactCooldown > 0) return;
-
-  const playerCX = player.x;
-  const playerCY = player.y - 4;
-  const contactRadius = 8.5;
-
-  let touchingGhost = null;
-  let closestDistance = Infinity;
-  let closestDx = 0;
-  let closestDy = 0;
-
-  for (const ghost of ghosts) {
-    if (
-      !naturalEnemyBelongsToCurrentMap(
-        ghost
-      )
-    ) {
-      continue;
-    }
-
-    if (!ghost.alive) continue;
-
-    // Natural ghosts use server-authoritative contact damage. Grave ghosts
-    // remain local with the local grave system.
-    if (!ghost.isGraveGhost) continue;
-
-    const dx = playerCX - ghost.x;
-    const dy = playerCY - (ghost.y - 7);
-    const distance = Math.hypot(dx, dy);
-
-    if (distance < contactRadius && distance < closestDistance) {
-      touchingGhost = ghost;
-      closestDistance = distance;
-      closestDx = dx;
-      closestDy = dy;
-    }
-  }
-
-  if (!touchingGhost) return;
-
-  let nx = closestDx;
-  let ny = closestDy;
-  const len = Math.hypot(nx, ny);
-
-  if (len < 0.001) {
-    nx = touchingGhost.dir > 0 ? -1 : 1;
-    ny = 0;
-  } else {
-    nx /= len;
-    ny /= len;
-  }
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient.requestPlayerDamage(
-      "graveGhost",
-      { nx, ny }
-    )
-  ) {
-    // The server applies HP/knockback and broadcasts the resulting hit.
-    player.contactCooldown = 0.55;
-    return;
-  }
-
-  // Offline fallback.
-  const damage =
-    9 + Math.floor(Math.random() * 5);
-
-  player.hp = Math.max(
-    0,
-    player.hp - damage
-  );
-
-  if (damage > 0 && focusFireIsCasting()) {
-    cancelFocusFire("hit");
-  }
-
-  spawnDamageNumber(
-    player.x,
-    player.y - 24,
-    damage
-  );
-
-  player.knockbackX = nx * 96;
-  player.knockbackY = ny * 96;
-  player.contactCooldown = 0.55;
-
-  if (player.hp <= 0) {
-    handlePlayerDeath();
-  }
-}
-
-function updateLocalGraveGhost(ghost, dt) {
-  if (!ghost.alive) {
-    if (!graveStillExists(ghost.graveId)) {
-      return;
-    }
-
-    ghost.respawnTime -= dt;
-
-    if (ghost.respawnTime <= 0) {
-      resetGhost(ghost);
-      ghost.aggroTime = ghost.aggroDuration;
-    }
-
-    return;
-  }
-
-  if (ghost.burnTime > 0) {
-    ghost.burnTime -= dt;
-    ghost.burnTickTimer -= dt;
-
-    if (Math.random() < dt * 9) {
-      spawnFireParticle(
-        ghost.x + (Math.random() - 0.5) * 8,
-        ghost.y - 15 + (Math.random() - 0.5) * 8,
-        (Math.random() - 0.5) * 5,
-        -7 - Math.random() * 5,
-        0.20 + Math.random() * 0.14
-      );
-    }
-
-    while (
-      ghost.burnTickTimer <= 0 &&
-      ghost.burnTime > 0 &&
-      ghost.alive
-    ) {
-      const burnDamage = 2;
-
-      ghost.hp -= burnDamage;
-      ghost.hitFlash = Math.max(
-        ghost.hitFlash,
-        0.07
-      );
-
-      spawnDamageNumber(
-        ghost.x,
-        ghost.y - 31,
-        burnDamage
-      );
-
-      ghost.burnTickTimer +=
-        ghost.burnTickInterval;
-
-      if (ghost.hp <= 0) {
-        killGhost(ghost);
-        break;
-      }
-    }
-
-    if (ghost.burnTime <= 0) {
-      ghost.burnTime = 0;
-      ghost.burnTickTimer = 0;
-    }
-
-    if (!ghost.alive) return;
-  }
-
-  const cloneTarget =
-    cloneTauntInfo(ghost.x, ghost.y - 11);
-
-  const playerTargetable = !player.shadowHidden;
-  const targetX = cloneTarget
-    ? cloneTarget.clone.x
-    : player.x;
-  const targetY = cloneTarget
-    ? cloneTarget.clone.y
-    : player.y;
-
-  const dx = targetX - ghost.x;
-  const dy = targetY - ghost.y;
-  const targetDistance = Math.hypot(dx, dy);
-
-  const playerDistance = Math.hypot(
-    player.x - ghost.x,
-    player.y - ghost.y
-  );
-
-  const homeDx = ghost.homeX - ghost.x;
-  const homeDy = ghost.homeY - ghost.y;
-  const distanceFromHome =
-    Math.hypot(homeDx, homeDy);
-
-  let moveX = 0;
-  let moveY = 0;
-  let speed = ghost.speed;
-
-  if (
-    cloneTarget ||
-    (
-      playerTargetable &&
-      playerDistance <= ghost.detectionRadius
-    )
-  ) {
-    ghost.aggroTime = ghost.aggroDuration;
-  } else if (!playerTargetable) {
-    ghost.aggroTime = 0;
-  } else if (ghost.aggroTime > 0) {
-    ghost.aggroTime = Math.max(
-      0,
-      ghost.aggroTime - dt
-    );
-  }
-
-  if (ghost.aggroTime > 0) {
-    if (targetDistance > 0.001) {
-      moveX = dx / targetDistance;
-      moveY = dy / targetDistance;
-    }
-
-    speed = ghost.chaseSpeed;
-  } else if (
-    distanceFromHome > ghost.leashRadius * 0.82
-  ) {
-    if (distanceFromHome > 0.001) {
-      moveX = homeDx / distanceFromHome;
-      moveY = homeDy / distanceFromHome;
-    }
-
-    speed = 14;
-  } else {
-    ghost.wanderTimer -= dt;
-
-    if (ghost.wanderTimer <= 0) {
-      ghost.wanderAngle +=
-        (Math.random() - 0.5) * 1.8;
-      ghost.wanderTimer =
-        0.8 + Math.random() * 1.6;
-    }
-
-    moveX = Math.cos(ghost.wanderAngle);
-    moveY = Math.sin(ghost.wanderAngle) * 0.65;
-  }
-
-  if (Math.abs(moveX) > 0.04) {
-    ghost.dir = moveX >= 0 ? 1 : -1;
-  }
-
-  ghost.x += moveX * speed * dt;
-  ghost.y += moveY * speed * dt;
-
-  ghost.x = Math.max(
-    8,
-    Math.min(world.width - 8, ghost.x)
-  );
-
-  ghost.y = Math.max(
-    24,
-    Math.min(world.height - 5, ghost.y)
-  );
-
-  ghost.x += ghost.knockbackX * dt;
-  ghost.y += ghost.knockbackY * dt;
-  ghost.knockbackX *= 0.82;
-  ghost.knockbackY *= 0.82;
-}
-
 function updateGhosts(dt) {
   const blend = 1 - Math.exp(-14 * dt);
 
@@ -18589,10 +17953,6 @@ function updateGhosts(dt) {
     tickTimer(ghost, "hitFlash", dt);
     tickTimer(ghost, "shakeTime", dt);
 
-    if (ghost.isGraveGhost) {
-      updateLocalGraveGhost(ghost, dt);
-      continue;
-    }
 
     if (
       Number.isFinite(ghost.serverTargetX) &&
@@ -18657,6 +18017,14 @@ function updateGoblins(dt) {
         0,
         goblin.lungeTime - dt
       );
+    }
+
+    if (goblin.pickupTime > 0) {
+      goblin.pickupTime = Math.max(0, goblin.pickupTime - dt);
+    }
+
+    if (goblin.hurlTime > 0) {
+      goblin.hurlTime = Math.max(0, goblin.hurlTime - dt);
     }
   }
 }
@@ -18770,10 +18138,6 @@ function updateTransientSystems(dt) {
 }
 
 function updateWorldObjectStates(dt) {
-  for (const grave of graves) {
-    tickTimer(grave, "shakeTime", dt);
-  }
-
   for (const tree of trees) {
     tickTimer(tree, "shakeTime", dt);
 
@@ -18993,8 +18357,6 @@ function updatePlayerStatusAndTimers(dt) {
 }
 
 function updatePlayerContactsAndKnockback(dt) {
-  trySlimeContact();
-  tryGhostContact();
 
   if (
     Math.abs(player.knockbackX) <= 0.1 &&
@@ -19067,7 +18429,7 @@ function updateSlimeAi(slime, dt) {
   const pursuing =
     slime.aggroTime > 0 &&
     targetDistance > 1 &&
-    distanceFromHome < 90;
+    distanceFromHome < (slime.combatLeashRadius || 240);
 
   if (pursuing) {
     const moveX = targetDx / targetDistance;
@@ -19081,7 +18443,7 @@ function updateSlimeAi(slime, dt) {
     return;
   }
 
-  if (distanceFromHome >= 90) {
+  if (distanceFromHome >= (slime.combatLeashRadius || 240)) {
     slime.aggroTime = 0;
   }
 
@@ -19239,9 +18601,26 @@ function collectNearbyPickups() {
 }
 
 function updateEnemySystems(dt) {
-  updateGhosts(dt);
-  updateGoblins(dt);
-  updateSlimes(dt);
+  const profiles =
+    Object.values(
+      CLIENT_ENEMY_RUNTIME_PROFILES
+    )
+      .filter(profile =>
+        typeof profile.update === "function"
+      )
+      .sort(
+        (a, b) =>
+          (a.updatePriority || 0) -
+          (b.updatePriority || 0)
+      );
+
+  const called = new Set();
+
+  for (const profile of profiles) {
+    if (called.has(profile.update)) continue;
+    called.add(profile.update);
+    profile.update(dt);
+  }
 }
 
 const GAMEPLAY_UPDATE_SYSTEMS = Object.freeze([
@@ -19404,7 +18783,7 @@ function drawWetStatus(screenX, screenY) {
   ctx.restore();
 }
 
-function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = undefined) {
+function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = undefined) {
   const screenX = Math.round(player.x - camX);
   const screenY = Math.round(player.y - camY);
 
@@ -19431,60 +18810,60 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   let baseY = plantedBaseY;
 
   // Local rendering calls drawPlayer() without a fourth argument and may
-  // look up the local carried slime. Remote rendering ALWAYS supplies a fourth
-  // argument (slime object or null), so a remote player with no slime must not
+  // look up the local carried enemy. Remote rendering ALWAYS supplies a fourth
+  // argument (enemy object or null), so a remote player with no slime must not
   // accidentally inherit the local player's carry state.
   const hasCarryingOverride =
     arguments.length >= 4;
 
-  const carriedSlime =
+  const carriedEnemy =
     hasCarryingOverride
       ? (
-          carryingSlimeOverride &&
-          typeof carryingSlimeOverride === "object"
-            ? carryingSlimeOverride
+          carryingEnemyOverride &&
+          typeof carryingEnemyOverride === "object"
+            ? carryingEnemyOverride
             : null
         )
-      : getLocalCarriedSlime();
+      : getLocalCarriedEnemy();
 
-  const carryingSlime =
-    Boolean(carriedSlime);
+  const carryingEnemy =
+    Boolean(carriedEnemy);
 
   const carryPickupDuration =
-    carryingSlime && carriedSlime
+    carryingEnemy && carriedEnemy
       ? Math.max(
           0.01,
-          carriedSlime.pickupDuration || 0.18
+          carriedEnemy.pickupDuration || 0.18
         )
       : 0.18;
 
   const carryPickupProgressRaw =
-    carryingSlime && carriedSlime
+    carryingEnemy && carriedEnemy
       ? Math.max(
           0,
           Math.min(
             1,
             1 -
-              (carriedSlime.pickupTime || 0) /
+              (carriedEnemy.pickupTime || 0) /
                 carryPickupDuration
           )
         )
       : 1;
 
   const carryPickupEffort =
-    carryingSlime &&
+    carryingEnemy &&
     carryPickupProgressRaw < 1
       ? Math.sin(carryPickupProgressRaw * Math.PI)
       : 0;
 
   const carryPickupDirX =
-    carryingSlime && carriedSlime
-      ? Number(carriedSlime.pickupDirX) || 0
+    carryingEnemy && carriedEnemy
+      ? Number(carriedEnemy.pickupDirX) || 0
       : 0;
 
   const carryPickupDirY =
-    carryingSlime && carriedSlime
-      ? Number(carriedSlime.pickupDirY) || 0
+    carryingEnemy && carriedEnemy
+      ? Number(carriedEnemy.pickupDirY) || 0
       : 0;
 
   const hurlReachDuration = Math.max(
@@ -19493,7 +18872,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
   );
 
   const hurlReachProgressRaw =
-    !carryingSlime && player.hurlReachTime > 0
+    !carryingEnemy && player.hurlReachTime > 0
       ? Math.max(
           0,
           Math.min(
@@ -19504,18 +18883,18 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
       : 1;
 
   const hurlReachEffort =
-    !carryingSlime &&
+    !carryingEnemy &&
     player.hurlReachTime > 0
       ? Math.sin(hurlReachProgressRaw * Math.PI)
       : 0;
 
   const hurlReachDirX =
-    !carryingSlime
+    !carryingEnemy
       ? Number(player.hurlReachDirX) || 0
       : 0;
 
   const hurlReachDirY =
-    !carryingSlime
+    !carryingEnemy
       ? Number(player.hurlReachDirY) || 0
       : 0;
 
@@ -19551,7 +18930,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     baseY += Math.round(lungeY * lunge);
   }
 
-  if (carryingSlime && carryPickupEffort > 0) {
+  if (carryingEnemy && carryPickupEffort > 0) {
     // Tiny visual-only step/reach toward the slime during the pickup wind-up.
     // Only move the body base here; headOffsetY is initialized below.
     baseX += Math.round(
@@ -19604,7 +18983,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     rightLegScaleY =
       1 - Math.max(0, -walkWave) * 0.30;
 
-    if (!carryingSlime) {
+    if (!carryingEnemy) {
       const armStep = Math.round(walkWave);
       leftArmOffsetY = armStep;
       rightArmOffsetY = -armStep;
@@ -19615,7 +18994,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     );
   }
 
-  if (carryingSlime && carryPickupEffort > 0) {
+  if (carryingEnemy && carryPickupEffort > 0) {
     headOffsetY -= Math.round(
       carryPickupEffort
     );
@@ -20046,7 +19425,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
 
   ctx.drawImage(appearance.torso, baseX, baseY);
 
-  if (!carryingSlime) {
+  if (!carryingEnemy) {
     if (bowPoseActive) {
       const drawPoseStarted =
         bowDrawAmount > 0.025;
@@ -20351,7 +19730,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     baseY + headOffsetY
   );
 
-  if (carryingSlime) {
+  if (carryingEnemy) {
     // During the pickup wind-up, start the arms slightly lower and extend them
     // a touch toward the slime. Then settle into the overhead carry pose.
     const carryReachBlend =
@@ -20409,7 +19788,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
 
   if (
     currentWeapon === "bow" &&
-    !carryingSlime
+    !carryingEnemy
   ) {
     const aim =
       Number(player.attackAimAngle) || 0;
@@ -20637,7 +20016,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     }
   } else if (
     currentWeapon &&
-    !carryingSlime
+    !carryingEnemy
   ) {
     const weaponImage =
       currentWeapon === "axe"
@@ -21357,7 +20736,7 @@ function drawRemotePlayer(
       camX,
       camY,
       reflectionMode,
-      getCarriedSlimeForPlayerId(
+      getCarriedEnemyForPlayerId(
         remote.id
       )
     );
@@ -21618,62 +20997,32 @@ function buildWorldDrawables(camX, camY) {
     );
   });
 
-  for (const slime of slimes) {
-    let sortY = slime.y;
-
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords()
+  ) {
     if (
-      slime.carriedBy &&
-      typeof onlineClient !== "undefined"
+      typeof profile.draw !== "function"
     ) {
-      const carrier =
-        onlineClient.playerForNetworkId(
-          slime.carriedBy
-        );
-
-      if (carrier) {
-        sortY = carrier.y + 0.25;
-      }
+      continue;
     }
+
+    const sortY =
+      typeof profile.drawSortY === "function"
+        ? profile.drawSortY(enemy)
+        : enemy.y;
 
     addDrawable(
       drawables,
       sortY,
-      () => drawSlime(
-        slime,
+      () => profile.draw(
+        enemy,
         camX,
         camY
       )
     );
   }
 
-  for (const goblin of goblins) {
-    addDrawable(drawables, goblin.y, () => drawGoblin(goblin, camX, camY));
-  }
-
-  for (const grave of graves) {
-    addDrawable(
-      drawables,
-      grave.y,
-      () => drawPlayerGrave(grave, camX, camY)
-    );
-  }
-
-  for (const ghost of ghosts) {
-    if (
-      !naturalEnemyBelongsToCurrentMap(
-        ghost
-      )
-    ) {
-      continue;
-    }
-
-    // Small foreground bias keeps hovering ghosts readable in dense grass.
-    addDrawable(
-      drawables,
-      ghost.y + 7,
-      () => drawGhost(ghost, camX, camY)
-    );
-  }
 
   for (const projectile of basicProjectiles) {
     addDrawable(

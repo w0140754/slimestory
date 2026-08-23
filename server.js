@@ -14,6 +14,149 @@ const ALLOWED_MAPS = new Set(
   Object.keys(WORLD_CONTENT.maps)
 );
 
+
+// -----------------------------------------------------------------------------
+// GENERIC SERVER ENEMY RUNTIME METADATA
+// -----------------------------------------------------------------------------
+// Shared systems consume these properties instead of branching on individual
+// monster species. AI implementations may still be species-specific.
+const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
+  slime: Object.freeze({
+    bodyOffsetY: -6,
+    fireSpreadChance: 0.42,
+    respawnSeconds: 30,
+    coinDropChance: 0.45,
+    hurlable: true,
+    patrolLeashRadius: 90,
+    combatLeashRadius: 240,
+    usesSlimeProtocol: true
+  }),
+  goblin: Object.freeze({
+    bodyOffsetY: -11,
+    fireSpreadChance: 0.42,
+    respawnSeconds: 40,
+    coinDropChance: 0.50,
+    hurlable: true,
+    patrolLeashRadius: 120,
+    combatLeashRadius: 260,
+    usesSlimeProtocol: false,
+    onHurlGrab(enemy) {
+      enemy.lungeTime = 0;
+      enemy.lungeTargetId = null;
+      enemy.attackHit = false;
+      enemy.moving = false;
+    },
+    snapshotExtra(enemy) {
+      return {
+        moving: enemy.moving,
+        walkTime: Number(
+          enemy.walkTime.toFixed(3)
+        ),
+        lungeTime: Number(
+          enemy.lungeTime.toFixed(3)
+        ),
+        lungeDirX: enemy.lungeDirX,
+        lungeDirY: enemy.lungeDirY
+      };
+    },
+    onKilled(enemy) {
+      enemy.lungeTime = 0;
+      enemy.moving = false;
+    }
+  }),
+  ghost: Object.freeze({
+    bodyOffsetY: -11,
+    fireSpreadChance: 0.38,
+    respawnSeconds: 50,
+    coinDropChance: 0,
+    hurlable: false,
+    patrolLeashRadius: 145,
+    combatLeashRadius: 280,
+    usesSlimeProtocol: false
+  })
+});
+
+function serverEnemyProfile(enemyOrType) {
+  const type =
+    typeof enemyOrType === "string"
+      ? enemyOrType
+      : enemyOrType?.type;
+
+  return (
+    SERVER_ENEMY_RUNTIME_PROFILES[type] ||
+    null
+  );
+}
+
+function ensureServerEnemyHurlState(enemy) {
+  if (!enemy) return enemy;
+
+  enemy.carriedBy =
+    typeof enemy.carriedBy === "string"
+      ? enemy.carriedBy
+      : null;
+  enemy.pickupTime = Math.max(0, Number(enemy.pickupTime) || 0);
+  enemy.pickupDuration = Math.max(0.01, Number(enemy.pickupDuration) || 0.18);
+  enemy.pickupDirX = Number(enemy.pickupDirX) || 0;
+  enemy.pickupDirY = Number(enemy.pickupDirY) || 0;
+  enemy.hurlTime = Math.max(0, Number(enemy.hurlTime) || 0);
+  enemy.hurlDuration = Math.max(0.01, Number(enemy.hurlDuration) || 0.58);
+  enemy.hurlVelocityX = Number(enemy.hurlVelocityX) || 0;
+  enemy.hurlVelocityY = Number(enemy.hurlVelocityY) || 0;
+  enemy.hurlThrownBy =
+    typeof enemy.hurlThrownBy === "string"
+      ? enemy.hurlThrownBy
+      : null;
+
+  return enemy;
+}
+
+function clearServerEnemyHurlState(enemy) {
+  if (!enemy) return;
+  ensureServerEnemyHurlState(enemy);
+  enemy.carriedBy = null;
+  enemy.pickupTime = 0;
+  enemy.pickupDirX = 0;
+  enemy.pickupDirY = 0;
+  enemy.hurlTime = 0;
+  enemy.hurlVelocityX = 0;
+  enemy.hurlVelocityY = 0;
+  enemy.hurlThrownBy = null;
+}
+
+function serverEnemyIsHurlable(enemy) {
+  const profile = serverEnemyProfile(enemy);
+  return Boolean(
+    enemy &&
+    enemy.alive &&
+    profile &&
+    (
+      typeof enemy.hurlable === "boolean"
+        ? enemy.hurlable
+        : profile.hurlable !== false
+    )
+  );
+}
+
+function allSharedEnemies() {
+  return [...worldEntitiesById.values()];
+}
+
+function sharedEnemiesOnMap(mapId) {
+  return worldEntitiesByMap.get(mapId) || [];
+}
+
+function serverEnemyBodyPoint(enemy) {
+  const profile = serverEnemyProfile(enemy);
+
+  return {
+    x: enemy?.x || 0,
+    y:
+      (enemy?.y || 0) +
+      (profile?.bodyOffsetY || 0)
+  };
+}
+
 function allEnemySpawnDefinitions() {
   const definitions = [];
 
@@ -43,11 +186,11 @@ function enemySpawnsOfType(type) {
 function validateWorldContent() {
   const ids = new Set();
 
-  const supportedTypes = new Set([
-    "slime",
-    "goblin",
-    "ghost"
-  ]);
+  const supportedTypes = new Set(
+    Object.keys(
+      SERVER_ENEMY_RUNTIME_PROFILES
+    )
+  );
 
   for (const spawn of allEnemySpawnDefinitions()) {
     if (!spawn.id || ids.has(spawn.id)) {
@@ -1089,43 +1232,24 @@ function igniteServerLivingNear(
   y,
   radius
 ) {
-  for (const slime of sharedSlimes) {
-    if (
-      !slime.alive ||
-      slime.mapId !== mapId ||
-      slime.burnTime > 0
-    ) {
-      continue;
-    }
-
-    if (
-      Math.hypot(
-        slime.x - x,
-        (slime.y - 6) - y
-      ) <= radius
-    ) {
-      slime.burnTime = 3.0;
-      slime.burnTickTimer =
-        slime.burnTickInterval;
-    }
-  }
-
-  for (const enemy of [
-    ...sharedGoblins,
-    ...sharedGhosts
-  ]) {
+  for (
+    const enemy
+    of sharedEnemiesOnMap(mapId)
+  ) {
     if (
       !enemy.alive ||
-      enemy.mapId !== mapId ||
       enemy.burnTime > 0
     ) {
       continue;
     }
 
+    const body =
+      serverEnemyBodyPoint(enemy);
+
     if (
       Math.hypot(
-        enemy.x - x,
-        (enemy.y - 11) - y
+        body.x - x,
+        body.y - y
       ) <= radius
     ) {
       enemy.burnTime = 3.0;
@@ -1183,34 +1307,22 @@ function spreadSharedEnvironmentFire() {
     });
   }
 
-  for (const slime of sharedSlimes) {
-    if (slime.alive && slime.burnTime > 0) {
-      sources.push({
-        mapId: slime.mapId,
-        x: slime.x,
-        y: slime.y - 6,
-        radius: 13,
-        chance: 0.42
-      });
+  for (const enemy of allSharedEnemies()) {
+    if (!enemy.alive || enemy.burnTime <= 0) {
+      continue;
     }
-  }
 
-  for (const enemy of [
-    ...sharedGoblins,
-    ...sharedGhosts
-  ]) {
-    if (enemy.alive && enemy.burnTime > 0) {
-      sources.push({
-        mapId: enemy.mapId,
-        x: enemy.x,
-        y: enemy.y - 11,
-        radius: 13,
-        chance:
-          enemy.type === "ghost"
-            ? 0.38
-            : 0.42
-      });
-    }
+    const profile = serverEnemyProfile(enemy);
+    const body = serverEnemyBodyPoint(enemy);
+
+    sources.push({
+      mapId: enemy.mapId,
+      x: body.x,
+      y: body.y,
+      radius: 13,
+      chance:
+        profile?.fireSpreadChance ?? 0.42
+    });
   }
 
   for (const playerState of players.values()) {
@@ -1668,6 +1780,7 @@ function makeServerGoblin(spawn) {
     chaseSpeed: 34,
     detectionRadius: 90,
     leashRadius: 120,
+    combatLeashRadius: 260,
 
     aggroTime: 0,
     aggroDuration: 5.0,
@@ -1741,6 +1854,7 @@ function makeServerGhost(spawn) {
     chaseSpeed: 32,
     detectionRadius: 110,
     leashRadius: 145,
+    combatLeashRadius: 280,
 
     aggroTime: 0,
     aggroDuration: 5.5,
@@ -1772,18 +1886,81 @@ function makeServerGhost(spawn) {
   };
 }
 
+const SERVER_ENEMY_FACTORIES = Object.freeze({
+  slime: makeServerSlime,
+  goblin: makeServerGoblin,
+  ghost: makeServerGhost
+});
+
+const worldEntitiesByType = new Map(
+  Object.entries(
+    SERVER_ENEMY_FACTORIES
+  ).map(([enemyType, factory]) => [
+    enemyType,
+    enemySpawnsOfType(enemyType)
+      .map(spawn => {
+        const enemy = ensureServerEnemyHurlState(
+          factory(spawn)
+        );
+
+        if (typeof spawn.hurlable === "boolean") {
+          enemy.hurlable = spawn.hurlable;
+        }
+
+        return enemy;
+      })
+  ])
+);
+
+const sharedSlimes =
+  worldEntitiesByType.get("slime") || [];
+
 const sharedGoblins =
-  enemySpawnsOfType("goblin")
-    .map(makeServerGoblin);
+  worldEntitiesByType.get("goblin") || [];
 
 const sharedGhosts =
-  enemySpawnsOfType("ghost")
-    .map(makeServerGhost);
+  worldEntitiesByType.get("ghost") || [];
 
-const sharedEnemyCollections = {
-  goblin: sharedGoblins,
-  ghost: sharedGhosts
-};
+// One authoritative registry across maps and enemy species.
+const worldEntitiesById = new Map();
+const worldEntitiesByMap = new Map();
+
+for (const entities of worldEntitiesByType.values()) {
+  for (const entity of entities) {
+    if (worldEntitiesById.has(entity.id)) {
+      throw new Error(
+        `Duplicate runtime entity id: ${entity.id}`
+      );
+    }
+
+    worldEntitiesById.set(
+      entity.id,
+      entity
+    );
+
+    if (!worldEntitiesByMap.has(entity.mapId)) {
+      worldEntitiesByMap.set(
+        entity.mapId,
+        []
+      );
+    }
+
+    worldEntitiesByMap
+      .get(entity.mapId)
+      .push(entity);
+  }
+}
+
+// Slimes retain their special carry/Hurl protocol. Every other registered
+// species automatically uses the generic shared-enemy snapshot/action path.
+const sharedEnemyCollections =
+  Object.fromEntries(
+    [...worldEntitiesByType.entries()]
+      .filter(([enemyType]) =>
+        !serverEnemyProfile(enemyType)
+          ?.usesSlimeProtocol
+      )
+  );
 
 const sharedEnemyActionRateLimits = new Map();
 const playerEnemyContactCooldowns = new Map();
@@ -1808,25 +1985,29 @@ function sharedEnemySnapshot(enemyType) {
     confusionTargetId: enemy.confusionTargetId || null,
     burnTime: Number(enemy.burnTime.toFixed(2)),
     respawnTime: Number(enemy.respawnTime.toFixed(2)),
+    carriedBy: enemy.carriedBy || null,
+    pickupTime: Number((enemy.pickupTime || 0).toFixed(3)),
+    pickupDuration: enemy.pickupDuration || 0.18,
+    pickupDirX: Number((enemy.pickupDirX || 0).toFixed(3)),
+    pickupDirY: Number((enemy.pickupDirY || 0).toFixed(3)),
+    hurlTime: Number((enemy.hurlTime || 0).toFixed(3)),
+    hurlDuration: enemy.hurlDuration || 0.58,
 
-    ...(enemyType === "goblin"
-      ? {
-          moving: enemy.moving,
-          walkTime: Number(
-            enemy.walkTime.toFixed(3)
-          ),
-          lungeTime: Number(
-            enemy.lungeTime.toFixed(3)
-          ),
-          lungeDirX: enemy.lungeDirX,
-          lungeDirY: enemy.lungeDirY
-        }
-      : {})
+    ...(
+      serverEnemyProfile(enemyType)
+        ?.snapshotExtra?.(enemy) ||
+      {}
+    )
   }));
 }
 
 function broadcastSharedEnemySnapshots() {
-  for (const enemyType of ["goblin", "ghost"]) {
+  for (
+    const enemyType
+    of Object.keys(
+      sharedEnemyCollections
+    )
+  ) {
     broadcast({
       type: "enemySnapshot",
       enemyType,
@@ -1945,11 +2126,7 @@ const CAMOUFLAGE_CLOSE_REVEAL_DISTANCE = 18;
 function playerIsTargetedByPveEnemy(playerId) {
   if (!playerId) return false;
 
-  for (const enemy of [
-    ...sharedSlimes,
-    ...sharedGoblins,
-    ...sharedGhosts
-  ]) {
+  for (const enemy of allSharedEnemies()) {
     if (!enemy?.alive) continue;
 
     if (
@@ -2248,6 +2425,7 @@ function resetServerGoblin(goblin) {
 
   goblin.tauntTime = 0;
   goblin.tauntOwnerId = null;
+  clearServerEnemyHurlState(goblin);
   goblin.lastDamagePlayerId = null;
 }
 
@@ -2278,6 +2456,7 @@ function resetServerGhost(ghost) {
 
   ghost.tauntTime = 0;
   ghost.tauntOwnerId = null;
+  clearServerEnemyHurlState(ghost);
   ghost.lastDamagePlayerId = null;
 }
 
@@ -2756,29 +2935,6 @@ function handlePlayerDamageRequest(
     damage = 2;
     minimumMs = 450;
     contactCooldown = 0;
-  } else if (source === "graveGhost") {
-    damage =
-      9 + Math.floor(Math.random() * 5);
-
-    minimumMs = 500;
-    contactCooldown = 0.55;
-
-    const nx = clampNumber(
-      payload.nx,
-      -1,
-      1,
-      0
-    );
-
-    const ny = clampNumber(
-      payload.ny,
-      -1,
-      1,
-      0
-    );
-
-    knockbackX = nx * 96;
-    knockbackY = ny * 96;
   } else {
     return;
   }
@@ -2956,24 +3112,30 @@ function killSharedEnemy(
   enemy.burnTickTimer = 0;
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
+  clearServerEnemyHurlState(enemy);
   clearEnemyAggroTarget(enemy);
   enemy.confusionTime = 0;
   enemy.confusionTargetId = null;
 
-  if (enemy.type === "goblin") {
-    enemy.respawnTime = 40.0;
-    enemy.lungeTime = 0;
-    enemy.moving = false;
+  const profile =
+    serverEnemyProfile(enemy);
 
-    if (Math.random() < 0.50) {
-      spawnSharedCoin(
-        enemy.mapId,
-        enemy.x,
-        enemy.y - 2
-      );
-    }
-  } else {
-    enemy.respawnTime = 50.0;
+  enemy.respawnTime =
+    profile?.respawnSeconds ?? 30;
+
+  if (profile?.onKilled) {
+    profile.onKilled(enemy);
+  }
+
+  if (
+    Math.random() <
+    (profile?.coinDropChance || 0)
+  ) {
+    spawnSharedCoin(
+      enemy.mapId,
+      enemy.x,
+      enemy.y - 2
+    );
   }
 
   broadcast({
@@ -3092,7 +3254,17 @@ function tickSharedGhosts(dt) {
     let moveY = 0;
     let speed = ghost.speed;
 
-    if (distanceFromHome >= ghost.leashRadius) {
+    const ghostCombatActive =
+      ghost.aggroTime > 0 ||
+      ghost.tauntTime > 0 ||
+      targetX !== null;
+
+    const ghostActiveLeash =
+      ghostCombatActive
+        ? (ghost.combatLeashRadius || 280)
+        : ghost.leashRadius;
+
+    if (distanceFromHome >= ghostActiveLeash) {
       clearEnemyAggroTarget(ghost);
       targetPlayer = null;
       targetX = null;
@@ -3239,6 +3411,10 @@ function tickSharedGoblins(dt) {
 
     tickEnemyBurn(goblin, dt);
     if (!goblin.alive) continue;
+
+    if (tickServerEnemyHurl(goblin, dt)) {
+      continue;
+    }
 
     const confused =
       tickEnemyConfusion(goblin, dt);
@@ -3405,7 +3581,7 @@ function tickSharedGoblins(dt) {
 
       const pursuing =
         goblin.aggroTime > 0 &&
-        distanceFromHome < goblin.leashRadius &&
+        distanceFromHome < (goblin.combatLeashRadius || 260) &&
         targetDistance > 1;
 
       if (
@@ -3456,10 +3632,20 @@ function tickSharedGoblins(dt) {
         }
       } else {
         if (
-          distanceFromHome >= goblin.leashRadius
+          goblin.aggroTime > 0 &&
+          distanceFromHome >= (goblin.combatLeashRadius || 260)
         ) {
           clearEnemyAggroTarget(goblin);
           targetPlayer = null;
+        }
+
+        if (
+          goblin.aggroTime <= 0 &&
+          distanceFromHome >= goblin.leashRadius
+        ) {
+          goblin.wanderTargetX = goblin.homeX;
+          goblin.wanderTargetY = goblin.homeY;
+          goblin.wanderDecisionTime = 0.45;
         }
 
         if (goblin.pauseTime > 0) {
@@ -3952,9 +4138,27 @@ function handleSharedEnemyAction(
       : {};
 
   if (action === "damage") {
-    handleSharedEnemyDamageAction(
+    // Slime damage still uses its legacy authoritative damage path for now.
+    if (enemy.type === "slime") {
+      handleSlimeDamageAction(playerId, enemy, payload);
+    } else {
+      handleSharedEnemyDamageAction(
+        playerId,
+        enemy,
+        payload
+      );
+    }
+    return;
+  }
+
+  if (
+    action === "hurlGrab" ||
+    action === "hurlThrow"
+  ) {
+    handleGenericEnemyHurlAction(
       playerId,
       enemy,
+      action,
       payload
     );
     return;
@@ -3963,6 +4167,10 @@ function handleSharedEnemyAction(
   if (
     playerState.mapId !== enemy.mapId
   ) {
+    return;
+  }
+
+  if (enemy.carriedBy) {
     return;
   }
 
@@ -4158,6 +4366,8 @@ function makeServerSlime(spawn) {
 
     speed: 16,
     chaseSpeed: 22,
+    patrolLeashRadius: 90,
+    combatLeashRadius: 240,
 
     aggroTime: 0,
     aggroDuration: 4.5,
@@ -4215,41 +4425,6 @@ function makeServerSlime(spawn) {
 
     lastDamagePlayerId: null
   };
-}
-
-const sharedSlimes =
-  enemySpawnsOfType("slime")
-    .map(makeServerSlime);
-
-// One authoritative registry across maps and enemy species.
-const worldEntitiesById = new Map();
-
-const worldEntitiesByType = new Map([
-  ["slime", sharedSlimes],
-  ["goblin", sharedGoblins],
-  ["ghost", sharedGhosts]
-]);
-
-const worldEntitiesByMap = new Map();
-
-for (const [type, entities] of worldEntitiesByType) {
-  for (const entity of entities) {
-    if (worldEntitiesById.has(entity.id)) {
-      throw new Error(
-        `Duplicate runtime entity id: ${entity.id}`
-      );
-    }
-
-    worldEntitiesById.set(entity.id, entity);
-
-    if (!worldEntitiesByMap.has(entity.mapId)) {
-      worldEntitiesByMap.set(entity.mapId, []);
-    }
-
-    worldEntitiesByMap
-      .get(entity.mapId)
-      .push(entity);
-  }
 }
 
 function getWorldEntity(
@@ -4485,14 +4660,7 @@ function resetServerSlime(slime) {
   slime.knockbackY = 0;
   clearEnemyAggroTarget(slime);
 
-  slime.carriedBy = null;
-  slime.pickupTime = 0;
-  slime.pickupDirX = 0;
-  slime.pickupDirY = 0;
-  slime.hurlTime = 0;
-  slime.hurlVelocityX = 0;
-  slime.hurlVelocityY = 0;
-  slime.hurlThrownBy = null;
+  clearServerEnemyHurlState(slime);
 
   slime.lastDamagePlayerId = null;
 }
@@ -4502,7 +4670,9 @@ function killServerSlime(slime, killerId = null) {
 
   slime.hp = 0;
   slime.alive = false;
-  slime.respawnTime = 30.0;
+  slime.respawnTime =
+    serverEnemyProfile(slime)
+      ?.respawnSeconds ?? 30;
   slime.burnTime = 0;
   slime.burnTickTimer = 0;
   slime.knockbackX = 0;
@@ -4510,16 +4680,12 @@ function killServerSlime(slime, killerId = null) {
   slime.confusionTime = 0;
   slime.confusionTargetId = null;
 
-  slime.carriedBy = null;
-  slime.pickupTime = 0;
-  slime.pickupDirX = 0;
-  slime.pickupDirY = 0;
-  slime.hurlTime = 0;
-  slime.hurlVelocityX = 0;
-  slime.hurlVelocityY = 0;
-  slime.hurlThrownBy = null;
+  clearServerEnemyHurlState(slime);
 
-  const droppedCoin = Math.random() < 0.45;
+  const droppedCoin =
+    Math.random() <
+    (serverEnemyProfile(slime)
+      ?.coinDropChance ?? 0.45);
 
   if (droppedCoin) {
     spawnSharedCoin(
@@ -4541,103 +4707,63 @@ function killServerSlime(slime, killerId = null) {
 }
 
 
-function broadcastHurlSlimeDamage(
-  slime,
+function broadcastHurlEnemyDamage(
+  enemy,
   amount,
   attackerId,
-  source = "hurl"
+  source = "hurl",
+  velocityX = 0,
+  velocityY = 0
 ) {
-  if (!slime.alive || amount <= 0) {
-    return;
-  }
+  if (!enemy?.alive || amount <= 0) return;
 
-  slime.hp = Math.max(
-    0,
-    slime.hp - amount
-  );
-
-  slime.lastDamagePlayerId =
-    attackerId;
+  enemy.hp = Math.max(0, enemy.hp - amount);
+  enemy.lastDamagePlayerId = attackerId;
 
   setEnemyAggroTarget(
-    slime,
+    enemy,
     attackerId,
-    slime.aggroDuration
+    enemy.aggroDuration
   );
 
-  broadcast({
-    type: "slimeDamage",
-    slimeId: slime.id,
-    amount,
-    hp: slime.hp,
-    critical: false,
-    source,
-    attackerId,
-    mapId: slime.mapId
-  });
-
-  if (slime.hp <= 0) {
-    killServerSlime(
-      slime,
-      attackerId
-    );
+  const speed = Math.hypot(velocityX, velocityY) || 1;
+  if (Math.abs(velocityX) + Math.abs(velocityY) > 0.01) {
+    enemy.knockbackX = velocityX / speed * 58;
+    enemy.knockbackY = velocityY / speed * 58;
   }
-}
 
-function broadcastHurlGoblinDamage(
-  goblin,
-  amount,
-  attackerId,
-  velocityX,
-  velocityY
-) {
-  if (!goblin.alive || amount <= 0) {
+  if (enemy.type === "slime") {
+    broadcast({
+      type: "slimeDamage",
+      slimeId: enemy.id,
+      amount,
+      hp: enemy.hp,
+      critical: false,
+      source,
+      attackerId,
+      mapId: enemy.mapId
+    });
+
+    if (enemy.hp <= 0) {
+      killServerSlime(enemy, attackerId);
+    }
     return;
   }
-
-  goblin.hp = Math.max(
-    0,
-    goblin.hp - amount
-  );
-
-  goblin.lastDamagePlayerId =
-    attackerId;
-
-  setEnemyAggroTarget(
-    goblin,
-    attackerId,
-    goblin.aggroDuration
-  );
-
-  const speed =
-    Math.hypot(
-      velocityX,
-      velocityY
-    ) || 1;
-
-  goblin.knockbackX =
-    velocityX / speed * 58;
-
-  goblin.knockbackY =
-    velocityY / speed * 58;
 
   broadcast({
     type: "enemyDamage",
-    enemyType: "goblin",
-    enemyId: goblin.id,
-    mapId: goblin.mapId,
+    enemyType: enemy.type,
+    enemyId: enemy.id,
+    mapId: enemy.mapId,
     amount,
-    hp: goblin.hp,
+    hp: enemy.hp,
     critical: false,
-    source: "hurl",
+    source,
     attackerId
   });
 
-  if (goblin.hp <= 0) {
-    killSharedEnemy(
-      goblin,
-      attackerId
-    );
+  if (enemy.hp <= 0) {
+    killSharedEnemy(enemy, attackerId);
   }
 }
 
@@ -4651,10 +4777,7 @@ function damageTreeFromHurl(
   let bestTree = null;
   let bestDistance = Infinity;
 
-  for (
-    const entity
-    of sharedEnvironment.values()
-  ) {
+  for (const entity of sharedEnvironment.values()) {
     if (
       entity.mapId !== mapId ||
       entity.kind !== "tree" ||
@@ -4664,353 +4787,212 @@ function damageTreeFromHurl(
       continue;
     }
 
-    const distance = Math.hypot(
-      entity.x - x,
-      entity.y - y
-    );
+    const distance = Math.hypot(entity.x - x, entity.y - y);
 
-    if (
-      distance <= 12 &&
-      distance < bestDistance
-    ) {
+    if (distance <= 12 && distance < bestDistance) {
       bestTree = entity;
       bestDistance = distance;
     }
   }
 
-  if (!bestTree) {
-    return false;
-  }
+  if (!bestTree) return false;
 
-  bestTree.hp = Math.max(
-    0,
-    bestTree.hp - 1
-  );
-
-  bestTree.lastHitPlayerId =
-    attackerId;
-
-  scheduleTreeRegrow(
-    bestTree
-  );
-
-  markEnvironmentDirty(
-    bestTree
-  );
+  bestTree.hp = Math.max(0, bestTree.hp - 1);
+  bestTree.lastHitPlayerId = attackerId;
+  scheduleTreeRegrow(bestTree);
+  markEnvironmentDirty(bestTree);
 
   if (bestTree.hp <= 0) {
     bestTree.falling = true;
-    bestTree.fallTime =
-      bestTree.fallDuration;
-
-    bestTree.fallDirection =
-      directionX >= 0
-        ? 1
-        : -1;
-
-    markEnvironmentDirty(
-      bestTree
-    );
+    bestTree.fallTime = bestTree.fallDuration;
+    bestTree.fallDirection = directionX >= 0 ? 1 : -1;
+    markEnvironmentDirty(bestTree);
   }
 
   return true;
 }
 
-function finishServerSlimeHurl(
-  slime,
+function serverEnemyPositionAllowedForHurl(enemy, x, y) {
+  if (enemy.type === "slime") {
+    return slimePositionAllowed(enemy, x, y);
+  }
+
+  if (enemy.type === "goblin") {
+    return goblinPositionAllowed(enemy, x, y);
+  }
+
+  return mapPointAllowed(enemy.mapId, x, y);
+}
+
+function finishServerEnemyHurl(
+  enemy,
   attackerId,
   landingDamage = true
 ) {
-  if (!slime.alive) return;
+  if (!enemy?.alive) return;
 
-  const velocityX =
-    slime.hurlVelocityX;
+  const velocityX = enemy.hurlVelocityX;
+  const velocityY = enemy.hurlVelocityY;
 
-  const velocityY =
-    slime.hurlVelocityY;
+  clearServerEnemyHurlState(enemy);
 
-  slime.carriedBy = null;
-  slime.hurlTime = 0;
-  slime.hurlVelocityX = 0;
-  slime.hurlVelocityY = 0;
-  slime.hurlThrownBy = null;
-
-  const speed =
-    Math.hypot(
-      velocityX,
-      velocityY
-    ) || 1;
-
-  slime.knockbackX =
-    velocityX / speed * 24;
-
-  slime.knockbackY =
-    velocityY / speed * 24;
+  const speed = Math.hypot(velocityX, velocityY) || 1;
+  enemy.knockbackX = velocityX / speed * 24;
+  enemy.knockbackY = velocityY / speed * 24;
 
   if (landingDamage) {
-    broadcastHurlSlimeDamage(
-      slime,
-      4 + Math.floor(Math.random() * 4),
+    const landingDamageAmount =
+      enemy.type === "slime"
+        ? 4 + Math.floor(Math.random() * 4)
+        : 6 + Math.floor(Math.random() * 4);
+
+    broadcastHurlEnemyDamage(
+      enemy,
+      landingDamageAmount,
       attackerId,
       "hurlLanding"
     );
   }
 }
 
-function tryHurlCollision(
-  slime
-) {
-  const attackerId =
-    slime.hurlThrownBy;
+function tryHurlCollision(enemy) {
+  const attackerId = enemy.hurlThrownBy;
+  const velocityX = enemy.hurlVelocityX;
+  const velocityY = enemy.hurlVelocityY;
 
-  const velocityX =
-    slime.hurlVelocityX;
-
-  const velocityY =
-    slime.hurlVelocityY;
-
-  for (const target of sharedSlimes) {
+  for (const target of sharedEnemiesOnMap(enemy.mapId)) {
     if (
-      target === slime ||
+      target === enemy ||
       !target.alive ||
       target.carriedBy ||
-      target.hurlTime > 0 ||
-      target.mapId !== slime.mapId
+      target.hurlTime > 0
     ) {
       continue;
     }
 
-    if (
-      Math.hypot(
-        target.x - slime.x,
-        target.y - slime.y
-      ) > 10
-    ) {
+    if (Math.hypot(target.x - enemy.x, target.y - enemy.y) > 11) {
       continue;
     }
 
-    const speed =
-      Math.hypot(
-        velocityX,
-        velocityY
-      ) || 1;
-
-    target.knockbackX =
-      velocityX / speed * 58;
-
-    target.knockbackY =
-      velocityY / speed * 58;
-
-    broadcastHurlSlimeDamage(
+    broadcastHurlEnemyDamage(
       target,
       8 + Math.floor(Math.random() * 5),
       attackerId,
-      "hurl"
-    );
-
-    finishServerSlimeHurl(
-      slime,
-      attackerId,
-      true
-    );
-
-    return true;
-  }
-
-  for (const goblin of sharedGoblins) {
-    if (
-      !goblin.alive ||
-      goblin.mapId !== slime.mapId
-    ) {
-      continue;
-    }
-
-    if (
-      Math.hypot(
-        goblin.x - slime.x,
-        goblin.y - slime.y
-      ) > 11
-    ) {
-      continue;
-    }
-
-    broadcastHurlGoblinDamage(
-      goblin,
-      8 + Math.floor(Math.random() * 5),
-      attackerId,
+      "hurl",
       velocityX,
       velocityY
     );
 
-    finishServerSlimeHurl(
-      slime,
-      attackerId,
-      true
-    );
-
+    finishServerEnemyHurl(enemy, attackerId, true);
     return true;
   }
 
   if (
     damageTreeFromHurl(
-      slime.mapId,
-      slime.x,
-      slime.y,
+      enemy.mapId,
+      enemy.x,
+      enemy.y,
       attackerId,
       velocityX
     )
   ) {
-    finishServerSlimeHurl(
-      slime,
-      attackerId,
-      true
-    );
-
+    finishServerEnemyHurl(enemy, attackerId, true);
     return true;
   }
 
   return false;
 }
 
-function tickServerSlimeHurl(
-  slime,
-  dt
-) {
-  if (slime.carriedBy) {
-    const carrier =
-      players.get(slime.carriedBy);
+function tickServerEnemyHurl(enemy, dt) {
+  ensureServerEnemyHurlState(enemy);
+
+  if (enemy.carriedBy) {
+    const carrier = players.get(enemy.carriedBy);
 
     if (
       !carrier ||
       carrier.hp <= 0 ||
-      carrier.mapId !== slime.mapId
+      carrier.mapId !== enemy.mapId
     ) {
-      slime.carriedBy = null;
-      slime.pickupTime = 0;
-      slime.pickupDirX = 0;
-      slime.pickupDirY = 0;
-      slime.hurlThrownBy = null;
+      clearServerEnemyHurlState(enemy);
       return false;
     }
 
-    slime.x = carrier.x;
-    slime.y = carrier.y;
-
-    slime.pickupTime = Math.max(
-      0,
-      slime.pickupTime - dt
-    );
-
-    slime.knockbackX = 0;
-    slime.knockbackY = 0;
-    clearEnemyAggroTarget(slime);
-    slime.tauntTime = 0;
-
+    enemy.x = carrier.x;
+    enemy.y = carrier.y;
+    enemy.pickupTime = Math.max(0, enemy.pickupTime - dt);
+    enemy.knockbackX = 0;
+    enemy.knockbackY = 0;
+    clearEnemyAggroTarget(enemy);
+    enemy.tauntTime = 0;
     return true;
   }
 
-  if (slime.hurlTime <= 0) {
-    return false;
-  }
+  if (enemy.hurlTime <= 0) return false;
 
-  slime.hurlTime =
-    Math.max(
-      0,
-      slime.hurlTime - dt
-    );
+  enemy.hurlTime = Math.max(0, enemy.hurlTime - dt);
 
-  const nextX =
-    slime.x +
-    slime.hurlVelocityX * dt;
+  const nextX = enemy.x + enemy.hurlVelocityX * dt;
+  const nextY = enemy.y + enemy.hurlVelocityY * dt;
 
-  const nextY =
-    slime.y +
-    slime.hurlVelocityY * dt;
-
-  if (
-    !slimePositionAllowed(
-      slime,
-      nextX,
-      nextY
-    )
-  ) {
-    finishServerSlimeHurl(
-      slime,
-      slime.hurlThrownBy,
-      true
-    );
-
+  if (!serverEnemyPositionAllowedForHurl(enemy, nextX, nextY)) {
+    finishServerEnemyHurl(enemy, enemy.hurlThrownBy, true);
     return true;
   }
 
-  slime.x = nextX;
-  slime.y = nextY;
+  enemy.x = nextX;
+  enemy.y = nextY;
 
-  if (tryHurlCollision(slime)) {
-    return true;
-  }
+  if (tryHurlCollision(enemy)) return true;
 
-  if (slime.hurlTime <= 0) {
-    finishServerSlimeHurl(
-      slime,
-      slime.hurlThrownBy,
-      true
-    );
-
-    return true;
+  if (enemy.hurlTime <= 0) {
+    finishServerEnemyHurl(enemy, enemy.hurlThrownBy, true);
   }
 
   return true;
 }
 
-function handleSlimeHurlAction(
+function handleGenericEnemyHurlAction(
   playerId,
-  slime,
+  enemy,
   action,
   payload
 ) {
-  const playerState =
-    players.get(playerId);
+  const playerState = players.get(playerId);
 
   if (
     !playerState ||
     playerState.hp <= 0 ||
-    playerState.mapId !== slime.mapId ||
-    !slime.alive
+    playerState.mapId !== enemy.mapId ||
+    !serverEnemyIsHurlable(enemy)
   ) {
     return;
   }
 
+  ensureServerEnemyHurlState(enemy);
+
   if (action === "hurlGrab") {
-    if (
-      slime.carriedBy ||
-      slime.hurlTime > 0
-    ) {
-      return;
-    }
+    if (enemy.carriedBy || enemy.hurlTime > 0) return;
 
     if (
-      sharedSlimes.some(
-        candidate =>
-          candidate.carriedBy === playerId
+      allSharedEnemies().some(candidate =>
+        candidate.carriedBy === playerId
       )
     ) {
       return;
     }
 
     const distance = Math.hypot(
-      slime.x - playerState.x,
-      slime.y - playerState.y
+      enemy.x - playerState.x,
+      enemy.y - playerState.y
     );
 
-    if (distance > 24) {
-      return;
-    }
+    if (distance > 24) return;
 
     if (
-      actionRateLimited(
+      sharedEnemyActionRateLimited(
         playerId,
-        slime.id,
+        enemy.id,
         "hurlGrab",
         300
       )
@@ -5018,50 +5000,37 @@ function handleSlimeHurlAction(
       return;
     }
 
-    const pickupDx =
-      slime.x - playerState.x;
-    const pickupDy =
-      slime.y - playerState.y;
-    const pickupLength =
-      Math.hypot(pickupDx, pickupDy) || 1;
+    const pickupDx = enemy.x - playerState.x;
+    const pickupDy = enemy.y - playerState.y;
+    const pickupLength = Math.hypot(pickupDx, pickupDy) || 1;
 
-    slime.carriedBy = playerId;
-    slime.pickupTime =
-      slime.pickupDuration;
-    slime.pickupDirX =
-      pickupDx / pickupLength;
-    slime.pickupDirY =
-      pickupDy / pickupLength;
-    slime.hurlTime = 0;
-    slime.hurlVelocityX = 0;
-    slime.hurlVelocityY = 0;
-    slime.hurlThrownBy = null;
-    slime.knockbackX = 0;
-    slime.knockbackY = 0;
-    clearEnemyAggroTarget(slime);
-    slime.tauntTime = 0;
+    enemy.carriedBy = playerId;
+    enemy.pickupTime = enemy.pickupDuration;
+    enemy.pickupDirX = pickupDx / pickupLength;
+    enemy.pickupDirY = pickupDy / pickupLength;
+    enemy.hurlTime = 0;
+    enemy.hurlVelocityX = 0;
+    enemy.hurlVelocityY = 0;
+    enemy.hurlThrownBy = null;
+    enemy.knockbackX = 0;
+    enemy.knockbackY = 0;
+    clearEnemyAggroTarget(enemy);
+    enemy.tauntTime = 0;
 
+    serverEnemyProfile(enemy)?.onHurlGrab?.(enemy);
     return;
   }
 
   if (action === "hurlThrow") {
-    if (
-      slime.carriedBy !== playerId
-    ) {
-      return;
-    }
+    if (enemy.carriedBy !== playerId) return;
 
-    const aimAngle =
-      Number(payload.aimAngle);
-
-    if (!Number.isFinite(aimAngle)) {
-      return;
-    }
+    const aimAngle = Number(payload.aimAngle);
+    if (!Number.isFinite(aimAngle)) return;
 
     if (
-      actionRateLimited(
+      sharedEnemyActionRateLimited(
         playerId,
-        slime.id,
+        enemy.id,
         "hurlThrow",
         220
       )
@@ -5071,29 +5040,17 @@ function handleSlimeHurlAction(
 
     const throwSpeed = 126;
 
-    slime.carriedBy = null;
-    slime.pickupTime = 0;
-    slime.pickupDirX = 0;
-    slime.pickupDirY = 0;
-    slime.hurlTime =
-      slime.hurlDuration;
-
-    slime.hurlVelocityX =
-      Math.cos(aimAngle) *
-      throwSpeed;
-
-    slime.hurlVelocityY =
-      Math.sin(aimAngle) *
-      throwSpeed;
-
-    slime.hurlThrownBy =
-      playerId;
-
-    slime.lastDamagePlayerId =
-      playerId;
-
-    clearEnemyAggroTarget(slime);
-    slime.tauntTime = 0;
+    enemy.carriedBy = null;
+    enemy.pickupTime = 0;
+    enemy.pickupDirX = 0;
+    enemy.pickupDirY = 0;
+    enemy.hurlTime = enemy.hurlDuration;
+    enemy.hurlVelocityX = Math.cos(aimAngle) * throwSpeed;
+    enemy.hurlVelocityY = Math.sin(aimAngle) * throwSpeed;
+    enemy.hurlThrownBy = playerId;
+    enemy.lastDamagePlayerId = playerId;
+    clearEnemyAggroTarget(enemy);
+    enemy.tauntTime = 0;
   }
 }
 
@@ -5213,7 +5170,7 @@ function tickSharedSlimes(dt) {
     if (!slime.alive) continue;
 
     if (
-      tickServerSlimeHurl(
+      tickServerEnemyHurl(
         slime,
         dt
       )
@@ -5311,7 +5268,7 @@ function tickSharedSlimes(dt) {
     // The decoy has absolute priority while it exists.
     if (
       slime.tauntTime > 0 &&
-      distanceFromHome < 90
+      distanceFromHome < (slime.combatLeashRadius || 240)
     ) {
       const dx =
         slime.tauntX - slime.x;
@@ -5373,7 +5330,7 @@ function tickSharedSlimes(dt) {
       slime.aggroTime > 0 &&
       targetPlayer &&
       targetDistance > 1 &&
-      distanceFromHome < 90
+      distanceFromHome < (slime.combatLeashRadius || 240)
     ) {
       const dx =
         targetPlayer.x - slime.x;
@@ -5403,7 +5360,7 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
-    if (distanceFromHome >= 90) {
+    if (distanceFromHome >= (slime.combatLeashRadius || 240)) {
       clearEnemyAggroTarget(slime);
     }
 
@@ -5756,19 +5713,6 @@ function handleSlimeAction(playerId, message) {
     return;
   }
 
-  if (
-    action === "hurlGrab" ||
-    action === "hurlThrow"
-  ) {
-    handleSlimeHurlAction(
-      playerId,
-      slime,
-      action,
-      payload
-    );
-
-    return;
-  }
 
   if (
     actionRateLimited(
@@ -6112,22 +6056,7 @@ function clearPlayerOwnedTransientWorldState(
   playerId,
   mapId = null
 ) {
-  for (const slime of sharedSlimes) {
-    if (
-      slime.tauntOwnerId !== playerId ||
-      (mapId && slime.mapId !== mapId)
-    ) {
-      continue;
-    }
-
-    slime.tauntTime = 0;
-    slime.tauntOwnerId = null;
-  }
-
-  for (const enemy of [
-    ...sharedGoblins,
-    ...sharedGhosts
-  ]) {
+  for (const enemy of allSharedEnemies()) {
     if (
       enemy.tauntOwnerId !== playerId ||
       (mapId && enemy.mapId !== mapId)
