@@ -1763,6 +1763,7 @@
         <div class="menu-item" data-owned-item="weapon_sword" data-hotbar-assignable="true"><img id="inventorySwordImg" alt="Wood Sword" /><span>Wood Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_oldSword" data-hotbar-assignable="true"><img id="inventoryOldSwordImg" alt="Sword" /><span>Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_bow" data-hotbar-assignable="true"><img id="inventoryBowImg" alt="Wood Bow" /><span>Wood Bow</span></div>
+        <div class="menu-item" data-owned-item="weapon_dreamcatcher" data-hotbar-assignable="true"><img id="inventoryDreamcatcherImg" alt="Dreamcatcher" /><span>Dreamcatcher</span></div>
         <div class="menu-item" data-owned-item="weapon_katana" data-hotbar-assignable="true"><img id="inventoryKatanaImg" alt="Katana" /><span>Katana</span></div>
         <div class="menu-item" data-owned-item="weapon_axe" data-hotbar-assignable="true"><img id="inventoryAxeImg" alt="Axe" /><span>Axe</span></div>
         <div class="menu-item" data-owned-item="weapon_wand" data-hotbar-assignable="true"><img id="inventoryWandImg" alt="Wand" /><span>Wand</span></div>
@@ -2088,6 +2089,24 @@
               </div>
               <div class="enhancement-note">Passive · movement speed increases with each level</div>
             </div>
+            <div class="skill-node locked" data-skill-node="camouflage">
+              <div class="skill-node-top">
+                <div class="skill-node-title">
+                  <img class="skill-node-icon" data-skill-icon="camouflage" alt="Camouflage" />
+                  <span class="skill-node-name">Camouflage</span>
+                </div>
+                <span class="skill-status">Locked</span>
+              </div>
+              <div class="skill-description">
+                Stand still beneath a tree canopy or inside tall grass for 1 second to become camouflaged. Your first attack breaks Camouflage. If that opening attack hits, the target is briefly confused before normal aggro begins.
+              </div>
+              <div class="skill-requirement">Requires 10 Dex</div>
+              <div class="skill-level-row">
+                <span class="skill-level-text">LV 0 / 1</span>
+                <button class="ability-upgrade-button" data-ability-id="camouflage">Unlock</button>
+              </div>
+              <div class="enhancement-note">Passive · cover hides you from enemy sight · 0.5s grace after leaving cover</div>
+            </div>
             <div class="skill-node locked" data-skill-node="focusFire">
               <div class="skill-node-top">
                 <div class="skill-node-title">
@@ -2307,7 +2326,7 @@
 </div>
 
 <script src="/shared/world-content.js?v=5"></script>
-<script src="/shared/combat-balance.js?v=3"></script>
+<script src="/shared/combat-balance.js?v=4"></script>
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -2461,6 +2480,7 @@ oldSwordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 
 // Player-drawn 16x16 Wood Bow arch. The drawstring is procedural.
 const bowImage = new Image();
+const dreamcatcherBowImage = loadImage("assets/dreamcatcher_bow_v1.png");
 bowImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAjUlEQVQ4T2NkoBAwwllkgmFswH+4J1EBhpfRBcAaV+WoMJxP4WOQFpMHCz599ZDBcM4nhrApdyCqkPQhG/C/wkuEgZ/9H0Pl+ndwQWTQHijE8PEnE0PHtjcgLlgvzID/qdZcDLOPfoNyMVwGA2AXIqllBClE1oxLIzqA64G7gATNMADWQ6omDDBqAAMDAJKmJxCluA92AAAAEGRlQkdCMUNFQUU3NzJCNjFENDI3TC6AxwAAAABJRU5ErkJgggAA";
 
 // The supplied bow is horizontal, with its curved centre near the top.
@@ -2640,14 +2660,368 @@ for (const tree of trees) {
 }
 
 function playerIsBehindTree(tree) {
-  // Behind/under this tree's canopy:
-  // - player is above the tree base in Y-sort terms
-  // - player is roughly under the canopy width
-  // - player isn't absurdly far above the tree
+  // Camouflage deliberately uses a tighter zone than the visual canopy. The
+  // player should look genuinely tucked beneath the leaves rather than merely
+  // standing somewhere near the tree.
   return (
-    player.y < tree.y &&
-    Math.abs(player.x - tree.x) < 18 &&
-    player.y > tree.y - 42
+    player.y <= tree.y - 2 &&
+    Math.abs(player.x - tree.x) < 17 &&
+    player.y > tree.y - 34
+  );
+}
+
+const CAMOUFLAGE_CONFUSION_DURATION = 1.25;
+const CAMOUFLAGE_CLOSE_REVEAL_DISTANCE = 18;
+
+function camouflageCoverAtPlayer() {
+  if (!isAbilityUnlocked("camouflage")) return null;
+
+  for (const tree of trees) {
+    if (
+      tree.isStump ||
+      tree.falling ||
+      tree.canopyBurned ||
+      tree.canopyBurnTime > 0
+    ) {
+      continue;
+    }
+
+    if (playerIsBehindTree(tree)) {
+      return {
+        type: "tree",
+        object: tree
+      };
+    }
+  }
+
+  for (const clump of tallGrass) {
+    if (clump.cut || clump.burnt) continue;
+
+    const halfWidth =
+      Math.max(6, (Number(clump.width) || 13) * 0.48);
+
+    // Grass camouflage is intentionally shallow vertically: the player's feet
+    // must actually be planted in the clump instead of above/below it.
+    if (
+      Math.abs(player.x - clump.x) <= halfWidth &&
+      player.y >= clump.y - 7 &&
+      player.y <= clump.y + 1
+    ) {
+      return {
+        type: "grass",
+        object: clump
+      };
+    }
+  }
+
+  return null;
+}
+
+function playerIsPveEngaged() {
+  const localId =
+    typeof onlineClient !== "undefined"
+      ? onlineClient?.localPlayerId
+      : null;
+
+  if (!localId) return false;
+
+  for (const enemy of [...slimes, ...goblins, ...ghosts]) {
+    if (!enemy?.alive) continue;
+
+    if (
+      enemy.aggroTargetId === localId &&
+      (Number(enemy.aggroTime) || 0) > 0
+    ) {
+      return true;
+    }
+
+    if (
+      enemy.confusionTargetId === localId &&
+      (Number(enemy.confusionTime) || 0) > 0
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function closeMonsterCanRevealCamouflage() {
+  for (const enemy of [...slimes, ...goblins, ...ghosts]) {
+    if (!enemy?.alive) continue;
+
+    const bodyY =
+      enemy.networkType === "slime" || slimes.includes(enemy)
+        ? enemy.y - 6
+        : enemy.y - 9;
+
+    if (
+      Math.hypot(
+        enemy.x - player.x,
+        bodyY - (player.y - 7)
+      ) <= CAMOUFLAGE_CLOSE_REVEAL_DISTANCE
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function emitCamouflageParticle() {
+  const colors = [
+    "#3f7d3b",
+    "#55964a",
+    "#6baa54",
+    "#87bd62"
+  ];
+
+  const life = 0.34 + Math.random() * 0.24;
+
+  growthParticles.push({
+    x: player.x + (Math.random() - 0.5) * 15,
+    y: player.y - 5 - Math.random() * 15,
+    vx: (Math.random() - 0.5) * 8,
+    vy: -4 - Math.random() * 8,
+    life,
+    maxLife: life,
+    color: colors[(Math.random() * colors.length) | 0],
+    size: Math.random() < 0.22 ? 2 : 1
+  });
+}
+
+function updateCamouflageParticles(dt) {
+  if (!player.camouflaged) {
+    player.camouflageParticleTimer = 0;
+    return;
+  }
+
+  player.camouflageParticleTimer -= dt;
+
+  if (player.camouflageParticleTimer > 0) return;
+
+  emitCamouflageParticle();
+  if (Math.random() < 0.32) {
+    emitCamouflageParticle();
+  }
+
+  player.camouflageParticleTimer = 0.075;
+}
+
+function clearCamouflageState(sendState = true) {
+  const changed =
+    player.camouflaged ||
+    player.camouflageBuildTime > 0 ||
+    player.camouflageGraceTime > 0;
+
+  player.camouflaged = false;
+  player.camouflageBuildTime = 0;
+  player.camouflageGraceTime = 0;
+  player.camouflageCoverType = null;
+  player.camouflageSourceCover = null;
+  player.camouflageParticleTimer = 0;
+
+  if (
+    changed &&
+    sendState &&
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+}
+
+function consumeCamouflageOpening() {
+  if (!player.camouflaged) return false;
+
+  // An ambush "uses up" the cover it was prepared from. The player must leave
+  // that patch before it can build Camouflage there again.
+  player.camouflageSpentCover =
+    player.camouflageSourceCover || null;
+
+  player.camouflaged = false;
+  player.camouflageBuildTime = 0;
+  player.camouflageGraceTime = 0;
+  player.camouflageCoverType = null;
+  player.camouflageSourceCover = null;
+  player.camouflageParticleTimer = 0;
+
+  // Reveal immediately when the attack is committed. The server keeps a
+  // short ambush-token window so this exact projectile can still apply the
+  // confusion effect if it lands.
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+
+  spawnFloatingText(
+    player.x,
+    player.y - 30,
+    "AMBUSH!",
+    "#c8e6a0",
+    0.75
+  );
+
+  return true;
+}
+
+function updateCamouflageState(dt) {
+  if (!isAbilityUnlocked("camouflage")) {
+    clearCamouflageState(false);
+    return;
+  }
+
+  if (player.shadowHidden) {
+    clearCamouflageState(false);
+    return;
+  }
+
+  const cover = camouflageCoverAtPlayer();
+  const coverType = cover?.type || null;
+  player.camouflageCoverType = coverType;
+
+  updateCamouflageParticles(dt);
+
+  // Once the player completely leaves the cover used for an ambush, that
+  // cover becomes eligible again.
+  if (
+    player.camouflageSpentCover &&
+    (!cover || cover.object !== player.camouflageSpentCover)
+  ) {
+    player.camouflageSpentCover = null;
+  }
+
+  if (player.camouflaged) {
+    // An enemy that already has the player identified prevents Camouflage from
+    // persisting, too. This also closes small networking/timing race windows.
+    if (
+      playerIsPveEngaged() ||
+      closeMonsterCanRevealCamouflage()
+    ) {
+      clearCamouflageState(true);
+      return;
+    }
+
+    if (cover) {
+      player.camouflageGraceTime =
+        player.camouflageGraceDuration;
+      return;
+    }
+
+    player.camouflageGraceTime = Math.max(
+      0,
+      player.camouflageGraceTime - dt
+    );
+
+    if (player.camouflageGraceTime <= 0) {
+      clearCamouflageState(true);
+    }
+
+    return;
+  }
+
+  // If an enemy is already targeting the player—or is still confused by the
+  // player's ambush—the player cannot simply crouch in place and chain another
+  // camouflage opener.
+  if (playerIsPveEngaged()) {
+    player.camouflageBuildTime = 0;
+    return;
+  }
+
+  const stationary =
+    !player.wasMoving &&
+    Math.hypot(player.knockbackX, player.knockbackY) < 0.5 &&
+    player.attackTime <= 0 &&
+    !player.bowDrawing &&
+    !focusFireIsCasting();
+
+  const coverSpent =
+    Boolean(
+      cover &&
+      player.camouflageSpentCover === cover.object
+    );
+
+  if (!cover || coverSpent || !stationary) {
+    player.camouflageBuildTime = 0;
+    return;
+  }
+
+  player.camouflageBuildTime = Math.min(
+    player.camouflageBuildDuration,
+    player.camouflageBuildTime + dt
+  );
+
+  if (
+    player.camouflageBuildTime >=
+    player.camouflageBuildDuration
+  ) {
+    player.camouflaged = true;
+    player.camouflageSourceCover = cover.object;
+    player.camouflageBuildTime =
+      player.camouflageBuildDuration;
+    player.camouflageGraceTime =
+      player.camouflageGraceDuration;
+
+    spawnFloatingText(
+      player.x,
+      player.y - 30,
+      "CAMOUFLAGED",
+      "#bfe3a2",
+      0.9
+    );
+
+    if (
+      typeof onlineClient !== "undefined" &&
+      onlineClient?.connected
+    ) {
+      onlineClient.sendLocalState(true);
+    }
+  }
+}
+
+function drawCamouflageIndicator(camX, camY) {
+  if (!isAbilityUnlocked("camouflage")) return;
+
+  const screenX = Math.round(player.x - camX);
+  const screenY = Math.round(player.y - camY - 27);
+
+  if (player.camouflaged) {
+    drawStaticPixelText(
+      "CAMO",
+      screenX,
+      screenY,
+      "#b9d99a",
+      1
+    );
+    return;
+  }
+
+  if (
+    !player.camouflageCoverType ||
+    player.camouflageBuildTime <= 0
+  ) {
+    return;
+  }
+
+  const progress = Math.max(
+    0,
+    Math.min(
+      1,
+      player.camouflageBuildTime /
+        player.camouflageBuildDuration
+    )
+  );
+
+  ctx.fillStyle = "rgba(28, 38, 27, .78)";
+  ctx.fillRect(screenX - 8, screenY, 16, 3);
+  ctx.fillStyle = "#a9cf85";
+  ctx.fillRect(
+    screenX - 7,
+    screenY + 1,
+    Math.round(14 * progress),
+    1
   );
 }
 
@@ -3875,7 +4249,8 @@ function castBasicProjectile(type, angle, options = {}) {
         1,
         Number(options.rangeMultiplier) || 1
       )
-    )
+    ),
+    camouflageOpening: Boolean(options.camouflageOpening)
   };
 
   basicProjectiles.push(projectile);
@@ -3977,6 +4352,11 @@ function fireBowArrow(drawAmount, angle) {
     return false;
   }
 
+  // A real arrow release reveals the hunter even if the shot later misses.
+  // The projectile itself remembers whether it was the prepared ambush shot.
+  const camouflageOpening =
+    consumeCamouflageOpening();
+
   const attackingFromShadowHide =
     player.shadowHidden;
 
@@ -3994,7 +4374,8 @@ function fireBowArrow(drawAmount, angle) {
       life: shot.projectileLife,
       drawAmount: shot.chargedAmount,
       damageMultiplier: shot.damageMultiplier,
-      rangeMultiplier: shot.rangeMultiplier
+      rangeMultiplier: shot.rangeMultiplier,
+      camouflageOpening
     }
   );
 
@@ -4192,6 +4573,11 @@ function releaseFocusFireCharge() {
     return true;
   }
 
+  // Focus Fire's arcing opener is still an arrow: committing it reveals
+  // Camouflage immediately even if the landing shot misses.
+  const camouflageOpening =
+    consumeCamouflageOpening();
+
   const startX = player.x + Math.cos(landing.angle) * 12;
   const startY = (player.y - 8) + Math.sin(landing.angle) * 12;
   const distance = Math.hypot(landing.x - startX, landing.y - startY);
@@ -4211,6 +4597,7 @@ function releaseFocusFireCharge() {
     duration,
     arcHeight: Math.min(42, 13 + distance * 0.18),
     angle: landing.angle,
+    camouflageOpening,
     visualOnly: false,
     ownerId: null
   });
@@ -4356,7 +4743,8 @@ function resolveFocusFireOpenerLanding(opener) {
     drawAmount: 1,
     damageMultiplier: 1,
     rangeMultiplier: 1,
-    critical: false
+    critical: false,
+    camouflageOpening: Boolean(opener.camouflageOpening)
   };
 
   damageFocusFireTarget(
@@ -4826,10 +5214,10 @@ function spawnRemoteRainCast(
   });
 }
 
-const LOCAL_TREE_REGROW_MIN_MS = 75_000;
-const LOCAL_TREE_REGROW_MAX_MS = 105_000;
-const LOCAL_GRASS_REGROW_MIN_MS = 25_000;
-const LOCAL_GRASS_REGROW_MAX_MS = 45_000;
+const LOCAL_TREE_REGROW_MIN_MS = 180_000;
+const LOCAL_TREE_REGROW_MAX_MS = 240_000;
+const LOCAL_GRASS_REGROW_MIN_MS = 90_000;
+const LOCAL_GRASS_REGROW_MAX_MS = 120_000;
 
 function randomLocalRegrowTimestamp(
   minMs,
@@ -5303,7 +5691,8 @@ function damageSlimeWithArrow(slime, projectile) {
     aimAngle: Math.atan2(projectile.vy, projectile.vx),
     drawAmount: projectile.drawAmount,
     damageMultiplier: projectile.damageMultiplier,
-    rangeMultiplier: projectile.rangeMultiplier
+    rangeMultiplier: projectile.rangeMultiplier,
+    camouflageOpening: Boolean(projectile.camouflageOpening)
   });
 }
 
@@ -5336,7 +5725,8 @@ function damageGoblinWithArrow(goblin, projectile) {
       aimAngle: Math.atan2(projectile.vy, projectile.vx),
       drawAmount: projectile.drawAmount,
       damageMultiplier: projectile.damageMultiplier,
-      rangeMultiplier: projectile.rangeMultiplier
+      rangeMultiplier: projectile.rangeMultiplier,
+      camouflageOpening: Boolean(projectile.camouflageOpening)
     }
   );
 }
@@ -5390,7 +5780,8 @@ function damageGhostWithArrow(ghost, projectile) {
       aimAngle: Math.atan2(projectile.vy, projectile.vx),
       drawAmount: projectile.drawAmount,
       damageMultiplier: projectile.damageMultiplier,
-      rangeMultiplier: projectile.rangeMultiplier
+      rangeMultiplier: projectile.rangeMultiplier,
+      camouflageOpening: Boolean(projectile.camouflageOpening)
     }
   );
 }
@@ -7659,6 +8050,7 @@ document.getElementById("craftArrowsImg").src = arrowResourceImage.src;
 document.getElementById("inventorySwordImg").src = swordImage.src;
 document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
 document.getElementById("inventoryBowImg").src = bowImage.src;
+document.getElementById("inventoryDreamcatcherImg").src = dreamcatcherBowImage.src;
 document.getElementById("inventoryKatanaImg").src = katanaImage.src;
 document.getElementById("inventoryAxeImg").src = axeImage.src;
 document.getElementById("inventoryWandImg").src = wandImage.src;
@@ -9400,6 +9792,11 @@ class OnlineClient {
       return;
     }
 
+    if (message.type === "enemyConfused") {
+      this.handleEnemyConfused(message);
+      return;
+    }
+
     if (message.type === "enemyDamage") {
       this.handleSharedEnemyDamage(message);
       return;
@@ -10639,12 +11036,22 @@ class OnlineClient {
       return false;
     }
 
+    const outgoingPayload =
+      action === "damage"
+        ? {
+            ...payload,
+            camouflageOpening:
+              Boolean(payload.camouflageOpening) ||
+              consumeCamouflageOpening()
+          }
+        : payload;
+
     this.socket.send(JSON.stringify({
       type: "enemyAction",
       enemyType,
       action,
       enemyId: enemy.entityId,
-      payload
+      payload: outgoingPayload
     }));
 
     return true;
@@ -10716,6 +11123,22 @@ class OnlineClient {
 
       enemy.alive = nextAlive;
       enemy.dir = state.dir === -1 ? -1 : 1;
+      enemy.aggroTime = Math.max(
+        0,
+        Number(state.aggroTime) || 0
+      );
+      enemy.aggroTargetId =
+        typeof state.aggroTargetId === "string"
+          ? state.aggroTargetId
+          : null;
+      enemy.confusionTime = Math.max(
+        0,
+        Number(state.confusionTime) || 0
+      );
+      enemy.confusionTargetId =
+        typeof state.confusionTargetId === "string"
+          ? state.confusionTargetId
+          : null;
       enemy.burnTime = Math.max(
         0,
         Number(state.burnTime) || 0
@@ -10738,6 +11161,73 @@ class OnlineClient {
         enemy.lungeDirY = Number(state.lungeDirY) || 0;
       }
     }
+  }
+
+  handleEnemyConfused(message) {
+    let enemy = null;
+
+    if (message.enemyType === "slime") {
+      enemy = this.findSharedSlime(
+        message.enemyId,
+        message.mapId
+      );
+    } else {
+      enemy = this.findSharedEnemy(
+        message.enemyType,
+        message.enemyId,
+        message.mapId
+      );
+    }
+
+    if (!enemy || currentMapId !== message.mapId) return;
+
+    enemy.confusionTime = Math.max(
+      enemy.confusionTime || 0,
+      Number(message.duration) || CAMOUFLAGE_CONFUSION_DURATION
+    );
+    enemy.confusionTargetId =
+      typeof message.attackerId === "string"
+        ? message.attackerId
+        : enemy.confusionTargetId;
+
+    const confusionY =
+      enemy.y - (message.enemyType === "slime" ? 27 : 34);
+
+    const confusionDuration =
+      Math.max(
+        0.7,
+        Number(message.duration) || CAMOUFLAGE_CONFUSION_DURATION
+      );
+
+    spawnFloatingText(
+      enemy.x - 9,
+      confusionY + 2,
+      "?",
+      "#f1e6a8",
+      confusionDuration,
+      1,
+      -0.75
+    );
+
+    spawnFloatingText(
+      enemy.x,
+      confusionY - 2,
+      "?",
+      "#fff2ad",
+      confusionDuration,
+      2,
+      0
+    );
+
+    spawnFloatingText(
+      enemy.x + 9,
+      confusionY + 2,
+      "?",
+      "#f1e6a8",
+      confusionDuration,
+      1,
+      0.75
+    );
   }
 
   handleSharedEnemyDamage(message) {
@@ -11109,6 +11599,10 @@ class OnlineClient {
       cancelFocusFire("hit");
     }
 
+    if (damage > 0 && player.camouflaged) {
+      clearCamouflageState(true);
+    }
+
     if (player.hp <= 0) {
       handlePlayerDeath();
     }
@@ -11280,11 +11774,21 @@ class OnlineClient {
       return false;
     }
 
+    const outgoingPayload =
+      action === "damage"
+        ? {
+            ...payload,
+            camouflageOpening:
+              Boolean(payload.camouflageOpening) ||
+              consumeCamouflageOpening()
+          }
+        : payload;
+
     this.socket.send(JSON.stringify({
       type: "slimeAction",
       action,
       slimeId: slime.entityId,
-      payload
+      payload: outgoingPayload
     }));
 
     return true;
@@ -11351,6 +11855,22 @@ class OnlineClient {
       slime.aggressiveOnSight = Boolean(
         state.aggressiveOnSight ?? slime.aggressiveOnSight
       );
+      slime.aggroTime = Math.max(
+        0,
+        Number(state.aggroTime) || 0
+      );
+      slime.aggroTargetId =
+        typeof state.aggroTargetId === "string"
+          ? state.aggroTargetId
+          : null;
+      slime.confusionTime = Math.max(
+        0,
+        Number(state.confusionTime) || 0
+      );
+      slime.confusionTargetId =
+        typeof state.confusionTargetId === "string"
+          ? state.confusionTargetId
+          : null;
 
       slime.alive = nextAlive;
       slime.dir = state.dir === -1 ? -1 : 1;
@@ -11465,7 +11985,7 @@ class OnlineClient {
       slime.hp = 0;
       slime.alive = false;
       slime.burnTime = 0;
-      slime.respawnTime = 2.0;
+      slime.respawnTime = 30.0;
     }
 
     if (message.killerId !== this.localPlayerId) return;
@@ -11507,6 +12027,7 @@ class OnlineClient {
       bowDrawAmount: player.bowDrawAmount,
       bowReleaseTime: player.bowReleaseTime,
       focusFireCasting: focusFireIsCasting(),
+      camouflaged: player.camouflaged,
 
       shadowHidden: player.shadowHidden,
       shadowHideRevealTime: player.shadowHideRevealTime,
@@ -11862,6 +12383,7 @@ function activateMap(mapId, entrySide) {
   if (!state) return;
 
   currentMapId = mapId;
+  clearCamouflageState(false);
 
   // Ensure this map's natural enemy objects exactly match the shared registry
   // before replacing the active collection views.
@@ -12365,7 +12887,15 @@ const FLOAT_GLYPHS = {
 
 const floatingTexts = [];
 
-function spawnFloatingText(x, y, text, color = "#a9dcff", duration = 1.0) {
+function spawnFloatingText(
+  x,
+  y,
+  text,
+  color = "#a9dcff",
+  duration = 1.0,
+  baseScale = 1,
+  driftX = null
+) {
   floatingTexts.push({
     x,
     y,
@@ -12373,7 +12903,10 @@ function spawnFloatingText(x, y, text, color = "#a9dcff", duration = 1.0) {
     color,
     life: duration,
     duration,
-    driftX: (Math.random() - 0.5) * 1.8
+    baseScale: Math.max(1, Math.round(Number(baseScale) || 1)),
+    driftX: Number.isFinite(driftX)
+      ? driftX
+      : (Math.random() - 0.5) * 1.8
   });
 }
 
@@ -12393,7 +12926,8 @@ function updateFloatingTexts(dt) {
 function drawFloatingTexts(camX, camY) {
   for (const item of floatingTexts) {
     const age = item.duration - item.life;
-    const scale = age < 0.10 ? 2 : 1;
+    const baseScale = Math.max(1, Number(item.baseScale) || 1);
+    const scale = (age < 0.10 ? 2 : 1) * baseScale;
     const charW = 3 * scale;
     const gap = scale;
     const spaceW = 2 * scale;
@@ -13366,6 +13900,19 @@ const player = {
   bowReleaseTime: 0,
   bowReleaseDuration: 0.12,
 
+  // Precision skill: Camouflage. Stand still in natural cover to prepare an
+  // ambush. Leaving cover keeps the camouflage briefly so the player can step
+  // out and take the opening shot.
+  camouflaged: false,
+  camouflageBuildTime: 0,
+  camouflageBuildDuration: 1.0,
+  camouflageGraceTime: 0,
+  camouflageGraceDuration: 0.5,
+  camouflageCoverType: null,
+  camouflageSourceCover: null,
+  camouflageSpentCover: null,
+  camouflageParticleTimer: 0,
+
   // Precision skill: Focus Fire. The opener is aimed with a cycling pulse;
   // a successful landing locks one monster for a five-second barrage.
   focusFireCharging: false,
@@ -13482,6 +14029,7 @@ const player = {
     jesterBlink: 0,
     fireball: 0,
     strafe: 0,
+    camouflage: 0,
     focusFire: 0,
     rainCloud: 0
   },
@@ -13505,7 +14053,7 @@ const player = {
 };
 
 const HOTBAR_SLOT_COUNT = 5;
-const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow"];
+const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger"];
@@ -13517,7 +14065,8 @@ const WEAPON_ITEM_IDS = [
   "weapon_rainWand",
   "weapon_katana",
   "weapon_oldSword",
-  "weapon_bow"
+  "weapon_bow",
+  "weapon_dreamcatcher"
 ];
 
 const HAT_ITEM_IDS = [
@@ -13587,6 +14136,7 @@ const SHOP_ITEMS = [
   { id: "weapon_rainWand", name: "Rain Wand" },
   { id: "weapon_katana", name: "Katana" },
   { id: "weapon_oldSword", name: "Sword" },
+  { id: "weapon_dreamcatcher", name: "Dreamcatcher" },
 
   { id: "hat_original", name: "Hat" },
   { id: "hat_blueCap", name: "Blue Cap" },
@@ -14469,6 +15019,21 @@ const ACTIVE_SKILLS = {
     singleScalingEnhancement: true,
     enhancementUnlockLevel: 1
   },
+  camouflage: {
+    name: "Camouflage",
+    requirementStat: "dex",
+    requirementLabel: "Dex",
+    requirementValue: 10,
+    maxLevel: 1,
+    passive: true,
+    noEnhancements: true,
+    levelProgression: [
+      {
+        name: "Ambush Cover",
+        effectText: "Stand still in tree canopy cover or tall grass for 1 second. Camouflage hides you from enemy sight. Your first attack breaks Camouflage; if that opening attack hits, the target is confused for 1.25 seconds before normal aggro."
+      }
+    ]
+  },
   focusFire: {
     name: "Focus Fire",
     requirementStat: "dex",
@@ -14518,6 +15083,7 @@ const SKILL_ICON_PATHS = {
   jesterBlink: "./assets/skills/jester_blink_approved.png",
   fireball: "./assets/skills/fireball_approved.png",
   strafe: "./assets/skills/strafe_approved.png",
+  camouflage: "./assets/skills/camouflage_v1.png",
   focusFire: "./assets/skills/focus_fire_approved.png",
   rainCloud: "./assets/skills/rain_cloud_approved.png"
 };
@@ -15347,7 +15913,7 @@ function killGhost(ghost) {
 
   ghost.hp = 0;
   ghost.alive = false;
-  ghost.respawnTime = 3.0;
+  ghost.respawnTime = 50.0;
   ghost.burnTime = 0;
   ghost.burnTickTimer = 0;
 }
@@ -15795,6 +16361,7 @@ function weaponImageForIndex(index) {
   if (index === 4) return katanaImage;
   if (index === 5) return oldSwordImage;
   if (index === 6) return bowImage;
+  if (index === 7) return dreamcatcherBowImage;
   return swordImage;
 }
 
@@ -16159,7 +16726,10 @@ function updateInventoryUi() {
   }
 
   if (equippedWeaponName) {
-    equippedWeaponName.textContent = weaponDisplayName(weaponStyle);
+    equippedWeaponName.textContent =
+      player.weaponIndex === 7
+        ? "Dreamcatcher"
+        : weaponDisplayName(weaponStyle);
   }
 
   document.querySelectorAll(".hat-choice").forEach(button => {
@@ -18659,6 +19229,7 @@ function updatePlayerMovement(dt) {
   player.y = clampToWorld(player.y, 15, world.height - 1);
 
   updateMapConnection();
+  updateCamouflageState(dt);
 }
 
 function collectNearbyPickups() {
@@ -18846,7 +19417,12 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     player.shadowHidden
       ? (player.shadowHideRevealTime > 0 ? 1 : 0.42)
       : 1;
-  const playerDrawAlpha = blinkFadeAlpha * shadowHideAlpha;
+  const camouflageAlpha =
+    player.camouflaged && !player.shadowHidden
+      ? 0.76
+      : 1;
+  const playerDrawAlpha =
+    blinkFadeAlpha * shadowHideAlpha * camouflageAlpha;
 
   const plantedBaseX = screenX - 8;
   const plantedBaseY = screenY - 15;
@@ -19990,7 +20566,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingSlimeOverride = 
     );
 
     ctx.drawImage(
-      bowImage,
+      weaponImageForIndex(player.weaponIndex) || bowImage,
       -BOW_PIVOT_X,
       -BOW_PIVOT_Y
     );
@@ -20630,6 +21206,7 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "focusFireCharging",
   "focusFireOpening",
   "focusFireActive",
+  "camouflaged",
   "jesterBlinkFadeTime",
   "jesterBlinkFadeDuration",
   "shadowHidden",
@@ -20751,6 +21328,7 @@ function drawRemotePlayer(
   player.focusFireCharging = Boolean(remote.focusFireCasting);
   player.focusFireOpening = false;
   player.focusFireActive = false;
+  player.camouflaged = Boolean(remote.camouflaged);
 
   player.jesterBlinkFadeTime = 0;
   player.jesterBlinkFadeDuration = 0.18;
@@ -21200,6 +21778,7 @@ function drawForegroundLayer(camX, camY) {
 
   drawFocusFireTargeting(camX, camY);
   drawFocusFireTargetMarker(camX, camY);
+  drawCamouflageIndicator(camX, camY);
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
   drawInteractionPrompt(camX, camY);

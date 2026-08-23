@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 3;
+    const VERSION = 4;
 
     const LEVEL_GAP_PENALTY_PER_LEVEL = 0.07;
     const MIN_LEVEL_MULTIPLIER = 0.45;
@@ -82,6 +82,16 @@
       Object.freeze({
         id: "weapon_bow",
         name: "Wood Bow",
+        power: 9,
+        damageType: "physical",
+        strengthScale: 0.15,
+        dexScale: 0.85,
+        intScale: 0
+      }),
+
+      Object.freeze({
+        id: "weapon_dreamcatcher",
+        name: "Dreamcatcher",
         power: 9,
         damageType: "physical",
         strengthScale: 0.15,

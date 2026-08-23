@@ -117,10 +117,10 @@ const ENVIRONMENT_SPREAD_INTERVAL = 0.24;
 
 // Regrowth uses one timestamp stored on the existing environment entity.
 // There are no per-tree/per-grass setTimeout timers.
-const TREE_REGROW_MIN_MS = 75_000;
-const TREE_REGROW_MAX_MS = 105_000;
-const GRASS_REGROW_MIN_MS = 25_000;
-const GRASS_REGROW_MAX_MS = 45_000;
+const TREE_REGROW_MIN_MS = 180_000;
+const TREE_REGROW_MAX_MS = 240_000;
+const GRASS_REGROW_MIN_MS = 90_000;
+const GRASS_REGROW_MAX_MS = 120_000;
 
 function randomRegrowTimestamp(
   minMs,
@@ -690,6 +690,7 @@ const SHOP_ITEM_IDS = new Set([
   "weapon_rainWand",
   "weapon_katana",
   "weapon_oldSword",
+  "weapon_dreamcatcher",
 
   "hat_original",
   "hat_blueCap",
@@ -1671,6 +1672,8 @@ function makeServerGoblin(spawn) {
     aggroTime: 0,
     aggroDuration: 5.0,
     aggroTargetId: null,
+    confusionTime: 0,
+    confusionTargetId: null,
 
     wanderTargetX: x,
     wanderTargetY: y,
@@ -1742,6 +1745,8 @@ function makeServerGhost(spawn) {
     aggroTime: 0,
     aggroDuration: 5.5,
     aggroTargetId: null,
+    confusionTime: 0,
+    confusionTargetId: null,
 
     wanderAngle: Math.random() * Math.PI * 2,
     wanderTimer: 0.8 + Math.random() * 1.2,
@@ -1797,6 +1802,10 @@ function sharedEnemySnapshot(enemyType) {
     hp: enemy.hp,
     maxHp: enemy.maxHp,
     alive: enemy.alive,
+    aggroTime: Number((enemy.aggroTime || 0).toFixed(2)),
+    aggroTargetId: enemy.aggroTargetId || null,
+    confusionTime: Number((enemy.confusionTime || 0).toFixed(2)),
+    confusionTargetId: enemy.confusionTargetId || null,
     burnTime: Number(enemy.burnTime.toFixed(2)),
     respawnTime: Number(enemy.respawnTime.toFixed(2)),
 
@@ -1849,6 +1858,15 @@ function nearestVisiblePlayer(
       playerState.y - y
     );
 
+    if (playerState.camouflaged) {
+      if (distance > CAMOUFLAGE_CLOSE_REVEAL_DISTANCE) {
+        continue;
+      }
+
+      playerState.camouflaged = false;
+      playerState.camouflageReadyUntil = 0;
+    }
+
     if (
       distance < bestDistance &&
       distance <= maxDistance
@@ -1868,7 +1886,9 @@ function nearestVisiblePlayer(
 
 function visibleAggroPlayerById(
   playerId,
-  mapId
+  mapId,
+  observerX = null,
+  observerY = null
 ) {
   if (!playerId) return null;
 
@@ -1881,6 +1901,22 @@ function visibleAggroPlayerById(
     playerState.hp <= 0
   ) {
     return null;
+  }
+
+  if (playerState.camouflaged) {
+    if (
+      !Number.isFinite(observerX) ||
+      !Number.isFinite(observerY) ||
+      Math.hypot(
+        playerState.x - observerX,
+        playerState.y - observerY
+      ) > CAMOUFLAGE_CLOSE_REVEAL_DISTANCE
+    ) {
+      return null;
+    }
+
+    playerState.camouflaged = false;
+    playerState.camouflageReadyUntil = 0;
   }
 
   return playerState;
@@ -1901,6 +1937,106 @@ function setEnemyAggroTarget(
 function clearEnemyAggroTarget(enemy) {
   enemy.aggroTargetId = null;
   enemy.aggroTime = 0;
+}
+
+const CAMOUFLAGE_CONFUSION_DURATION = 1.25;
+const CAMOUFLAGE_CLOSE_REVEAL_DISTANCE = 18;
+
+function playerIsTargetedByPveEnemy(playerId) {
+  if (!playerId) return false;
+
+  for (const enemy of [
+    ...sharedSlimes,
+    ...sharedGoblins,
+    ...sharedGhosts
+  ]) {
+    if (!enemy?.alive) continue;
+
+    if (
+      enemy.aggroTargetId === playerId &&
+      (Number(enemy.aggroTime) || 0) > 0
+    ) {
+      return true;
+    }
+
+    if (
+      enemy.confusionTargetId === playerId &&
+      (Number(enemy.confusionTime) || 0) > 0
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function tryApplyCamouflageConfusion(
+  enemy,
+  playerState,
+  playerId,
+  payload = {}
+) {
+  if (
+    !payload.camouflageOpening ||
+    !playerState ||
+    !Number.isFinite(playerState.camouflageReadyUntil) ||
+    playerState.camouflageReadyUntil < Date.now()
+  ) {
+    return false;
+  }
+
+  playerState.camouflaged = false;
+  playerState.camouflageReadyUntil = 0;
+
+  clearEnemyAggroTarget(enemy);
+  enemy.confusionTime = CAMOUFLAGE_CONFUSION_DURATION;
+  enemy.confusionTargetId = playerId;
+
+  broadcast({
+    type: "enemyConfused",
+    enemyType: enemy.type,
+    enemyId: enemy.id,
+    mapId: enemy.mapId,
+    duration: CAMOUFLAGE_CONFUSION_DURATION,
+    attackerId: playerId
+  });
+
+  return true;
+}
+
+function tickEnemyConfusion(enemy, dt) {
+  if (!enemy || enemy.confusionTime <= 0) {
+    return false;
+  }
+
+  enemy.confusionTime = Math.max(
+    0,
+    enemy.confusionTime - dt
+  );
+
+  if (enemy.confusionTime > 0) {
+    return true;
+  }
+
+  const targetId = enemy.confusionTargetId;
+  enemy.confusionTargetId = null;
+
+  const target = visibleAggroPlayerById(
+    targetId,
+    enemy.mapId,
+    enemy.x,
+    enemy.y
+  );
+
+  if (target) {
+    setEnemyAggroTarget(
+      enemy,
+      target.id,
+      enemy.aggroDuration
+    );
+  }
+
+  return false;
 }
 
 function serverCircleRectCollision(
@@ -2087,6 +2223,8 @@ function resetServerGoblin(goblin) {
 
   goblin.aggroTime = 0;
   goblin.aggroTargetId = null;
+  goblin.confusionTime = 0;
+  goblin.confusionTargetId = null;
   goblin.wanderTargetX = goblin.homeX;
   goblin.wanderTargetY = goblin.homeY;
   goblin.wanderDecisionTime = 0;
@@ -2124,6 +2262,8 @@ function resetServerGhost(ghost) {
 
   ghost.aggroTime = 0;
   ghost.aggroTargetId = null;
+  ghost.confusionTime = 0;
+  ghost.confusionTargetId = null;
   ghost.wanderAngle =
     Math.random() * Math.PI * 2;
 
@@ -2200,6 +2340,11 @@ function applyServerPlayerDamage(
     0,
     target.hp - actualDamage
   );
+
+  // Camouflage never prevents collision/contact damage. Being struck reveals
+  // the player immediately on the authoritative server as well as the client.
+  target.camouflaged = false;
+  target.camouflageReadyUntil = 0;
 
   broadcast({
     type: "playerDamage",
@@ -2288,6 +2433,10 @@ function broadcastEnemyHitPlayer(
       contactCooldown
     }
   );
+}
+
+function isBowWeaponIndex(index) {
+  return index === 6 || index === 7;
 }
 
 function pvpAttackRateLimited(
@@ -2493,7 +2642,7 @@ function handlePvpAttack(
     knockback =
       attacker.weaponIndex === 1 ? 18 : 15;
   } else if (source === "bowMelee") {
-    if (attacker.weaponIndex !== 6) {
+    if (!isBowWeaponIndex(attacker.weaponIndex)) {
       return;
     }
 
@@ -2508,7 +2657,7 @@ function handlePvpAttack(
     minimumMs = 300;
     knockback = 7;
   } else if (source === "arrow") {
-    if (attacker.weaponIndex !== 6) {
+    if (!isBowWeaponIndex(attacker.weaponIndex)) {
       return;
     }
 
@@ -2808,9 +2957,11 @@ function killSharedEnemy(
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
   clearEnemyAggroTarget(enemy);
+  enemy.confusionTime = 0;
+  enemy.confusionTargetId = null;
 
   if (enemy.type === "goblin") {
-    enemy.respawnTime = 4.0;
+    enemy.respawnTime = 40.0;
     enemy.lungeTime = 0;
     enemy.moving = false;
 
@@ -2822,7 +2973,7 @@ function killSharedEnemy(
       );
     }
   } else {
-    enemy.respawnTime = 6.0;
+    enemy.respawnTime = 50.0;
   }
 
   broadcast({
@@ -2863,18 +3014,25 @@ function tickSharedGhosts(dt) {
       );
     }
 
+    const confused =
+      tickEnemyConfusion(ghost, dt);
+
     let targetX = null;
     let targetY = null;
     let targetPlayer = null;
 
-    if (ghost.tauntTime > 0) {
+    if (confused) {
+      clearEnemyAggroTarget(ghost);
+    } else if (ghost.tauntTime > 0) {
       targetX = ghost.tauntX;
       targetY = ghost.tauntY;
       ghost.aggroTime = ghost.aggroDuration;
     } else {
       targetPlayer = visibleAggroPlayerById(
         ghost.aggroTargetId,
-        ghost.mapId
+        ghost.mapId,
+        ghost.x,
+        ghost.y
       );
 
       if (targetPlayer) {
@@ -2941,7 +3099,10 @@ function tickSharedGhosts(dt) {
       targetY = null;
     }
 
-    if (
+    if (confused) {
+      moveX = 0;
+      moveY = 0;
+    } else if (
       ghost.aggroTime > 0 &&
       targetX !== null
     ) {
@@ -3004,12 +3165,14 @@ function tickSharedGhosts(dt) {
     ghost.knockbackX *= 0.82;
     ghost.knockbackY *= 0.82;
 
-    const contact = nearestVisiblePlayer(
-      ghost.mapId,
-      ghost.x,
-      ghost.y,
-      8.5
-    );
+    const contact = confused
+      ? null
+      : nearestVisiblePlayer(
+          ghost.mapId,
+          ghost.x,
+          ghost.y,
+          8.5
+        );
 
     if (
       contact &&
@@ -3077,9 +3240,16 @@ function tickSharedGoblins(dt) {
     tickEnemyBurn(goblin, dt);
     if (!goblin.alive) continue;
 
+    const confused =
+      tickEnemyConfusion(goblin, dt);
+
     goblin.moving = false;
 
-    if (goblin.lungeTime > 0) {
+    if (confused) {
+      goblin.lungeTime = 0;
+      goblin.lungeTargetId = null;
+      goblin.attackHit = false;
+    } else if (goblin.lungeTime > 0) {
       goblin.lungeTime -= dt;
       goblin.moving = true;
       goblin.walkTime += dt * 1.8;
@@ -3168,7 +3338,9 @@ function tickSharedGoblins(dt) {
       } else {
         targetPlayer = visibleAggroPlayerById(
           goblin.aggroTargetId,
-          goblin.mapId
+          goblin.mapId,
+          goblin.x,
+          goblin.y
         );
 
         if (targetPlayer) {
@@ -3461,7 +3633,7 @@ function validateSharedEnemyBowMeleeHit(
   enemy,
   payload
 ) {
-  if (playerState.weaponIndex !== 6) {
+  if (!isBowWeaponIndex(playerState.weaponIndex)) {
     return false;
   }
 
@@ -3641,7 +3813,7 @@ function handleSharedEnemyDamageAction(
       arrowChargeProfileFromPayload(payload);
 
     if (
-      playerState.weaponIndex !== 6 ||
+      !isBowWeaponIndex(playerState.weaponIndex) ||
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
@@ -3700,11 +3872,21 @@ function handleSharedEnemyDamageAction(
     enemy.hp - damage
   );
 
-  setEnemyAggroTarget(
-    enemy,
-    playerId,
-    enemy.aggroDuration
-  );
+  const camouflageConfused =
+    tryApplyCamouflageConfusion(
+      enemy,
+      playerState,
+      playerId,
+      payload
+    );
+
+  if (!camouflageConfused) {
+    setEnemyAggroTarget(
+      enemy,
+      playerId,
+      enemy.aggroDuration
+    );
+  }
   enemy.lastDamagePlayerId = playerId;
 
   if (source === "fireball") {
@@ -3980,6 +4162,8 @@ function makeServerSlime(spawn) {
     aggroTime: 0,
     aggroDuration: 4.5,
     aggroTargetId: null,
+    confusionTime: 0,
+    confusionTargetId: null,
 
     // Jester Blink decoy. While active, the clone position has priority over
     // real players.
@@ -4102,6 +4286,10 @@ function slimeSnapshot() {
     hp: slime.hp,
     maxHp: slime.maxHp,
     alive: slime.alive,
+    aggroTime: Number((slime.aggroTime || 0).toFixed(2)),
+    aggroTargetId: slime.aggroTargetId || null,
+    confusionTime: Number((slime.confusionTime || 0).toFixed(2)),
+    confusionTargetId: slime.confusionTargetId || null,
     burnTime: Number(slime.burnTime.toFixed(2)),
     respawnTime: Number(slime.respawnTime.toFixed(2)),
 
@@ -4246,6 +4434,15 @@ function nearestPlayerForSlime(slime) {
       playerState.y - slime.y
     );
 
+    if (playerState.camouflaged) {
+      if (distance > CAMOUFLAGE_CLOSE_REVEAL_DISTANCE) {
+        continue;
+      }
+
+      playerState.camouflaged = false;
+      playerState.camouflageReadyUntil = 0;
+    }
+
     if (distance < bestDistance) {
       best = playerState;
       bestDistance = distance;
@@ -4269,6 +4466,8 @@ function resetServerSlime(slime) {
 
   slime.aggroTime = 0;
   slime.aggroTargetId = null;
+  slime.confusionTime = 0;
+  slime.confusionTargetId = null;
 
   slime.tauntTime = 0;
   slime.tauntX = slime.homeX;
@@ -4303,11 +4502,13 @@ function killServerSlime(slime, killerId = null) {
 
   slime.hp = 0;
   slime.alive = false;
-  slime.respawnTime = 2.0;
+  slime.respawnTime = 30.0;
   slime.burnTime = 0;
   slime.burnTickTimer = 0;
   slime.knockbackX = 0;
   slime.knockbackY = 0;
+  slime.confusionTime = 0;
+  slime.confusionTargetId = null;
 
   slime.carriedBy = null;
   slime.pickupTime = 0;
@@ -5031,7 +5232,14 @@ function tickSharedSlimes(dt) {
       }
     }
 
-    if (slime.aggressiveOnSight && slime.tauntTime <= 0) {
+    const confused =
+      tickEnemyConfusion(slime, dt);
+
+    if (
+      !confused &&
+      slime.aggressiveOnSight &&
+      slime.tauntTime <= 0
+    ) {
       const nearest = nearestPlayerForSlime(slime);
 
       if (
@@ -5046,7 +5254,9 @@ function tickSharedSlimes(dt) {
       }
     }
 
-    tryServerSlimeContact(slime);
+    if (!confused) {
+      tryServerSlimeContact(slime);
+    }
 
     if (slime.aggroTime > 0) {
       slime.aggroTime = Math.max(
@@ -5087,6 +5297,10 @@ function tickSharedSlimes(dt) {
 
       slime.knockbackX *= 0.82;
       slime.knockbackY *= 0.82;
+    }
+
+    if (confused) {
+      continue;
     }
 
     const distanceFromHome = Math.hypot(
@@ -5133,7 +5347,9 @@ function tickSharedSlimes(dt) {
 
     let targetPlayer = visibleAggroPlayerById(
       slime.aggroTargetId,
-      slime.mapId
+      slime.mapId,
+      slime.x,
+      slime.y
     );
 
     if (!targetPlayer && slime.aggroTargetId) {
@@ -5296,7 +5512,7 @@ function validateBowMeleeSlimeHit(
   slime,
   payload
 ) {
-  if (playerState.weaponIndex !== 6) {
+  if (!isBowWeaponIndex(playerState.weaponIndex)) {
     return false;
   }
 
@@ -5414,7 +5630,7 @@ function handleSlimeDamageAction(playerId, slime, payload) {
       arrowChargeProfileFromPayload(payload);
 
     if (
-      playerState.weaponIndex !== 6 ||
+      !isBowWeaponIndex(playerState.weaponIndex) ||
       Math.hypot(
         slime.x - playerState.x,
         slime.y - playerState.y
@@ -5467,11 +5683,22 @@ function handleSlimeDamageAction(playerId, slime, payload) {
   }
 
   slime.hp = Math.max(0, slime.hp - damage);
-  setEnemyAggroTarget(
-    slime,
-    playerId,
-    slime.aggroDuration
-  );
+
+  const camouflageConfused =
+    tryApplyCamouflageConfusion(
+      slime,
+      playerState,
+      playerId,
+      payload
+    );
+
+  if (!camouflageConfused) {
+    setEnemyAggroTarget(
+      slime,
+      playerId,
+      slime.aggroDuration
+    );
+  }
   slime.lastDamagePlayerId = playerId;
 
   if (source === "fireball") {
@@ -5982,6 +6209,20 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     ? source.mapId
     : "spawn";
 
+  const camouflageRequested =
+    Boolean(source.camouflaged) &&
+    !playerIsTargetedByPveEnemy(id);
+
+  const camouflageReadyUntil =
+    camouflageRequested
+      // Long enough for a maximum-range committed arrow + ordinary latency
+      // to arrive after the client has already revealed itself on release.
+      ? Date.now() + 2500
+      : Math.max(
+          0,
+          Number(previous?.camouflageReadyUntil) || 0
+        );
+
   return {
     id,
     mapId,
@@ -6048,7 +6289,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     hatIndex: clampInteger(source.hatIndex, -1, 7, -1),
     shirtIndex: clampInteger(source.shirtIndex, -1, 4, -1),
     pantsIndex: clampInteger(source.pantsIndex, -1, 4, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 6, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 7, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -6132,6 +6373,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     focusFireCasting:
       Boolean(source.focusFireCasting),
+
+    camouflaged: camouflageRequested,
+    camouflageReadyUntil,
 
     shadowHidden: Boolean(source.shadowHidden),
     shadowHideRevealTime:
