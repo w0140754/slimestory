@@ -6,7 +6,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-78";
+const BUILD_VERSION = "6-11-61";
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
 const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
@@ -14,22 +14,6 @@ const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
 const ALLOWED_MAPS = new Set(
   Object.keys(WORLD_CONTENT.maps)
 );
-
-function mapWorldDimensions(mapId) {
-  const dimensions =
-    WORLD_CONTENT.maps[mapId]?.dimensions || null;
-
-  return {
-    width:
-      Number.isFinite(dimensions?.width)
-        ? dimensions.width
-        : 640,
-    height:
-      Number.isFinite(dimensions?.height)
-        ? dimensions.height
-        : 400
-  };
-}
 
 
 // -----------------------------------------------------------------------------
@@ -45,7 +29,6 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 30,
     coinDropChance: 0.45,
     hurlable: true,
-    snareable: true,
     rainEffect: "heal",
     patrolLeashRadius: 90,
     combatLeashRadius: 240,
@@ -70,7 +53,6 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 40,
     coinDropChance: 0.50,
     hurlable: true,
-    snareable: true,
     rainEffect: "heal",
     patrolLeashRadius: 120,
     combatLeashRadius: 260,
@@ -112,7 +94,6 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 50,
     coinDropChance: 0,
     hurlable: false,
-    snareable: false,
     rainEffect: "damage",
     patrolLeashRadius: 145,
     combatLeashRadius: 280,
@@ -128,16 +109,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     bodyOffsetY: -10,
     meleeBodyRadius: 12,
     fireSpreadChance: 0.42,
-    respawnSeconds: 300,
+    respawnSeconds: 90,
     coinDropChance: 1,
-    resourceDrops: Object.freeze([
-      Object.freeze({
-        kind: "goldSlimeBubble",
-        chance: 1
-      })
-    ]),
     hurlable: false,
-    snareable: true,
     rainEffect: "heal",
     patrolLeashRadius: 85,
     combatLeashRadius: 320,
@@ -197,90 +171,6 @@ function clearServerEnemyHurlState(enemy) {
   enemy.hurlVelocityX = 0;
   enemy.hurlVelocityY = 0;
   enemy.hurlThrownBy = null;
-}
-
-function ensureServerEnemySnareState(enemy) {
-  if (!enemy) return enemy;
-
-  enemy.snareRootTime = Math.max(
-    0,
-    Number(enemy.snareRootTime) || 0
-  );
-
-  enemy.snareSlowTime = Math.max(
-    0,
-    Number(enemy.snareSlowTime) || 0
-  );
-
-  enemy.snareSlowMultiplier = Math.max(
-    0.1,
-    Math.min(
-      1,
-      Number(enemy.snareSlowMultiplier) || 0.45
-    )
-  );
-
-  return enemy;
-}
-
-function clearServerEnemySnareState(enemy) {
-  if (!enemy) return;
-  ensureServerEnemySnareState(enemy);
-  enemy.snareRootTime = 0;
-  enemy.snareSlowTime = 0;
-}
-
-function serverEnemyIsSnareable(enemy) {
-  const profile = serverEnemyProfile(enemy);
-
-  return Boolean(
-    enemy &&
-    enemy.alive &&
-    !enemy.carriedBy &&
-    profile &&
-    (
-      typeof enemy.snareable === "boolean"
-        ? enemy.snareable
-        : profile.snareable !== false
-    )
-  );
-}
-
-function serverEnemyMovementMultiplier(enemy) {
-  ensureServerEnemySnareState(enemy);
-
-  if (enemy.snareRootTime > 0) return 0;
-  if (enemy.snareSlowTime > 0) {
-    return enemy.snareSlowMultiplier;
-  }
-
-  return 1;
-}
-
-function tickSharedEnemySnareStatuses(dt) {
-  for (const enemy of allSharedEnemies()) {
-    if (!enemy.alive) {
-      clearServerEnemySnareState(enemy);
-      continue;
-    }
-
-    ensureServerEnemySnareState(enemy);
-
-    if (enemy.snareRootTime > 0) {
-      enemy.snareRootTime = Math.max(
-        0,
-        enemy.snareRootTime - dt
-      );
-      continue;
-    }
-
-    if (enemy.snareSlowTime > 0) {
-      enemy.snareSlowTime = Math.max(
-        0,
-        enemy.snareSlowTime - dt
-      );
-    }
-  }
 }
 
 function serverEnemyIsHurlable(enemy) {
@@ -389,259 +279,6 @@ function validateWorldContent() {
 validateWorldContent();
 
 const players = new Map();
-
-const HUNTER_SNARE_TRIGGER_RADIUS = 9;
-const HUNTER_SNARE_ROOT_SECONDS = 0.65;
-const HUNTER_SNARE_SLOW_SECONDS = 3.0;
-const HUNTER_SNARE_SLOW_MULTIPLIER = 0.45;
-const HUNTER_SNARE_MAX_ACTIVE = 3;
-const HUNTER_SNARE_MAX_CHARGES = 3;
-const HUNTER_SNARE_CHARGE_SECONDS = 15.0;
-const hunterSnares = new Map();
-let nextHunterSnareId = 1;
-
-function hunterSnaresForOwner(ownerId) {
-  return [...hunterSnares.values()]
-    .filter(snare => snare.ownerId === ownerId)
-    .sort((a, b) => a.createdAt - b.createdAt);
-}
-
-function hunterSnareSnapshot() {
-  return [...hunterSnares.values()].map(snare => ({
-    id: snare.id,
-    ownerId: snare.ownerId,
-    mapId: snare.mapId,
-    x: snare.x,
-    y: snare.y
-  }));
-}
-
-function removeHunterSnare(snareId, reason = "removed") {
-  const snare = hunterSnares.get(snareId);
-  if (!snare) return null;
-
-  hunterSnares.delete(snareId);
-
-  broadcast({
-    type: "hunterSnareRemoved",
-    snareId,
-    ownerId: snare.ownerId,
-    mapId: snare.mapId,
-    reason
-  });
-
-  return snare;
-}
-
-function removeHunterSnaresForOwner(ownerId, mapId = null, reason = "ownerCleanup") {
-  for (const snare of [...hunterSnares.values()]) {
-    if (
-      snare.ownerId !== ownerId ||
-      (mapId && snare.mapId !== mapId)
-    ) {
-      continue;
-    }
-
-    removeHunterSnare(snare.id, reason);
-  }
-}
-
-function broadcastHunterSnareChargeState(playerId) {
-  const playerState = players.get(playerId);
-  if (!playerState) return;
-
-  broadcast({
-    type: "hunterSnareChargeState",
-    ownerId: playerId,
-    charges: Math.max(0, Math.floor(playerState.hunterSnareCharges || 0))
-  });
-}
-
-function tickHunterSnareCharges(dt) {
-  for (const [playerId, playerState] of players.entries()) {
-    const charges = Math.max(
-      0,
-      Math.min(
-        HUNTER_SNARE_MAX_CHARGES,
-        Math.floor(Number(playerState.hunterSnareCharges) || 0)
-      )
-    );
-
-    playerState.hunterSnareCharges = charges;
-
-    // A trap sitting in the world still occupies one of the hunter's three
-    // total trap slots. This prevents pre-placing three snares, waiting back
-    // to three charges, and effectively entering combat with six traps.
-    // Once a trap springs (or otherwise leaves the field), that slot becomes
-    // eligible to recharge.
-    const activeTrapCount = hunterSnaresForOwner(playerId).length;
-    const maxBankedCharges = Math.max(
-      0,
-      HUNTER_SNARE_MAX_CHARGES - activeTrapCount
-    );
-
-    if (charges >= maxBankedCharges) {
-      playerState.hunterSnareChargeTime = 0;
-      continue;
-    }
-
-    const rechargeMultiplier =
-      playerState.camouflaged ? 2 : 1;
-
-    playerState.hunterSnareChargeTime = Math.max(
-      0,
-      Number(playerState.hunterSnareChargeTime) || 0
-    ) + dt * rechargeMultiplier;
-
-    let changed = false;
-    while (
-      playerState.hunterSnareChargeTime >= HUNTER_SNARE_CHARGE_SECONDS &&
-      playerState.hunterSnareCharges < maxBankedCharges
-    ) {
-      playerState.hunterSnareChargeTime -= HUNTER_SNARE_CHARGE_SECONDS;
-      playerState.hunterSnareCharges += 1;
-      changed = true;
-    }
-
-    if (playerState.hunterSnareCharges >= maxBankedCharges) {
-      playerState.hunterSnareChargeTime = 0;
-    }
-
-    if (changed) {
-      broadcastHunterSnareChargeState(playerId);
-    }
-  }
-}
-
-function handleHunterSnarePlace(playerId, message) {
-  const playerState = players.get(playerId);
-  if (!playerState || playerState.hp <= 0) return;
-
-  if ((playerState.hunterSnareCharges || 0) <= 0) {
-    broadcast({
-      type: "hunterSnarePlaceRejected",
-      ownerId: playerId,
-      reason: "noCharges",
-      charges: 0
-    });
-    return;
-  }
-
-  const x = Number(message.x);
-  const y = Number(message.y);
-
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-
-  // The setup is performed by the owning client (2.5s normally, 1.25s while
-  // Camouflaged). The authoritative
-  // server still validates that the completed trap lands at the player's feet.
-  if (Math.hypot(x - playerState.x, y - playerState.y) > 14) {
-    return;
-  }
-
-  playerState.hunterSnareCharges = Math.max(
-    0,
-    Math.floor(playerState.hunterSnareCharges || 0) - 1
-  );
-
-  // A placed trap occupies its charge slot while it remains on the field.
-  // Recharge only becomes possible after a trap leaves the field.
-  if (!Number.isFinite(playerState.hunterSnareChargeTime)) {
-    playerState.hunterSnareChargeTime = 0;
-  }
-
-  broadcastHunterSnareChargeState(playerId);
-
-  const existing = hunterSnaresForOwner(playerId);
-
-  // A hunter may maintain three prepared traps. Setting a fourth retires the
-  // oldest one rather than rejecting a completed setup action.
-  if (existing.length >= HUNTER_SNARE_MAX_ACTIVE) {
-    removeHunterSnare(existing[0].id, "replacedOldest");
-  }
-
-  const snare = {
-    id: `snare:${nextHunterSnareId++}`,
-    ownerId: playerId,
-    mapId: playerState.mapId,
-    x: playerState.x,
-    y: playerState.y,
-    createdAt: Date.now()
-  };
-
-  hunterSnares.set(snare.id, snare);
-
-  broadcast({
-    type: "hunterSnarePlaced",
-    ...snare
-  });
-}
-
-function tickHunterSnares() {
-  for (const snare of [...hunterSnares.values()]) {
-    const owner = players.get(snare.ownerId);
-
-    if (
-      !owner ||
-      owner.mapId !== snare.mapId ||
-      owner.hp <= 0
-    ) {
-      removeHunterSnare(
-        snare.id,
-        "ownerUnavailable"
-      );
-      continue;
-    }
-
-    let triggeredEnemy = null;
-
-    for (const enemy of sharedEnemiesOnMap(snare.mapId)) {
-      if (!serverEnemyIsSnareable(enemy)) continue;
-      if (enemy.hurlTime > 0) continue;
-
-      ensureServerEnemySnareState(enemy);
-
-      const distance = Math.hypot(
-        enemy.x - snare.x,
-        enemy.y - snare.y
-      );
-
-      if (distance <= HUNTER_SNARE_TRIGGER_RADIUS) {
-        triggeredEnemy = enemy;
-        break;
-      }
-    }
-
-    if (!triggeredEnemy) continue;
-
-    ensureServerEnemySnareState(triggeredEnemy);
-    triggeredEnemy.snareRootTime =
-      HUNTER_SNARE_ROOT_SECONDS;
-    triggeredEnemy.snareSlowTime =
-      HUNTER_SNARE_SLOW_SECONDS;
-    triggeredEnemy.snareSlowMultiplier =
-      HUNTER_SNARE_SLOW_MULTIPLIER;
-
-    const removed = removeHunterSnare(
-      snare.id,
-      "triggered"
-    );
-
-    broadcast({
-      type: "hunterSnareTriggered",
-      snareId: snare.id,
-      ownerId: snare.ownerId,
-      mapId: snare.mapId,
-      x: removed?.x ?? snare.x,
-      y: removed?.y ?? snare.y,
-      enemyType: triggeredEnemy.type,
-      enemyId: triggeredEnemy.id,
-      rootSeconds: HUNTER_SNARE_ROOT_SECONDS,
-      slowSeconds: HUNTER_SNARE_SLOW_SECONDS,
-      slowMultiplier: HUNTER_SNARE_SLOW_MULTIPLIER
-    });
-  }
-}
 
 // PvP is deliberately opt-in. Both players must have it enabled before the
 // server will accept any player-vs-player attack. Once combat begins, both
@@ -996,7 +633,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "flower", "goldSlimeBubble"].includes(kind)) {
+  if (!["wood", "flower"].includes(kind)) {
     return null;
   }
 
@@ -1089,10 +726,8 @@ function handleResourcePickup(
 
   if (resource.kind === "wood") {
     playerState.wood += 1;
-  } else if (resource.kind === "flower") {
+  } else {
     playerState.flowers += 1;
-  } else if (resource.kind === "goldSlimeBubble") {
-    playerState.goldSlimeBubbles += 1;
   }
 
   broadcast({
@@ -1101,8 +736,7 @@ function handleResourcePickup(
     resourceKind: resource.kind,
     collectorId: playerId,
     totalWood: playerState.wood,
-    totalFlowers: playerState.flowers,
-    totalGoldSlimeBubbles: playerState.goldSlimeBubbles
+    totalFlowers: playerState.flowers
   });
 }
 
@@ -1118,26 +752,6 @@ const CRAFT_RECIPES = Object.freeze({
   woodBow: Object.freeze({
     cost: 5,
     stateKey: "woodBowCrafted",
-    repeatable: false
-  }),
-  shepherdStaff: Object.freeze({
-    cost: 5,
-    stateKey: "shepherdStaffCrafted",
-    repeatable: false
-  }),
-  woodHelm: Object.freeze({
-    cost: 3,
-    stateKey: "woodHelmCrafted",
-    repeatable: false
-  }),
-  woodChest: Object.freeze({
-    cost: 5,
-    stateKey: "woodChestCrafted",
-    repeatable: false
-  }),
-  woodGreaves: Object.freeze({
-    cost: 4,
-    stateKey: "woodGreavesCrafted",
     repeatable: false
   }),
   arrows: Object.freeze({
@@ -1909,7 +1523,7 @@ function handleEnvironmentAction(
   message
 ) {
   const playerState = players.get(playerId);
-  if (!playerState || playerState.hp <= 0) return;
+  if (!playerState) return;
 
   const action = String(message.action || "");
 
@@ -2396,18 +2010,12 @@ const worldEntitiesByType = new Map(
     enemyType,
     enemySpawnsOfType(enemyType)
       .map(spawn => {
-        const enemy = ensureServerEnemySnareState(
-          ensureServerEnemyHurlState(
-            factory(spawn)
-          )
+        const enemy = ensureServerEnemyHurlState(
+          factory(spawn)
         );
 
         if (typeof spawn.hurlable === "boolean") {
           enemy.hurlable = spawn.hurlable;
-        }
-
-        if (typeof spawn.snareable === "boolean") {
-          enemy.snareable = spawn.snareable;
         }
 
         return enemy;
@@ -2494,9 +2102,6 @@ function sharedEnemySnapshot(enemyType) {
     pickupDirY: Number((enemy.pickupDirY || 0).toFixed(3)),
     hurlTime: Number((enemy.hurlTime || 0).toFixed(3)),
     hurlDuration: enemy.hurlDuration || 0.58,
-    snareRootTime: Number((enemy.snareRootTime || 0).toFixed(3)),
-    snareSlowTime: Number((enemy.snareSlowTime || 0).toFixed(3)),
-    snareSlowMultiplier: Number((enemy.snareSlowMultiplier || 0.45).toFixed(3)),
 
     ...(
       serverEnemyProfile(enemyType)
@@ -2652,25 +2257,18 @@ function playerIsTargetedByPveEnemy(playerId) {
   return false;
 }
 
-function camouflageOpeningIsValid(
-  playerState,
-  payload = {}
-) {
-  return Boolean(
-    payload.camouflageOpening &&
-    playerState &&
-    Number.isFinite(playerState.camouflageReadyUntil) &&
-    playerState.camouflageReadyUntil >= Date.now()
-  );
-}
-
 function tryApplyCamouflageConfusion(
   enemy,
   playerState,
   playerId,
   payload = {}
 ) {
-  if (!camouflageOpeningIsValid(playerState, payload)) {
+  if (
+    !payload.camouflageOpening ||
+    !playerState ||
+    !Number.isFinite(playerState.camouflageReadyUntil) ||
+    playerState.camouflageReadyUntil < Date.now()
+  ) {
     return false;
   }
 
@@ -2842,14 +2440,11 @@ function moveServerGoblin(
   speed,
   dt
 ) {
-  const movementMultiplier =
-    serverEnemyMovementMultiplier(goblin);
-
   const nextX =
-    goblin.x + moveX * speed * movementMultiplier * dt;
+    goblin.x + moveX * speed * dt;
 
   const nextY =
-    goblin.y + moveY * speed * movementMultiplier * dt;
+    goblin.y + moveY * speed * dt;
 
   if (goblinPositionAllowed(goblin, nextX, goblin.y)) {
     goblin.x = nextX;
@@ -2996,39 +2591,6 @@ function rateLimitPlayerEvent(
   return false;
 }
 
-function handleAuthoritativePlayerDeath(target) {
-  if (!target || target.isDead) return;
-
-  target.isDead = true;
-  target.hp = 0;
-  target.burnTime = 0;
-  target.wetTime = 0;
-  target.shadowHidden = false;
-  target.camouflaged = false;
-  target.camouflageReadyUntil = 0;
-  target.focusFireCasting = false;
-  target.hunterSnareSetting = false;
-  target.attackTime = 0;
-  target.bowDrawing = false;
-  target.bowDrawAmount = 0;
-  target.bowReleaseTime = 0;
-  target.hurlReachTime = 0;
-
-  focusFireDamageChains.delete(target.id);
-
-  // Snares, clone/rain visuals, taunts, carried enemies, and enemy targeting
-  // all end the instant the authoritative HP reaches zero.
-  clearPlayerOwnedTransientWorldState(
-    target.id,
-    target.mapId
-  );
-
-  broadcastOwnerTransientCleanup(
-    target.id,
-    target.mapId
-  );
-}
-
 function applyServerPlayerDamage(
   target,
   {
@@ -3072,10 +2634,6 @@ function applyServerPlayerDamage(
   // the player immediately on the authoritative server as well as the client.
   target.camouflaged = false;
   target.camouflageReadyUntil = 0;
-
-  if (target.hp <= 0) {
-    handleAuthoritativePlayerDeath(target);
-  }
 
   broadcast({
     type: "playerDamage",
@@ -3561,23 +3119,24 @@ function handlePlayerRespawn(
   if (target.hp > 0) return;
 
   target.hp = target.maxHp;
-  target.isDead = false;
   target.mapId = "spawn";
 
-  // Respawn is server-authoritative and always returns to the safe clearing.
-  target.x = 320;
-  target.y = 200;
+  target.x = clampNumber(
+    message.x,
+    0,
+    640,
+    320
+  );
+
+  target.y = clampNumber(
+    message.y,
+    0,
+    400,
+    200
+  );
+
   target.burnTime = 0;
-  target.wetTime = 0;
   target.shadowHidden = false;
-  target.camouflaged = false;
-  target.camouflageReadyUntil = 0;
-  target.focusFireCasting = false;
-  target.hunterSnareSetting = false;
-  target.attackTime = 0;
-  target.bowDrawing = false;
-  target.bowDrawAmount = 0;
-  target.bowReleaseTime = 0;
 
   broadcast({
     type: "playerRespawn",
@@ -3664,7 +3223,6 @@ function killSharedEnemy(
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
   clearServerEnemyHurlState(enemy);
-  clearServerEnemySnareState(enemy);
   clearEnemyAggroTarget(enemy);
   enemy.confusionTime = 0;
   enemy.confusionTargetId = null;
@@ -3679,60 +3237,16 @@ function killSharedEnemy(
     profile.onKilled(enemy);
   }
 
-  const pendingDrops = [];
-
-  for (const drop of profile?.resourceDrops || []) {
-    if (
-      drop?.kind &&
-      Math.random() < Math.max(0, Math.min(1, Number(drop.chance) || 0))
-    ) {
-      pendingDrops.push({
-        kind: "resource",
-        resourceKind: drop.kind
-      });
-    }
-  }
-
   if (
     Math.random() <
     (profile?.coinDropChance || 0)
   ) {
-    pendingDrops.push({ kind: "coin" });
-  }
-
-  const dropCount = pendingDrops.length;
-  const dropRadius = dropCount > 1 ? 10 : 0;
-
-  pendingDrops.forEach((drop, index) => {
-    const angle =
-      dropCount === 2
-        ? index * Math.PI
-        : -Math.PI / 2 +
-          (Math.PI * 2 * index) /
-            Math.max(1, dropCount);
-
-    const dropX =
-      enemy.x + Math.cos(angle) * dropRadius;
-
-    const dropY =
-      enemy.y - 2 + Math.sin(angle) * dropRadius * 0.55;
-
-    if (drop.kind === "coin") {
-      spawnSharedCoin(
-        enemy.mapId,
-        dropX,
-        dropY
-      );
-      return;
-    }
-
-    spawnSharedResource(
+    spawnSharedCoin(
       enemy.mapId,
-      drop.resourceKind,
-      dropX,
-      dropY
+      enemy.x,
+      enemy.y - 2
     );
-  });
+  }
 
   broadcast({
     type: "enemyKilled",
@@ -3914,13 +3428,9 @@ function tickSharedGhosts(dt) {
       ghost.dir = moveX >= 0 ? 1 : -1;
     }
 
-    // Ghosts intentionally phase through terrain. Hunter's Snare defaults to
-    // ignoring ghosts, but the generic movement modifier keeps this path
-    // compatible with future floating enemies that may opt into snares.
-    const snareMoveMultiplier =
-      serverEnemyMovementMultiplier(ghost);
-    ghost.x += moveX * speed * snareMoveMultiplier * dt;
-    ghost.y += moveY * speed * snareMoveMultiplier * dt;
+    // Ghosts intentionally phase through terrain.
+    ghost.x += moveX * speed * dt;
+    ghost.y += moveY * speed * dt;
 
     ghost.x = Math.max(
       8,
@@ -4499,64 +4009,6 @@ function scaleArrowDamage(
   );
 }
 
-// Eleven uninterrupted Focus Fire hits total exactly 8.0 normal-arrow units.
-// A perfect regular bow fits four shots into the same five-second barrage
-// window, so a full Focus Fire channel is ~2x perfect regular-bow damage.
-// The final three arrows all land at 135%, but the climb into them is now
-// flatter so the barrage feels rewarding throughout instead of spiking only
-// at the very end.
-const FOCUS_FIRE_DAMAGE_CURVE = Object.freeze([
-  0.30, 0.34, 0.38, 0.42, 0.46,
-  0.55, 0.65, 0.85, 1.35, 1.35, 1.35
-]);
-const FOCUS_FIRE_CHAIN_WINDOW_MS = 1300;
-const focusFireDamageChains = new Map();
-
-function focusFireDamageMultiplier(
-  playerId,
-  enemy,
-  payload = {}
-) {
-  if (!payload.focusFire) {
-    focusFireDamageChains.delete(playerId);
-    return 1;
-  }
-
-  const sequence = clampInteger(
-    payload.focusFireShotSequence,
-    1,
-    32,
-    1
-  );
-
-  const now = Date.now();
-  const previous = focusFireDamageChains.get(playerId);
-  const consecutive = Boolean(
-    previous &&
-    previous.enemyId === enemy.id &&
-    sequence === previous.sequence + 1 &&
-    now - previous.hitAt <= FOCUS_FIRE_CHAIN_WINDOW_MS
-  );
-
-  const count = consecutive
-    ? previous.count + 1
-    : 1;
-
-  focusFireDamageChains.set(playerId, {
-    enemyId: enemy.id,
-    sequence,
-    count,
-    hitAt: now
-  });
-
-  const curveIndex = Math.max(
-    0,
-    Math.min(FOCUS_FIRE_DAMAGE_CURVE.length - 1, count - 1)
-  );
-
-  return FOCUS_FIRE_DAMAGE_CURVE[curveIndex];
-}
-
 function handleSharedEnemyDamageAction(
   playerId,
   enemy,
@@ -4581,18 +4033,6 @@ function handleSharedEnemyDamageAction(
   let knockback = 0;
   let minimumMs = 180;
 
-  // The prepared Camo opener is validated against server-held state. A client
-  // cannot manufacture repeat criticals just by setting camouflageOpening.
-  const camouflageCritical =
-    camouflageOpeningIsValid(
-      playerState,
-      payload
-    );
-
-  if (source !== "arrow") {
-    focusFireDamageChains.delete(playerId);
-  }
-
   if (source === "melee") {
     if (
       !validateSharedEnemyMeleeHit(
@@ -4607,8 +4047,7 @@ function handleSharedEnemyDamageAction(
     minimumMs = 260;
 
     critical =
-      Boolean(payload.critical) ||
-      camouflageCritical;
+      Boolean(payload.critical);
 
     damage =
       calculateServerPlayerDamage(
@@ -4632,9 +4071,7 @@ function handleSharedEnemyDamageAction(
     }
 
     minimumMs = 300;
-    critical =
-      Boolean(payload.critical) ||
-      camouflageCritical;
+    critical = Boolean(payload.critical);
 
     damage =
       calculateServerPlayerDamage(
@@ -4648,7 +4085,7 @@ function handleSharedEnemyDamageAction(
       serverEnemyProfile(enemy)?.damageKnockback?.bowMelee ?? 10;
   } else if (source === "basic") {
     if (
-      ![2, 3, 8].includes(playerState.weaponIndex) ||
+      ![2, 3].includes(playerState.weaponIndex) ||
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
@@ -4657,14 +4094,11 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    critical = camouflageCritical;
-
     damage =
       calculateServerPlayerDamage(
         playerState,
         enemy,
-        "basic",
-        critical
+        "basic"
       );
 
     knockback =
@@ -4683,28 +4117,13 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    critical = camouflageCritical;
-
-    const focusMultiplier =
-      focusFireDamageMultiplier(
-        playerId,
+    damage = scaleArrowDamage(
+      calculateServerPlayerDamage(
+        playerState,
         enemy,
-        payload
-      );
-
-    damage = Math.max(
-      1,
-      Math.round(
-        scaleArrowDamage(
-          calculateServerPlayerDamage(
-            playerState,
-            enemy,
-            "arrow",
-            critical
-          ),
-          payload
-        ) * focusMultiplier
-      )
+        "arrow"
+      ),
+      payload
     );
 
     knockback =
@@ -4719,14 +4138,11 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    critical = camouflageCritical;
-
     damage =
       calculateServerPlayerDamage(
         playerState,
         enemy,
-        "fireball",
-        critical
+        "fireball"
       );
 
     knockback =
@@ -4820,7 +4236,7 @@ function handleSharedEnemyAction(
   }
 
   const playerState = players.get(playerId);
-  if (!playerState || playerState.hp <= 0) return;
+  if (!playerState) return;
 
   const action = String(message.action || "");
 
@@ -5046,9 +4462,18 @@ const MEADOW_POND = {
 };
 
 function bigGoldSlimePositionAllowed(slime, x, y) {
-  // Gold Slime Den now has true map dimensions instead of an inset invisible
-  // leash. The elite can pursue anywhere the player can actually stand.
-  return mapPointAllowed(slime.mapId, x, y, 10);
+  if (!mapPointAllowed(slime.mapId, x, y, 10)) {
+    return false;
+  }
+
+  // Keep the elite inside the compact hunting clearing even though the world
+  // canvas itself is larger. The tree walls visually match these bounds.
+  return (
+    x >= 128 &&
+    x <= 512 &&
+    y >= 68 &&
+    y <= 350
+  );
 }
 
 function moveServerBigGoldSlime(
@@ -5058,10 +4483,8 @@ function moveServerBigGoldSlime(
   speed,
   dt
 ) {
-  const movementMultiplier =
-    serverEnemyMovementMultiplier(slime);
-  const nextX = slime.x + moveX * speed * movementMultiplier * dt;
-  const nextY = slime.y + moveY * speed * movementMultiplier * dt;
+  const nextX = slime.x + moveX * speed * dt;
+  const nextY = slime.y + moveY * speed * dt;
 
   if (
     bigGoldSlimePositionAllowed(
@@ -5328,9 +4751,12 @@ function tickSharedBigGoldSlimes(dt) {
       dx /= length;
       dy /= length;
 
-      // Lethal to a fresh LV1 / 50 HP player, but survivable later if the
-      // player has earned a larger health pool.
-      const damage = 50;
+      // Big Gold Slime contact is intentionally lethal. Use the target's
+      // remaining HP so this stays true even if player max HP changes later.
+      const damage = Math.max(
+        1,
+        Math.ceil(Number(contact.player.hp) || 1)
+      );
 
       setPlayerContactCooldown(
         contact.player.id,
@@ -5361,28 +4787,8 @@ function makeServerSlime(spawn) {
     wanderRadiusY = 18,
     level = 1,
     variant = "green",
-    aggressiveOnSight = false,
-    spawnOnlyWhileBigGoldDead = false
+    aggressiveOnSight = false
   } = spawn;
-
-  // Conditional respawning should not suppress the initial map population.
-  // Baby gold slimes begin alive; only later respawns pause while the boss is alive.
-  const startsDormant = false;
-
-  // Gold babies are den predators: unlike ordinary slimes they acquire nearby
-  // living players without waiting to be struck first.
-  const aggressiveByDefault =
-    Boolean(aggressiveOnSight) ||
-    variant === "goldBaby";
-
-  const maxHp =
-    variant === "purple"
-      ? 80
-      : variant === "blue"
-        ? 56
-        : variant === "goldBaby"
-          ? 64
-          : 40;
 
   return {
     id,
@@ -5390,8 +4796,7 @@ function makeServerSlime(spawn) {
     type: "slime",
     level,
     variant,
-    aggressiveOnSight: aggressiveByDefault,
-    spawnOnlyWhileBigGoldDead: Boolean(spawnOnlyWhileBigGoldDead),
+    aggressiveOnSight,
 
     x,
     y,
@@ -5401,8 +4806,8 @@ function makeServerSlime(spawn) {
     dir: 1,
     phase,
 
-    speed: variant === "goldBaby" ? 21 : 16,
-    chaseSpeed: variant === "goldBaby" ? 30 : 22,
+    speed: 16,
+    chaseSpeed: 22,
     patrolLeashRadius: 90,
     combatLeashRadius: 240,
 
@@ -5426,9 +4831,19 @@ function makeServerSlime(spawn) {
     wanderRadiusX,
     wanderRadiusY,
 
-    maxHp,
-    hp: startsDormant ? 0 : maxHp,
-    alive: !startsDormant,
+    maxHp:
+      variant === "purple"
+        ? 80
+        : variant === "blue"
+          ? 56
+          : 40,
+    hp:
+      variant === "purple"
+        ? 80
+        : variant === "blue"
+          ? 56
+          : 40,
+    alive: true,
     respawnTime: 0,
 
     burnTime: 0,
@@ -5495,14 +4910,11 @@ function mapPointAllowed(
   y,
   padding = 0
 ) {
-  const dimensions =
-    mapWorldDimensions(mapId);
-
   if (
     x < 10 ||
-    x > dimensions.width - 10 ||
+    x > 630 ||
     y < 18 ||
-    y > dimensions.height - 8
+    y > 392
   ) {
     return false;
   }
@@ -5543,10 +4955,8 @@ function slimePositionAllowed(
 }
 
 function moveServerSlime(slime, moveX, moveY, speed, dt) {
-  const movementMultiplier =
-    serverEnemyMovementMultiplier(slime);
-  const nextX = slime.x + moveX * speed * movementMultiplier * dt;
-  const nextY = slime.y + moveY * speed * movementMultiplier * dt;
+  const nextX = slime.x + moveX * speed * dt;
+  const nextY = slime.y + moveY * speed * dt;
 
   if (slimePositionAllowed(slime, nextX, slime.y)) {
     slime.x = nextX;
@@ -6034,11 +5444,9 @@ function tryServerSlimeContact(slime) {
   const damage =
     slime.variant === "purple"
       ? 8 + Math.floor(Math.random() * 3)
-      : slime.variant === "goldBaby"
-        ? 7 + Math.floor(Math.random() * 4)
-        : slime.variant === "blue"
-          ? 6 + Math.floor(Math.random() * 3)
-          : 4 + Math.floor(Math.random() * 4);
+      : slime.variant === "blue"
+        ? 6 + Math.floor(Math.random() * 3)
+        : 4 + Math.floor(Math.random() * 4);
 
   setPlayerContactCooldown(
     target.player.id,
@@ -6056,25 +5464,9 @@ function tryServerSlimeContact(slime) {
   );
 }
 
-function bigGoldSlimeAliveOnMap(mapId) {
-  return sharedBigGoldSlimes.some(bigGold =>
-    bigGold.mapId === mapId && bigGold.alive
-  );
-}
-
 function tickSharedSlimes(dt) {
   for (const slime of sharedSlimes) {
     if (!slime.alive) {
-      // Baby gold slimes only enter/re-enter the den during the long window
-      // where the Big Gold Slime is dead. Their timer freezes while the elite
-      // is alive, but any babies already alive are deliberately left alone.
-      if (
-        slime.spawnOnlyWhileBigGoldDead &&
-        bigGoldSlimeAliveOnMap(slime.mapId)
-      ) {
-        continue;
-      }
-
       slime.respawnTime -= dt;
 
       if (slime.respawnTime <= 0) {
@@ -6355,13 +5747,10 @@ setInterval(() => {
 
   previousSlimeTick = now;
 
-  tickSharedEnemySnareStatuses(dt);
-  tickHunterSnareCharges(dt);
   tickSharedSlimes(dt);
   tickSharedGoblins(dt);
   tickSharedGhosts(dt);
   tickSharedBigGoldSlimes(dt);
-  tickHunterSnares();
   tickSharedEnvironment(dt);
   tickSharedResources(dt);
   tickSharedCoins(dt);
@@ -6410,11 +5799,9 @@ function sanitizeVisualEffectPayload(
       projectileType:
         payload.projectileType === "rainWand"
           ? "rainWand"
-          : payload.projectileType === "shepherdStaff"
-            ? "shepherdStaff"
-            : payload.projectileType === "arrow"
-              ? "arrow"
-              : "wand",
+          : payload.projectileType === "arrow"
+            ? "arrow"
+            : "wand",
 
       x: sanitizeVisualPoint(payload.x),
       y: sanitizeVisualPoint(payload.y),
@@ -6473,11 +5860,9 @@ function sanitizeVisualEffectPayload(
       projectileType:
         payload.projectileType === "rainWand"
           ? "rainWand"
-          : payload.projectileType === "shepherdStaff"
-            ? "shepherdStaff"
-            : payload.projectileType === "arrow"
-              ? "arrow"
-              : "wand",
+          : payload.projectileType === "arrow"
+            ? "arrow"
+            : "wand",
 
       x: sanitizeVisualPoint(payload.x),
       y: sanitizeVisualPoint(payload.y)
@@ -6572,35 +5957,16 @@ function clearPlayerOwnedTransientWorldState(
   playerId,
   mapId = null
 ) {
-  removeHunterSnaresForOwner(
-    playerId,
-    mapId,
-    "ownerCleanup"
-  );
-
   for (const enemy of allSharedEnemies()) {
-    if (mapId && enemy.mapId !== mapId) {
+    if (
+      enemy.tauntOwnerId !== playerId ||
+      (mapId && enemy.mapId !== mapId)
+    ) {
       continue;
     }
 
-    // Death/map-leave makes the owner cease to exist as a combat target.
-    if (enemy.aggroTargetId === playerId) {
-      clearEnemyAggroTarget(enemy);
-    }
-
-    if (enemy.confusionTargetId === playerId) {
-      enemy.confusionTime = 0;
-      enemy.confusionTargetId = null;
-    }
-
-    if (enemy.tauntOwnerId === playerId) {
-      enemy.tauntTime = 0;
-      enemy.tauntOwnerId = null;
-    }
-
-    if (enemy.carriedBy === playerId) {
-      clearServerEnemyHurlState(enemy);
-    }
+    enemy.tauntTime = 0;
+    enemy.tauntOwnerId = null;
   }
 }
 
@@ -6629,7 +5995,7 @@ function handleVisualEffect(
   message
 ) {
   const playerState = players.get(playerId);
-  if (!playerState || playerState.hp <= 0) return;
+  if (!playerState) return;
 
   const effect = String(message.effect || "");
 
@@ -6669,23 +6035,11 @@ function handleVisualEffect(
 }
 
 function sanitizePlayerState(id, source = {}, previous = null) {
-  const requestedMapId = ALLOWED_MAPS.has(source.mapId)
+  const mapId = ALLOWED_MAPS.has(source.mapId)
     ? source.mapId
     : "spawn";
 
-  const authoritativeDead =
-    Boolean(previous && previous.hp <= 0);
-
-  // Dead players stay exactly where they fell until the client presses the
-  // explicit Respawn button. Their ordinary movement packets must not move
-  // them or transfer them through portals while dead.
-  const mapId =
-    authoritativeDead && previous?.mapId
-      ? previous.mapId
-      : requestedMapId;
-
   const camouflageRequested =
-    !authoritativeDead &&
     Boolean(source.camouflaged) &&
     !playerIsTargetedByPveEnemy(id);
 
@@ -6717,30 +6071,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.flowers
       : 0,
 
-    goldSlimeBubbles:
-      previous && Number.isFinite(previous.goldSlimeBubbles)
-        ? previous.goldSlimeBubbles
-        : 0,
-
     arrows: previous && Number.isFinite(previous.arrows)
       ? previous.arrows
       : 0,
-
-    hunterSnareCharges:
-      previous && Number.isFinite(previous.hunterSnareCharges)
-        ? Math.max(
-            0,
-            Math.min(
-              HUNTER_SNARE_MAX_CHARGES,
-              Math.floor(previous.hunterSnareCharges)
-            )
-          )
-        : HUNTER_SNARE_MAX_CHARGES,
-
-    hunterSnareChargeTime:
-      previous && Number.isFinite(previous.hunterSnareChargeTime)
-        ? Math.max(0, previous.hunterSnareChargeTime)
-        : 0,
 
     // Session-only first crafting progression. Wood is server-owned, so the
     // bench recipe must be validated/spent here rather than only on the client.
@@ -6752,26 +6085,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     woodBowCrafted:
       previous
         ? Boolean(previous.woodBowCrafted)
-        : false,
-
-    shepherdStaffCrafted:
-      previous
-        ? Boolean(previous.shepherdStaffCrafted)
-        : false,
-
-    woodHelmCrafted:
-      previous
-        ? Boolean(previous.woodHelmCrafted)
-        : false,
-
-    woodChestCrafted:
-      previous
-        ? Boolean(previous.woodChestCrafted)
-        : false,
-
-    woodGreavesCrafted:
-      previous
-        ? Boolean(previous.woodGreavesCrafted)
         : false,
 
     shopPurchases:
@@ -6788,8 +6101,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.hp
       : 50,
 
-    isDead: authoritativeDead,
-
     // PvP permission and combat-lock time are server-owned. Normal movement
     // packets cannot enable/disable PvP or clear an active lock.
     pvpEnabled:
@@ -6802,29 +6113,13 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? previous.pvpCombatUntil
         : 0,
 
-    x:
-      authoritativeDead && previous && Number.isFinite(previous.x)
-        ? previous.x
-        : clampNumber(
-            source.x,
-            0,
-            mapWorldDimensions(mapId).width,
-            mapWorldDimensions(mapId).width / 2
-          ),
-    y:
-      authoritativeDead && previous && Number.isFinite(previous.y)
-        ? previous.y
-        : clampNumber(
-            source.y,
-            0,
-            mapWorldDimensions(mapId).height,
-            mapWorldDimensions(mapId).height / 2
-          ),
+    x: clampNumber(source.x, 0, 640, 320),
+    y: clampNumber(source.y, 0, 400, 200),
 
-    hatIndex: clampInteger(source.hatIndex, -1, 8, -1),
-    shirtIndex: clampInteger(source.shirtIndex, -1, 5, -1),
-    pantsIndex: clampInteger(source.pantsIndex, -1, 5, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 8, -1),
+    hatIndex: clampInteger(source.hatIndex, -1, 7, -1),
+    shirtIndex: clampInteger(source.shirtIndex, -1, 4, -1),
+    pantsIndex: clampInteger(source.pantsIndex, -1, 4, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 7, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -6839,28 +6134,28 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       strength: clampInteger(
         source.stats?.strength,
         0,
-        10,
+        999,
         previous?.stats?.strength || 0
       ),
 
       dex: clampInteger(
         source.stats?.dex,
         0,
-        10,
+        999,
         previous?.stats?.dex || 0
       ),
 
       luck: clampInteger(
         source.stats?.luck,
         0,
-        10,
+        999,
         previous?.stats?.luck || 0
       ),
 
       int: clampInteger(
         source.stats?.int,
         0,
-        10,
+        999,
         previous?.stats?.int || 0
       )
     },
@@ -6911,13 +6206,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     camouflaged: camouflageRequested,
     camouflageReadyUntil,
-
-    hunterSnareSetting:
-      Boolean(source.hunterSnareSetting),
-    hunterSnareSetTime:
-      clampNumber(source.hunterSnareSetTime, 0, 3, 0),
-    hunterSnareSetDuration:
-      clampNumber(source.hunterSnareSetDuration, 0.5, 3, 2.5),
 
     shadowHidden: Boolean(source.shadowHidden),
     shadowHideRevealTime:
@@ -7113,9 +6401,7 @@ wss.on("connection", socket => {
     coins: initialState.coins,
     wood: initialState.wood,
     flowers: initialState.flowers,
-    goldSlimeBubbles: initialState.goldSlimeBubbles,
     arrows: initialState.arrows,
-    hunterSnareCharges: initialState.hunterSnareCharges,
     hp: initialState.hp,
     maxHp: initialState.maxHp,
     pvpEnabled: initialState.pvpEnabled,
@@ -7138,11 +6424,6 @@ wss.on("connection", socket => {
       enemies: sharedEnemySnapshot(enemyType)
     });
   }
-
-  sendJson(socket, {
-    type: "hunterSnareSnapshot",
-    snares: hunterSnareSnapshot()
-  });
 
   sendJson(socket, {
     type: "coinSnapshot",
@@ -7223,11 +6504,6 @@ wss.on("connection", socket => {
 
     if (message.type === "enemyAction") {
       handleSharedEnemyAction(id, message);
-      return;
-    }
-
-    if (message.type === "hunterSnarePlace") {
-      handleHunterSnarePlace(id, message);
       return;
     }
 
@@ -7333,8 +6609,6 @@ wss.on("connection", socket => {
   });
 
   socket.on("close", () => {
-    focusFireDamageChains.delete(id);
-
     const previousState =
       players.get(id);
 

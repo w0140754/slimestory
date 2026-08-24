@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 4;
+    const VERSION = 5;
 
     const LEVEL_GAP_PENALTY_PER_LEVEL = 0.07;
     const MIN_LEVEL_MULTIPLIER = 0.45;
@@ -97,6 +97,16 @@
         strengthScale: 0.15,
         dexScale: 0.85,
         intScale: 0
+      }),
+
+      Object.freeze({
+        id: "weapon_shepherdStaff",
+        name: "Shepherd Staff",
+        power: 8,
+        damageType: "magic",
+        strengthScale: 0,
+        dexScale: 0,
+        intScale: 0.70
       })
     ]);
 
@@ -141,6 +151,12 @@
 
         // Elemental / magical attacks are the intended answer.
         magicMultiplier: 1.15
+      }),
+
+      bigGoldSlime: Object.freeze({
+        level: 4,
+        physicalMultiplier: 1,
+        magicMultiplier: 1
       })
     });
 

@@ -32,8 +32,8 @@
             id: "meadow:slime:1",
             type: "slime",
             level: 1,
-            x: 265,
-            y: 228,
+            x: 235,
+            y: 245,
             phase: 0.0
           },
           {
@@ -132,7 +132,7 @@
             type: "slime",
             level: 1,
             x: 330,
-            y: 172,
+            y: 145,
             phase: 1.3,
             wanderRadiusX: 24,
             wanderRadiusY: 17
@@ -152,8 +152,8 @@
         collision: {
           waterRects: [
             {
-              x: 300,
-              y: 258,
+              x: 260,
+              y: 171,
               width: 120,
               height: 58
             }
@@ -266,6 +266,94 @@
         }
       },
 
+      goldSlimeDen: {
+        dimensions: {
+          width: 520,
+          height: 330
+        },
+
+        enemySpawns: [
+          {
+            id: "goldSlimeDen:bigGoldSlime:1",
+            type: "bigGoldSlime",
+            level: 4,
+            x: 260,
+            y: 184,
+            phase: 0.8,
+            hurlable: false
+          },
+          {
+            id: "goldSlimeDen:slime:goldBaby:1",
+            type: "slime",
+            variant: "goldBaby",
+            aggressiveOnSight: true,
+            level: 3,
+            x: 160,
+            y: 142,
+            phase: 0.3,
+            wanderRadiusX: 24,
+            wanderRadiusY: 18,
+            spawnOnlyWhileBigGoldDead: true
+          },
+          {
+            id: "goldSlimeDen:slime:goldBaby:2",
+            type: "slime",
+            variant: "goldBaby",
+            aggressiveOnSight: true,
+            level: 3,
+            x: 360,
+            y: 142,
+            phase: 1.6,
+            wanderRadiusX: 24,
+            wanderRadiusY: 18,
+            spawnOnlyWhileBigGoldDead: true
+          },
+          {
+            id: "goldSlimeDen:slime:goldBaby:3",
+            type: "slime",
+            variant: "goldBaby",
+            aggressiveOnSight: true,
+            level: 3,
+            x: 132,
+            y: 218,
+            phase: 2.8,
+            wanderRadiusX: 22,
+            wanderRadiusY: 16,
+            spawnOnlyWhileBigGoldDead: true
+          },
+          {
+            id: "goldSlimeDen:slime:goldBaby:4",
+            type: "slime",
+            variant: "goldBaby",
+            aggressiveOnSight: true,
+            level: 3,
+            x: 388,
+            y: 218,
+            phase: 4.1,
+            wanderRadiusX: 22,
+            wanderRadiusY: 16,
+            spawnOnlyWhileBigGoldDead: true
+          },
+          {
+            id: "goldSlimeDen:slime:goldBaby:5",
+            type: "slime",
+            variant: "goldBaby",
+            aggressiveOnSight: true,
+            level: 3,
+            x: 260,
+            y: 270,
+            phase: 5.2,
+            wanderRadiusX: 26,
+            wanderRadiusY: 16,
+            spawnOnlyWhileBigGoldDead: true
+          }
+        ],
+
+        collision: {
+          waterRects: []
+        }
+      },
+
       goblinWoods: {
         enemySpawns: [
           {
@@ -291,6 +379,54 @@
             x: 500,
             y: 300,
             phase: 4.1
+          },
+          {
+            id: "goblinWoods:goblin:4",
+            type: "goblin",
+            level: 3,
+            x: 320,
+            y: 128,
+            phase: 0.9
+          },
+          {
+            id: "goblinWoods:goblin:5",
+            type: "goblin",
+            level: 3,
+            x: 365,
+            y: 145,
+            phase: 1.6
+          },
+          {
+            id: "goblinWoods:goblin:6",
+            type: "goblin",
+            level: 3,
+            x: 455,
+            y: 170,
+            phase: 2.4
+          },
+          {
+            id: "goblinWoods:goblin:7",
+            type: "goblin",
+            level: 3,
+            x: 285,
+            y: 265,
+            phase: 3.2
+          },
+          {
+            id: "goblinWoods:goblin:8",
+            type: "goblin",
+            level: 3,
+            x: 365,
+            y: 290,
+            phase: 4.7
+          },
+          {
+            id: "goblinWoods:goblin:9",
+            type: "goblin",
+            level: 3,
+            x: 465,
+            y: 255,
+            phase: 5.5
           }
         ],
 
@@ -329,7 +465,7 @@
       // Bump this whenever shared map/enemy placement changes. The browser
       // loads this file with the matching version in its URL so an old cached
       // registry cannot disagree with the running Node server.
-      version: 5,
+      version: 10,
       maps
     });
   }
