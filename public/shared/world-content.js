@@ -20,6 +20,10 @@
     // the enemy networking layer does not need another map-specific handler.
     const maps = {
       spawn: {
+        dimensions: {
+          width: 344,
+          height: 224
+        },
         enemySpawns: [],
         collision: {
           waterRects: []
@@ -465,7 +469,7 @@
       // Bump this whenever shared map/enemy placement changes. The browser
       // loads this file with the matching version in its URL so an old cached
       // registry cannot disagree with the running Node server.
-      version: 10,
+      version: 11,
       maps
     });
   }

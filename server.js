@@ -6,7 +6,8 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-78";
+const BUILD_VERSION = "6-11-122";
+const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
 const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
@@ -46,7 +47,7 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     coinDropChance: 0.45,
     hurlable: true,
     snareable: true,
-    rainEffect: "heal",
+    rainEffect: "none",
     patrolLeashRadius: 90,
     combatLeashRadius: 240,
     damageKnockback: Object.freeze({
@@ -71,7 +72,7 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     coinDropChance: 0.50,
     hurlable: true,
     snareable: true,
-    rainEffect: "heal",
+    rainEffect: "none",
     patrolLeashRadius: 120,
     combatLeashRadius: 260,
     damageKnockback: Object.freeze({
@@ -138,7 +139,7 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     ]),
     hurlable: false,
     snareable: true,
-    rainEffect: "heal",
+    rainEffect: "none",
     patrolLeashRadius: 85,
     combatLeashRadius: 320,
     damageKnockback: Object.freeze({
@@ -161,6 +162,141 @@ function serverEnemyProfile(enemyOrType) {
     SERVER_ENEMY_RUNTIME_PROFILES[type] ||
     null
   );
+}
+
+// -----------------------------------------------------------------------------
+// SHARED STATUS EFFECTS
+// -----------------------------------------------------------------------------
+// Burn/Wet used to be written directly from several combat/environment paths.
+// Keep the rules here so Fireball, rain, environmental fire, and future status
+// skills all agree on duration, extinguishing, source attribution, and movement.
+const STATUS_RULES = Object.freeze({
+  enemyBurnDuration: 3.0,
+  enemyWetDuration: 3.0,
+  enemyWetSpeedMultiplier: 0.75,
+  playerBurnDuration: 5.0,
+  playerWetDuration: 3.0
+});
+
+function ensureServerEnemyStatusState(enemy) {
+  if (!enemy) return enemy;
+
+  enemy.burnTime = Math.max(0, Number(enemy.burnTime) || 0);
+  enemy.burnTickTimer = Math.max(0, Number(enemy.burnTickTimer) || 0);
+  enemy.burnTickInterval = Math.max(0.05, Number(enemy.burnTickInterval) || 0.5);
+  enemy.wetTime = Math.max(0, Number(enemy.wetTime) || 0);
+  enemy.wetDuration = Math.max(0.1, Number(enemy.wetDuration) || STATUS_RULES.enemyWetDuration);
+
+  return enemy;
+}
+
+function serverEnemyIsWet(enemy) {
+  ensureServerEnemyStatusState(enemy);
+  return enemy.wetTime > 0;
+}
+
+function clearServerEnemyBurn(enemy) {
+  if (!enemy) return false;
+  ensureServerEnemyStatusState(enemy);
+
+  const changed = enemy.burnTime > 0 || enemy.burnTickTimer > 0;
+  enemy.burnTime = 0;
+  enemy.burnTickTimer = 0;
+  return changed;
+}
+
+function applyServerEnemyWet(enemy, duration = STATUS_RULES.enemyWetDuration) {
+  if (!enemy?.alive) return false;
+  ensureServerEnemyStatusState(enemy);
+
+  clearServerEnemyBurn(enemy);
+  enemy.wetTime = Math.max(
+    enemy.wetTime,
+    Math.max(0.1, Number(duration) || STATUS_RULES.enemyWetDuration)
+  );
+  return true;
+}
+
+function applyServerEnemyBurn(
+  enemy,
+  {
+    duration = STATUS_RULES.enemyBurnDuration,
+    sourcePlayerId = null,
+    forceThroughWet = false,
+    refresh = true
+  } = {}
+) {
+  if (!enemy?.alive) return false;
+  ensureServerEnemyStatusState(enemy);
+
+  if (serverEnemyIsWet(enemy) && !forceThroughWet) {
+    return false;
+  }
+
+  if (forceThroughWet) {
+    enemy.wetTime = 0;
+  }
+
+  const burnDuration = Math.max(0.1, Number(duration) || STATUS_RULES.enemyBurnDuration);
+  enemy.burnTime = refresh
+    ? Math.max(enemy.burnTime, burnDuration)
+    : burnDuration;
+  enemy.burnTickTimer = enemy.burnTickInterval;
+
+  if (sourcePlayerId && players.has(sourcePlayerId)) {
+    setEnemyAggroTarget(enemy, sourcePlayerId, enemy.aggroDuration);
+    enemy.lastDamagePlayerId = sourcePlayerId;
+  }
+
+  return true;
+}
+
+function clearServerPlayerBurn(target) {
+  if (!target) return false;
+  const changed = (Number(target.burnTime) || 0) > 0;
+  target.burnTime = 0;
+  return changed;
+}
+
+function applyServerPlayerWet(target, duration = STATUS_RULES.playerWetDuration) {
+  if (!target || target.hp <= 0) return false;
+  clearServerPlayerBurn(target);
+  target.wetTime = Math.max(
+    Number(target.wetTime) || 0,
+    Math.max(0.1, Number(duration) || STATUS_RULES.playerWetDuration)
+  );
+  return true;
+}
+
+function applyServerPlayerBurn(
+  target,
+  {
+    duration = STATUS_RULES.playerBurnDuration,
+    forceThroughWet = false
+  } = {}
+) {
+  if (!target || target.hp <= 0) return false;
+
+  if ((Number(target.wetTime) || 0) > 0 && !forceThroughWet) {
+    return false;
+  }
+
+  if (forceThroughWet) {
+    target.wetTime = 0;
+  }
+
+  target.burnTime = Math.max(
+    Number(target.burnTime) || 0,
+    Math.max(0.1, Number(duration) || STATUS_RULES.playerBurnDuration)
+  );
+  return true;
+}
+
+function clearServerEnemyStatuses(enemy) {
+  if (!enemy) return;
+  ensureServerEnemyStatusState(enemy);
+  clearServerEnemyBurn(enemy);
+  enemy.wetTime = 0;
 }
 
 function ensureServerEnemyHurlState(enemy) {
@@ -212,6 +348,11 @@ function ensureServerEnemySnareState(enemy) {
     Number(enemy.snareSlowTime) || 0
   );
 
+  enemy.magicGrassSlowTime = Math.max(
+    0,
+    Number(enemy.magicGrassSlowTime) || 0
+  );
+
   enemy.snareSlowMultiplier = Math.max(
     0.1,
     Math.min(
@@ -248,13 +389,22 @@ function serverEnemyIsSnareable(enemy) {
 
 function serverEnemyMovementMultiplier(enemy) {
   ensureServerEnemySnareState(enemy);
+  ensureServerEnemyStatusState(enemy);
 
   if (enemy.snareRootTime > 0) return 0;
+
+  let multiplier = 1;
   if (enemy.snareSlowTime > 0) {
-    return enemy.snareSlowMultiplier;
+    multiplier = Math.min(multiplier, enemy.snareSlowMultiplier);
+  }
+  if (enemy.magicGrassSlowTime > 0) {
+    multiplier = Math.min(multiplier, 0.80);
+  }
+  if (enemy.wetTime > 0) {
+    multiplier = Math.min(multiplier, STATUS_RULES.enemyWetSpeedMultiplier);
   }
 
-  return 1;
+  return multiplier;
 }
 
 function tickSharedEnemySnareStatuses(dt) {
@@ -265,6 +415,13 @@ function tickSharedEnemySnareStatuses(dt) {
     }
 
     ensureServerEnemySnareState(enemy);
+
+    if (enemy.magicGrassSlowTime > 0) {
+      enemy.magicGrassSlowTime = Math.max(
+        0,
+        enemy.magicGrassSlowTime - dt
+      );
+    }
 
     if (enemy.snareRootTime > 0) {
       enemy.snareRootTime = Math.max(
@@ -1106,8 +1263,8 @@ function handleResourcePickup(
   });
 }
 
-const FIRST_BENCH_X = 376;
-const FIRST_BENCH_Y = 201;
+const FIRST_BENCH_X = 216;
+const FIRST_BENCH_Y = 101;
 
 const CRAFT_RECIPES = Object.freeze({
   woodSword: Object.freeze({
@@ -1257,8 +1414,8 @@ function handleArrowUse(playerId, socket) {
   });
 }
 
-const FIRST_NPC_X = 350;
-const FIRST_NPC_Y = 200;
+const FIRST_NPC_X = 190;
+const FIRST_NPC_Y = 100;
 const SHOP_PRICE = 1;
 
 const SHOP_ITEM_IDS = new Set([
@@ -1474,7 +1631,7 @@ function environmentMeleeValid(
   );
 }
 
-function igniteEnvironmentEntity(entity) {
+function igniteEnvironmentEntity(entity, sourcePlayerId = null) {
   if (!entity) return false;
 
   if (entity.kind === "tree") {
@@ -1489,6 +1646,7 @@ function igniteEnvironmentEntity(entity) {
 
     entity.canopyBurnTime =
       entity.canopyBurnDuration;
+    entity.burnSourcePlayerId = sourcePlayerId || entity.burnSourcePlayerId || null;
 
     markEnvironmentDirty(entity);
     return true;
@@ -1504,6 +1662,7 @@ function igniteEnvironmentEntity(entity) {
 
   entity.burnTime =
     entity.burnDuration;
+  entity.burnSourcePlayerId = sourcePlayerId || entity.burnSourcePlayerId || null;
 
   if (entity.kind === "flower") {
     // Fire-destroyed flowers never produce loot.
@@ -1523,6 +1682,7 @@ function extinguishEnvironmentEntity(entity) {
     }
 
     entity.canopyBurnTime = 0;
+    entity.burnSourcePlayerId = null;
     markEnvironmentDirty(entity);
     return true;
   }
@@ -1532,6 +1692,7 @@ function extinguishEnvironmentEntity(entity) {
   }
 
   entity.burnTime = 0;
+  entity.burnSourcePlayerId = null;
   markEnvironmentDirty(entity);
   return true;
 }
@@ -1567,7 +1728,8 @@ function igniteEnvironmentNear(
   mapId,
   x,
   y,
-  radius
+  radius,
+  sourcePlayerId = null
 ) {
   let changed = false;
 
@@ -1589,7 +1751,7 @@ function igniteEnvironmentNear(
         (radius + 13) * (radius + 13)
       ) {
         changed =
-          igniteEnvironmentEntity(entity) ||
+          igniteEnvironmentEntity(entity, sourcePlayerId) ||
           changed;
       }
 
@@ -1609,7 +1771,7 @@ function igniteEnvironmentNear(
       radius * radius
     ) {
       changed =
-        igniteEnvironmentEntity(entity) ||
+        igniteEnvironmentEntity(entity, sourcePlayerId) ||
         changed;
     }
   }
@@ -1665,39 +1827,38 @@ function igniteServerLivingNear(
   mapId,
   x,
   y,
-  radius
+  radius,
+  sourcePlayerId = null
 ) {
   for (
     const enemy
     of sharedEnemiesOnMap(mapId)
   ) {
-    if (
-      !enemy.alive ||
-      enemy.burnTime > 0
-    ) {
-      continue;
-    }
+    if (!enemy.alive) continue;
 
-    const body =
-      serverEnemyBodyPoint(enemy);
+    const body = serverEnemyBodyPoint(enemy);
 
     if (
       Math.hypot(
         body.x - x,
         body.y - y
-      ) <= radius
+      ) > radius
     ) {
-      enemy.burnTime = 3.0;
-      enemy.burnTickTimer =
-        enemy.burnTickInterval;
+      continue;
     }
+
+    // Wet enemies resist ordinary environmental ignition. If they do catch,
+    // keep the original player attribution attached to the whole fire chain.
+    applyServerEnemyBurn(enemy, {
+      sourcePlayerId,
+      duration: STATUS_RULES.enemyBurnDuration
+    });
   }
 
   for (const playerState of players.values()) {
     if (
       playerState.mapId !== mapId ||
       playerState.hp <= 0 ||
-      playerState.wetTime > 0 ||
       playerState.burnTime > 0
     ) {
       continue;
@@ -1712,13 +1873,15 @@ function igniteServerLivingNear(
       continue;
     }
 
-    playerState.burnTime = 5.0;
+    if (!applyServerPlayerBurn(playerState)) {
+      continue;
+    }
 
     broadcast({
       type: "playerIgnited",
       targetId: playerState.id,
       mapId,
-      burnTime: 5.0
+      burnTime: playerState.burnTime
     });
   }
 }
@@ -1738,6 +1901,7 @@ function spreadSharedEnvironmentFire() {
 
     sources.push({
       mapId: entity.mapId,
+      sourcePlayerId: entity.burnSourcePlayerId || null,
       ...environmentEntityFirePoint(entity)
     });
   }
@@ -1752,6 +1916,7 @@ function spreadSharedEnvironmentFire() {
 
     sources.push({
       mapId: enemy.mapId,
+      sourcePlayerId: enemy.lastDamagePlayerId || enemy.aggroTargetId || null,
       x: body.x,
       y: body.y,
       radius: 13,
@@ -1764,6 +1929,7 @@ function spreadSharedEnvironmentFire() {
     if (playerState.burnTime > 0) {
       sources.push({
         mapId: playerState.mapId,
+        sourcePlayerId: playerState.id,
         x: playerState.x,
         y: playerState.y - 8,
         radius: 13,
@@ -1782,7 +1948,8 @@ function spreadSharedEnvironmentFire() {
       source.mapId,
       source.x,
       source.y,
-      source.radius
+      source.radius,
+      source.sourcePlayerId || null
     );
 
     igniteServerLivingNear(
@@ -1792,7 +1959,8 @@ function spreadSharedEnvironmentFire() {
       Math.max(
         11,
         source.radius - 1
-      )
+      ),
+      source.sourcePlayerId || null
     );
   }
 }
@@ -1845,6 +2013,7 @@ function tickSharedEnvironment(dt) {
 
       if (entity.canopyBurnTime <= 0) {
         entity.canopyBurnTime = 0;
+        entity.burnSourcePlayerId = null;
         entity.canopyBurned = true;
         scheduleTreeRegrow(entity);
         markEnvironmentDirty(entity);
@@ -1860,6 +2029,7 @@ function tickSharedEnvironment(dt) {
 
       if (entity.burnTime <= 0) {
         entity.burnTime = 0;
+        entity.burnSourcePlayerId = null;
         entity.cut = true;
         entity.burnt = true;
 
@@ -1963,7 +2133,8 @@ function handleEnvironmentAction(
         playerState.mapId,
         x,
         y,
-        radius
+        radius,
+        playerId
       );
     } else {
       extinguishEnvironmentNear(
@@ -2471,7 +2642,10 @@ function sharedEnemySnapshot(enemyType) {
   const collection =
     sharedEnemyCollections[enemyType] || [];
 
-  return collection.map(enemy => ({
+  return collection.map(enemy => {
+    ensureServerEnemyStatusState(enemy);
+
+    return ({
     id: enemy.id,
     mapId: enemy.mapId,
     x: Number(enemy.x.toFixed(2)),
@@ -2498,12 +2672,16 @@ function sharedEnemySnapshot(enemyType) {
     snareSlowTime: Number((enemy.snareSlowTime || 0).toFixed(3)),
     snareSlowMultiplier: Number((enemy.snareSlowMultiplier || 0.45).toFixed(3)),
 
+    wetTime: Number((enemy.wetTime || 0).toFixed(2)),
+    wetDuration: Number((enemy.wetDuration || STATUS_RULES.enemyWetDuration).toFixed(2)),
+
     ...(
       serverEnemyProfile(enemyType)
         ?.snapshotExtra?.(enemy) ||
       {}
     )
-  }));
+  });
+  });
 }
 
 function broadcastSharedEnemySnapshots() {
@@ -3001,7 +3179,7 @@ function handleAuthoritativePlayerDeath(target) {
 
   target.isDead = true;
   target.hp = 0;
-  target.burnTime = 0;
+  clearServerPlayerBurn(target);
   target.wetTime = 0;
   target.shadowHidden = false;
   target.camouflaged = false;
@@ -3092,6 +3270,48 @@ function applyServerPlayerDamage(
   });
 
   return actualDamage;
+}
+
+function handlePlayerIgniteRequest(playerId, message) {
+  const requester = players.get(playerId);
+  if (!requester || requester.hp <= 0) return;
+
+  const targetId = String(message?.targetId || playerId);
+  const target = players.get(targetId);
+
+  if (
+    !target ||
+    target.hp <= 0 ||
+    target.mapId !== requester.mapId
+  ) {
+    return;
+  }
+
+  // Temporary rain-grass is client-generated, so the server cannot validate a
+  // specific tuft. Keep the request bounded to nearby players on the same map.
+  if (
+    targetId !== playerId &&
+    Math.hypot(target.x - requester.x, target.y - requester.y) > 220
+  ) {
+    return;
+  }
+
+  // Burning magic grass obeys the same Wet protection rule as other fire.
+  // If Wet blocks the ignition, do not emit an ignition event at all.
+  const ignited = applyServerPlayerBurn(target, {
+    duration: STATUS_RULES.playerBurnDuration
+  });
+
+  if (!ignited) {
+    return;
+  }
+
+  broadcast({
+    type: "playerIgnited",
+    targetId: target.id,
+    mapId: target.mapId,
+    burnTime: target.burnTime
+  });
 }
 
 function applyServerPlayerHeal(
@@ -3353,8 +3573,8 @@ function handlePvpAttack(
   let arrowCharge = null;
 
   if (source === "melee") {
-    // Wood Sword, Axe, Katana, and Sword all use the existing melee path.
-    if (![0, 1, 4, 5].includes(attacker.weaponIndex)) {
+    // Melee weapons plus unmastered wand-type weapons use this path.
+    if (![0, 1, 2, 3, 4, 5, 8].includes(attacker.weaponIndex)) {
       return;
     }
 
@@ -3372,6 +3592,21 @@ function handlePvpAttack(
     minimumMs = 260;
     knockback =
       attacker.weaponIndex === 1 ? 18 : 15;
+  } else if (source === "wandMasteryMelee") {
+    if (![2, 3, 8].includes(attacker.weaponIndex)) {
+      return;
+    }
+
+    valid = pvpAimHitsTarget(
+      attacker,
+      target,
+      payload.aimAngle,
+      46,
+      0.54
+    );
+
+    minimumMs = 260;
+    knockback = 15;
   } else if (source === "bowMelee") {
     if (!isBowWeaponIndex(attacker.weaponIndex)) {
       return;
@@ -3565,8 +3800,8 @@ function handlePlayerRespawn(
   target.mapId = "spawn";
 
   // Respawn is server-authoritative and always returns to the safe clearing.
-  target.x = 320;
-  target.y = 200;
+  target.x = 172;
+  target.y = 112;
   target.burnTime = 0;
   target.wetTime = 0;
   target.shadowHidden = false;
@@ -3602,8 +3837,19 @@ function setPlayerContactCooldown(
   );
 }
 
-function tickEnemyBurn(enemy, dt) {
-  if (enemy.burnTime <= 0 || !enemy.alive) {
+function tickEnemyStatuses(enemy, dt) {
+  ensureServerEnemyStatusState(enemy);
+
+  if (!enemy.alive) {
+    clearServerEnemyStatuses(enemy);
+    return;
+  }
+
+  if (enemy.wetTime > 0) {
+    enemy.wetTime = Math.max(0, enemy.wetTime - dt);
+  }
+
+  if (enemy.burnTime <= 0) {
     return;
   }
 
@@ -3659,8 +3905,7 @@ function killSharedEnemy(
 
   enemy.hp = 0;
   enemy.alive = false;
-  enemy.burnTime = 0;
-  enemy.burnTickTimer = 0;
+  clearServerEnemyStatuses(enemy);
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
   clearServerEnemyHurlState(enemy);
@@ -3757,13 +4002,14 @@ function tickSharedGhosts(dt) {
       continue;
     }
 
-    tickEnemyBurn(ghost, dt);
+    tickEnemyStatuses(ghost, dt);
     if (!ghost.alive) continue;
 
     ghost.tauntTime = Math.max(
       0,
       ghost.tauntTime - dt
     );
+    releaseEnemyTauntOnContact(ghost);
 
     if (ghost.aggroTime > 0) {
       ghost.aggroTime = Math.max(
@@ -4008,8 +4254,9 @@ function tickSharedGoblins(dt) {
       0,
       goblin.tauntTime - dt
     );
+    releaseEnemyTauntOnContact(goblin);
 
-    tickEnemyBurn(goblin, dt);
+    tickEnemyStatuses(goblin, dt);
     if (!goblin.alive) continue;
 
     if (tickServerEnemyHurl(goblin, dt)) {
@@ -4371,7 +4618,7 @@ function validateSharedEnemyMeleeHit(
   enemy,
   payload
 ) {
-  if (![0, 1, 4].includes(playerState.weaponIndex)) {
+  if (![0, 1, 2, 3, 4, 8].includes(playerState.weaponIndex)) {
     return false;
   }
 
@@ -4410,6 +4657,37 @@ function validateSharedEnemyMeleeHit(
       )
     ) <= 0.90
   );
+}
+
+function validateSharedEnemyWandMasteryHit(
+  playerState,
+  enemy,
+  payload
+) {
+  if (![2, 3, 8].includes(playerState.weaponIndex)) {
+    return false;
+  }
+
+  const profile = serverEnemyProfile(enemy);
+  const targetOffsetY = profile?.bodyOffsetY ?? -11;
+  const bodyRadius = profile?.meleeBodyRadius ?? 7;
+  const dx = enemy.x - playerState.x;
+  const dy =
+    (enemy.y + targetOffsetY) -
+    (playerState.y - 8);
+  const distance = Math.hypot(dx, dy);
+
+  if (distance > 38 + bodyRadius) {
+    return false;
+  }
+
+  const aimAngle = Number(payload.aimAngle);
+  if (!Number.isFinite(aimAngle)) {
+    return false;
+  }
+
+  const targetAngle = Math.atan2(dy, dx);
+  return Math.abs(angleDifference(targetAngle, aimAngle)) <= 0.54;
 }
 
 function validateSharedEnemyBowMeleeHit(
@@ -4620,6 +4898,27 @@ function handleSharedEnemyDamageAction(
 
     knockback =
       serverEnemyProfile(enemy)?.damageKnockback?.melee ?? 22;
+  } else if (source === "wandMasteryMelee") {
+    if (
+      !validateSharedEnemyWandMasteryHit(
+        playerState,
+        enemy,
+        payload
+      )
+    ) {
+      return;
+    }
+
+    minimumMs = 260;
+    critical = Boolean(payload.critical) || camouflageCritical;
+    damage = calculateServerPlayerDamage(
+      playerState,
+      enemy,
+      "melee",
+      critical
+    );
+    knockback =
+      serverEnemyProfile(enemy)?.damageKnockback?.melee ?? 22;
   } else if (source === "bowMelee") {
     if (
       !validateSharedEnemyBowMeleeHit(
@@ -4769,9 +5068,10 @@ function handleSharedEnemyDamageAction(
   enemy.lastDamagePlayerId = playerId;
 
   if (source === "fireball") {
-    enemy.burnTime = 3.0;
-    enemy.burnTickTimer =
-      enemy.burnTickInterval;
+    applyServerEnemyBurn(enemy, {
+      duration: STATUS_RULES.enemyBurnDuration,
+      sourcePlayerId: playerId
+    });
   }
 
   let pushAngle = Number(payload.aimAngle);
@@ -4783,11 +5083,16 @@ function handleSharedEnemyDamageAction(
     );
   }
 
-  enemy.knockbackX =
-    Math.cos(pushAngle) * knockback;
+  const damageFraction =
+    damage / Math.max(1, Number(enemy.maxHp) || damage);
 
-  enemy.knockbackY =
-    Math.sin(pushAngle) * knockback;
+  if (damageFraction >= ENEMY_KNOCKBACK_DAMAGE_THRESHOLD) {
+    enemy.knockbackX =
+      Math.cos(pushAngle) * knockback;
+
+    enemy.knockbackY =
+      Math.sin(pushAngle) * knockback;
+  }
 
   broadcast({
     type: "enemyDamage",
@@ -4867,40 +5172,98 @@ function handleSharedEnemyAction(
       playerId,
       enemy.id,
       action,
-      action === "rainHeal" ||
       action === "rainDamage"
         ? 400
-        : 250
+        : action === "magicGrassSlow" || action === "wet"
+          ? 150
+          : 250
     )
   ) {
+    return;
+  }
+
+  if (action === "magicGrassSlow") {
+    if (!enemy.alive) return;
+
+    ensureServerEnemySnareState(enemy);
+    enemy.magicGrassSlowTime = Math.max(
+      enemy.magicGrassSlowTime,
+      clampNumber(payload.duration, 0.15, 0.75, 0.50)
+    );
+    return;
+  }
+
+  if (action === "wet") {
+    if (!enemy.alive) return;
+    if (serverEnemyProfile(enemy)?.rainEffect === "damage") return;
+
+    applyServerEnemyWet(
+      enemy,
+      clampNumber(payload.duration, 0.25, 8, STATUS_RULES.enemyWetDuration)
+    );
     return;
   }
 
   if (action === "ignite") {
     if (!enemy.alive) return;
 
-    enemy.burnTime = 3.0;
-    enemy.burnTickTimer =
-      enemy.burnTickInterval;
-
-    setEnemyAggroTarget(
-      enemy,
-      playerId,
-      enemy.aggroDuration
-    );
-
-    enemy.lastDamagePlayerId = playerId;
+    // This action is reserved for direct contact with client-temporary magic
+    // grass. Wet now blocks it the same way it blocks other fire sources.
+    applyServerEnemyBurn(enemy, {
+      duration: STATUS_RULES.enemyBurnDuration,
+      sourcePlayerId: playerId
+    });
     return;
   }
 
   if (action === "extinguish") {
-    enemy.burnTime = 0;
-    enemy.burnTickTimer = 0;
+    clearServerEnemyBurn(enemy);
+    return;
+  }
+
+  if (action === "clearTaunt") {
+    const cloneId =
+      typeof payload.cloneId === "string"
+        ? payload.cloneId.slice(0, 96)
+        : null;
+
+    if (
+      enemy.tauntOwnerId === playerId &&
+      (
+        !cloneId ||
+        !enemy.tauntCloneId ||
+        enemy.tauntCloneId === cloneId
+      )
+    ) {
+      if (cloneId) {
+        enemy.releasedHallucinationId = cloneId;
+      } else if (enemy.tauntCloneId) {
+        enemy.releasedHallucinationId = enemy.tauntCloneId;
+      }
+
+      enemy.tauntTime = 0;
+      enemy.tauntOwnerId = null;
+      enemy.tauntCloneId = null;
+    }
     return;
   }
 
   if (action === "taunt") {
     if (!enemy.alive || enemy.hurlTime > 0) return;
+
+    const cloneId =
+      typeof payload.cloneId === "string"
+        ? payload.cloneId.slice(0, 96)
+        : null;
+
+    // Once an enemy reaches a specific Hallucination, later pulse messages
+    // from that same clone can never force it back again.
+    if (
+      cloneId &&
+      enemy.releasedHallucinationId === cloneId
+    ) {
+      return;
+    }
 
     const tauntX = clampNumber(
       payload.x,
@@ -4936,6 +5299,7 @@ function handleSharedEnemyAction(
     enemy.tauntY = tauntY;
     enemy.tauntTime = duration;
     enemy.tauntOwnerId = playerId;
+    enemy.tauntCloneId = cloneId;
     enemy.aggroTime = Math.max(
       enemy.aggroTime,
       duration
@@ -4945,42 +5309,6 @@ function handleSharedEnemyAction(
 
   const rainEffect =
     serverEnemyProfile(enemy)?.rainEffect;
-
-  if (
-    action === "rainHeal" &&
-    rainEffect === "heal"
-  ) {
-    if (!enemy.alive) return;
-
-    const power = Math.round(
-      clampNumber(payload.power, 1, 3, 2)
-    );
-
-    const before = enemy.hp;
-
-    enemy.hp = Math.min(
-      enemy.maxHp,
-      enemy.hp + power
-    );
-
-    enemy.burnTime = 0;
-    enemy.burnTickTimer = 0;
-
-    const healed = enemy.hp - before;
-
-    if (healed > 0) {
-      broadcast({
-        type: "enemyHeal",
-        enemyType: enemy.type,
-        enemyId: enemy.id,
-        mapId: enemy.mapId,
-        amount: healed,
-        hp: enemy.hp
-      });
-    }
-
-    return;
-  }
 
   if (
     action === "rainDamage" &&
@@ -5006,8 +5334,7 @@ function handleSharedEnemyAction(
       enemy.hp - damage
     );
 
-    enemy.burnTime = 0;
-    enemy.burnTickTimer = 0;
+    clearServerEnemyBurn(enemy);
 
     setEnemyAggroTarget(
       enemy,
@@ -5110,6 +5437,28 @@ function resetServerBigGoldSlime(slime) {
   slime.lastDamagePlayerId = null;
 }
 
+function releaseEnemyTauntOnContact(enemy, radius = 8.5) {
+  if (!enemy || enemy.tauntTime <= 0) return false;
+
+  if (
+    Math.hypot(
+      enemy.x - enemy.tauntX,
+      enemy.y - enemy.tauntY
+    ) > radius
+  ) {
+    return false;
+  }
+
+  if (enemy.tauntCloneId) {
+    enemy.releasedHallucinationId = enemy.tauntCloneId;
+  }
+
+  enemy.tauntTime = 0;
+  enemy.tauntOwnerId = null;
+  enemy.tauntCloneId = null;
+  return true;
+}
+
 function tickSharedBigGoldSlimes(dt) {
   for (const slime of sharedBigGoldSlimes) {
     if (!slime.alive) {
@@ -5122,13 +5471,14 @@ function tickSharedBigGoldSlimes(dt) {
       continue;
     }
 
-    tickEnemyBurn(slime, dt);
+    tickEnemyStatuses(slime, dt);
     if (!slime.alive) continue;
 
     slime.tauntTime = Math.max(
       0,
       slime.tauntTime - dt
     );
+    releaseEnemyTauntOnContact(slime);
 
     if (slime.aggroTime > 0) {
       slime.aggroTime = Math.max(
@@ -5412,7 +5762,7 @@ function makeServerSlime(spawn) {
     confusionTime: 0,
     confusionTargetId: null,
 
-    // Jester Blink decoy. While active, the clone position has priority over
+    // Hallucination decoy. While active, the clone position has priority over
     // real players.
     tauntTime: 0,
     tauntX: x,
@@ -6084,7 +6434,7 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
-    tickEnemyBurn(slime, dt);
+    tickEnemyStatuses(slime, dt);
     if (!slime.alive) continue;
 
     if (
@@ -6104,6 +6454,9 @@ function tickSharedSlimes(dt) {
 
       if (slime.tauntTime <= 0) {
         slime.tauntOwnerId = null;
+        slime.tauntCloneId = null;
+      } else {
+        releaseEnemyTauntOnContact(slime);
       }
     }
 
@@ -6215,8 +6568,8 @@ function tickSharedSlimes(dt) {
         }
       }
 
-      // Even if it reaches the clone, remain occupied by it until the clone
-      // expires instead of immediately acquiring the player again.
+      // Contact with the Hallucination clears its forced taunt above; until then,
+      // the illusion retains priority over ordinary player aggro.
       continue;
     }
 
@@ -6451,6 +6804,23 @@ function sanitizeVisualEffectPayload(
       y: sanitizeVisualPoint(payload.y),
       vx: sanitizeVisualVelocity(payload.vx),
       vy: sanitizeVisualVelocity(payload.vy),
+      airborne: Boolean(payload.airborne),
+      startX: sanitizeVisualPoint(payload.startX),
+      startY: sanitizeVisualPoint(payload.startY),
+      targetX: sanitizeVisualPoint(payload.targetX),
+      targetY: sanitizeVisualPoint(payload.targetY),
+      duration: clampNumber(
+        payload.duration,
+        0.18,
+        0.9,
+        0.4
+      ),
+      arcHeight: clampNumber(
+        payload.arcHeight,
+        0,
+        60,
+        20
+      ),
 
       life: clampNumber(
         payload.life,
@@ -6484,6 +6854,14 @@ function sanitizeVisualEffectPayload(
     };
   }
 
+  if (effect === "wandMasteryHit") {
+    return {
+      x: sanitizeVisualPoint(payload.x),
+      y: sanitizeVisualPoint(payload.y),
+      angle: clampNumber(payload.angle, -20, 20, 0)
+    };
+  }
+
   if (effect === "levelUp") {
     return {
       level: clampInteger(
@@ -6504,6 +6882,7 @@ function sanitizeVisualEffectPayload(
 
       followPlayer: Boolean(payload.followPlayer),
       retarget: Boolean(payload.retarget),
+      instant: Boolean(payload.instant),
 
       cloudLife: clampNumber(
         payload.cloudLife,
@@ -6511,6 +6890,49 @@ function sanitizeVisualEffectPayload(
         24,
         12
       )
+    };
+  }
+
+
+  if (effect === "rainGrassSpawn") {
+    const grassId = typeof payload.grassId === "string"
+      ? payload.grassId.slice(0, 96)
+      : "";
+
+    if (!grassId) return null;
+
+    return {
+      grassId,
+      patchId: clampInteger(payload.patchId, 0, 1000000000, 0),
+      x: sanitizeVisualPoint(payload.x),
+      y: sanitizeVisualPoint(payload.y),
+      width: clampNumber(payload.width, 8, 18, 12),
+      phase: clampNumber(payload.phase, -20, 20, 0),
+      tempLife: clampNumber(payload.tempLife, 0.1, 40, 30),
+      burnDuration: clampNumber(payload.burnDuration, 0.1, 6, 3)
+    };
+  }
+
+  if (effect === "rainGrassState") {
+    const grassId = typeof payload.grassId === "string"
+      ? payload.grassId.slice(0, 96)
+      : "";
+    const grassOwnerId = typeof payload.grassOwnerId === "string"
+      ? payload.grassOwnerId.slice(0, 96)
+      : "";
+    const state = payload.state === "extinguished"
+      ? "extinguished"
+      : payload.state === "burning"
+        ? "burning"
+        : "";
+
+    if (!grassId || !grassOwnerId || !state) return null;
+
+    return {
+      grassOwnerId,
+      grassId,
+      state,
+      burnTime: clampNumber(payload.burnTime, 0, 6, 0)
     };
   }
 
@@ -6596,6 +7018,7 @@ function clearPlayerOwnedTransientWorldState(
     if (enemy.tauntOwnerId === playerId) {
       enemy.tauntTime = 0;
       enemy.tauntOwnerId = null;
+      enemy.tauntCloneId = null;
     }
 
     if (enemy.carriedBy === playerId) {
@@ -6636,11 +7059,14 @@ function handleVisualEffect(
   const allowedEffects = new Set([
     "basicProjectile",
     "basicProjectileImpact",
+    "wandMasteryHit",
     "focusFireArc",
     "fireball",
     "fireballImpact",
     "levelUp",
     "rainCast",
+    "rainGrassSpawn",
+    "rainGrassState",
     "shadowSmoke",
     "jesterBlink"
   ]);
@@ -6909,6 +7335,18 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     focusFireCasting:
       Boolean(source.focusFireCasting),
 
+    fireballAiming:
+      Boolean(source.fireballAiming),
+    fireballAimTime:
+      clampNumber(source.fireballAimTime, 0, 1000000, 0),
+
+    rainCloudCasting:
+      Boolean(source.rainCloudCasting),
+    rainCloudCastTime:
+      clampNumber(source.rainCloudCastTime, 0, 1, 0),
+    rainCloudCastDuration:
+      clampNumber(source.rainCloudCastDuration, 0.05, 1, 0.50),
+
     camouflaged: camouflageRequested,
     camouflageReadyUntil,
 
@@ -7099,8 +7537,8 @@ wss.on("connection", socket => {
 
   const initialState = sanitizePlayerState(id, {
     mapId: "spawn",
-    x: 320,
-    y: 200,
+    x: 172,
+    y: 112,
     weaponIndex: -1
   });
 
@@ -7233,6 +7671,11 @@ wss.on("connection", socket => {
 
     if (message.type === "playerDamageRequest") {
       handlePlayerDamageRequest(id, message);
+      return;
+    }
+
+    if (message.type === "playerIgniteRequest") {
+      handlePlayerIgniteRequest(id, message);
       return;
     }
 

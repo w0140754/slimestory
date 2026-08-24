@@ -157,6 +157,34 @@
     image-rendering: crisp-edges;
   }
 
+  .ability-slot .ability-cooldown-mask {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    height: 0%;
+    background: rgba(12, 14, 16, .72);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .ability-slot .ability-cooldown-text {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #fff8dc;
+    font: 9px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .ability-slot.cooling-down .ability-slot-img {
+    opacity: .52;
+  }
+
   .ability-slot.empty {
     opacity: 0.42;
     border-color: #5b5367;
@@ -189,6 +217,7 @@
     font: 8px/9px monospace;
     text-shadow: 1px 1px 0 #000;
     box-sizing: border-box;
+    z-index: 4;
   }
 
   #hotbar {
@@ -1523,6 +1552,75 @@
     box-shadow: 0 0 0 1px rgba(225, 200, 110, .16) inset;
   }
 
+  .skill-category-tab.class-locked,
+  .skill-category-tab:disabled {
+    opacity: .38;
+    cursor: not-allowed;
+    filter: saturate(.45);
+  }
+
+  #skillsPage.class-unselected > :not(#classSelectionGate) {
+    display: none !important;
+  }
+
+  .class-selection-gate {
+    display: none;
+    padding: 6px 2px 2px;
+  }
+
+  #skillsPage.class-unselected .class-selection-gate {
+    display: block;
+  }
+
+  .class-selection-title {
+    margin-bottom: 7px;
+    color: #fff0b7;
+    font: 12px/1.15 monospace;
+    text-transform: uppercase;
+  }
+
+  .class-selection-copy {
+    max-width: 520px;
+    margin-bottom: 12px;
+    color: #c9c09f;
+    font: 9px/1.45 monospace;
+  }
+
+  .class-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .class-selection-button {
+    appearance: none;
+    min-height: 64px;
+    padding: 9px 10px;
+    border: 2px solid #5d563e;
+    background: #273027;
+    color: #ded4ad;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .class-selection-button:hover {
+    border-color: #9b8650;
+    background: #354132;
+  }
+
+  .class-selection-button strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #fff0b7;
+    font: 10px/1 monospace;
+  }
+
+  .class-selection-button span {
+    display: block;
+    color: #bdb493;
+    font: 8px/1.35 monospace;
+  }
+
   .skill-category-panel {
     display: none;
   }
@@ -1785,21 +1883,29 @@
     <div id="abilityBar">
       <div class="ability-slot empty" id="abilitySlotShift">
         <img class="ability-slot-img" alt="" />
+        <div class="ability-cooldown-mask"></div>
+        <div class="ability-cooldown-text"></div>
         <div class="ability-charge"></div>
         <div class="hotbar-label">Shift</div>
       </div>
       <div class="ability-slot empty" id="abilitySlotSpace">
         <img class="ability-slot-img" alt="" />
+        <div class="ability-cooldown-mask"></div>
+        <div class="ability-cooldown-text"></div>
         <div class="ability-charge"></div>
         <div class="hotbar-label">Space</div>
       </div>
       <div class="ability-slot empty" id="abilitySlotE">
         <img class="ability-slot-img" alt="" />
+        <div class="ability-cooldown-mask"></div>
+        <div class="ability-cooldown-text"></div>
         <div class="ability-charge"></div>
         <div class="hotbar-label">E</div>
       </div>
       <div class="ability-slot empty" id="abilitySlotR">
         <img class="ability-slot-img" alt="" />
+        <div class="ability-cooldown-mask"></div>
+        <div class="ability-cooldown-text"></div>
         <div class="ability-charge"></div>
         <div class="hotbar-label">R</div>
       </div>
@@ -2045,6 +2151,30 @@
     </div>
 
     <div id="skillsPage" class="inventory-page">
+      <div id="classSelectionGate" class="class-selection-gate">
+        <div class="class-selection-title">Choose Your Class</div>
+        <div class="class-selection-copy">
+          Your choice locks this character to one skill tree. Other class arts cannot be unlocked or equipped afterward.
+        </div>
+        <div class="class-selection-grid">
+          <button type="button" class="class-selection-button" data-class-choice="might">
+            <strong>Bruiser</strong>
+            <span>Close-range physical techniques and force.</span>
+          </button>
+          <button type="button" class="class-selection-button" data-class-choice="arcana">
+            <strong>Magus</strong>
+            <span>Wand mastery, Hallucination, Fireball, and Rain Cloud.</span>
+          </button>
+          <button type="button" class="class-selection-button" data-class-choice="precision">
+            <strong>Ranger</strong>
+            <span>Bow control, camouflage, traps, and focused attacks.</span>
+          </button>
+          <button type="button" class="class-selection-button" data-class-choice="guile">
+            <strong>Rogue</strong>
+            <span>Stealth and opportunistic attacks.</span>
+          </button>
+        </div>
+      </div>
       <div class="menu-section-title">Active Skill Keys</div>
       <div class="skill-key-strip">
         <div class="skill-key-slot">
@@ -2117,6 +2247,22 @@
         <div class="skill-tree">
           <div class="skill-tree-root">Magus Arts</div>
           <div class="skill-tree-branches">
+<div class="skill-node locked" data-skill-node="wandMastery">
+            <div class="skill-node-top">
+              <div class="skill-node-title">
+                <img class="skill-node-icon" data-skill-icon="wandMastery" alt="Wand Mastery" />
+                <span class="skill-node-name">Wand Mastery</span>
+              </div>
+              <span class="skill-status">Locked</span>
+            </div>
+            <div class="skill-description">
+              Passive. Wand-type weapons normally strike in melee. Wand Mastery empowers those strikes into larger magical sweeps that can hit up to 3 targets.
+            </div>
+            <div class="skill-level-row">
+              <span class="skill-level-text">LV 0 / 1</span>
+              <button class="ability-upgrade-button" data-ability-id="wandMastery">Unlock</button>
+            </div>
+          </div>
 <div class="skill-node locked" data-skill-node="fireball">
             <div class="skill-node-top">
               <div class="skill-node-title">
@@ -2126,7 +2272,7 @@
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Launch a fiery spell toward the cursor. It burns enemies and ignites flammable terrain.
+              Requires a wand-type weapon. Hold to extend Fireball's targeting distance toward the cursor, then release when the reticle reaches the spot you want. Close casts can be quick taps; farther casts take longer to line up. The fireball arcs over intervening targets and ignites its landing area. 3.5-second cooldown.
             </div>
             <div class="skill-level-row">
               <span class="skill-level-text">LV 0 / 5</span>
@@ -2150,10 +2296,10 @@
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Summon a rain cloud at the cursor. It heals you and monsters, hurts ghosts, and puts out fire.
+              Requires a wand-type weapon. Commit to a 0.5-second summon at the point under your cursor when casting begins. You cannot move, attack, swap weapons, or use other abilities during the summon. The cloud then drifts on its own, grows slowing flammable magic grass, makes living enemies Wet, hurts ghosts, and puts out fire. After it expires, Rain Cloud has a 15-second cooldown.
             </div>
             <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
+              <span class="skill-level-text">LV 0 / 1</span>
               <button class="ability-upgrade-button" data-ability-id="rainCloud">Unlock</button>
             </div>
             <div class="skill-bind-label">Bind key</div>
@@ -2168,13 +2314,13 @@
 <div class="skill-node locked" data-skill-node="jesterBlink">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="jesterBlink" alt="Jester Blink" />
-                <span class="skill-node-name">Jester Blink</span>
+                <img class="skill-node-icon" data-skill-icon="jesterBlink" alt="Hallucination" />
+                <span class="skill-node-name">Hallucination</span>
               </div>
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Blink toward the cursor and leave a taunting decoy behind to distract nearby enemies.
+              Blink toward the cursor and leave a Hallucination behind. It periodically draws in nearby enemies; each monster is released from the forced lure once it reaches the illusion.
             </div>
             <div class="skill-level-row">
               <span class="skill-level-text">LV 0 / 5</span>
@@ -2471,7 +2617,7 @@
   </div>
 </div>
 
-<script src="/shared/world-content.js?v=12"></script>
+<script src="/shared/world-content.js?v=42"></script>
 <script src="/shared/combat-balance.js?v=5"></script>
 <script>
 const canvas = document.getElementById("game");
@@ -2480,7 +2626,7 @@ ctx.imageSmoothingEnabled = false;
 
 const VIEW_W = canvas.width;
 const VIEW_H = canvas.height;
-const CLIENT_BUILD_VERSION = "6-11-78";
+const CLIENT_BUILD_VERSION = "6-11-122";
 
 // Most maps use the original 640x400 world. Gold Slime Den is intentionally
 // smaller so the perimeter itself is the encounter boundary rather than a
@@ -2488,6 +2634,7 @@ const CLIENT_BUILD_VERSION = "6-11-78";
 let activeWorldDimensionMapId = "meadow";
 const MAP_WORLD_DIMENSIONS = Object.freeze({
   default: Object.freeze({ width: 640, height: 400 }),
+  spawn: Object.freeze({ width: 344, height: 224 }),
   goldSlimeDen: Object.freeze({ width: 520, height: 330 })
 });
 
@@ -2512,8 +2659,13 @@ const world = {
 const GAME_CONFIG = Object.freeze({
   player: {
     baseSpeed: 72,
-    wetDuration: 5.0,
+    wetDuration: 3.0,
     wetSpeedMultiplier: 0.75
+  },
+
+  status: {
+    enemyWetDuration: 3.0,
+    enemyWetSpeedMultiplier: 0.75
   },
 
   house: {
@@ -2527,9 +2679,7 @@ const GAME_CONFIG = Object.freeze({
 
   rainCloud: {
     baseLifetime: 12.0,
-    enhancedLifetime: 17.0,
-    basePower: 2,
-    enhancedPower: 3
+    ghostDamage: 2
   },
 
   projectileDamage: {
@@ -2599,12 +2749,12 @@ const sprite = {
   wizardHat: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhElEQVQ4T2NkwA/+Q2lGKI0BcEqANGdcP8vQLFfHIMq9FcTHqharIEwzMpihaQyiMNRjCIA0v/7qDWbUPmqCCjHgdAkyB+xf/dkTGUT5+GBiKOD1p08MF1PzYVywXpgB/11WzkdXgBXALNgTngjiMmK4AN2JWACKOkKKCYJRA0bDAJQOAK6iJBF69CrqAAAAEGRlQkcyMjQwMkI3RTA3NjkxNDE1WzHzEAAAAABJRU5ErkJgggAA"),
 
   // User-drawn jester / magician armor set.
-  jesterHat: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAuUlEQVQ4T2NkwAT/oTQjlIYBrOIYivYH32QQlRVm0JkgAuLD5P+nXWhkMNQ3YMhk9EcWRzHg//T/GxlsC60ZJiVMRVbMANIc2RzBsLx2BYYhKAaAFGIDeQuywfTrx2/BhswyqAdxUQwAOx0kef7YGYbTWZuhwqjAdJovg6GVCZgNMwRuwJWCNwyJaokwzcguQwYY6kAK/////5+BEW4WTs0wAI4NmB64C4jQiA7AekjVhAFGDRgWYQAAykZDEDUtO5cAAAAQZGVCRzVEQTg0Q0QyMTNFREYzNkQ+W8eIAAAAAElFTkSuQmCC"),
-  jesterLeftArm: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVQ4T2NkoBAwwllkglEDBmMY/CfVVciK/0//v5Ehk9EfxCbaEBQDvh9cw8BpHwJik2UACFDkBbLAMDAAABcUChH2IHE1AAAAEGRlQkdFMzMzMzE4MzU3MjAwQjE5qZItegAAAABJRU5ErkJgggAA"),
-  jesterLeftLeg: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAARklEQVQ4T2NkoBAwwllkglEDRsNg8KaD/9BUCgN4Uys2yf/T/28EMzIZ/UEUNjVwgE3y//7gm2CG41p1EIVNDRxgkyTJCwCdMwoRZhPzTwAAABBkZUJHMjM1M0Y4NzRENjRDNkRDRnPyZIoAAAAASUVORK5CYIIA"),
-  jesterRightArm: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVQ4T2NkoBAwwllkglEDhmoY/Ed2OanR+H/6/40MmYz+IDZYL8kGfD+4hoHTPgTEJssAEKDICxhgGBgAAK72ChH0/9QoAAAAEGRlQkdCQzY2RUEzQThGQkQyRDdGNlVODAAAAABJRU5ErkJgggAA"),
-  jesterRightLeg: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQklEQVQ4T2NkoBAwwllkglEDRsNg6KSD/9BUCwMoqZeYpPx/+v+NYEYmoz+IIt2A/cE3wQzHteoginQD4CwIQNEDAP0kChG9YYMwAAAAEGRlQkdGNzY3OUVBMjE1RDJGRDI2svLk3gAAAABJRU5ErkJgggAA"),
-  jesterTorso: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAfElEQVQ4T2NkoBAwwllkglEDaBQG/3GIgwCGHLrC/6bTfBlOZ22GCyADJDm4PnQDQOB/2oVGBkN9Awa3ezpggV1KVxjOX7zAMMugHsTF6wIQgBuADEgyAORUQysThsj3dmCB5YKHGM4fO4PhfBDAagCchR0QNIAkMPAGAABJICURT2c0cwAAABBkZUJHNzAzQkZFMUFEQ0E4OTM1Q26FIicAAAAASUVORK5CYIIA"),
+  jesterHat: loadImage("assets/jester_hat_v2.png"),
+  jesterLeftArm: loadImage("assets/jester_leftarm_v2.png"),
+  jesterLeftLeg: loadImage("assets/jester_leftleg_v2.png"),
+  jesterRightArm: loadImage("assets/jester_rightarm_v2.png"),
+  jesterRightLeg: loadImage("assets/jester_rightleg_v2.png"),
+  jesterTorso: loadImage("assets/jester_torso_v2.png"),
 
   // User-drawn ninja armor set.
   ninjaHat: loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAfElEQVQ4T2NkoBAwwlmo4D+chQow1GMIgDSLi4gwMLOxwQVA4O+vXwwv37wBMVH0oBsA1gwC2AwAAXRDMAxIkBNhUBURBHNEJSXB9Ovnz8H07TfvGRY8ImAApS5gEBcR+f/yzRsMcRDAJodTITYXoGsGAQwBUsGoAcMiDAAwJS8RTDl2aAAAABBkZUJHMUU4NUUwNzUxQTg0RTgxMbXjug4AAAAASUVORK5CYIIA"),
@@ -2676,6 +2826,7 @@ const AXE_PIVOT_Y = 7;
 const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
+const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
 
 const woodBenchImage = new Image();
 woodBenchImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbklEQVQ4T2NkYGBgyHWV+A+iSQWTd79gZARpFhHgYtBUkYdLEAOu33nI8ObDNwawAbYmmnAJUsDhM9dHDRg8YUBxOgAZQA5ASUggE2GC+ADMMpCLMQIRJABK32AODoCufhAYAHMWiCbkfBhAVg8A6slwD3hszMIAAAAQZGVCRzIyMzVDRjg3OTIwOEI5Q0GexihVAAAAAElFTkSuQmCC";
@@ -2702,6 +2853,7 @@ rainCloudImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAQCAYA
 // Use a pivot near the handle end so it swings naturally in the hand.
 const WAND_PIVOT_X = 2;
 const WAND_PIVOT_Y = 7;
+const WAND_HOLD_OFFSET_Y = 2;
 
 // Feed the hotbar DOM with the same weapon art.
 
@@ -2946,7 +3098,7 @@ function closeMonsterCanRevealCamouflage() {
   return false;
 }
 
-function emitCamouflageParticle() {
+function emitCamouflageParticleAt(x, y) {
   const colors = [
     "#3f7d3b",
     "#55964a",
@@ -2957,8 +3109,8 @@ function emitCamouflageParticle() {
   const life = 0.34 + Math.random() * 0.24;
 
   growthParticles.push({
-    x: player.x + (Math.random() - 0.5) * 15,
-    y: player.y - 5 - Math.random() * 15,
+    x: x + (Math.random() - 0.5) * 15,
+    y: y - 5 - Math.random() * 15,
     vx: (Math.random() - 0.5) * 8,
     vy: -4 - Math.random() * 8,
     life,
@@ -2966,6 +3118,32 @@ function emitCamouflageParticle() {
     color: colors[(Math.random() * colors.length) | 0],
     size: Math.random() < 0.22 ? 2 : 1
   });
+}
+
+function emitCamouflageParticle() {
+  emitCamouflageParticleAt(player.x, player.y);
+}
+
+function emitRemoteCamouflageParticles(remote) {
+  if (!remote || !remote.camouflaged) {
+    if (remote) remote._nextCamouflageParticleAt = 0;
+    return;
+  }
+
+  const now = Number(worldTime) || 0;
+  const nextAt = Number(remote._nextCamouflageParticleAt) || 0;
+
+  if (now < nextAt) return;
+
+  emitCamouflageParticleAt(Number(remote.x) || 0, Number(remote.y) || 0);
+  if (Math.random() < 0.72) {
+    emitCamouflageParticleAt(Number(remote.x) || 0, Number(remote.y) || 0);
+  }
+  if (Math.random() < 0.28) {
+    emitCamouflageParticleAt(Number(remote.x) || 0, Number(remote.y) || 0);
+  }
+
+  remote._nextCamouflageParticleAt = now + 0.055;
 }
 
 function updateCamouflageParticles(dt) {
@@ -3524,9 +3702,377 @@ tallGrass.forEach(clump => {
   clump.regrowAt = 0;
 });
 
+const TEMP_RAIN_GRASS_LIFETIME = 30;
+const TEMP_RAIN_GRASS_BURN_DURATION = 3.0;
+const TEMP_RAIN_GRASS_SPAWN_RADIUS = 17;
+const TEMP_RAIN_GRASS_MIN_SPACING = 5;
+const TEMP_RAIN_GRASS_MAX_LOCAL_CLUMPS = 42;
+const TEMP_RAIN_GRASS_SPEED_MULTIPLIER = 0.80;
+const TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE = 0.36;
+const TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE = 0.48;
+const TEMP_RAIN_GRASS_CHAIN_RADIUS = 15;
+let rainGrassPatchSequence = 0;
+let rainGrassClumpSequence = 0;
+let temporaryRainGrassSlowSyncTimer = 0;
+
+function isTemporaryRainGrass(clump) {
+  return Boolean(clump?.temporaryRainGrass);
+}
+
+function localRainGrassOwnerId() {
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected &&
+    onlineClient.localPlayerId
+  ) {
+    return String(onlineClient.localPlayerId);
+  }
+
+  return "local";
+}
+
+function temporaryRainGrassOwnerId(clump) {
+  return String(clump?.grassOwnerId || "local");
+}
+
+function findTemporaryRainGrass(ownerId, grassId) {
+  if (!ownerId || !grassId) return null;
+
+  return tallGrass.find(clump =>
+    isTemporaryRainGrass(clump) &&
+    temporaryRainGrassOwnerId(clump) === String(ownerId) &&
+    clump.grassSyncId === String(grassId)
+  ) || null;
+}
+
+function clearTemporaryRainGrass() {
+  temporaryRainGrassSlowSyncTimer = 0;
+
+  for (let i = tallGrass.length - 1; i >= 0; i--) {
+    if (isTemporaryRainGrass(tallGrass[i])) {
+      tallGrass.splice(i, 1);
+    }
+  }
+}
+
+function clearTemporaryRainGrassForOwner(ownerId) {
+  if (!ownerId) return;
+
+  const normalizedOwnerId = String(ownerId);
+
+  for (let i = tallGrass.length - 1; i >= 0; i--) {
+    const clump = tallGrass[i];
+
+    if (
+      isTemporaryRainGrass(clump) &&
+      temporaryRainGrassOwnerId(clump) === normalizedOwnerId
+    ) {
+      tallGrass.splice(i, 1);
+    }
+  }
+}
+
+function syncTemporaryRainGrassSpawn(clump) {
+  if (
+    !clump ||
+    typeof onlineClient === "undefined" ||
+    !onlineClient?.connected
+  ) {
+    return;
+  }
+
+  onlineClient.sendVisualEffect(
+    "rainGrassSpawn",
+    {
+      grassId: clump.grassSyncId,
+      patchId: Number(clump.grassPatchId) || 0,
+      x: clump.x,
+      y: clump.y,
+      width: Number(clump.width) || 12,
+      phase: Number(clump.phase) || 0,
+      tempLife: Number(clump.tempLife) || TEMP_RAIN_GRASS_LIFETIME,
+      burnDuration: Number(clump.burnDuration) || TEMP_RAIN_GRASS_BURN_DURATION
+    }
+  );
+}
+
+function syncTemporaryRainGrassState(clump, state) {
+  if (
+    !clump ||
+    typeof onlineClient === "undefined" ||
+    !onlineClient?.connected
+  ) {
+    return;
+  }
+
+  onlineClient.sendVisualEffect(
+    "rainGrassState",
+    {
+      grassOwnerId: temporaryRainGrassOwnerId(clump),
+      grassId: clump.grassSyncId,
+      state,
+      burnTime: Number(clump.burnTime) || 0
+    }
+  );
+}
+
+function refreshTemporaryRainGrassClump(
+  clump,
+  patchId,
+  options = {}
+) {
+  clump.grassPatchId = patchId;
+  clump.tempLife = Number.isFinite(options.tempLife)
+    ? Math.max(0.1, Number(options.tempLife))
+    : TEMP_RAIN_GRASS_LIFETIME;
+  clump.mapId = currentMapId;
+  clump.cut = false;
+  clump.burnt = false;
+  clump.burnTime = Math.max(0, Number(options.burnTime) || 0);
+  clump.burnDuration = Number.isFinite(options.burnDuration)
+    ? Math.max(0.1, Number(options.burnDuration))
+    : TEMP_RAIN_GRASS_BURN_DURATION;
+  clump.regrowAt = 0;
+  clump.regrowAnimTime = clump.regrowAnimDuration || 0.22;
+  clump.grassBornAt = worldTime;
+
+  if (options.ownerId) {
+    clump.grassOwnerId = String(options.ownerId);
+  }
+
+  if (options.grassId) {
+    clump.grassSyncId = String(options.grassId);
+  }
+
+  if (Number.isFinite(options.width)) {
+    clump.width = Math.max(8, Math.min(18, Number(options.width)));
+  }
+
+  if (Number.isFinite(options.phase)) {
+    clump.phase = Number(options.phase);
+  }
+
+  return clump;
+}
+
+function removeOldestTemporaryGrassFromOtherPatch(
+  patchId,
+  ownerId
+) {
+  let candidateIndex = -1;
+  let candidateBornAt = Infinity;
+  const normalizedOwnerId = String(ownerId || "local");
+
+  for (let i = 0; i < tallGrass.length; i++) {
+    const clump = tallGrass[i];
+    if (!isTemporaryRainGrass(clump)) continue;
+    if (temporaryRainGrassOwnerId(clump) !== normalizedOwnerId) continue;
+    if (clump.grassPatchId === patchId) continue;
+
+    const burningPenalty = (Number(clump.burnTime) || 0) > 0 ? 1000000 : 0;
+    const bornAt = (Number(clump.grassBornAt) || 0) + burningPenalty;
+
+    if (bornAt < candidateBornAt) {
+      candidateBornAt = bornAt;
+      candidateIndex = i;
+    }
+  }
+
+  if (candidateIndex >= 0) {
+    tallGrass.splice(candidateIndex, 1);
+    return true;
+  }
+
+  return false;
+}
+
+function spawnTemporaryRainGrassAt(
+  x,
+  y,
+  patchId = 0,
+  options = {}
+) {
+  const ownerId = String(options.ownerId || localRainGrassOwnerId());
+  const shouldSync = options.sync !== false;
+  const requestedGrassId = options.grassId
+    ? String(options.grassId)
+    : null;
+
+  if (requestedGrassId) {
+    const exactExisting = findTemporaryRainGrass(ownerId, requestedGrassId);
+
+    if (exactExisting) {
+      exactExisting.x = clampToWorld(x, 8, world.width - 8);
+      exactExisting.y = clampToWorld(y, 12, world.height - 4);
+      refreshTemporaryRainGrassClump(
+        exactExisting,
+        patchId,
+        {
+          ...options,
+          ownerId,
+          grassId: requestedGrassId
+        }
+      );
+
+      if (shouldSync) {
+        syncTemporaryRainGrassSpawn(exactExisting);
+      }
+
+      return exactExisting;
+    }
+  }
+
+  let ownerCount = 0;
+
+  for (const existing of tallGrass) {
+    if (!isTemporaryRainGrass(existing)) continue;
+    if (temporaryRainGrassOwnerId(existing) !== ownerId) continue;
+
+    ownerCount += 1;
+
+    const dx = existing.x - x;
+    const dy = existing.y - y;
+
+    if (Math.hypot(dx, dy) < TEMP_RAIN_GRASS_MIN_SPACING) {
+      if (existing.grassPatchId !== patchId) {
+        refreshTemporaryRainGrassClump(
+          existing,
+          patchId,
+          { ...options, ownerId }
+        );
+      } else {
+        existing.tempLife = Math.max(
+          Number(existing.tempLife) || 0,
+          Number.isFinite(options.tempLife)
+            ? Number(options.tempLife)
+            : TEMP_RAIN_GRASS_LIFETIME
+        );
+      }
+
+      if (shouldSync) {
+        syncTemporaryRainGrassSpawn(existing);
+      }
+
+      return existing;
+    }
+  }
+
+  if (ownerCount >= TEMP_RAIN_GRASS_MAX_LOCAL_CLUMPS) {
+    if (!removeOldestTemporaryGrassFromOtherPatch(patchId, ownerId)) {
+      return null;
+    }
+  }
+
+  const clump = {
+    x: clampToWorld(x, 8, world.width - 8),
+    y: clampToWorld(y, 12, world.height - 4),
+    width: Number.isFinite(options.width)
+      ? Math.max(8, Math.min(18, Number(options.width)))
+      : 11 + ((Math.random() * 4) | 0),
+    phase: Number.isFinite(options.phase)
+      ? Number(options.phase)
+      : Math.random() * Math.PI * 2,
+    cut: false,
+    flowerType: null,
+    flowerPicked: true,
+    patchFlower: false,
+    burnt: false,
+    burnTime: Math.max(0, Number(options.burnTime) || 0),
+    burnDuration: Number.isFinite(options.burnDuration)
+      ? Math.max(0.1, Number(options.burnDuration))
+      : TEMP_RAIN_GRASS_BURN_DURATION,
+    regrowAnimTime: 0.22,
+    regrowAnimDuration: 0.22,
+    regrowAt: 0,
+    temporaryRainGrass: true,
+    tempLife: Number.isFinite(options.tempLife)
+      ? Math.max(0.1, Number(options.tempLife))
+      : TEMP_RAIN_GRASS_LIFETIME,
+    mapId: currentMapId,
+    grassPatchId: patchId,
+    grassBornAt: worldTime,
+    grassOwnerId: ownerId,
+    grassSyncId: requestedGrassId || `${patchId}:${++rainGrassClumpSequence}`
+  };
+
+  tallGrass.push(clump);
+
+  if (shouldSync) {
+    syncTemporaryRainGrassSpawn(clump);
+  }
+
+  return clump;
+}
+
+function growTemporaryRainGrass(cloud) {
+  if (!cloud || cloud.visualOnly || cloud.life <= 0) return;
+
+  if ((Number(cloud.grassGrowTimer) || 0) > 0) {
+    return;
+  }
+
+  cloud.grassGrowTimer = Number(cloud.grassGrowInterval) || 0.32;
+
+  // One cloud can fill the entire temporary-grass budget. The orbit supplies
+  // the footprint while the denser growth makes it feel like a real field.
+  const spawnCount = Math.random() < 0.70 ? 2 : 1;
+  const ownerId = localRainGrassOwnerId();
+
+  for (let i = 0; i < spawnCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * TEMP_RAIN_GRASS_SPAWN_RADIUS;
+    const gx = cloud.x + Math.cos(angle) * distance;
+    const gy = cloud.y + Math.sin(angle) * distance * 0.7 + 3;
+    spawnTemporaryRainGrassAt(
+      gx,
+      gy,
+      Number(cloud.grassPatchId) || 0,
+      { ownerId }
+    );
+  }
+}
+
+function pointIsInTemporaryRainGrass(x, y, radius = 9) {
+  for (const clump of tallGrass) {
+    if (
+      !isTemporaryRainGrass(clump) ||
+      clump.cut ||
+      clump.burnt ||
+      clump.mapId !== currentMapId
+    ) {
+      continue;
+    }
+
+    const dx = x - clump.x;
+    const dy = y - clump.y;
+    const combinedRadius = radius + Math.max(4, (Number(clump.width) || 12) * 0.35);
+
+    if (dx * dx + dy * dy <= combinedRadius * combinedRadius) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function updateTemporaryRainGrassSlow(dt) {
+  temporaryRainGrassSlowSyncTimer = Math.max(0, temporaryRainGrassSlowSyncTimer - dt);
+  if (temporaryRainGrassSlowSyncTimer > 0) return;
+  temporaryRainGrassSlowSyncTimer = 0.20;
+
+  if (typeof onlineClient === "undefined" || !onlineClient?.connected) return;
+
+  for (const { enemy } of activeEnemyRecords({ aliveOnly: true })) {
+    if (pointIsInTemporaryRainGrass(Number(enemy.x) || 0, Number(enemy.y) || 0, 7)) {
+      sendEnemyAction(enemy, "magicGrassSlow", { duration: 0.50 });
+    }
+  }
+}
+
 function drawTallGrass(clump, camX, camY) {
   const screenX = Math.round(clump.x - camX);
   const screenY = Math.round(clump.y - camY);
+  const magicGrass = isTemporaryRainGrass(clump);
 
   // Once cut/burned, leave a little uneven stubble behind.
   if (clump.cut) {
@@ -3602,7 +4148,9 @@ function drawTallGrass(clump, camX, camY) {
   // Tiny secondary motion helps keep the grass from looking mechanical.
   const flutter = Math.sin(worldTime * 3.1 + clump.phase * 1.7);
 
-  ctx.fillStyle = "rgba(40, 73, 38, .28)";
+  ctx.fillStyle = magicGrass
+    ? "rgba(47, 78, 50, .27)"
+    : "rgba(40, 73, 38, .28)";
   ctx.fillRect(
     screenX - Math.floor(clump.width / 2),
     screenY,
@@ -3615,15 +4163,19 @@ function drawTallGrass(clump, camX, camY) {
   for (let i = 0; i < bladeOffsets.length; i++) {
     const bx = screenX + bladeOffsets[i];
 
-    const height =
+    const baseHeight =
       i % 4 === 0 ? 9 :
       i % 4 === 1 ? 11 :
       i % 4 === 2 ? 8 : 10;
 
+    const height = baseHeight + (magicGrass ? 1 : 0);
+
     const bladeTop = screenY - height;
 
     // Lower stalk stays planted.
-    ctx.fillStyle = i % 2 === 0 ? "#3d743d" : "#467f43";
+    ctx.fillStyle = magicGrass
+      ? (i % 2 === 0 ? "#477c49" : "#508850")
+      : (i % 2 === 0 ? "#3d743d" : "#467f43");
     ctx.fillRect(bx, bladeTop + 4, 1, height - 4);
 
     // Upper portion bends in the breeze.
@@ -3631,7 +4183,9 @@ function drawTallGrass(clump, camX, camY) {
       topShift +
       (i % 2 === 0 ? 0 : Math.round(flutter * 0.5));
 
-    ctx.fillStyle = i % 2 === 0 ? "#5b9850" : "#67a858";
+    ctx.fillStyle = magicGrass
+      ? (i % 2 === 0 ? "#70a86c" : "#7bb678")
+      : (i % 2 === 0 ? "#5b9850" : "#67a858");
 
     ctx.fillRect(bx + localShift, bladeTop, 1, 3);
     ctx.fillRect(
@@ -3652,11 +4206,28 @@ function drawTallGrass(clump, camX, camY) {
   }
 
   // Shorter blades fill in the foreground edge.
-  ctx.fillStyle = "#4f8947";
+  ctx.fillStyle = magicGrass ? "#61975f" : "#4f8947";
   ctx.fillRect(screenX - 5, screenY - 4, 1, 4);
   ctx.fillRect(screenX - 1, screenY - 5, 1, 5);
   ctx.fillRect(screenX + 3, screenY - 4, 1, 4);
   ctx.fillRect(screenX + 5, screenY - 3, 1, 3);
+
+  if (magicGrass && clump.burnTime <= 0) {
+    // A rare pale glint helps the rain-grown field read as magical without
+    // turning it into a glowing neon patch.
+    const shimmer = Math.sin(worldTime * 1.55 + clump.phase * 1.9);
+    if (shimmer > 0.97) {
+      const shimmerX = screenX + ((Math.floor(clump.phase * 7) % 9) - 4);
+      const shimmerY = screenY - 10 - (Math.floor(clump.phase * 3) % 3);
+      ctx.fillStyle = "#d4e8bd";
+      ctx.fillRect(shimmerX, shimmerY, 1, 1);
+      if (shimmer > 0.992) {
+        ctx.fillStyle = "#9fc59a";
+        ctx.fillRect(shimmerX - 1, shimmerY, 1, 1);
+        ctx.fillRect(shimmerX + 1, shimmerY, 1, 1);
+      }
+    }
+  }
 
   if (clump.burnTime > 0) {
     drawPixelFlame(screenX - 3, screenY - 4, clump.phase + 0.4);
@@ -3990,11 +4561,15 @@ function tryCutHarvestFlowers() {
 // -----------------------------------------------------------------------------
 const fireballs = [];
 const fireParticles = [];
+const wandSweepParticles = [];
+const enemyDeathEffects = [];
+const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
+const ENEMY_SPAWN_ANIM_DURATION = 0.30;
+const ENEMY_DEATH_ANIM_DURATION = 0.36;
 const growthParticles = [];
 const basicProjectiles = [];
 const focusFireOpeners = [];
 const hunterSnareVisuals = new Map();
-const rainOrbs = [];
 const rainClouds = [];
 const shadowSmokeParticles = [];
 const jesterConfetti = [];
@@ -4004,8 +4579,11 @@ const remoteJesterClones = [];
 let mouseCanvasX = VIEW_W / 2;
 let mouseCanvasY = VIEW_H / 2;
 const JESTER_BLINK_RANGE = 34;
-const JESTER_CLONE_DURATION = 4.8;
+const JESTER_CLONE_DURATION = 5.8;
 const JESTER_CLONE_TAUNT_RADIUS = 120;
+const JESTER_CLONE_TAUNT_INTERVAL = 1.0;
+const JESTER_CLONE_TAUNT_HOLD = 1.15;
+const JESTER_CLONE_CONTACT_RADIUS = 8.5;
 
 // Fire spreads in little pulses rather than instantly chaining through an
 // entire field in one frame.
@@ -4021,6 +4599,35 @@ function spawnFireParticle(x, y, vx = 0, vy = -8, life = 0.28) {
     life,
     maxLife: life
   });
+}
+
+function spawnFireballImpactBurst(x, y) {
+  // Small, crisp landing pop rather than a large explosion. The radial shape
+  // makes the point of contact readable without obscuring enemies/terrain.
+  const count = 6;
+
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.35;
+    const speed = 12 + Math.random() * 12;
+
+    spawnFireParticle(
+      x + (Math.random() - 0.5) * 2,
+      y + (Math.random() - 0.5) * 2,
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed - 2,
+      0.16 + Math.random() * 0.10
+    );
+  }
+
+  for (let i = 0; i < 2; i++) {
+    spawnFireParticle(
+      x + (Math.random() - 0.5) * 3,
+      y - 1,
+      (Math.random() - 0.5) * 7,
+      -12 - Math.random() * 6,
+      0.22 + Math.random() * 0.08
+    );
+  }
 }
 
 function spawnTreeRegrowBurst(tree) {
@@ -4226,15 +4833,7 @@ function spawnRemoteFireballImpact(
   );
 
   // Match the small impact burst the caster sees.
-  for (let p = 0; p < 5; p++) {
-    spawnFireParticle(
-      x,
-      y,
-      (Math.random() - 0.5) * 18,
-      (Math.random() - 0.5) * 18,
-      0.18 + Math.random() * 0.16
-    );
-  }
+  spawnFireballImpactBurst(x, y);
 }
 
 function spawnRemoteBasicProjectileImpact(
@@ -4263,21 +4862,35 @@ function spawnRemoteBasicProjectileImpact(
   );
 }
 
-function castFireball(angle) {
+function castFireballToPoint(targetX, targetY) {
+  const originX = player.x;
+  const originY = player.y - 8;
+  const dx = targetX - originX;
+  const dy = targetY - originY;
+  const distance = Math.hypot(dx, dy) || 1;
+  const angle = Math.atan2(dy, dx);
   const startDistance = 11;
+  const startX = originX + Math.cos(angle) * startDistance;
+  const startY = originY + Math.sin(angle) * startDistance;
+  const travelDistance = Math.hypot(targetX - startX, targetY - startY);
+  const duration = Math.max(0.30, Math.min(0.78, travelDistance / 205));
+  const arcHeight = Math.min(44, 13 + travelDistance * 0.19);
 
   const fireball = {
-    x:
-      player.x +
-      Math.cos(angle) * startDistance,
-
-    y:
-      (player.y - 8) +
-      Math.sin(angle) * startDistance,
-
+    x: startX,
+    y: startY,
+    startX,
+    startY,
+    targetX,
+    targetY,
+    elapsed: 0,
+    duration,
+    arcHeight,
+    airborne: true,
+    angle,
     vx: Math.cos(angle) * 138,
     vy: Math.sin(angle) * 138,
-    life: 1.65,
+    life: duration + 0.20,
     trailTimer: 0
   };
 
@@ -4291,7 +4904,14 @@ function castFireball(angle) {
         y: fireball.y,
         vx: fireball.vx,
         vy: fireball.vy,
-        life: fireball.life
+        life: fireball.life,
+        airborne: true,
+        startX,
+        startY,
+        targetX,
+        targetY,
+        duration,
+        arcHeight
       }
     );
   }
@@ -4312,21 +4932,6 @@ function getActiveRainCloud() {
   return null;
 }
 
-function isRainSelfTarget(targetX, targetY) {
-  const dx = targetX - player.x;
-  const dy = targetY - (player.y - 8);
-  return dx * dx + dy * dy <= 12 * 12;
-}
-
-function getRainSelfFollowTarget() {
-  // Use a ground-adjacent anchor so the cloud's shadow sits more naturally
-  // over the player's planted position instead of floating above their head.
-  return {
-    x: player.x,
-    y: player.y + 2
-  };
-}
-
 function getCurrentWorldMouseTarget() {
   return {
     x: Math.max(0, Math.min(world.width, currentCamX + mouseCanvasX)),
@@ -4341,21 +4946,8 @@ function aimPlayerTowardPoint(targetX, targetY) {
 }
 
 function updateCanvasCursor() {
-  if (inventoryOpen || shopOpen || craftingOpen) {
-    canvas.style.cursor = "default";
-    return;
-  }
-
-  // Rain Cloud self-targeting only exists while Cloud Movement is equipped.
-  if (getBoundKeyForSkill("rainCloud") && rainCloudHasMovementEnhancement()) {
-    const worldMouse = getCurrentWorldMouseTarget();
-
-    canvas.style.cursor = isRainSelfTarget(worldMouse.x, worldMouse.y)
-      ? "copy"
-      : "default";
-    return;
-  }
-
+  // Rain Cloud no longer has self-targeting/repositioning, so there is no
+  // ability-specific cursor state to maintain here.
   canvas.style.cursor = "default";
 }
 
@@ -4558,6 +5150,200 @@ function fireBowArrow(drawAmount, angle, options = {}) {
   return true;
 }
 
+const WAND_WEAPON_TYPES = Object.freeze(["wand", "rainWand", "shepherdStaff"]);
+
+function isWandTypeWeapon(weapon = equippedWeapon()) {
+  return WAND_WEAPON_TYPES.includes(weapon);
+}
+
+function showWandRequiredMessage() {
+  spawnFloatingText(
+    player.x,
+    player.y - 31,
+    "WAND REQUIRED",
+    "#d9c6ff",
+    0.72
+  );
+}
+
+function skillCooldownRemaining(skillId) {
+  return Math.max(
+    0,
+    Number(player.skillCooldowns?.[skillId]) || 0
+  );
+}
+
+function skillCooldownDuration(skillId) {
+  return Math.max(
+    0,
+    Number(ACTIVE_SKILLS?.[skillId]?.cooldown) || 0
+  );
+}
+
+function skillIsOnCooldown(skillId) {
+  return skillCooldownRemaining(skillId) > 0;
+}
+
+function startSkillCooldown(skillId, duration = null) {
+  if (!player.skillCooldowns) player.skillCooldowns = {};
+
+  const resolvedDuration = Number.isFinite(duration)
+    ? Math.max(0, duration)
+    : skillCooldownDuration(skillId);
+
+  player.skillCooldowns[skillId] = Math.max(
+    skillCooldownRemaining(skillId),
+    resolvedDuration
+  );
+}
+
+function showSkillCooldownMessage(skillId) {
+  const remaining = skillCooldownRemaining(skillId);
+  if (remaining <= 0) return;
+
+  spawnFloatingText(
+    player.x,
+    player.y - 31,
+    `${remaining.toFixed(1)}S`,
+    "#bbb7c8",
+    0.48
+  );
+}
+
+const FIREBALL_AIM_MIN_RANGE = 26;
+const FIREBALL_AIM_MAX_RANGE = 150;
+const FIREBALL_AIM_PULSE_DURATION = 1.25;
+const FIREBALL_LANDING_RADIUS = 13;
+
+function fireballIsAiming() {
+  return Boolean(player.fireballAiming);
+}
+
+function fireballAimProgress() {
+  const time = Math.max(0, Number(player.fireballAimTime) || 0);
+  return (time % FIREBALL_AIM_PULSE_DURATION) / FIREBALL_AIM_PULSE_DURATION;
+}
+
+function fireballAimRadius() {
+  const progress = fireballAimProgress();
+  return FIREBALL_AIM_MIN_RANGE +
+    (FIREBALL_AIM_MAX_RANGE - FIREBALL_AIM_MIN_RANGE) * progress;
+}
+
+function fireballLandingPoint() {
+  const target = getCurrentWorldMouseTarget();
+  let dx = target.x - player.x;
+  let dy = target.y - (player.y - 8);
+  const length = Math.hypot(dx, dy) || 1;
+  dx /= length;
+  dy /= length;
+
+  const radius = fireballAimRadius();
+
+  return {
+    x: clampToWorld(player.x + dx * radius, 5, world.width - 5),
+    y: clampToWorld((player.y - 8) + dy * radius, 5, world.height - 5),
+    angle: Math.atan2(dy, dx),
+    radius
+  };
+}
+
+function clearFireballChargeState() {
+  player.fireballAiming = false;
+  player.fireballAimTime = 0;
+  player.fireballBoundKey = null;
+  player.fireballAimMapId = null;
+  player.fireballTargetX = null;
+  player.fireballTargetY = null;
+  player.fireballTargetAngle = null;
+}
+
+function cancelFireballAim() {
+  if (!player.fireballAiming) return false;
+
+  clearFireballChargeState();
+
+  if (typeof onlineClient !== "undefined") {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function beginFireballAim(boundKey = null) {
+  if (!isAbilityUnlocked("fireball")) return false;
+
+  if (!isWandTypeWeapon()) {
+    showWandRequiredMessage();
+    return true;
+  }
+
+  if (skillIsOnCooldown("fireball")) {
+    showSkillCooldownMessage("fireball");
+    return true;
+  }
+
+  if (player.fireballAiming) return true;
+  if (focusFireIsCasting()) return true;
+
+  breakShadowHide();
+  player.fireballAiming = true;
+  player.fireballAimTime = 0;
+  player.fireballBoundKey = boundKey;
+  player.fireballAimMapId = currentMapId;
+  player.fireballTargetX = null;
+  player.fireballTargetY = null;
+  player.fireballTargetAngle = null;
+
+  const target = getCurrentWorldMouseTarget();
+  aimPlayerTowardPoint(target.x, target.y);
+
+  if (typeof onlineClient !== "undefined") {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function releaseFireballAim() {
+  if (!player.fireballAiming) return false;
+
+  if (currentMapId !== player.fireballAimMapId) {
+    cancelFireballAim();
+    return true;
+  }
+
+  const landing = fireballLandingPoint();
+
+  clearFireballChargeState();
+  player.attackAimAngle = landing.angle;
+  player.attackHand = Math.cos(landing.angle) >= 0 ? "right" : "left";
+  player.attackTime = Math.max(player.attackTime, 0.10);
+  player.attackCooldown = Math.max(player.attackCooldown, 0.20);
+
+  castFireballToPoint(landing.x, landing.y);
+  startSkillCooldown("fireball");
+
+  if (typeof onlineClient !== "undefined") {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function updateFireballAim(dt) {
+  if (!player.fireballAiming) return;
+
+  if (player.isDead || currentMapId !== player.fireballAimMapId) {
+    cancelFireballAim();
+    return;
+  }
+
+  player.fireballAimTime += dt;
+  const target = getCurrentWorldMouseTarget();
+  aimPlayerTowardPoint(target.x, target.y);
+}
+
 const FOCUS_FIRE_MIN_RADIUS = 30;
 const FOCUS_FIRE_MAX_RADIUS = 150;
 const FOCUS_FIRE_PULSE_DURATION = 1.35;
@@ -4665,7 +5451,7 @@ function beginFocusFireCharge(boundKey = null) {
     return true;
   }
 
-  if (focusFireIsCasting()) {
+  if (focusFireIsCasting() || fireballIsAiming()) {
     return true;
   }
 
@@ -5064,106 +5850,196 @@ function updateFocusFire(dt) {
   }
 }
 
-function castRainOrb(targetX, targetY) {
-  const canMoveCloud = rainCloudHasMovementEnhancement();
-  const selfTarget = canMoveCloud && isRainSelfTarget(targetX, targetY);
+const RAIN_CLOUD_ORBIT_MAX_RADIUS = 28;
+const RAIN_CLOUD_ORBIT_EXPAND_TIME = 7.0;
+const RAIN_CLOUD_ORBIT_ANGULAR_SPEED = 0.72;
 
-  const startX = player.x + Math.cos(player.attackAimAngle) * 11;
-  const startY = (player.y - 8) + Math.sin(player.attackAimAngle) * 11;
+function resetRainCloudOrbit(cloud, centerX, centerY, angle = null) {
+  if (!cloud) return;
 
-  // IMPORTANT: resolve self-targeting BEFORE calculating travel direction.
-  // Previously we calculated velocity toward the raw torso click, then
-  // replaced the destination with the player-follow point. For some torso
-  // clicks that left the local orb travelling away from its corrected target.
-  if (selfTarget) {
-    const followTarget = getRainSelfFollowTarget();
-    targetX = followTarget.x;
-    targetY = followTarget.y;
+  cloud.orbitCenterX = centerX;
+  cloud.orbitCenterY = centerY;
+  cloud.orbitElapsed = 0;
+  cloud.orbitRadius = 0;
+
+  if (Number.isFinite(angle)) {
+    cloud.orbitAngle = angle;
+  } else if (!Number.isFinite(cloud.orbitAngle)) {
+    cloud.orbitAngle = 0;
   }
 
-  let dx = targetX - startX;
-  let dy = targetY - startY;
-  let len = Math.hypot(dx, dy) || 1;
+  cloud.targetX = centerX;
+  cloud.targetY = centerY;
+}
 
-  // Shorter tactical cast range. Clicking farther away still casts in that
-  // direction, but the orb stops at this maximum distance. Self-casts always
-  // use the resolved player-follow point directly.
+function castRainOrb(targetX, targetY) {
+  const originX = player.x;
+  const originY = player.y - 8;
   const maxRange = 80;
 
-  if (!selfTarget) {
-    const travelDistance = Math.min(len, maxRange);
-    const initialDirX = dx / len;
-    const initialDirY = dy / len;
+  let dx = targetX - originX;
+  let dy = targetY - originY;
+  const distance = Math.hypot(dx, dy) || 1;
 
-    targetX = startX + initialDirX * travelDistance;
-    targetY = startY + initialDirY * travelDistance;
-
-    // Recalculate from the final clamped target so local and remote orb
-    // movement are derived from exactly the same start/destination pair.
-    dx = targetX - startX;
-    dy = targetY - startY;
-    len = Math.hypot(dx, dy) || 1;
+  if (distance > maxRange) {
+    const scale = maxRange / distance;
+    targetX = originX + dx * scale;
+    targetY = originY + dy * scale;
   }
 
-  const dirX = dx / len;
-  const dirY = dy / len;
+  targetX = clampToWorld(targetX, 6, world.width - 6);
+  targetY = clampToWorld(targetY, 10, world.height - 4);
 
-  const activeCloud = getActiveRainCloud();
+  const grassPatchId = ++rainGrassPatchSequence;
+  const initialOrbitAngle = Math.random() * Math.PI * 2;
 
   if (typeof onlineClient !== "undefined") {
     onlineClient.sendVisualEffect(
       "rainCast",
       {
-        startX,
-        startY,
+        startX: originX,
+        startY: originY,
         targetX,
         targetY,
-        followPlayer: selfTarget,
-        retarget: Boolean(
-          activeCloud && canMoveCloud
-        ),
-        cloudLife: getRainCloudLifetime()
+        followPlayer: false,
+        retarget: false,
+        cloudLife: getRainCloudLifetime(),
+        orbitAngle: initialOrbitAngle,
+        instant: true
       }
     );
   }
 
-  // With Cloud Movement equipped, recasting retargets the active cloud
-  // instead of dismissing it. Without the enhancement, a new cast simply
-  // replaces the old storm with a fresh one.
-  if (activeCloud && canMoveCloud) {
-    rainOrbs.length = 0;
-    activeCloud.followPlayer = selfTarget;
+  rainClouds.length = 0;
 
-    if (selfTarget) {
-      const followTarget = getRainSelfFollowTarget();
-      activeCloud.targetX = followTarget.x;
-      activeCloud.targetY = followTarget.y;
-    } else {
-      activeCloud.targetX = targetX;
-      activeCloud.targetY = targetY;
+  spawnRainCloud(
+    targetX,
+    targetY,
+    false,
+    {
+      life: getRainCloudLifetime(),
+      orbitAngle: initialOrbitAngle,
+      grassPatchId
     }
+  );
+}
 
-    activeCloud.life = Math.max(activeCloud.life, activeCloud.maxLife * 0.85);
-    activeCloud.fadeTime = activeCloud.maxFadeTime;
+function cancelRainCloudCast() {
+  if (!player.rainCloudCasting) return false;
+
+  player.rainCloudCasting = false;
+  player.rainCloudCastTime = 0;
+  player.rainCloudCastMapId = null;
+  player.rainCloudCastTargetX = null;
+  player.rainCloudCastTargetY = null;
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function beginRainCloudCast() {
+  if (!isAbilityUnlocked("rainCloud")) return false;
+
+  if (!isWandTypeWeapon()) {
+    showWandRequiredMessage();
+    return true;
+  }
+
+  if (skillIsOnCooldown("rainCloud")) {
+    showSkillCooldownMessage("rainCloud");
+    return true;
+  }
+
+  if (getActiveRainCloud()) {
+    spawnFloatingText(
+      player.x,
+      player.y - 31,
+      "CLOUD ACTIVE",
+      "#b9d9ce",
+      0.65
+    );
+    return true;
+  }
+
+  if (player.rainCloudCasting) return true;
+  if (focusFireIsCasting() || fireballIsAiming()) return true;
+
+  breakShadowHide();
+
+  const target = getCurrentWorldMouseTarget();
+
+  player.rainCloudCasting = true;
+  player.rainCloudCastTime = 0;
+  player.rainCloudCastMapId = currentMapId;
+  player.rainCloudCastTargetX = target.x;
+  player.rainCloudCastTargetY = target.y;
+
+  aimPlayerTowardPoint(target.x, target.y);
+
+  // A summon is a committed pose. Gameplay inputs are ignored while this
+  // state is active, but held movement keys may resume naturally afterward.
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendLocalState(true);
+  }
+
+  return true;
+}
+
+function updateRainCloudCast(dt) {
+  if (!player.rainCloudCasting) return;
+
+  if (
+    player.isDead ||
+    currentMapId !== player.rainCloudCastMapId ||
+    getActiveRainCloud()
+  ) {
+    cancelRainCloudCast();
     return;
   }
 
-  // Replace any lingering orb/fading cloud with a new cast.
-  rainClouds.length = 0;
-  rainOrbs.length = 0;
+  const targetX = Number(player.rainCloudCastTargetX);
+  const targetY = Number(player.rainCloudCastTargetY);
 
-  const speed = 124;
+  if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) {
+    cancelRainCloudCast();
+    return;
+  }
 
-  rainOrbs.push({
-    x: startX,
-    y: startY,
-    targetX,
-    targetY,
-    vx: dirX * speed,
-    vy: dirY * speed,
-    trailTimer: 0,
-    followPlayer: selfTarget
-  });
+  // Face the snapshotted summon point for the whole ritual. Moving the mouse
+  // after the initial button press deliberately does not retarget the cloud.
+  aimPlayerTowardPoint(targetX, targetY);
+
+  player.rainCloudCastTime = Math.min(
+    player.rainCloudCastDuration,
+    player.rainCloudCastTime + dt
+  );
+
+  if (player.rainCloudCastTime < player.rainCloudCastDuration) return;
+
+  player.rainCloudCasting = false;
+  player.rainCloudCastTime = 0;
+  player.rainCloudCastMapId = null;
+  player.rainCloudCastTargetX = null;
+  player.rainCloudCastTargetY = null;
+
+  castRainOrb(targetX, targetY);
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.sendLocalState(true);
+  }
 }
 
 function spawnRainCloud(
@@ -5181,13 +6057,28 @@ function spawnRainCloud(
     y,
     targetX: x,
     targetY: y,
-    moveSpeed: 26,
+    moveSpeed: 22,
     followPlayer,
+
+    // The cloud slowly paints the battlefield on its own. Its orbit begins
+    // tight around the cast point, then expands until it reaches a broad loop.
+    orbitCenterX: x,
+    orbitCenterY: y,
+    orbitAngle: Number.isFinite(options.orbitAngle)
+      ? options.orbitAngle
+      : 0,
+    orbitElapsed: 0,
+    orbitRadius: 0,
+    orbitMaxRadius: RAIN_CLOUD_ORBIT_MAX_RADIUS,
+    orbitExpandTime: RAIN_CLOUD_ORBIT_EXPAND_TIME,
+    orbitAngularSpeed: RAIN_CLOUD_ORBIT_ANGULAR_SPEED,
+    grassPatchId: Number(options.grassPatchId) || 0,
     life,
     maxLife: life,
 
     visualOnly: Boolean(options.visualOnly),
     ownerId: options.ownerId || null,
+    cooldownStarted: false,
 
     // After the rain ends, keep the cloud around briefly so it can
     // drift upward and fade away instead of disappearing instantly.
@@ -5196,13 +6087,17 @@ function spawnRainCloud(
 
     pulseTimer: 0,
     pulseInterval: 0.32,
-    healTimer: 0,
-    healInterval: 0.48,
-
     // Rain also affects creatures on a slower, readable tick:
-    // living monsters heal, while ghosts are harmed.
+    // Rain Cloud only affects creatures offensively now: living enemies are
+    // unaffected, while ghosts are harmed.
     creatureTimer: 0,
     creatureInterval: 0.48,
+
+    // Rain steadily builds a dense patch of temporary, flammable grass.
+    // The first tuft waits a moment so the cloud visually settles before the
+    // ground starts changing underneath it.
+    grassGrowTimer: 0.65,
+    grassGrowInterval: 0.32,
 
     radius: 24
   });
@@ -5241,21 +6136,6 @@ function removeRemoteRainForOwner(ownerId) {
       rainClouds.splice(i, 1);
     }
   }
-
-  for (
-    let i = rainOrbs.length - 1;
-    i >= 0;
-    i--
-  ) {
-    const orb = rainOrbs[i];
-
-    if (
-      orb.visualOnly &&
-      orb.ownerId === ownerId
-    ) {
-      rainOrbs.splice(i, 1);
-    }
-  }
 }
 
 function removeRemoteCasterEffectsForOwner(
@@ -5266,6 +6146,8 @@ function removeRemoteCasterEffectsForOwner(
   removeRemoteRainForOwner(
     ownerId
   );
+
+  clearTemporaryRainGrassForOwner(ownerId);
 
   removeRemoteJesterForOwner(
     ownerId
@@ -5303,25 +6185,13 @@ function spawnRemoteRainCast(
   ownerId,
   payload
 ) {
-  const startX =
-    Number(payload.startX) || 0;
-
-  const startY =
-    Number(payload.startY) || 0;
-
-  const targetX =
-    Number(payload.targetX) || 0;
-
-  const targetY =
-    Number(payload.targetY) || 0;
-
-  const followPlayer =
-    Boolean(payload.followPlayer);
-
-  const cloudLife = Math.max(
-    4,
-    Number(payload.cloudLife) || 12
-  );
+  const targetX = Number(payload.targetX) || 0;
+  const targetY = Number(payload.targetY) || 0;
+  const followPlayer = Boolean(payload.followPlayer);
+  const cloudLife = Math.max(4, Number(payload.cloudLife) || 12);
+  const orbitAngle = Number.isFinite(Number(payload.orbitAngle))
+    ? Number(payload.orbitAngle)
+    : 0;
 
   const activeRemoteCloud =
     rainClouds.find(cloud =>
@@ -5330,78 +6200,36 @@ function spawnRemoteRainCast(
       cloud.life > 0
     ) || null;
 
-  // Cloud Movement mirrors the caster's local behavior: retarget the existing
-  // cloud instead of spawning a second one.
-  if (
-    payload.retarget &&
-    activeRemoteCloud
-  ) {
-    // A stale travelling orb from the same caster should never survive a
-    // retarget.
-    for (
-      let i = rainOrbs.length - 1;
-      i >= 0;
-      i--
-    ) {
-      const orb = rainOrbs[i];
-
-      if (
-        orb.visualOnly &&
-        orb.ownerId === ownerId
-      ) {
-        rainOrbs.splice(i, 1);
-      }
-    }
-
-    activeRemoteCloud.followPlayer =
-      followPlayer;
-
-    activeRemoteCloud.targetX =
-      targetX;
-
-    activeRemoteCloud.targetY =
-      targetY;
-
-    activeRemoteCloud.life =
-      Math.max(
-        activeRemoteCloud.life,
-        activeRemoteCloud.maxLife * 0.85
-      );
-
-    activeRemoteCloud.fadeTime =
-      activeRemoteCloud.maxFadeTime;
-
+  if (payload.retarget && activeRemoteCloud) {
+    // Mirror the caster: keep the existing cloud and let its normal movement
+    // system drift it toward the new target. No rain missile and no teleport.
+    activeRemoteCloud.followPlayer = followPlayer;
+    resetRainCloudOrbit(
+      activeRemoteCloud,
+      targetX,
+      targetY,
+      activeRemoteCloud.orbitAngle
+    );
+    activeRemoteCloud.life = Math.max(
+      activeRemoteCloud.life,
+      activeRemoteCloud.maxLife * 0.85
+    );
+    activeRemoteCloud.fadeTime = activeRemoteCloud.maxFadeTime;
     return;
   }
 
-  // Ordinary recast: the caster's old cloud vanishes on their own screen, so
-  // it must vanish on observers' screens too. This also handles a rapid recast
-  // while the previous orb is still in flight.
   removeRemoteRainForOwner(ownerId);
-
-  let dx = targetX - startX;
-  let dy = targetY - startY;
-  const distance = Math.hypot(dx, dy) || 1;
-
-  dx /= distance;
-  dy /= distance;
-
-  const speed = 124;
-
-  rainOrbs.push({
-    x: startX,
-    y: startY,
+  spawnRainCloud(
     targetX,
     targetY,
-    vx: dx * speed,
-    vy: dy * speed,
-    trailTimer: 0,
-
     followPlayer,
-    visualOnly: true,
-    ownerId,
-    cloudLife
-  });
+    {
+      visualOnly: true,
+      ownerId,
+      life: cloudLife,
+      orbitAngle
+    }
+  );
 }
 
 const LOCAL_TREE_REGROW_MIN_MS = 180_000;
@@ -5438,6 +6266,7 @@ function scheduleLocalTreeRegrow(tree) {
 
 function scheduleLocalGrassRegrow(clump) {
   if (
+    isTemporaryRainGrass(clump) ||
     clump.serverControlled ||
     clump.regrowAt > 0
   ) {
@@ -5451,10 +6280,22 @@ function scheduleLocalGrassRegrow(clump) {
     );
 }
 
-function igniteGrass(clump) {
+function igniteGrass(clump, options = {}) {
   if (clump.cut || clump.burnTime > 0) return;
-  clump.burnTime = 1.05;
-  clump.burnDuration = 1.05;
+
+  const burnDuration = isTemporaryRainGrass(clump)
+    ? TEMP_RAIN_GRASS_BURN_DURATION
+    : Math.max(0.1, Number(clump.burnDuration) || 1.05);
+
+  clump.burnDuration = burnDuration;
+  clump.burnTime = burnDuration;
+
+  if (
+    isTemporaryRainGrass(clump) &&
+    options.sync !== false
+  ) {
+    syncTemporaryRainGrassState(clump, "burning");
+  }
 }
 
 function igniteHarvestFlower(flower) {
@@ -5479,8 +6320,37 @@ function igniteTreeCanopy(tree) {
 function igniteVegetationNear(
   x,
   y,
-  radius = 12
+  radius = 12,
+  options = {}
 ) {
+  const temporaryGrassChance = Math.max(
+    0,
+    Math.min(1, Number(options.temporaryGrassChance) || 1)
+  );
+  const temporaryGrassMaxIgnitions = Number.isFinite(options.temporaryGrassMaxIgnitions)
+    ? Math.max(1, Math.floor(options.temporaryGrassMaxIgnitions))
+    : Infinity;
+  let temporaryGrassIgnitions = 0;
+  // Cloud-grown grass is client-temporary and therefore is not part of the
+  // server's persistent environment catalog. Ignite it locally first so it
+  // remains genuinely flammable in multiplayer as well as offline play.
+  for (const clump of tallGrass) {
+    if (!isTemporaryRainGrass(clump) || clump.cut) continue;
+
+    const dx = clump.x - x;
+    const dy = (clump.y - 5) - y;
+
+    if (
+      dx * dx + dy * dy <=
+      radius * radius &&
+      Math.random() <= temporaryGrassChance
+    ) {
+      igniteGrass(clump);
+      temporaryGrassIgnitions += 1;
+      if (temporaryGrassIgnitions >= temporaryGrassMaxIgnitions) break;
+    }
+  }
+
   if (
     typeof onlineClient !== "undefined" &&
     onlineClient.sendEnvironmentAction(
@@ -5494,7 +6364,7 @@ function igniteVegetationNear(
 
   // Offline fallback.
   for (const clump of tallGrass) {
-    if (clump.cut) continue;
+    if (clump.cut || isTemporaryRainGrass(clump)) continue;
 
     const dx = clump.x - x;
     const dy = (clump.y - 5) - y;
@@ -5542,11 +6412,80 @@ function igniteVegetationNear(
   }
 }
 
-function ignitePlayerFromSpread() {
-  if (player.burnTime > 0 || playerIsWet()) return;
+// -----------------------------------------------------------------------------
+// LOCAL STATUS EFFECTS
+// -----------------------------------------------------------------------------
+// Presentation/offline state mirrors the server rules. Networked enemies still
+// receive authoritative timers from snapshots, but every local interaction uses
+// these helpers instead of writing burnTime/wetTime ad hoc.
+function ensureLocalStatusState(entity, wetDuration = GAME_CONFIG.status.enemyWetDuration) {
+  if (!entity) return entity;
 
-  player.burnTime = player.burnDuration;
-  player.burnTickTimer = player.burnTickInterval;
+  entity.burnTime = Math.max(0, Number(entity.burnTime) || 0);
+  entity.burnTickTimer = Math.max(0, Number(entity.burnTickTimer) || 0);
+  entity.burnTickInterval = Math.max(0.05, Number(entity.burnTickInterval) || 0.5);
+  entity.wetTime = Math.max(0, Number(entity.wetTime) || 0);
+  entity.wetDuration = Math.max(0.1, Number(entity.wetDuration) || wetDuration);
+  return entity;
+}
+
+function entityIsWet(entity) {
+  ensureLocalStatusState(entity);
+  return Boolean(entity && entity.wetTime > 0);
+}
+
+function clearLocalBurnStatus(entity) {
+  if (!entity) return false;
+  ensureLocalStatusState(entity);
+  const changed = entity.burnTime > 0 || entity.burnTickTimer > 0;
+  entity.burnTime = 0;
+  entity.burnTickTimer = 0;
+  return changed;
+}
+
+function applyLocalWetStatus(
+  entity,
+  duration = GAME_CONFIG.status.enemyWetDuration
+) {
+  if (!entity) return false;
+  ensureLocalStatusState(entity, duration);
+
+  clearLocalBurnStatus(entity);
+  entity.wetTime = Math.max(
+    entity.wetTime,
+    Math.max(0.1, Number(duration) || GAME_CONFIG.status.enemyWetDuration)
+  );
+  return true;
+}
+
+function applyLocalBurnStatus(
+  entity,
+  duration,
+  { forceThroughWet = false } = {}
+) {
+  if (!entity) return false;
+  ensureLocalStatusState(entity);
+
+  if (entityIsWet(entity) && !forceThroughWet) {
+    return false;
+  }
+
+  if (forceThroughWet) {
+    entity.wetTime = 0;
+  }
+
+  const burnDuration = Math.max(
+    0.1,
+    Number(duration) || Number(entity.burnDuration) || 3.0
+  );
+  entity.burnTime = Math.max(entity.burnTime, burnDuration);
+  entity.burnTickTimer = entity.burnTickInterval;
+  return true;
+}
+
+function ignitePlayerFromSpread() {
+  if (player.burnTime > 0) return;
+  applyLocalBurnStatus(player, player.burnDuration);
 }
 
 function igniteLivingNear(x, y, radius = 14) {
@@ -5574,6 +6513,267 @@ function igniteLivingNear(x, y, radius = 14) {
   }
 }
 
+function igniteTemporaryRainGrassNear(
+  x,
+  y,
+  radius = 13,
+  options = {}
+) {
+  const ignitionChance = Math.max(
+    0,
+    Math.min(1, Number(options.chance) || 1)
+  );
+  const maxIgnitions = Number.isFinite(options.maxIgnitions)
+    ? Math.max(1, Math.floor(options.maxIgnitions))
+    : Infinity;
+  let ignitions = 0;
+
+  for (const clump of tallGrass) {
+    if (
+      !isTemporaryRainGrass(clump) ||
+      clump.cut ||
+      clump.burnTime > 0
+    ) {
+      continue;
+    }
+
+    const dx = clump.x - x;
+    const dy = (clump.y - 5) - y;
+
+    if (
+      dx * dx + dy * dy <= radius * radius &&
+      Math.random() <= ignitionChance
+    ) {
+      igniteGrass(clump);
+      ignitions += 1;
+      if (ignitions >= maxIgnitions) break;
+    }
+  }
+}
+
+function isNearBurningTemporaryRainGrass(x, y, radius = 13) {
+  for (const clump of tallGrass) {
+    if (
+      !isTemporaryRainGrass(clump) ||
+      clump.cut ||
+      (Number(clump.burnTime) || 0) <= 0
+    ) {
+      continue;
+    }
+
+    const dx = x - clump.x;
+    const dy = y - (clump.y - 5);
+
+    if (dx * dx + dy * dy <= radius * radius) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function ignitePlayerFromTemporaryRainGrass(targetId = null) {
+  // Burning magic grass now obeys the same Wet rule as other fire sources.
+  if (!targetId || targetId === onlineClient?.localPlayerId) {
+    if (player.isDead || player.hp <= 0 || player.burnTime > 0) {
+      return;
+    }
+
+    const ignited = applyLocalBurnStatus(
+      player,
+      player.burnDuration
+    );
+
+    if (!ignited) {
+      return;
+    }
+
+    if (
+      typeof onlineClient !== "undefined" &&
+      onlineClient?.connected
+    ) {
+      onlineClient.requestPlayerIgnite(onlineClient.localPlayerId);
+      onlineClient.sendLocalState(true);
+    }
+
+    return;
+  }
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    onlineClient.requestPlayerIgnite(targetId);
+  }
+}
+
+function spreadOnlineFireToTemporaryRainGrass() {
+  const sources = [];
+
+  // Shared enemies are authoritative on the server, but their burn timers are
+  // mirrored locally. Use those synced timers to ignite client-temporary grass
+  // that the server cannot know exists.
+  for (
+    const { enemy, profile }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    if ((Number(enemy.burnTime) || 0) <= 0) continue;
+
+    const body = enemyBodyPoint(enemy);
+    sources.push({
+      x: body.x,
+      y: body.y,
+      radius: 13,
+      chance: profile.burnSpreadChance ?? 0.42
+    });
+  }
+
+  if (player.burnTime > 0) {
+    sources.push({
+      x: player.x,
+      y: player.y - 8,
+      radius: 13,
+      chance: 0.42
+    });
+  }
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    for (const remote of onlineClient.playersOnCurrentMap()) {
+      if ((Number(remote.burnTime) || 0) <= 0) continue;
+
+      sources.push({
+        x: remote.x,
+        y: remote.y - 8,
+        radius: 13,
+        chance: 0.42
+      });
+    }
+  }
+
+  // Burning world vegetation is also server-authoritative, but its burn state
+  // is mirrored into these local objects. Let it ignite temporary grass too.
+  // Burning temporary grass is included as a local-only source so the rain
+  // patch can visibly chain through itself in multiplayer.
+  for (const clump of tallGrass) {
+    if (clump.cut || clump.burnTime <= 0) {
+      continue;
+    }
+
+    const magicGrassSource = isTemporaryRainGrass(clump);
+    sources.push({
+      x: clump.x,
+      y: clump.y - 5,
+      radius: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_RADIUS : 17,
+      chance: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE : 0.58,
+      magicGrassSource
+    });
+  }
+
+  for (const flower of harvestFlowers) {
+    if (!flower.cut && flower.burnTime > 0) {
+      sources.push({ x: flower.x, y: flower.y - 8, radius: 16, chance: 0.60 });
+    }
+  }
+
+  for (const tree of trees) {
+    if (tree.canopyBurnTime > 0 && !tree.canopyBurned) {
+      sources.push({ x: tree.x, y: tree.y - 18, radius: 20, chance: 0.48 });
+    }
+  }
+
+  for (const source of sources) {
+    if (Math.random() <= source.chance) {
+      igniteTemporaryRainGrassNear(
+        source.x,
+        source.y,
+        source.radius,
+        source.magicGrassSource
+          ? {
+              chance: TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE,
+              maxIgnitions: 1
+            }
+          : {}
+      );
+    }
+  }
+}
+
+function spreadTemporaryRainGrassFireToLiving() {
+  const burningTemporaryGrass = tallGrass.filter(clump =>
+    isTemporaryRainGrass(clump) &&
+    !clump.cut &&
+    (Number(clump.burnTime) || 0) > 0
+  );
+
+  if (burningTemporaryGrass.length === 0) {
+    return;
+  }
+
+  // Directly standing in burning grass is deterministic. Randomness still
+  // governs fire jumping between nearby sources, but contact itself should
+  // never feel unreliable.
+  for (
+    const { enemy }
+    of activeEnemyRecords({ aliveOnly: true })
+  ) {
+    if ((Number(enemy.burnTime) || 0) > 0) continue;
+
+    const body = enemyBodyPoint(enemy);
+
+    for (const clump of burningTemporaryGrass) {
+      const dx = body.x - clump.x;
+      const dy = body.y - (clump.y - 5);
+      const radius = 14;
+
+      if (dx * dx + dy * dy <= radius * radius) {
+        igniteEnemyFromSpread(enemy);
+
+        break;
+      }
+    }
+  }
+
+  const playerBodyX = player.x;
+  const playerBodyY = player.y - 8;
+
+  if (
+    !player.isDead &&
+    player.hp > 0 &&
+    player.burnTime <= 0 &&
+    isNearBurningTemporaryRainGrass(playerBodyX, playerBodyY, 12)
+  ) {
+    ignitePlayerFromTemporaryRainGrass();
+  }
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    for (const remote of onlineClient.playersOnCurrentMap()) {
+      if (
+        remote.isDead ||
+        (Number(remote.hp) || 0) <= 0 ||
+        (Number(remote.burnTime) || 0) > 0
+      ) {
+        continue;
+      }
+
+      if (
+        isNearBurningTemporaryRainGrass(
+          Number(remote.x) || 0,
+          (Number(remote.y) || 0) - 8,
+          12
+        )
+      ) {
+        ignitePlayerFromTemporaryRainGrass(remote.id);
+      }
+    }
+  }
+}
+
 function spreadFireFromBurningSources() {
   // Snapshot the currently burning sources first. Anything ignited by this
   // pulse has to wait until a later pulse before it can spread again, which
@@ -5582,7 +6782,14 @@ function spreadFireFromBurningSources() {
 
   for (const clump of tallGrass) {
     if (clump.burnTime > 0 && !clump.cut) {
-      sources.push({ x: clump.x, y: clump.y - 5, radius: 17, chance: 0.58 });
+      const magicGrassSource = isTemporaryRainGrass(clump);
+      sources.push({
+        x: clump.x,
+        y: clump.y - 5,
+        radius: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_RADIUS : 17,
+        chance: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE : 0.58,
+        magicGrassSource
+      });
     }
   }
 
@@ -5623,7 +6830,17 @@ function spreadFireFromBurningSources() {
 
   for (const source of sources) {
     if (Math.random() <= source.chance) {
-      igniteVegetationNear(source.x, source.y, source.radius);
+      igniteVegetationNear(
+        source.x,
+        source.y,
+        source.radius,
+        source.magicGrassSource
+          ? {
+              temporaryGrassChance: TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE,
+              temporaryGrassMaxIgnitions: 1
+            }
+          : {}
+      );
       igniteLivingNear(source.x, source.y, Math.max(11, source.radius - 1));
     }
   }
@@ -5719,8 +6936,10 @@ function applyRangedHit(entity, projectile, entityType, attackType) {
   entity.hp -= damage;
 
   if (attackType === "fireball") {
-    entity.burnTime = entity.burnDuration;
-    entity.burnTickTimer = entity.burnTickInterval;
+    applyLocalBurnStatus(
+      entity,
+      Number(entity.burnDuration) || 3.0
+    );
   }
 
   spawnDamageNumber(
@@ -5735,8 +6954,13 @@ function applyRangedHit(entity, projectile, entityType, attackType) {
       ? entityProfile.fireballKnockback
       : entityProfile.basicKnockback;
 
-  entity.knockbackX = (projectile.vx / len) * knockback;
-  entity.knockbackY = (projectile.vy / len) * knockback;
+  const damageFraction =
+    damage / Math.max(1, Number(entity.maxHp) || damage);
+
+  if (damageFraction >= ENEMY_KNOCKBACK_DAMAGE_THRESHOLD) {
+    entity.knockbackX = (projectile.vx / len) * knockback;
+    entity.knockbackY = (projectile.vy / len) * knockback;
+  }
 
   if (entity.hp <= 0) {
     entityProfile.kill(entity);
@@ -5753,16 +6977,15 @@ function fireballHitsWater(fireball) {
 }
 
 function extinguishPlayer() {
-  player.burnTime = 0;
-  player.burnTickTimer = 0;
+  clearLocalBurnStatus(player);
 }
 
 function playerIsWet() {
-  return player.wetTime > 0;
+  return entityIsWet(player);
 }
 
 function applyWetStatus() {
-  player.wetTime = player.wetDuration;
+  applyLocalWetStatus(player, player.wetDuration);
 }
 
 function restoreGrass(clump) {
@@ -5784,6 +7007,23 @@ function restoreTreeCanopy(tree) {
 function applyRainCloud(cloud) {
   const radius = cloud.radius;
 
+  growTemporaryRainGrass(cloud);
+
+  // Rain-grown grass is client-temporary, so the server cannot extinguish it.
+  // Handle it locally on every rain pulse so magic grass obeys the same fire
+  // rule as ordinary vegetation.
+  for (const clump of tallGrass) {
+    if (!isTemporaryRainGrass(clump) || clump.burnTime <= 0) continue;
+
+    const dx = clump.x - cloud.x;
+    const dy = (clump.y - 5) - cloud.y;
+
+    if (dx * dx + dy * dy <= radius * radius) {
+      clump.burnTime = 0;
+      syncTemporaryRainGrassState(clump, "extinguished");
+    }
+  }
+
   const sharedEnvironmentRain =
     typeof onlineClient !== "undefined" &&
     onlineClient.sendEnvironmentAction(
@@ -5803,8 +7043,7 @@ function applyRainCloud(cloud) {
 
     if (dx * dx + dy * dy > radius * radius) continue;
 
-    // Rain can put out grass that is currently burning,
-    // but it no longer regrows grass that has already burned away.
+    // Rain extinguishes any actively burning grass under the cloud.
     if (clump.burnTime > 0) {
       clump.burnTime = 0;
     }
@@ -5838,8 +7077,6 @@ function applyRainCloud(cloud) {
   }
 
   const creatureTick = cloud.creatureTimer <= 0;
-  const rainPower = getRainCloudPowerValue();
-  const preciseRain = rainCloudHasPrecisionEnhancement();
   let affectedCreatureThisTick = false;
 
   for (
@@ -5857,9 +7094,13 @@ function applyRainCloud(cloud) {
 
     if (!inside) continue;
 
+    const standingInBurningRainGrass =
+      isNearBurningTemporaryRainGrass(body.x, body.y, 14);
+
     if (profile.rainEffect === "damage") {
-      // Restorative rain is harmful to spectral creatures.
-      if (enemy.burnTime > 0) {
+      // Spectral creatures remain the exception: rain damages them rather than
+      // applying Wet. Ordinary rain still extinguishes their burn.
+      if (enemy.burnTime > 0 && !standingInBurningRainGrass) {
         extinguishEnemy(enemy);
       }
 
@@ -5868,33 +7109,29 @@ function applyRainCloud(cloud) {
       sendEnemyAction(
         enemy,
         "rainDamage",
-        { power: rainPower }
+        { power: GAME_CONFIG.rainCloud.ghostDamage }
       );
 
       affectedCreatureThisTick = true;
       continue;
     }
 
-    if (
-      !preciseRain &&
-      enemy.burnTime > 0
-    ) {
-      extinguishEnemy(enemy);
-    }
+    // Living enemies now share the same Wet status rule as the player. Wet
+    // extinguishes Burn, prevents ordinary re-ignition, and slows movement.
+    applyLocalWetStatus(
+      enemy,
+      GAME_CONFIG.status.enemyWetDuration
+    );
 
-    if (
-      !preciseRain &&
-      creatureTick &&
-      enemy.hp < enemy.maxHp
-    ) {
+    if (creatureTick) {
       sendEnemyAction(
         enemy,
-        "rainHeal",
-        { power: rainPower }
+        "wet",
+        { duration: GAME_CONFIG.status.enemyWetDuration }
       );
-
       affectedCreatureThisTick = true;
     }
+
   }
 
   if (creatureTick && affectedCreatureThisTick) {
@@ -5906,42 +7143,21 @@ function applyRainCloud(cloud) {
   const playerInside = pdx * pdx + pdy * pdy <= (radius - 1) * (radius - 1);
 
   if (playerInside) {
-    applyWetStatus();
+    const standingInBurningRainGrass =
+      isNearBurningTemporaryRainGrass(player.x, player.y - 8, 12);
 
-    if (player.burnTime > 0) {
+    if (standingInBurningRainGrass) {
+      // Direct flame contact boils off Wet instead of allowing the rain to
+      // erase the grass combo on the same pulse.
+      player.wetTime = 0;
+    } else {
+      applyWetStatus();
+    }
+
+    if (player.burnTime > 0 && !standingInBurningRainGrass) {
       extinguishPlayer();
     }
 
-    if (
-      cloud.healTimer <= 0 &&
-      player.hp < player.maxHp
-    ) {
-      const requested =
-        typeof onlineClient !== "undefined" &&
-        onlineClient.requestPlayerHeal(
-          rainPower
-        );
-
-      if (!requested) {
-        // Offline fallback.
-        const heal = Math.min(
-          rainPower,
-          player.maxHp - player.hp
-        );
-
-        player.hp += heal;
-
-        spawnFloatingText(
-          player.x,
-          player.y - 34,
-          `+${heal}`,
-          "#89d9b8",
-          0.95
-        );
-      }
-
-      cloud.healTimer = cloud.healInterval;
-    }
   }
 
   // Rain also snuffs out active fireballs that pass into the shower.
@@ -6076,81 +7292,47 @@ function updateBasicProjectiles(dt) {
 }
 
 function updateRainMagic(dt) {
-  for (let i = rainOrbs.length - 1; i >= 0; i--) {
-    const orb = rainOrbs[i];
-
-    const stepX = orb.vx * dt;
-    const stepY = orb.vy * dt;
-    const nextX = orb.x + stepX;
-    const nextY = orb.y + stepY;
-
-    const beforeDx = orb.targetX - orb.x;
-    const beforeDy = orb.targetY - orb.y;
-    const afterDx = orb.targetX - nextX;
-    const afterDy = orb.targetY - nextY;
-
-    orb.trailTimer -= dt;
-    if (orb.trailTimer <= 0) {
-      orb.trailTimer = 0.045;
-    }
-
-    orb.x = nextX;
-    orb.y = nextY;
-
-    const arrived =
-      beforeDx * afterDx <= 0 &&
-      beforeDy * afterDy <= 0 ||
-      Math.hypot(orb.targetX - orb.x, orb.targetY - orb.y) <= 5;
-
-    if (arrived) {
-      spawnRainCloud(
-        orb.targetX,
-        orb.targetY,
-        !!orb.followPlayer,
-        {
-          visualOnly:
-            Boolean(orb.visualOnly),
-
-          ownerId:
-            orb.ownerId || null,
-
-          life:
-            Number.isFinite(orb.cloudLife)
-              ? orb.cloudLife
-              : undefined
-        }
-      );
-
-      rainOrbs.splice(i, 1);
-    }
-  }
-
   for (let i = rainClouds.length - 1; i >= 0; i--) {
     const cloud = rainClouds[i];
 
     if (cloud.life > 0) {
-      if (cloud.followPlayer) {
-        if (
-          cloud.visualOnly &&
-          typeof onlineClient !== "undefined"
-        ) {
-          const owner =
-            onlineClient.remotePlayerPosition(
-              cloud.ownerId
-            );
+      cloud.orbitElapsed =
+        (Number(cloud.orbitElapsed) || 0) + dt;
+      cloud.orbitAngle =
+        (Number(cloud.orbitAngle) || 0) +
+        (Number(cloud.orbitAngularSpeed) || RAIN_CLOUD_ORBIT_ANGULAR_SPEED) * dt;
 
-          if (owner) {
-            cloud.targetX = owner.x;
-            cloud.targetY = owner.y + 2;
-          }
-        } else {
-          const followTarget =
-            getRainSelfFollowTarget();
+      const expandTime = Math.max(
+        0.01,
+        Number(cloud.orbitExpandTime) || RAIN_CLOUD_ORBIT_EXPAND_TIME
+      );
+      const orbitProgress = Math.max(
+        0,
+        Math.min(1, cloud.orbitElapsed / expandTime)
+      );
+      // Smoothstep keeps the first few seconds subtle, then opens into a wider
+      // loop that naturally spreads the temporary grass across a broad patch.
+      const easedOrbit = orbitProgress * orbitProgress * (3 - 2 * orbitProgress);
+      cloud.orbitRadius =
+        (Number(cloud.orbitMaxRadius) || RAIN_CLOUD_ORBIT_MAX_RADIUS) * easedOrbit;
 
-          cloud.targetX = followTarget.x;
-          cloud.targetY = followTarget.y;
-        }
-      }
+      const orbitCenterX = Number.isFinite(cloud.orbitCenterX)
+        ? cloud.orbitCenterX
+        : cloud.x;
+      const orbitCenterY = Number.isFinite(cloud.orbitCenterY)
+        ? cloud.orbitCenterY
+        : cloud.y;
+
+      cloud.targetX = clampToWorld(
+        orbitCenterX + Math.cos(cloud.orbitAngle) * cloud.orbitRadius,
+        6,
+        world.width - 6
+      );
+      cloud.targetY = clampToWorld(
+        orbitCenterY + Math.sin(cloud.orbitAngle) * cloud.orbitRadius * 0.72,
+        10,
+        world.height - 4
+      );
 
       const moveDx = cloud.targetX - cloud.x;
       const moveDy = cloud.targetY - cloud.y;
@@ -6167,8 +7349,11 @@ function updateRainMagic(dt) {
 
       cloud.life -= dt;
       cloud.pulseTimer -= dt;
-      cloud.healTimer -= dt;
       cloud.creatureTimer -= dt;
+      cloud.grassGrowTimer = Math.max(
+        0,
+        (Number(cloud.grassGrowTimer) || 0) - dt
+      );
 
       // Remote copies render the spell but never run its gameplay effects.
       if (
@@ -6180,8 +7365,13 @@ function updateRainMagic(dt) {
         applyRainCloud(cloud);
       }
 
-      if (cloud.life < 0) {
+      if (cloud.life <= 0) {
         cloud.life = 0;
+
+        if (!cloud.visualOnly && !cloud.cooldownStarted) {
+          cloud.cooldownStarted = true;
+          startSkillCooldown("rainCloud");
+        }
       }
     } else {
       // Departure phase: no rain/effects, just the visual cloud fading away.
@@ -6200,11 +7390,34 @@ function updateFire(dt) {
   if (fireSpreadTimer >= FIRE_SPREAD_INTERVAL) {
     fireSpreadTimer = 0;
 
+    // Temporary rain-grown grass exists only on the client, so direct contact
+    // with its flames must be resolved here in both offline and online play.
+    spreadTemporaryRainGrassFireToLiving();
+
     if (
       !onlineClient ||
       !onlineClient.connected
     ) {
       spreadFireFromBurningSources();
+    } else {
+      // The server handles persistent environment/living fire spread. This
+      // complementary pass lets those synced server-side sources ignite the
+      // client-temporary grass that the server cannot see.
+      spreadOnlineFireToTemporaryRainGrass();
+    }
+  }
+
+  // Temporary rain-cloud grass lingers long enough to set up fire combos,
+  // then quietly disappears. It never permanently regrows into the map.
+  for (let i = tallGrass.length - 1; i >= 0; i--) {
+    const clump = tallGrass[i];
+
+    if (!isTemporaryRainGrass(clump)) continue;
+
+    clump.tempLife = Math.max(0, Number(clump.tempLife) - dt);
+
+    if (clump.tempLife <= 0) {
+      tallGrass.splice(i, 1);
     }
   }
 
@@ -6304,9 +7517,96 @@ function updateFire(dt) {
     const fireball = fireballs[i];
 
     fireball.life -= dt;
+    fireball.trailTimer -= dt;
+
+    if (fireball.airborne) {
+      fireball.elapsed = Math.min(
+        Number(fireball.duration) || 0.4,
+        (Number(fireball.elapsed) || 0) + dt
+      );
+
+      const duration = Math.max(0.001, Number(fireball.duration) || 0.4);
+      const progress = Math.max(0, Math.min(1, fireball.elapsed / duration));
+      fireball.x = fireball.startX + (fireball.targetX - fireball.startX) * progress;
+      fireball.y = fireball.startY + (fireball.targetY - fireball.startY) * progress;
+
+      if (fireball.trailTimer <= 0) {
+        fireball.trailTimer = 0.035;
+        const visualY = fireballVisualY(fireball);
+        spawnFireParticle(
+          fireball.x + (Math.random() - 0.5) * 2,
+          visualY + (Math.random() - 0.5) * 2,
+          -Math.cos(fireball.angle || 0) * 5 + (Math.random() - 0.5) * 4,
+          -4 - Math.random() * 5,
+          0.18 + Math.random() * 0.10
+        );
+      }
+
+      if (fireball.visualOnly) {
+        if (progress >= 1 || fireball.life <= 0) {
+          fireballs.splice(i, 1);
+        }
+        continue;
+      }
+
+      if (progress < 1 && fireball.life > 0) {
+        continue;
+      }
+
+      // The aimed Fireball ignores anything it visually passes over and only
+      // resolves when it reaches its chosen landing point.
+      igniteVegetationNear(fireball.targetX, fireball.targetY, 12);
+
+      let nearestEnemy = null;
+      let nearestDistanceSq = Infinity;
+
+      for (
+        const { enemy, profile }
+        of activeEnemyRecords({ aliveOnly: true })
+      ) {
+        const body = enemyBodyPoint(enemy);
+        const dx = fireball.targetX - body.x;
+        const dy = fireball.targetY - body.y;
+        const bodyPadding = Math.max(0, (profile.projectileHitRadius ?? 8) - 5);
+        const hitRadius = FIREBALL_LANDING_RADIUS + bodyPadding;
+        const distanceSq = dx * dx + dy * dy;
+
+        if (
+          distanceSq <= hitRadius * hitRadius &&
+          distanceSq < nearestDistanceSq
+        ) {
+          nearestEnemy = enemy;
+          nearestDistanceSq = distanceSq;
+        }
+      }
+
+      if (nearestEnemy) {
+        damageEnemyWithProjectile(
+          nearestEnemy,
+          fireball,
+          "fireball"
+        );
+      }
+
+      spawnFireballImpactBurst(fireball.targetX, fireball.targetY);
+
+      if (typeof onlineClient !== "undefined") {
+        onlineClient.sendVisualEffect(
+          "fireballImpact",
+          {
+            x: fireball.targetX,
+            y: fireball.targetY
+          }
+        );
+      }
+
+      fireballs.splice(i, 1);
+      continue;
+    }
+
+    // Legacy/non-aimed fallback projectiles remain supported for safety.
     fireball.x += fireball.vx * dt;
     fireball.y += fireball.vy * dt;
-    fireball.trailTimer -= dt;
 
     if (fireball.trailTimer <= 0) {
       fireball.trailTimer = 0.035;
@@ -6326,95 +7626,29 @@ function updateFire(dt) {
         fireball.x > world.width ||
         fireball.y > world.height;
 
-      if (
-        outOfWorld ||
-        fireball.life <= 0
-      ) {
+      if (outOfWorld || fireball.life <= 0) {
         fireballs.splice(i, 1);
       }
-
       continue;
     }
 
     let impact = false;
 
-    // Harvestable wildflower collision.
-    for (const flower of harvestFlowers) {
-      if (flower.cut || flower.burnt) continue;
+    for (
+      const { enemy, profile }
+      of activeEnemyRecords({ aliveOnly: true })
+    ) {
+      const body = enemyBodyPoint(enemy);
+      const dx = fireball.x - body.x;
+      const dy = fireball.y - body.y;
+      const hitRadius = profile.projectileHitRadius ?? 8;
 
-      const dx = fireball.x - flower.x;
-      const dy = fireball.y - (flower.y - 8);
-
-      if (dx * dx + dy * dy <= 7 * 7) {
-        igniteVegetationNear(fireball.x, fireball.y, 11);
+      if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+        damageEnemyWithProjectile(enemy, fireball, "fireball");
         impact = true;
         break;
       }
     }
-
-    // Grass collision.
-    if (!impact) {
-      for (const clump of tallGrass) {
-        if (clump.cut) continue;
-
-        const dx = fireball.x - clump.x;
-        const dy = fireball.y - (clump.y - 5);
-
-        if (dx * dx + dy * dy <= 7 * 7) {
-          igniteVegetationNear(fireball.x, fireball.y, 11);
-          impact = true;
-          break;
-        }
-      }
-    }
-
-    // Tree canopy collision.
-    if (!impact) {
-      for (const tree of trees) {
-        if (tree.isStump || tree.falling || tree.canopyBurned) continue;
-
-        const dx = fireball.x - tree.x;
-        const dy = fireball.y - (tree.y - 28);
-
-        // Elliptical-ish canopy hit area.
-        if ((dx * dx) / (18 * 18) + (dy * dy) / (20 * 20) <= 1) {
-          igniteVegetationNear(fireball.x, fireball.y, 12);
-          impact = true;
-          break;
-        }
-      }
-    }
-
-    // Fireballs can hurt any registered monster species.
-    if (!impact) {
-      for (
-        const { enemy, profile }
-        of activeEnemyRecords({ aliveOnly: true })
-      ) {
-        const body = enemyBodyPoint(enemy);
-        const dx = fireball.x - body.x;
-        const dy = fireball.y - body.y;
-        const hitRadius =
-          profile.projectileHitRadius ?? 8;
-
-        if (
-          dx * dx + dy * dy <=
-          hitRadius * hitRadius
-        ) {
-          damageEnemyWithProjectile(
-            enemy,
-            fireball,
-            "fireball"
-          );
-
-          impact = true;
-          break;
-        }
-      }
-    }
-
-    // Fireballs travel over water and continue until they hit a valid target,
-    // expire, or leave the world.
 
     const outOfWorld =
       fireball.x < 0 ||
@@ -6433,16 +7667,10 @@ function updateFire(dt) {
         );
       }
 
-      if (
-        impact &&
-        typeof onlineClient !== "undefined"
-      ) {
+      if (impact && typeof onlineClient !== "undefined") {
         onlineClient.sendVisualEffect(
           "fireballImpact",
-          {
-            x: fireball.x,
-            y: fireball.y
-          }
+          { x: fireball.x, y: fireball.y }
         );
       }
 
@@ -6504,6 +7732,42 @@ function drawFocusFireOpener(opener, camX, camY) {
   ctx.fillStyle = "#82d7dc";
   ctx.fillRect(-5, -2, 1, 1);
   ctx.fillRect(-5, 1, 1, 1);
+
+  ctx.restore();
+}
+
+function drawFireballTargeting(camX, camY) {
+  if (!player.fireballAiming) return;
+
+  const radius = fireballAimRadius();
+  const progress = fireballAimProgress();
+  const centerX = Math.round(player.x - camX);
+  const centerY = Math.round(player.y - 8 - camY);
+  const pointCount = Math.max(18, Math.round(radius / 5));
+
+  ctx.save();
+  ctx.globalAlpha *= 0.30 + Math.sin(progress * Math.PI) * 0.12;
+  ctx.fillStyle = "#e99a55";
+
+  for (let i = 0; i < pointCount; i++) {
+    const angle = (i / pointCount) * Math.PI * 2;
+    const x = Math.round(centerX + Math.cos(angle) * radius);
+    const y = Math.round(centerY + Math.sin(angle) * radius);
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const landing = fireballLandingPoint();
+  const x = Math.round(landing.x - camX);
+  const y = Math.round(landing.y - camY);
+
+  ctx.globalAlpha = 0.94;
+  ctx.fillStyle = "#ffcf70";
+  ctx.fillRect(x - 3, y, 2, 1);
+  ctx.fillRect(x + 2, y, 2, 1);
+  ctx.fillRect(x, y - 3, 1, 2);
+  ctx.fillRect(x, y + 2, 1, 2);
+  ctx.fillStyle = "#fff0a7";
+  ctx.fillRect(x, y, 1, 1);
 
   ctx.restore();
 }
@@ -6635,9 +7899,40 @@ function drawBasicProjectile(projectile, camX, camY) {
   }
 }
 
+function fireballVisualY(fireball) {
+  if (!fireball?.airborne) {
+    return Number(fireball?.y) || 0;
+  }
+
+  const duration = Math.max(0.001, Number(fireball.duration) || 0.4);
+  const progress = Math.max(
+    0,
+    Math.min(1, (Number(fireball.elapsed) || 0) / duration)
+  );
+  const arcHeight = Math.max(0, Number(fireball.arcHeight) || 0);
+  return fireball.y - Math.sin(progress * Math.PI) * arcHeight;
+}
+
 function drawFireball(fireball, camX, camY) {
   const x = Math.round(fireball.x - camX);
-  const y = Math.round(fireball.y - camY);
+  const groundY = Math.round(fireball.y - camY);
+  const visualY = fireballVisualY(fireball);
+  const y = Math.round(visualY - camY);
+
+  if (fireball.airborne) {
+    const duration = Math.max(0.001, Number(fireball.duration) || 0.4);
+    const progress = Math.max(0, Math.min(1, (Number(fireball.elapsed) || 0) / duration));
+    const height = Math.max(0, fireball.y - visualY);
+
+    // Moving shadow sells that the projectile is passing over enemies/trees
+    // instead of colliding with them on the ground plane.
+    ctx.save();
+    ctx.globalAlpha *= Math.max(0.08, 0.28 - height * 0.0045);
+    ctx.fillStyle = "#26382b";
+    const shadowWidth = Math.max(2, Math.round(5 - Math.min(2, height / 18)));
+    ctx.fillRect(x - Math.floor(shadowWidth / 2), groundY, shadowWidth, 1);
+    ctx.restore();
+  }
 
   // Chunky 5x5-ish projectile with a hot center.
   ctx.fillStyle = "#a52d22";
@@ -6667,6 +7962,194 @@ function drawFireParticles(camX, camY) {
 
     ctx.fillRect(x, y, pct > 0.7 ? 2 : 1, pct > 0.7 ? 2 : 1);
   }
+}
+
+function spawnWandMasteryHitParticles(x, y, angle) {
+  // Delay the rake a hair so it appears after the monster's white hit flash
+  // peaks. Saturated arcane colours stay readable without implying an element.
+  const colors = ["#8f6cff", "#c97cff", "#6fdcff"];
+  const slashAngle = angle + 0.72;
+  const dirX = Math.cos(slashAngle);
+  const dirY = Math.sin(slashAngle);
+  const normalX = -dirY;
+  const normalY = dirX;
+
+  for (let claw = -1; claw <= 1; claw++) {
+    for (let segment = 0; segment < 5; segment++) {
+      const t = segment / 4;
+      const offset = claw * 3.2;
+      const along = (t - 0.5) * 10;
+      const life = 0.24 + segment * 0.012;
+
+      wandSweepParticles.push({
+        x: x + normalX * offset + dirX * along,
+        y: y + normalY * offset + dirY * along,
+        vx: dirX * (2.5 + segment * 0.7) + normalX * claw * 1.4,
+        vy: dirY * (2.5 + segment * 0.7) + normalY * claw * 1.4,
+        life,
+        maxLife: life,
+        delay: 0.055 + segment * 0.008,
+        color: colors[(claw + 1) % colors.length],
+        kind: "hit",
+        twinkle: segment * 0.9 + claw
+      });
+    }
+  }
+}
+
+function updateWandSweepParticles(dt) {
+  for (let i = wandSweepParticles.length - 1; i >= 0; i--) {
+    const particle = wandSweepParticles[i];
+
+    if ((Number(particle.delay) || 0) > 0) {
+      particle.delay = Math.max(0, particle.delay - dt);
+      continue;
+    }
+
+    particle.life -= dt;
+    particle.x += particle.vx * dt;
+    particle.y += particle.vy * dt;
+    particle.vx *= 0.94;
+    particle.vy *= 0.94;
+
+    if (particle.life <= 0) {
+      wandSweepParticles.splice(i, 1);
+    }
+  }
+}
+
+function drawWandSweepParticles(camX, camY) {
+  for (const particle of wandSweepParticles) {
+    if ((Number(particle.delay) || 0) > 0) continue;
+
+    const alpha = Math.max(0, Math.min(1, particle.life / particle.maxLife));
+    const x = Math.round(particle.x - camX);
+    const y = Math.round(particle.y - camY);
+
+    ctx.save();
+    ctx.globalAlpha = alpha * (particle.kind === "hit" ? 0.96 : 0.90);
+    ctx.fillStyle = particle.color;
+
+    if (particle.kind === "glitter") {
+      // Alternate between a single bright pixel and a tiny four-point sparkle.
+      const sparkle = Math.sin(worldTime * 28 + (particle.twinkle || 0)) > -0.15;
+      ctx.fillRect(x, y, 1, 1);
+
+      if (sparkle && alpha > 0.38) {
+        ctx.fillRect(x - 1, y, 1, 1);
+        ctx.fillRect(x + 1, y, 1, 1);
+        ctx.fillRect(x, y - 1, 1, 1);
+        ctx.fillRect(x, y + 1, 1, 1);
+      }
+    } else {
+      // The impact rake is intentionally chunkier than the old white slices so
+      // it remains visible after the monster's white damage flash.
+      const size = alpha > 0.45 ? 2 : 1;
+      ctx.fillRect(x, y, size, size);
+    }
+
+    ctx.restore();
+  }
+}
+
+function enemySpawnScale(enemy) {
+  const time = Math.max(0, Number(enemy?.spawnAnimTime) || 0);
+  if (time <= 0) return { x: 1, y: 1, alpha: 1 };
+
+  const progress = Math.max(
+    0,
+    Math.min(1, 1 - time / ENEMY_SPAWN_ANIM_DURATION)
+  );
+  const eased = 1 - Math.pow(1 - progress, 3);
+  const pop = Math.sin(progress * Math.PI) * 0.10;
+
+  return {
+    x: 0.48 + eased * 0.52 + pop,
+    y: 0.28 + eased * 0.72 - pop * 0.35,
+    alpha: Math.min(1, 0.45 + progress * 0.75)
+  };
+}
+
+function spawnEnemyDeathEffect(enemy, enemyType) {
+  if (!enemy || !enemyType) return;
+
+  enemyDeathEffects.push({
+    enemyType,
+    variant: enemy.variant || "green",
+    x: Number(enemy.x) || 0,
+    y: Number(enemy.y) || 0,
+    phase: Number(enemy.phase) || 0,
+    life: ENEMY_DEATH_ANIM_DURATION,
+    maxLife: ENEMY_DEATH_ANIM_DURATION
+  });
+}
+
+function updateEnemyPresentationEffects(dt) {
+  for (const { enemy } of activeEnemyRecords()) {
+    if ((Number(enemy.spawnAnimTime) || 0) > 0) {
+      enemy.spawnAnimTime = Math.max(0, enemy.spawnAnimTime - dt);
+    }
+  }
+
+  for (let i = enemyDeathEffects.length - 1; i >= 0; i--) {
+    enemyDeathEffects[i].life -= dt;
+    if (enemyDeathEffects[i].life <= 0) {
+      enemyDeathEffects.splice(i, 1);
+    }
+  }
+}
+
+function drawEnemyDeathEffect(effect, camX, camY) {
+  const progress = Math.max(0, Math.min(1, 1 - effect.life / effect.maxLife));
+  const screenX = Math.round(effect.x - camX);
+  const screenY = Math.round(effect.y - camY);
+  const squash = Math.sin(progress * Math.PI);
+  const scaleX = Math.max(0.18, 1 + squash * 0.28 - progress * 0.76);
+  const scaleY = Math.max(0.10, 1 - squash * 0.30 - progress * 0.82);
+  const alpha = Math.max(0, 1 - progress * progress);
+
+  let image = slimeImage;
+  let width = 16;
+  let height = 16;
+
+  if (effect.enemyType === "slime") {
+    image =
+      effect.variant === "purple" ? purpleSlimeImage :
+      effect.variant === "blue" ? blueSlimeImage :
+      effect.variant === "goldBaby" ? goldBabySlimeImage :
+      slimeImage;
+  } else if (effect.enemyType === "goblin") {
+    image = goblinImage;
+    height = 24;
+  } else if (effect.enemyType === "ghost") {
+    image = ghostImage;
+    height = 24;
+  } else if (effect.enemyType === "bigGoldSlime") {
+    image = bigGoldSlimeImage;
+    width = 24;
+    height = 24;
+  }
+
+  const drawWidth = Math.max(1, Math.round(width * scaleX));
+  const drawHeight = Math.max(1, Math.round(height * scaleY));
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = `rgba(35, 45, 32, ${0.24 * alpha})`;
+  ctx.fillRect(
+    screenX - Math.max(1, Math.round(drawWidth * 0.35)),
+    screenY,
+    Math.max(2, Math.round(drawWidth * 0.70)),
+    2
+  );
+  ctx.drawImage(
+    image,
+    Math.round(screenX - drawWidth / 2),
+    Math.round(screenY - drawHeight + 1),
+    drawWidth,
+    drawHeight
+  );
+  ctx.restore();
 }
 
 function spawnShadowSmokePuff(x, y, count = 18, scale = 1) {
@@ -6858,22 +8341,6 @@ function drawJesterAfterimages(camX, camY) {
   }
 }
 
-function drawRainOrb(orb, camX, camY) {
-  const x = Math.round(orb.x - camX);
-  const y = Math.round(orb.y - camY);
-
-  ctx.fillStyle = "#28597a";
-  ctx.fillRect(x - 2, y - 2, 5, 5);
-
-  ctx.fillStyle = "#57a7d7";
-  ctx.fillRect(x - 1, y - 2, 3, 4);
-  ctx.fillRect(x - 2, y - 1, 4, 3);
-
-  ctx.fillStyle = "#b4e5fb";
-  ctx.fillRect(x, y - 1, 1, 2);
-  ctx.fillRect(x - 1, y, 1, 1);
-}
-
 function drawRainCloudGround(cloud, camX, camY) {
   // This is a ground decal, not part of the floating cloud sprite. Drawing it
   // before trees/characters keeps trunks and canopies naturally in front of it.
@@ -7010,6 +8477,53 @@ function drawRainCloud(cloud, camX, camY) {
     -7
   );
   ctx.restore();
+
+  // Sparse magical twinkles around the cloud body. Keep these tiny and
+  // intermittent so the rain still reads first and the cloud feels enchanted
+  // rather than covered in constant glitter.
+  const sparkleSeeds = [
+    { x: -12, y: -2, phase: 0.2 },
+    { x:  11, y:  1, phase: 1.7 },
+    { x:  -5, y: -8, phase: 3.1 },
+    { x:   6, y: -6, phase: 4.6 }
+  ];
+
+  ctx.save();
+  ctx.globalAlpha = departureAlpha;
+
+  for (let i = 0; i < sparkleSeeds.length; i++) {
+    const sparkle = sparkleSeeds[i];
+    const wave = Math.sin(worldTime * 3.4 + sparkle.phase + age * 0.9);
+
+    // Only let each star show near the top of its pulse so the effect flickers
+    // naturally instead of becoming a permanent outline around the cloud.
+    if (wave < 0.42) continue;
+
+    const driftX = Math.round(
+      Math.sin(worldTime * 1.15 + sparkle.phase) * 1
+    );
+    const driftY = Math.round(
+      Math.cos(worldTime * 1.35 + sparkle.phase) * 1
+    );
+    const sx = Math.round(cx + sparkle.x + driftX);
+    const sy = Math.round(cloudVisualY + 6 + sparkle.y + driftY);
+    const sparkleAlpha = Math.min(0.9, 0.35 + (wave - 0.42) * 0.95);
+
+    ctx.globalAlpha = departureAlpha * sparkleAlpha;
+    ctx.fillStyle = "#dff7f4";
+    ctx.fillRect(sx, sy, 1, 1);
+
+    // Stronger pulses briefly become a tiny pixel-star cross.
+    if (wave > 0.78) {
+      ctx.fillStyle = "#f4fff4";
+      ctx.fillRect(sx - 1, sy, 1, 1);
+      ctx.fillRect(sx + 1, sy, 1, 1);
+      ctx.fillRect(sx, sy - 1, 1, 1);
+      ctx.fillRect(sx, sy + 1, 1, 1);
+    }
+  }
+
+  ctx.restore();
 }
 
 // Lightweight pixel-style glow.
@@ -7067,7 +8581,7 @@ function drawFireLighting(camX, camY) {
     const fireball = fireballs[i];
     drawPixelGlow(
       fireball.x - camX,
-      fireball.y - camY,
+      fireballVisualY(fireball) - camY,
       11,
       0.20,
       i * 1.8
@@ -7310,10 +8824,21 @@ function drawPlayerReflection(camX, camY) {
 // visual effect accurately shows the player's reach.
 const SWORD_REACH = 22;
 const SWORD_HALF_ARC = 0.62;
+const WAND_MASTERY_REACH = 38;
+const WAND_MASTERY_HALF_ARC = 0.52;
+const WAND_MASTERY_MAX_TARGETS = 3;
 const BOW_MELEE_TRIGGER_RANGE = 24;
 const BOW_MELEE_HALF_ARC = 1.05;
 
+function wandMasteryMeleeActive() {
+  return Boolean(
+    isWandTypeWeapon(equippedWeapon()) &&
+    isAbilityUnlocked("wandMastery")
+  );
+}
+
 function currentMeleeReach() {
+  if (wandMasteryMeleeActive()) return WAND_MASTERY_REACH;
   return equippedWeapon() === "katana" ? 27 : SWORD_REACH;
 }
 
@@ -7324,9 +8849,21 @@ function getActiveJesterClone() {
   return jesterClone;
 }
 
-function cloneTauntInfo(entityX, entityY, radius = JESTER_CLONE_TAUNT_RADIUS) {
+function cloneTauntInfo(
+  entityX,
+  entityY,
+  radius = JESTER_CLONE_TAUNT_RADIUS,
+  enemyId = null
+) {
   const clone = getActiveJesterClone();
   if (!clone) return null;
+
+  if (
+    enemyId &&
+    clone.releasedEnemyIds?.has(enemyId)
+  ) {
+    return null;
+  }
 
   const dx = clone.x - entityX;
   const dy = clone.y - entityY;
@@ -7349,12 +8886,18 @@ function canOccupyPlayerPoint(x, y) {
 }
 
 function spawnJesterClone(x, y) {
+  const cloneId =
+    `hallucination:${currentMapId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
+
   jesterClone = {
+    cloneId,
     x,
     y,
     life: JESTER_CLONE_DURATION,
     duration: JESTER_CLONE_DURATION,
     phase: Math.random() * Math.PI * 2,
+    tauntPulseTimer: 0,
+    releasedEnemyIds: new Set(),
     hatIndex: player.hatIndex,
     shirtIndex: player.shirtIndex,
     pantsIndex: player.pantsIndex,
@@ -7428,13 +8971,6 @@ function spawnRemoteJesterBlinkVisual(
     appearance
   );
 
-  spawnFloatingText(
-    startX,
-    startY - 22,
-    "Trick!",
-    "#eba8ff",
-    0.9
-  );
 }
 
 function tryCastJesterBlink() {
@@ -7517,26 +9053,6 @@ function tryCastJesterBlink() {
   player.jesterBlinkCooldown = player.jesterBlinkCooldownDuration;
   player.jesterBlinkFadeTime = player.jesterBlinkFadeDuration;
 
-  spawnFloatingText(startX, startY - 22, "Trick!", "#eba8ff", 0.9);
-
-  for (
-    const { enemy }
-    of activeEnemyRecords({ aliveOnly: true })
-  ) {
-    if (
-      Math.hypot(
-        enemy.x - startX,
-        enemy.y - startY
-      ) <= JESTER_CLONE_TAUNT_RADIUS
-    ) {
-      tauntEnemy(
-        enemy,
-        startX,
-        startY,
-        JESTER_CLONE_DURATION
-      );
-    }
-  }
 
   return true;
 }
@@ -8100,6 +9616,9 @@ function updateBigGoldSlimes(dt) {
         slime.burnTime - dt
       );
     }
+    if (slime.wetTime > 0) {
+      slime.wetTime = Math.max(0, slime.wetTime - dt);
+    }
 
     if (!slime.alive && slime.respawnTime > 0) {
       slime.respawnTime = Math.max(
@@ -8191,6 +9710,10 @@ function drawBigGoldSlime(slime, camX, camY) {
     Math.round(2 * landingSquash) +
     Math.round(2 * airStretch);
 
+  const spawnScale = enemySpawnScale(slime);
+  drawWidth = Math.max(1, Math.round(drawWidth * spawnScale.x));
+  drawHeight = Math.max(1, Math.round(drawHeight * spawnScale.y));
+
   const shadowWidth =
     Math.round(20 - hopWave * 7);
   const shadowAlpha =
@@ -8228,6 +9751,8 @@ function drawBigGoldSlime(slime, camX, camY) {
   const bubbleCenterY =
     tetherAnchorY - 13 + bubbleBob;
 
+  ctx.save();
+  ctx.globalAlpha *= spawnScale.alpha;
   ctx.drawImage(
     bigGoldSlimeImage,
     drawX,
@@ -8235,6 +9760,7 @@ function drawBigGoldSlime(slime, camX, camY) {
     drawWidth,
     drawHeight
   );
+  ctx.restore();
 
   if (slime.hitFlash > 0 && bigGoldSlimeFlashImage.src) {
     ctx.save();
@@ -8277,6 +9803,15 @@ function drawBigGoldSlime(slime, camX, camY) {
       Math.round(screenX + 6),
       Math.round(drawY + 10),
       slime.phase + 3.1
+    );
+  }
+
+  if ((Number(slime.wetTime) || 0) > 0) {
+    drawWetStatus(
+      screenX,
+      Math.round(screenY - hopHeight - 4),
+      slime.wetTime,
+      slime.wetDuration || GAME_CONFIG.status.enemyWetDuration
     );
   }
 
@@ -8722,12 +10257,17 @@ const meadowMap = {
 // -----------------------------------------------------------------------------
 // This is intentionally much smaller-feeling than the combat maps: a compact
 // clearing surrounded by a thick forest wall. There are no natural enemies.
+const SPAWN_MAP_OFFSET_X = 160;
+const SPAWN_MAP_OFFSET_Y = 100;
+const spawnMapX = x => x - SPAWN_MAP_OFFSET_X;
+const spawnMapY = y => y - SPAWN_MAP_OFFSET_Y;
+
 const spawnMapTrees = [];
 let spawnTreePhase = 0.18;
 
 function addSpawnTree(x, y) {
   spawnMapTrees.push(
-    makeRuntimeTree(x, y, spawnTreePhase)
+    makeRuntimeTree(spawnMapX(x), spawnMapY(y), spawnTreePhase)
   );
   spawnTreePhase += 0.61;
 }
@@ -8761,26 +10301,26 @@ for (let y = 148; y <= 276; y += 24) {
 
 // A handful of quiet vegetation clumps so the spawn doesn't feel sterile.
 const spawnMapGrass = [
-  makeMapGrass(248, 168, 0.4, 12, "white"),
-  makeMapGrass(278, 252, 1.2, 13),
-  makeMapGrass(330, 158, 2.0, 12, "yellow"),
-  makeMapGrass(366, 252, 2.8, 13, "pink"),
-  makeMapGrass(408, 176, 3.6, 12),
-  makeMapGrass(228, 230, 4.4, 12, "blue")
+  makeMapGrass(spawnMapX(248), spawnMapY(168), 0.4, 12, "white"),
+  makeMapGrass(spawnMapX(278), spawnMapY(252), 1.2, 13),
+  makeMapGrass(spawnMapX(330), spawnMapY(158), 2.0, 12, "yellow"),
+  makeMapGrass(spawnMapX(366), spawnMapY(252), 2.8, 13, "pink"),
+  makeMapGrass(spawnMapX(408), spawnMapY(176), 3.6, 12),
+  makeMapGrass(spawnMapX(228), spawnMapY(230), 4.4, 12, "blue")
 ];
 
 const spawnMapHouses = [
   // Bottom-center anchored. Slightly left of the path so it feels like a
   // peaceful little home in the safe clearing without blocking the exit lane.
   // Nudged a little higher so a front path has room to breathe.
-  makeMapHouse(275, 184)
+  makeMapHouse(spawnMapX(275), spawnMapY(184))
 ];
 
 // First progression/tutorial fixtures.
 // These are deterministic map fixtures, not inventory/world-state entities.
 const tutorialNpc = {
-  x: 350,
-  y: 180,
+  x: spawnMapX(350),
+  y: spawnMapY(180),
   interactionRadius: 24
 };
 
@@ -8790,9 +10330,15 @@ const hunterNpc = {
   interactionRadius: 24
 };
 
+const jesterNpc = {
+  x: 338,
+  y: 183,
+  interactionRadius: 24
+};
+
 const woodCraftBench = {
-  x: 376,
-  y: 181,
+  x: spawnMapX(376),
+  y: spawnMapY(181),
   interactionRadius: 24
 };
 
@@ -8931,6 +10477,8 @@ const hunterHollowHousePlacement = {
 
 hunterNpc.x = 485;
 hunterNpc.y = 126;
+jesterNpc.x = 513;
+jesterNpc.y = 127;
 
 const hunterHollowTrees = [];
 let hunterHollowTreePhase = 0.24;
@@ -9308,7 +10856,7 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     meleeBodyRadius: 5,
     horizontalMeleeBodyRadius: 6,
     rainRadiusInset: 3,
-    rainEffect: "heal",
+    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -7,
     burnGlowRadius: 9,
@@ -9376,7 +10924,7 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     meleeBodyRadius: 6,
     horizontalMeleeBodyRadius: 7,
     rainRadiusInset: 2,
-    rainEffect: "heal",
+    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -12,
     burnGlowRadius: 10,
@@ -9453,7 +11001,7 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     meleeBodyRadius: 10,
     horizontalMeleeBodyRadius: 11,
     rainRadiusInset: 0,
-    rainEffect: "heal",
+    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -12,
     burnGlowRadius: 13,
@@ -9692,22 +11240,34 @@ function damageEnemyWithProjectile(
   );
 }
 
-function igniteEnemyFromSpread(enemy) {
-  if (
-    !enemy?.alive ||
-    enemy.burnTime > 0
-  ) {
-    return;
-  }
+function igniteEnemyFromSpread(
+  enemy,
+  { forceThroughWet = false } = {}
+) {
+  if (!enemy?.alive || enemy.burnTime > 0) return;
 
-  sendEnemyAction(
+  const ignited = applyLocalBurnStatus(
     enemy,
-    "ignite"
+    Number(enemy.burnDuration) || 3.0,
+    { forceThroughWet }
   );
+
+  if (!ignited) return;
+
+  if (
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.connected
+  ) {
+    sendEnemyAction(
+      enemy,
+      "ignite"
+    );
+  }
 }
 
 function extinguishEnemy(enemy) {
   if (!enemy) return;
+  clearLocalBurnStatus(enemy);
 
   sendEnemyAction(
     enemy,
@@ -9719,7 +11279,8 @@ function tauntEnemy(
   enemy,
   x,
   y,
-  duration = JESTER_CLONE_DURATION
+  duration = JESTER_CLONE_DURATION,
+  cloneId = null
 ) {
   if (!enemy?.alive) return;
 
@@ -9729,8 +11290,19 @@ function tauntEnemy(
     {
       x,
       y,
-      duration
+      duration,
+      cloneId
     }
+  );
+}
+
+function clearHallucinationTaunt(enemy, cloneId = null) {
+  if (!enemy?.alive) return;
+
+  sendEnemyAction(
+    enemy,
+    "clearTaunt",
+    { cloneId }
   );
 }
 
@@ -11679,9 +13251,22 @@ class OnlineClient {
 
     if (!target) return;
 
+    const syncedBurnTime = Number(message.burnTime);
+
+    if (!Number.isFinite(syncedBurnTime) || syncedBurnTime <= 0) {
+      return;
+    }
+
+    // Wet and Burn are mutually exclusive. The server is authoritative, but
+    // this guard prevents a stale/out-of-order ignition packet from creating
+    // an impossible local Wet + Burn state.
+    if ((Number(target.wetTime) || 0) > 0) {
+      return;
+    }
+
     target.burnTime = Math.max(
       Number(target.burnTime) || 0,
-      Number(message.burnTime) || 5
+      syncedBurnTime
     );
 
     if (
@@ -11979,6 +13564,14 @@ class OnlineClient {
       const respawned =
         !wasAlive && nextAlive;
 
+      if ((firstSnapshot && nextAlive) || respawned) {
+        enemy.spawnAnimTime = ENEMY_SPAWN_ANIM_DURATION;
+      }
+
+      if (wasAlive && !nextAlive) {
+        spawnEnemyDeathEffect(enemy, enemyType);
+      }
+
       const snapPosition =
         shouldSnapNetworkPosition(
           enemy.x,
@@ -12031,6 +13624,14 @@ class OnlineClient {
       enemy.burnTime = Math.max(
         0,
         Number(state.burnTime) || 0
+      );
+      enemy.wetTime = Math.max(
+        0,
+        Number(state.wetTime) || 0
+      );
+      enemy.wetDuration = Math.max(
+        0.1,
+        Number(state.wetDuration) || GAME_CONFIG.status.enemyWetDuration
       );
 
       ensureEnemyHurlState(enemy);
@@ -12232,6 +13833,10 @@ class OnlineClient {
       );
 
     if (enemy) {
+      if (enemy.alive) {
+        spawnEnemyDeathEffect(enemy, message.enemyType);
+      }
+
       enemy.hp = 0;
       enemy.alive = false;
       enemy.burnTime = 0;
@@ -12363,11 +13968,28 @@ class OnlineClient {
     }
 
     if (message.effect === "fireball") {
+      const airborne = Boolean(payload.airborne);
+      const startX = Number(payload.startX ?? payload.x) || 0;
+      const startY = Number(payload.startY ?? payload.y) || 0;
+      const targetX = Number(payload.targetX) || startX;
+      const targetY = Number(payload.targetY) || startY;
+      const duration = Math.max(0.18, Number(payload.duration) || 0.4);
+      const angle = Math.atan2(targetY - startY, targetX - startX);
+
       fireballs.push({
-        x: Number(payload.x) || 0,
-        y: Number(payload.y) || 0,
-        vx: Number(payload.vx) || 0,
-        vy: Number(payload.vy) || 0,
+        x: startX,
+        y: startY,
+        startX,
+        startY,
+        targetX,
+        targetY,
+        elapsed: 0,
+        duration,
+        arcHeight: Math.max(0, Number(payload.arcHeight) || 0),
+        airborne,
+        angle,
+        vx: Number(payload.vx) || Math.cos(angle) * 138,
+        vy: Number(payload.vy) || Math.sin(angle) * 138,
 
         life: Math.max(
           0.1,
@@ -12401,6 +14023,15 @@ class OnlineClient {
       return;
     }
 
+    if (message.effect === "wandMasteryHit") {
+      spawnWandMasteryHitParticles(
+        Number(payload.x) || 0,
+        Number(payload.y) || 0,
+        Number(payload.angle) || 0
+      );
+      return;
+    }
+
     if (message.effect === "levelUp") {
       const remote =
         this.remotePlayers.get(
@@ -12416,6 +14047,48 @@ class OnlineClient {
         "#ffe070",
         1.35
       );
+
+      return;
+    }
+
+    if (message.effect === "rainGrassSpawn") {
+      spawnTemporaryRainGrassAt(
+        Number(payload.x) || 0,
+        Number(payload.y) || 0,
+        Number(payload.patchId) || 0,
+        {
+          ownerId: message.senderId,
+          grassId: payload.grassId,
+          width: Number(payload.width) || 12,
+          phase: Number(payload.phase) || 0,
+          tempLife: Number(payload.tempLife) || TEMP_RAIN_GRASS_LIFETIME,
+          burnDuration: Number(payload.burnDuration) || TEMP_RAIN_GRASS_BURN_DURATION,
+          sync: false
+        }
+      );
+      return;
+    }
+
+    if (message.effect === "rainGrassState") {
+      const grassOwnerId = String(payload.grassOwnerId || message.senderId);
+      const clump = findTemporaryRainGrass(
+        grassOwnerId,
+        payload.grassId
+      );
+
+      if (!clump) return;
+
+      if (payload.state === "burning") {
+        clump.cut = false;
+        clump.burnt = false;
+        clump.burnDuration = TEMP_RAIN_GRASS_BURN_DURATION;
+        clump.burnTime = Math.max(
+          0.1,
+          Number(payload.burnTime) || TEMP_RAIN_GRASS_BURN_DURATION
+        );
+      } else if (payload.state === "extinguished") {
+        clump.burnTime = 0;
+      }
 
       return;
     }
@@ -12653,6 +14326,24 @@ class OnlineClient {
     return true;
   }
 
+  requestPlayerIgnite(targetId = this.localPlayerId) {
+    if (
+      !targetId ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "playerIgniteRequest",
+      targetId
+    }));
+
+    return true;
+  }
+
   requestPlayerHeal(power) {
     if (
       !this.connected ||
@@ -12721,6 +14412,11 @@ class OnlineClient {
       bowDrawAmount: player.bowDrawAmount,
       bowReleaseTime: player.bowReleaseTime,
       focusFireCasting: focusFireIsCasting(),
+      fireballAiming: player.fireballAiming,
+      fireballAimTime: player.fireballAimTime,
+      rainCloudCasting: player.rainCloudCasting,
+      rainCloudCastTime: player.rainCloudCastTime,
+      rainCloudCastDuration: player.rainCloudCastDuration,
       camouflaged: player.camouflaged,
 
       hunterSnareSetting: player.hunterSnareSetting,
@@ -12854,6 +14550,10 @@ function removeLocalCasterEffectsOnDeath() {
   player.focusFireCharging = false;
   player.focusFireOpening = false;
   player.focusFireActive = false;
+  player.fireballAiming = false;
+  player.fireballAimTime = 0;
+  player.fireballBoundKey = null;
+  player.fireballAimMapId = null;
 
   // Local caster effects have no `visualOnly` flag. Preserve remote-player
   // effects while immediately deleting everything owned by the dead player.
@@ -12861,7 +14561,6 @@ function removeLocalCasterEffectsOnDeath() {
     fireballs,
     basicProjectiles,
     focusFireOpeners,
-    rainOrbs,
     rainClouds
   ]) {
     for (let i = collection.length - 1; i >= 0; i--) {
@@ -12871,6 +14570,7 @@ function removeLocalCasterEffectsOnDeath() {
     }
   }
 
+  clearTemporaryRainGrass();
   jesterClone = null;
   player.bowDrawing = false;
   player.bowDrawAmount = 0;
@@ -12966,13 +14666,15 @@ document.getElementById("respawnButton")?.addEventListener(
 
 function clearTransientWorldEffects() {
   cancelHunterSnarePlacement(false);
+  cancelRainCloudCast();
   fireballs.length = 0;
   fireParticles.length = 0;
+  wandSweepParticles.length = 0;
   basicProjectiles.length = 0;
   focusFireOpeners.length = 0;
   clearFocusFireState(false);
-  rainOrbs.length = 0;
   rainClouds.length = 0;
+  clearTemporaryRainGrass();
   shadowSmokeParticles.length = 0;
   jesterClone = null;
   remoteJesterClones.length = 0;
@@ -13048,11 +14750,8 @@ function activateMap(mapId, entrySide) {
     player.x = 26;
     player.y = 200;
   } else if (entrySide === "spawnEast") {
-    // The safe map is a compact clearing in the middle of the larger world
-    // canvas, so its east-side entrance is at the clearing wall rather than
-    // the absolute world edge.
-    player.x = 446;
-    player.y = 200;
+    player.x = world.width - 30;
+    player.y = spawnMapY(200);
   } else if (entrySide === "north") {
     player.x = world.width / 2;
     player.y = 26;
@@ -13066,9 +14765,13 @@ function activateMap(mapId, entrySide) {
 }
 
 function updateMapConnection() {
+  const horizontalGateCenterY =
+    currentMapId === "spawn"
+      ? spawnMapY(200)
+      : 200;
   const insideHorizontalGate =
-    player.y >= 174 &&
-    player.y <= 226;
+    player.y >= horizontalGateCenterY - 26 &&
+    player.y <= horizontalGateCenterY + 26;
 
   const verticalGateCenter = world.width / 2;
   const insideVerticalGate =
@@ -13079,7 +14782,7 @@ function updateMapConnection() {
   if (
     currentMapId === "spawn" &&
     insideHorizontalGate &&
-    player.x >= 492
+    player.x >= world.width - 12
   ) {
     activateMap(
       "meadow",
@@ -13197,7 +14900,7 @@ function updateMapConnection() {
 }
 
 function drawMapConnection(camX, camY) {
-  const gateY = 200;
+  const gateY = currentMapId === "spawn" ? spawnMapY(200) : 200;
   const screenY = Math.round(gateY - camY);
 
   function drawHorizontalPath(x, width) {
@@ -13256,8 +14959,8 @@ function drawMapConnection(camX, camY) {
   if (currentMapId === "spawn") {
     // Quiet path from the house area through the middle of the safe clearing
     // and out the east gate.
-    const pathStart = Math.round(267 - camX);
-    const pathEnd = Math.round(500 - camX);
+    const pathStart = Math.round(spawnMapX(267) - camX);
+    const pathEnd = Math.round(world.width - camX);
     drawHorizontalPath(pathStart, pathEnd - pathStart);
     return;
   }
@@ -13927,7 +15630,7 @@ function canAttackRemotePlayerWithPvp(remote) {
   );
 }
 
-function tryHitPvpPlayers(source = "melee") {
+function tryHitPvpPlayers(source = "melee", maxTargets = Infinity) {
   if (
     typeof onlineClient === "undefined" ||
     !onlineClient?.connected ||
@@ -13946,14 +15649,20 @@ function tryHitPvpPlayers(source = "melee") {
   const hitHalfArc =
     source === "bowMelee"
       ? BOW_MELEE_HALF_ARC
-      : horizontalSwing
-        ? 0.88
-        : 0.74;
+      : source === "wandMasteryMelee"
+        ? WAND_MASTERY_HALF_ARC
+        : horizontalSwing
+          ? 0.88
+          : 0.74;
 
   const reach =
     source === "bowMelee"
       ? BOW_MELEE_TRIGGER_RANGE
-      : currentMeleeReach();
+      : source === "wandMasteryMelee"
+        ? WAND_MASTERY_REACH
+        : currentMeleeReach();
+
+  const candidates = [];
 
   for (const remote of onlineClient.playersOnCurrentMap()) {
     if (!canAttackRemotePlayerWithPvp(remote)) continue;
@@ -13964,18 +15673,17 @@ function tryHitPvpPlayers(source = "melee") {
     const targetAngle = Math.atan2(dy, dx);
 
     const insideAngle =
-      Math.abs(
-        angleDifference(
-          targetAngle,
-          player.attackAimAngle
-        )
-      ) <= hitHalfArc;
+      Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= hitHalfArc;
+    const insideRange = distance <= reach + 8;
 
-    const insideRange =
-      distance <= reach + 8;
+    if (insideAngle && insideRange) {
+      candidates.push({ remote, distance });
+    }
+  }
 
-    if (!insideAngle || !insideRange) continue;
+  candidates.sort((a, b) => a.distance - b.distance);
 
+  for (const { remote } of candidates.slice(0, Math.max(0, maxTargets))) {
     onlineClient.sendPvpAttack(
       remote.id,
       source,
@@ -13984,10 +15692,28 @@ function tryHitPvpPlayers(source = "melee") {
         aimAngle: player.attackAimAngle
       }
     );
+
+    if (source === "wandMasteryMelee") {
+      const hitX = Number(remote.x) || 0;
+      const hitY = (Number(remote.y) || 0) - 8;
+      spawnWandMasteryHitParticles(
+        hitX,
+        hitY,
+        player.attackAimAngle
+      );
+      onlineClient.sendVisualEffect(
+        "wandMasteryHit",
+        {
+          x: hitX,
+          y: hitY,
+          angle: player.attackAimAngle
+        }
+      );
+    }
   }
 }
 
-function tryHitEnemies(source = "melee") {
+function tryHitEnemies(source = "melee", maxTargets = Infinity) {
   const originX = player.x;
   const originY = player.y - 8;
 
@@ -13998,9 +15724,18 @@ function tryHitEnemies(source = "melee") {
   const hitHalfArc =
     source === "bowMelee"
       ? BOW_MELEE_HALF_ARC
-      : horizontalSwing
-        ? 0.80
-        : SWORD_HALF_ARC;
+      : source === "wandMasteryMelee"
+        ? WAND_MASTERY_HALF_ARC
+        : horizontalSwing
+          ? 0.80
+          : SWORD_HALF_ARC;
+
+  const reach =
+    source === "wandMasteryMelee"
+      ? WAND_MASTERY_REACH
+      : currentMeleeReach();
+
+  const candidates = [];
 
   for (
     const { enemy, profile }
@@ -14013,30 +15748,42 @@ function tryHitEnemies(source = "melee") {
     const targetAngle = Math.atan2(dy, dx);
 
     const insideAngle =
-      Math.abs(
-        angleDifference(
-          targetAngle,
-          player.attackAimAngle
-        )
-      ) <= hitHalfArc;
+      Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= hitHalfArc;
 
     const bodyRadius = horizontalSwing
       ? profile.horizontalMeleeBodyRadius ?? 6
       : profile.meleeBodyRadius ?? 5;
 
-    const insideRange =
-      distance <=
-      currentMeleeReach() +
-      bodyRadius;
+    const insideRange = distance <= reach + bodyRadius;
 
-    if (
-      insideAngle &&
-      insideRange
-    ) {
-      damageEnemyWithMelee(
-        enemy,
-        source
+    if (insideAngle && insideRange) {
+      candidates.push({ enemy, distance });
+    }
+  }
+
+  candidates.sort((a, b) => a.distance - b.distance);
+
+  for (const { enemy } of candidates.slice(0, Math.max(0, maxTargets))) {
+    damageEnemyWithMelee(enemy, source);
+
+    if (source === "wandMasteryMelee") {
+      const target = enemyBodyPoint(enemy);
+      spawnWandMasteryHitParticles(
+        target.x,
+        target.y,
+        player.attackAimAngle
       );
+
+      if (typeof onlineClient !== "undefined") {
+        onlineClient.sendVisualEffect(
+          "wandMasteryHit",
+          {
+            x: target.x,
+            y: target.y,
+            angle: player.attackAimAngle
+          }
+        );
+      }
     }
   }
 }
@@ -14167,6 +15914,10 @@ function drawSlime(slime, camX, camY) {
     drawHeight = 17;
   }
 
+  const spawnScale = enemySpawnScale(slime);
+  drawWidth = Math.max(1, Math.round(drawWidth * spawnScale.x));
+  drawHeight = Math.max(1, Math.round(drawHeight * spawnScale.y));
+
   const shadowWave = carried
     ? pickupProgress
     : hopWave;
@@ -14194,6 +15945,8 @@ function drawSlime(slime, camX, camY) {
           ? goldBabySlimeImage
           : slimeImage;
 
+  ctx.save();
+  ctx.globalAlpha *= spawnScale.alpha;
   ctx.drawImage(
     baseSlimeImage,
     drawX,
@@ -14201,6 +15954,7 @@ function drawSlime(slime, camX, camY) {
     drawWidth,
     drawHeight
   );
+  ctx.restore();
 
   if (slime.hitFlash > 0) {
     ctx.save();
@@ -14237,6 +15991,15 @@ function drawSlime(slime, camX, camY) {
         slime.phase + 4.7
       );
     }
+  }
+
+  if ((Number(slime.wetTime) || 0) > 0) {
+    drawWetStatus(
+      screenX,
+      Math.round(screenY - hopHeight - 2),
+      slime.wetTime,
+      slime.wetDuration || GAME_CONFIG.status.enemyWetDuration
+    );
   }
 }
 
@@ -14283,6 +16046,10 @@ function drawGoblin(goblin, camX, camY) {
     drawHeight = 23;
   }
 
+  const spawnScale = enemySpawnScale(goblin);
+  drawWidth = Math.max(1, Math.round(drawWidth * spawnScale.x));
+  drawHeight = Math.max(1, Math.round(drawHeight * spawnScale.y));
+
   let hurlLift = carrier ? 15 : 0;
 
   if (!carrier && goblin.hurlTime > 0) {
@@ -14294,6 +16061,8 @@ function drawGoblin(goblin, camX, camY) {
   const drawX = Math.round(screenX - drawWidth / 2 + sway);
   const drawY = Math.round(screenY - drawHeight + 1 - bob - hurlLift);
 
+  ctx.save();
+  ctx.globalAlpha *= spawnScale.alpha;
   ctx.drawImage(
     goblinImage,
     drawX,
@@ -14301,6 +16070,7 @@ function drawGoblin(goblin, camX, camY) {
     drawWidth,
     drawHeight
   );
+  ctx.restore();
 
   if (goblin.hitFlash > 0 && goblinFlashImage.complete) {
     ctx.save();
@@ -14322,6 +16092,15 @@ function drawGoblin(goblin, camX, camY) {
     if (Math.sin(worldTime * 13 + goblin.phase) > 0.05) {
       drawPixelFlame(screenX, drawY + 6, goblin.phase + 4.6);
     }
+  }
+
+  if ((Number(goblin.wetTime) || 0) > 0) {
+    drawWetStatus(
+      screenX,
+      Math.round(screenY - hurlLift - 4),
+      goblin.wetTime,
+      goblin.wetDuration || GAME_CONFIG.status.enemyWetDuration
+    );
   }
 }
 
@@ -14352,16 +16131,22 @@ function drawGhost(ghost, camX, camY) {
   ctx.fillStyle = `rgba(25, 34, 29, ${0.27 - shadowPulse * 0.05})`;
   ctx.fillRect(screenX - 5, screenY, 10, 2);
 
-  const drawX = screenX - 8;
-  const drawY = screenY - 24 + hover;
+  const spawnScale = enemySpawnScale(ghost);
+  const drawWidth = Math.max(1, Math.round(16 * spawnScale.x));
+  const drawHeight = Math.max(1, Math.round(24 * spawnScale.y));
+  const drawX = Math.round(screenX - drawWidth / 2);
+  const drawY = Math.round(screenY - drawHeight + hover);
 
+  ctx.save();
+  ctx.globalAlpha *= spawnScale.alpha;
   ctx.drawImage(
     ghostImage,
     drawX,
     drawY,
-    16,
-    24
+    drawWidth,
+    drawHeight
   );
+  ctx.restore();
 
   if (ghost.hitFlash > 0 && ghostFlashImage.complete) {
     ctx.save();
@@ -14370,8 +16155,8 @@ function drawGhost(ghost, camX, camY) {
       ghostFlashImage,
       drawX,
       drawY,
-      16,
-      24
+      drawWidth,
+      drawHeight
     );
     ctx.restore();
   }
@@ -14439,6 +16224,31 @@ const player = {
   hunterSnareCharges: 3,
   hunterSnareMaxCharges: 3,
 
+  // Fireball uses an expanding targeting pulse similar to Focus Fire.
+  fireballAiming: false,
+  fireballAimTime: 0,
+  fireballBoundKey: null,
+  fireballAimMapId: null,
+  fireballTargetX: null,
+  fireballTargetY: null,
+  fireballTargetAngle: null,
+
+  // Active-skill cooldowns are tracked locally. Rain Cloud begins its cooldown
+  // only after the summoned cloud expires; Fireball begins on successful release.
+  skillCooldowns: {
+    fireball: 0,
+    rainCloud: 0
+  },
+
+  // Rain Cloud is a short committed cast. Its destination is snapshotted
+  // when the cast begins and cannot be retargeted during the half-second summon.
+  rainCloudCasting: false,
+  rainCloudCastTime: 0,
+  rainCloudCastDuration: 0.50,
+  rainCloudCastMapId: null,
+  rainCloudCastTargetX: null,
+  rainCloudCastTargetY: null,
+
   // Precision skill: Focus Fire. The opener is aimed with a cycling pulse;
   // a successful landing locks one monster for a five-second barrage.
   focusFireCharging: false,
@@ -14492,7 +16302,7 @@ const player = {
 
   // Wet status from standing under a rain cloud.
   wetTime: 0,
-  wetDuration: 5.0,
+  wetDuration: 3.0,
 
   // Jester mobility / trick skill.
   jesterBlinkCooldown: 0,
@@ -14556,10 +16366,16 @@ const player = {
   skillPoints: 0,
   abilityPoints: 0,
 
+  // Choosing a class is permanent for this character/session. Persistence is
+  // intentionally deferred until the save system exists, but all skill access
+  // respects this lock immediately after selection.
+  classId: null,
+
   abilities: {
     shadowHide: 0,
     hurl: 0,
     jesterBlink: 0,
+    wandMastery: 0,
     fireball: 0,
     strafe: 0,
     camouflage: 0,
@@ -15496,6 +17312,10 @@ function setCraftingOpen(open) {
     cancelFocusFire();
   }
 
+  if (open && fireballIsAiming()) {
+    cancelFireballAim();
+  }
+
   const overlay =
     document.getElementById(
       "craftOverlay"
@@ -15564,26 +17384,45 @@ function interactWithNearbyObject() {
 const ACTIVE_SKILLS = {
   shadowHide: {
     name: "Shadow Hide",
+    classId: "guile",
     maxLevel: 5,
     noEnhancements: true
   },
   hurl: {
     name: "Hurl",
+    classId: "might",
     maxLevel: 5,
     noEnhancements: true
   },
   jesterBlink: {
-    name: "Jester Blink",
+    name: "Hallucination",
+    classId: "arcana",
     maxLevel: 5,
     noEnhancements: true
   },
+  wandMastery: {
+    name: "Wand Mastery",
+    classId: "arcana",
+    maxLevel: 1,
+    passive: true,
+    noEnhancements: true,
+    levelProgression: [
+      {
+        name: "Wand Mastery",
+        effectText: "Empowers regular wand attacks into larger magical melee sweeps that can hit up to 3 targets."
+      }
+    ]
+  },
   fireball: {
     name: "Fireball",
+    classId: "arcana",
     maxLevel: 5,
+    cooldown: 3.5,
     noEnhancements: true
   },
   strafe: {
     name: "Strafe",
+    classId: "precision",
     maxLevel: 5,
     passive: true,
     levelProgression: [
@@ -15600,6 +17439,7 @@ const ACTIVE_SKILLS = {
   },
   camouflage: {
     name: "Camouflage",
+    classId: "precision",
     maxLevel: 1,
     passive: true,
     noEnhancements: true,
@@ -15612,6 +17452,7 @@ const ACTIVE_SKILLS = {
   },
   focusFire: {
     name: "Focus Fire",
+    classId: "precision",
     maxLevel: 1,
     noEnhancements: true,
     levelProgression: [
@@ -15623,6 +17464,7 @@ const ACTIVE_SKILLS = {
   },
   huntersSnare: {
     name: "Hunter's Snare",
+    classId: "precision",
     maxLevel: 1,
     noEnhancements: true,
     levelProgression: [
@@ -15634,25 +17476,14 @@ const ACTIVE_SKILLS = {
   },
   rainCloud: {
     name: "Rain Cloud",
-    maxLevel: 5,
-    enhancementName: "Rain Cloud Enhancement",
-    enhancementEffect: "Reserved for future rain-cloud bonuses.",
-    enhancementUnlocks: [
+    classId: "arcana",
+    maxLevel: 1,
+    cooldown: 15.0,
+    noEnhancements: true,
+    levelProgression: [
       {
-        name: "Cloud Movement",
-        effectText: "Lets you reposition an active cloud and self-target so the cloud follows you."
-      },
-      {
-        name: "Cloud Duration",
-        effectText: "Increases how long Rain Cloud stays active."
-      },
-      {
-        name: "Cloud Power",
-        effectText: "Increases rain healing and spectral damage."
-      },
-      {
-        name: "Cloud Precision",
-        effectText: "Rain Cloud no longer affects living monsters."
+        name: "Rain Cloud",
+        effectText: "Requires a wand-type weapon. Commit to a 0.5-second summon. The cloud drifts autonomously, grows slowing flammable magic grass, makes living enemies Wet, hurts ghosts, and extinguishes fire. After expiry, 15-second cooldown."
       }
     ]
   }
@@ -15662,6 +17493,7 @@ const SKILL_ICON_PATHS = {
   shadowHide: "./assets/skills/shadow_hide_approved.png",
   hurl: "./assets/skills/hurl_approved.png",
   jesterBlink: "./assets/skills/jester_blink_approved.png",
+  wandMastery: "./assets/shepherd_staff_v1.png",
   fireball: "./assets/skills/fireball_approved.png",
   strafe: "./assets/skills/strafe_precision_v2.png",
   camouflage: "./assets/skills/camouflage_precision_v2.png",
@@ -15734,21 +17566,85 @@ function skillDisplayName(skillId) {
     : "Empty";
 }
 
+const PLAYER_CLASSES = Object.freeze({
+  might: Object.freeze({ name: "Bruiser" }),
+  arcana: Object.freeze({ name: "Magus" }),
+  precision: Object.freeze({ name: "Ranger" }),
+  guile: Object.freeze({ name: "Rogue" })
+});
+
+function playerHasChosenClass() {
+  return Boolean(player.classId && PLAYER_CLASSES[player.classId]);
+}
+
+function skillBelongsToSelectedClass(skillId) {
+  const skill = ACTIVE_SKILLS[skillId];
+  return Boolean(
+    skill &&
+    playerHasChosenClass() &&
+    skill.classId === player.classId
+  );
+}
+
+function choosePlayerClass(classId) {
+  if (playerHasChosenClass()) return false;
+  if (!PLAYER_CLASSES[classId]) return false;
+
+  player.classId = classId;
+
+  // Any test bindings made before choosing a class are cleared if they point
+  // outside the chosen tree. Existing ability levels are left untouched so a
+  // dev/test session never loses AP, but off-class skills become unusable.
+  for (const key of Object.keys(skillBindings)) {
+    const skillId = skillBindings[key];
+    if (skillId && ACTIVE_SKILLS[skillId]?.classId !== classId) {
+      skillBindings[key] = null;
+    }
+  }
+
+  showSkillCategory(classId);
+  updateInventoryUi();
+  return true;
+}
+
+function updateClassSelectionUi() {
+  const skillsPage = document.getElementById("skillsPage");
+  const chosen = playerHasChosenClass();
+
+  if (skillsPage) {
+    skillsPage.classList.toggle("class-unselected", !chosen);
+  }
+
+  document.querySelectorAll(".skill-category-tab").forEach(tab => {
+    const locked = chosen && tab.dataset.skillCategory !== player.classId;
+    tab.disabled = locked;
+    tab.classList.toggle("class-locked", locked);
+    tab.setAttribute("aria-disabled", locked ? "true" : "false");
+  });
+
+  document.querySelectorAll(".skill-category-panel").forEach(panel => {
+    panel.classList.toggle(
+      "class-locked",
+      chosen && panel.dataset.skillCategoryPanel !== player.classId
+    );
+  });
+}
+
 function abilityLevel(skillId) {
   return Number(player.abilities[skillId] || 0);
 }
 
 function isAbilityUnlocked(skillId) {
-  return abilityLevel(skillId) > 0;
+  return skillBelongsToSelectedClass(skillId) && abilityLevel(skillId) > 0;
 }
 
 function meetsAbilityRequirement(skillId) {
-  return Boolean(ACTIVE_SKILLS[skillId]);
+  return skillBelongsToSelectedClass(skillId);
 }
 
 function upgradeAbility(skillId) {
   const skill = ACTIVE_SKILLS[skillId];
-  if (!skill) return false;
+  if (!skill || !skillBelongsToSelectedClass(skillId)) return false;
 
   const level = abilityLevel(skillId);
   if (level >= skill.maxLevel) return false;
@@ -15770,6 +17666,10 @@ function getAvailableEnhancements() {
   const list = [];
 
   for (const [skillId, skill] of Object.entries(ACTIVE_SKILLS)) {
+    if (!skillBelongsToSelectedClass(skillId)) {
+      continue;
+    }
+
     const level = abilityLevel(skillId);
 
     if (skill.noEnhancements) {
@@ -15914,32 +17814,8 @@ function renderSkillEnhancementToggles(node, skillId) {
   `;
 }
 
-function rainCloudHasMovementEnhancement() {
-  return hasEnhancement("rainCloud_enh_1");
-}
-
-function rainCloudHasDurationEnhancement() {
-  return hasEnhancement("rainCloud_enh_2");
-}
-
-function rainCloudHasPowerEnhancement() {
-  return hasEnhancement("rainCloud_enh_3");
-}
-
-function rainCloudHasPrecisionEnhancement() {
-  return hasEnhancement("rainCloud_enh_4");
-}
-
 function getRainCloudLifetime() {
-  return rainCloudHasDurationEnhancement()
-    ? GAME_CONFIG.rainCloud.enhancedLifetime
-    : GAME_CONFIG.rainCloud.baseLifetime;
-}
-
-function getRainCloudPowerValue() {
-  return rainCloudHasPowerEnhancement()
-    ? GAME_CONFIG.rainCloud.enhancedPower
-    : GAME_CONFIG.rainCloud.basePower;
+  return GAME_CONFIG.rainCloud.baseLifetime;
 }
 
 function getBoundKeyForSkill(skillId) {
@@ -15951,6 +17827,7 @@ function getBoundKeyForSkill(skillId) {
 
 function bindSkillToKey(skillId, key) {
   if (!ACTIVE_SKILLS[skillId]) return;
+  if (!skillBelongsToSelectedClass(skillId)) return;
   if (!isAbilityUnlocked(skillId)) return;
 
   // A skill occupies at most one active key.
@@ -15970,6 +17847,8 @@ function bindSkillToKey(skillId, key) {
 }
 
 function updateAbilityTreeUi() {
+  updateClassSelectionUi();
+
   const availableEnhancementIds = new Set(
     getAvailableEnhancements().map(entry => entry.id)
   );
@@ -15989,8 +17868,8 @@ function updateAbilityTreeUi() {
     if (!skill) return;
 
     const level = abilityLevel(skillId);
-    const requirementMet = true;
-    const unlocked = level > 0;
+    const requirementMet = skillBelongsToSelectedClass(skillId);
+    const unlocked = level > 0 && requirementMet;
     const maxed = level >= skill.maxLevel;
 
     node.classList.toggle("unlocked", unlocked);
@@ -16000,10 +17879,10 @@ function updateAbilityTreeUi() {
     const status = node.querySelector(".skill-status");
     if (status) {
       status.textContent =
+        !requirementMet ? "Class Locked" :
         maxed ? "MAX" :
         unlocked ? `LV ${level}` :
-        requirementMet ? "Ready" :
-        "Locked";
+        "Ready";
     }
 
     let progression = node.querySelector(".skill-progression");
@@ -16047,6 +17926,7 @@ function updateAbilityTreeUi() {
         "Level Up";
 
       upgradeButton.disabled =
+        !requirementMet ||
         maxed ||
         player.abilityPoints <= 0;
     }
@@ -16123,8 +18003,36 @@ function updateSkillBindingUi() {
         }
       }
 
+      const cooldownRemaining = validSkill
+        ? skillCooldownRemaining(validSkill)
+        : 0;
+      const cooldownDuration = validSkill
+        ? skillCooldownDuration(validSkill)
+        : 0;
+      const coolingDown = cooldownRemaining > 0 && cooldownDuration > 0;
+      const cooldownMask = hudSlot.querySelector(".ability-cooldown-mask");
+      const cooldownText = hudSlot.querySelector(".ability-cooldown-text");
+
+      hudSlot.classList.toggle("cooling-down", coolingDown);
+
+      if (cooldownMask) {
+        const fraction = coolingDown
+          ? Math.max(0, Math.min(1, cooldownRemaining / cooldownDuration))
+          : 0;
+        cooldownMask.style.height = `${Math.round(fraction * 100)}%`;
+      }
+
+      if (cooldownText) {
+        cooldownText.style.display = coolingDown ? "flex" : "none";
+        cooldownText.textContent = coolingDown
+          ? (cooldownRemaining >= 10
+              ? String(Math.ceil(cooldownRemaining))
+              : cooldownRemaining.toFixed(1))
+          : "";
+      }
+
       hudSlot.title = validSkill
-        ? `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: ${skillDisplayName(validSkill)}`
+        ? `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: ${skillDisplayName(validSkill)}${coolingDown ? ` · ${cooldownRemaining.toFixed(1)}s cooldown` : ""}`
         : `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: Empty`;
     }
   }
@@ -16522,6 +18430,31 @@ function removeHunterSnareVisualsForOwner(ownerId) {
   }
 }
 
+function drawRainCloudCastIndicator(camX, camY) {
+  if (!player.rainCloudCasting) return;
+
+  const screenX = Math.round(player.x - camX);
+  const screenY = Math.round(player.y - camY - 32);
+  const progress = Math.max(
+    0,
+    Math.min(
+      1,
+      player.rainCloudCastTime /
+        Math.max(0.05, player.rainCloudCastDuration)
+    )
+  );
+
+  ctx.fillStyle = "rgba(28, 32, 29, .82)";
+  ctx.fillRect(screenX - 9, screenY, 18, 4);
+  ctx.fillStyle = "#8fc7bd";
+  ctx.fillRect(
+    screenX - 8,
+    screenY + 1,
+    Math.round(16 * progress),
+    2
+  );
+}
+
 function drawHunterSnarePlacementIndicator(camX, camY) {
   if (!player.hunterSnareSetting) return;
 
@@ -16585,7 +18518,7 @@ function triggerActiveSkillForKey(key) {
     cancelHunterSnarePlacement(true);
   }
 
-  if (focusFireIsCasting()) {
+  if (focusFireIsCasting() || fireballIsAiming()) {
     return true;
   }
 
@@ -16604,6 +18537,10 @@ function triggerActiveSkillForKey(key) {
       0.72
     );
 
+    return true;
+  }
+
+  if (player.rainCloudCasting && skillId !== "rainCloud") {
     return true;
   }
 
@@ -16633,19 +18570,11 @@ function triggerActiveSkillForKey(key) {
   }
 
   if (skillId === "fireball") {
-    breakShadowHide();
-    const target = getCurrentWorldMouseTarget();
-    aimPlayerTowardPoint(target.x, target.y);
-    castFireball(player.attackAimAngle);
-    return true;
+    return beginFireballAim(key);
   }
 
   if (skillId === "rainCloud") {
-    breakShadowHide();
-    const target = getCurrentWorldMouseTarget();
-    aimPlayerTowardPoint(target.x, target.y);
-    castRainOrb(target.x, target.y);
-    return true;
+    return beginRainCloudCast();
   }
 
   return false;
@@ -16888,7 +18817,7 @@ function cycleHat() {
 }
 
 function equipWeaponIndex(index) {
-  if (focusFireIsCasting()) return false;
+  if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
   if (player.attackTime > 0) return false;
 
   if (
@@ -17772,6 +19701,10 @@ function setShopOpen(open) {
     cancelFocusFire();
   }
 
+  if (open && fireballIsAiming()) {
+    cancelFireballAim();
+  }
+
   const overlay =
     document.getElementById(
       "shopOverlay"
@@ -17889,6 +19822,10 @@ function setInventoryOpen(open) {
     cancelFocusFire();
   }
 
+  if (open && fireballIsAiming()) {
+    cancelFireballAim();
+  }
+
   if (open && shopOpen) {
     setShopOpen(false);
   }
@@ -17909,6 +19846,13 @@ function setInventoryOpen(open) {
 }
 
 function showInventoryPage(pageId) {
+  if (pageId === "skillsPage") {
+    updateClassSelectionUi();
+    if (playerHasChosenClass()) {
+      showSkillCategory(player.classId);
+    }
+  }
+
   document.querySelectorAll(".inventory-page").forEach(page => {
     page.classList.toggle("active", page.id === pageId);
   });
@@ -17942,6 +19886,13 @@ window.addEventListener("wheel", event => {
 }, { passive: false });
 
 function showSkillCategory(categoryId) {
+  if (
+    playerHasChosenClass() &&
+    categoryId !== player.classId
+  ) {
+    categoryId = player.classId;
+  }
+
   document.querySelectorAll(".skill-category-tab").forEach(tab => {
     tab.classList.toggle("active", tab.dataset.skillCategory === categoryId);
   });
@@ -17957,6 +19908,12 @@ function showSkillCategory(categoryId) {
 document.querySelectorAll(".skill-category-tab").forEach(tab => {
   tab.addEventListener("click", () => {
     showSkillCategory(tab.dataset.skillCategory);
+  });
+});
+
+document.querySelectorAll("[data-class-choice]").forEach(button => {
+  button.addEventListener("click", () => {
+    choosePlayerClass(button.dataset.classChoice);
   });
 });
 
@@ -18155,7 +20112,7 @@ document.querySelectorAll(".hat-choice").forEach(button => {
 
 document.querySelectorAll(".weapon-choice").forEach(button => {
   button.addEventListener("click", () => {
-    if (focusFireIsCasting()) return;
+    if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return;
 
     const index =
       Number(
@@ -18589,6 +20546,21 @@ function handleGameKeyUp(event) {
       { key: activeSkillKey }
     );
   }
+
+  if (
+    activeSkillKey &&
+    skillBindings[activeSkillKey] === "fireball"
+  ) {
+    if (activeSkillKey === "space") {
+      event.preventDefault();
+    }
+
+    inputController.queueCommand(
+      "releaseFireball",
+      { key: activeSkillKey }
+    );
+  }
+
 }
 
 window.addEventListener("keyup", handleGameKeyUp);
@@ -18648,18 +20620,22 @@ function executeWeaponAttack(weapon) {
     return;
   }
 
-  if (weapon === "wand") {
-    castBasicProjectile("wand", player.attackAimAngle);
-    return;
-  }
+  if (isWandTypeWeapon(weapon)) {
+    if (isAbilityUnlocked("wandMastery")) {
+      tryHitEnemies(
+        "wandMasteryMelee",
+        WAND_MASTERY_MAX_TARGETS
+      );
+      tryHitPvpPlayers(
+        "wandMasteryMelee",
+        WAND_MASTERY_MAX_TARGETS
+      );
 
-  if (weapon === "rainWand") {
-    castBasicProjectile("rainWand", player.attackAimAngle);
+    } else {
+      tryHitEnemies("melee");
+      tryHitPvpPlayers("melee");
+    }
     return;
-  }
-
-  if (weapon === "shepherdStaff") {
-    castBasicProjectile("shepherdStaff", player.attackAimAngle);
   }
 }
 
@@ -18831,11 +20807,12 @@ function executeBowMeleeAttack() {
 function handlePrimaryAttack(event) {
   if (player.isDead) return;
   if (inventoryOpen || shopOpen || craftingOpen || event.button !== 0) return;
+  if (player.rainCloudCasting) return;
 
   if (player.hunterSnareSetting) {
     cancelHunterSnarePlacement(true);
   }
-  if (focusFireIsCasting()) return;
+  if (focusFireIsCasting() || fireballIsAiming()) return;
 
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
@@ -18896,7 +20873,8 @@ function handleBowVisualMouseUp(event) {
   if (
     player.isDead ||
     event.button !== 0 ||
-    !player.bowDrawing
+    !player.bowDrawing ||
+    player.rainCloudCasting
   ) {
     return;
   }
@@ -18963,6 +20941,10 @@ function resetInputAfterFocusLoss() {
 
   if (focusFireIsCasting()) {
     cancelFocusFire();
+  }
+
+  if (fireballIsAiming()) {
+    cancelFireballAim();
   }
 
   if (
@@ -19134,6 +21116,9 @@ function updateGhosts(dt) {
         ghost.burnTime - dt
       );
     }
+    if (ghost.wetTime > 0) {
+      ghost.wetTime = Math.max(0, ghost.wetTime - dt);
+    }
 
     if (!ghost.alive && ghost.respawnTime > 0) {
       ghost.respawnTime = Math.max(
@@ -19167,6 +21152,9 @@ function updateGoblins(dt) {
         0,
         goblin.burnTime - dt
       );
+    }
+    if (goblin.wetTime > 0) {
+      goblin.wetTime = Math.max(0, goblin.wetTime - dt);
     }
 
     if (!goblin.alive && goblin.respawnTime > 0) {
@@ -19288,17 +21276,22 @@ function updateEnvironmentRegrowthEffects(
 }
 
 function updateTransientSystems(dt) {
+  updateEnemyPresentationEffects(dt);
   updateDamageNumbers(dt);
   updateFloatingTexts(dt);
   updateJesterConfetti(dt);
+  updateWandSweepParticles(dt);
   updateJesterAfterimages(dt);
   updateShadowSmoke(dt);
   updateCoins(dt);
   updateWoodDrops(dt);
   updateFlowerDrops(dt);
   updateFocusFire(dt);
+  updateFireballAim(dt);
+  updateRainCloudCast(dt);
   updateBasicProjectiles(dt);
   updateRainMagic(dt);
+  updateTemporaryRainGrassSlow(dt);
   updateFire(dt);
   updateEnvironmentRegrowthEffects(dt);
 }
@@ -19349,6 +21342,65 @@ function updateJesterRuntime(dt) {
   if (jesterClone) {
     jesterClone.life -= dt;
     jesterClone.phase += dt * 7;
+    jesterClone.tauntPulseTimer =
+      (Number(jesterClone.tauntPulseTimer) || 0) - dt;
+
+    const releasedEnemyIds =
+      jesterClone.releasedEnemyIds ||
+      (jesterClone.releasedEnemyIds = new Set());
+
+    const enemyRecords =
+      activeEnemyRecords({ aliveOnly: true });
+
+    // Reaching the Hallucination satisfies the lure for that monster. It is
+    // released permanently for this clone and can resume normal aggro logic.
+    for (const { enemy } of enemyRecords) {
+      const enemyId = enemy?.entityId || null;
+      if (!enemyId || releasedEnemyIds.has(enemyId)) continue;
+
+      const body = enemyBodyPoint(enemy);
+      const contactDistance = Math.hypot(
+        body.x - jesterClone.x,
+        body.y - jesterClone.y
+      );
+
+      if (contactDistance <= JESTER_CLONE_CONTACT_RADIUS) {
+        releasedEnemyIds.add(enemyId);
+        clearHallucinationTaunt(
+          enemy,
+          jesterClone.cloneId || null
+        );
+      }
+    }
+
+    // Hallucination keeps calling nearby monsters back toward itself instead
+    // of only taunting once at cast time. Monsters that have already touched
+    // this clone are deliberately excluded from later pulses.
+    if (jesterClone.tauntPulseTimer <= 0) {
+      jesterClone.tauntPulseTimer = JESTER_CLONE_TAUNT_INTERVAL;
+
+      for (const { enemy } of enemyRecords) {
+        const enemyId = enemy?.entityId || null;
+        if (enemyId && releasedEnemyIds.has(enemyId)) continue;
+
+        const body = enemyBodyPoint(enemy);
+
+        if (
+          Math.hypot(
+            body.x - jesterClone.x,
+            body.y - jesterClone.y
+          ) <= JESTER_CLONE_TAUNT_RADIUS
+        ) {
+          tauntEnemy(
+            enemy,
+            jesterClone.x,
+            jesterClone.y,
+            JESTER_CLONE_TAUNT_HOLD,
+            jesterClone.cloneId || null
+          );
+        }
+      }
+    }
 
     if (jesterClone.life <= 0) {
       spawnJesterConfettiBurst(
@@ -19536,6 +21588,15 @@ function updatePlayerStatusAndTimers(dt) {
   tickTimer(player, "attackCooldown", dt);
   tickTimer(player, "slashTime", dt);
 
+  if (player.skillCooldowns) {
+    for (const skillId of Object.keys(player.skillCooldowns)) {
+      player.skillCooldowns[skillId] = Math.max(
+        0,
+        (Number(player.skillCooldowns[skillId]) || 0) - dt
+      );
+    }
+  }
+
   updateJesterRuntime(dt);
   updatePlayerBurnStatus(dt);
 }
@@ -19596,7 +21657,34 @@ function updateSlimeBurn(slime, dt) {
 }
 
 function updateSlimeAi(slime, dt) {
-  const cloneTarget = cloneTauntInfo(slime.x, slime.y - 6);
+  const activeClone = getActiveJesterClone();
+  if (activeClone && slime?.entityId) {
+    const cloneDistance = Math.hypot(
+      activeClone.x - slime.x,
+      activeClone.y - (slime.y - 6)
+    );
+
+    if (cloneDistance <= JESTER_CLONE_CONTACT_RADIUS) {
+      const wasReleased =
+        activeClone.releasedEnemyIds?.has(slime.entityId);
+
+      activeClone.releasedEnemyIds?.add(slime.entityId);
+
+      if (!wasReleased) {
+        clearHallucinationTaunt(
+          slime,
+          activeClone.cloneId || null
+        );
+      }
+    }
+  }
+
+  const cloneTarget = cloneTauntInfo(
+    slime.x,
+    slime.y - 6,
+    JESTER_CLONE_TAUNT_RADIUS,
+    slime?.entityId || null
+  );
   const playerTargetable = !player.shadowHidden;
   const playerDx = player.x - slime.x;
   const playerDy = player.y - slime.y;
@@ -19700,6 +21788,9 @@ function updateSlimes(dt) {
     if (slime.burnTime > 0) {
       slime.burnTime = Math.max(0, slime.burnTime - dt);
     }
+    if (slime.wetTime > 0) {
+      slime.wetTime = Math.max(0, slime.wetTime - dt);
+    }
 
     if (slime.pickupTime > 0) {
       slime.pickupTime = Math.max(
@@ -19757,7 +21848,10 @@ function updatePlayerMovement(dt) {
 
   const movement = readMovementInput();
   const strafeMultiplier = bowStrafeMovementMultiplier();
-  const canActuallyMove = movement.moving && strafeMultiplier > 0;
+  const canActuallyMove =
+    !player.rainCloudCasting &&
+    movement.moving &&
+    strafeMultiplier > 0;
 
   if (canActuallyMove) {
     if (!player.wasMoving) {
@@ -19765,10 +21859,21 @@ function updatePlayerMovement(dt) {
       player.walkTime = 0;
     }
 
+    const wetMovementMultiplier =
+      playerIsWet() ? GAME_CONFIG.player.wetSpeedMultiplier : 1;
+    const magicGrassMovementMultiplier =
+      pointIsInTemporaryRainGrass(player.x, player.y, 7)
+        ? TEMP_RAIN_GRASS_SPEED_MULTIPLIER
+        : 1;
+    const environmentalMovementMultiplier = Math.min(
+      wetMovementMultiplier,
+      magicGrassMovementMultiplier
+    );
+
     const moveSpeed =
       player.speed *
       strafeMultiplier *
-      (playerIsWet() ? GAME_CONFIG.player.wetSpeedMultiplier : 1);
+      environmentalMovementMultiplier;
 
     const nextX = player.x + movement.dx * moveSpeed * dt;
     const nextY = player.y + movement.dy * moveSpeed * dt;
@@ -19836,7 +21941,7 @@ function processGameCommand(command) {
   if (command.type === "equipWeapon") {
     // Focus Fire is a committed channel. Hotbar keys and mouse wheel cannot
     // be used as a free cancel by swapping weapons mid-skill.
-    if (focusFireIsCasting()) return;
+    if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return;
 
     const slotIndex =
       Number(command.payload.index);
@@ -19860,12 +21965,19 @@ function processGameCommand(command) {
     return;
   }
 
+  if (command.type === "releaseFireball") {
+    releaseFireballAim();
+    return;
+  }
+
   if (command.type === "interact") {
+    if (player.rainCloudCasting) return;
     interactWithNearbyObject();
     return;
   }
 
   if (command.type === "primaryAttack") {
+    if (player.rainCloudCasting) return;
     executePrimaryAttackCommand(command.payload);
   }
 }
@@ -19933,11 +22045,18 @@ function drawGround(camX, camY) {
   }
 }
 
-function drawWetStatus(screenX, screenY) {
+function drawWetStatus(
+  screenX,
+  screenY,
+  wetTime = player.wetTime,
+  wetDuration = player.wetDuration
+) {
+  const safeWetDuration = Math.max(0.001, Number(wetDuration) || 3);
+  const safeWetTime = Math.max(0, Number(wetTime) || 0);
   const fadeAlpha =
-    player.wetTime >= player.wetDuration * 0.6
+    safeWetTime >= safeWetDuration * 0.6
       ? 1
-      : 0.45 + 0.55 * (player.wetTime / Math.max(0.001, player.wetDuration * 0.6));
+      : 0.45 + 0.55 * (safeWetTime / Math.max(0.001, safeWetDuration * 0.6));
 
   ctx.save();
   ctx.globalAlpha *= fadeAlpha;
@@ -20441,6 +22560,14 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   let weaponArmX = 0;
   let weaponArmY = 0;
 
+  const circularWandCastPose =
+    (player.rainCloudCasting || player.fireballAiming) &&
+    (
+      currentWeaponForPose === "wand" ||
+      currentWeaponForPose === "rainWand" ||
+      currentWeaponForPose === "shepherdStaff"
+    );
+
   let bowDrawArmAngle = 0;
   let bowHoldArmAngle = 0;
   let bowUpAimBlend = 0;
@@ -20651,6 +22778,31 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
 
     leftArmOffsetY -= 1;
     rightArmOffsetY -= 1;
+  }
+
+  if (circularWandCastPose && attackFrame < 0) {
+    const castProgress = player.rainCloudCasting
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            Number(player.rainCloudCastTime) /
+              Math.max(0.05, Number(player.rainCloudCastDuration) || 0.50)
+          )
+        )
+      : (
+          (Math.max(0, Number(player.fireballAimTime) || 0) % FIREBALL_AIM_PULSE_DURATION) /
+          FIREBALL_AIM_PULSE_DURATION
+        );
+
+    // Rain Cloud and Fireball share the same little casting language: keep the
+    // wand upright while the hand traces a small pixel-circle. Fireball loops
+    // the motion for as long as the expanding aim is held.
+    const castCircleAngle =
+      -Math.PI / 2 + castProgress * Math.PI * 2;
+
+    weaponArmX += Math.round(Math.cos(castCircleAngle) * 1.5);
+    weaponArmY += -2 + Math.round(Math.sin(castCircleAngle) * 1.5);
   }
 
   if (attackFrame >= 0) {
@@ -20995,7 +23147,9 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   // During attacks, keep the crisp 90-degree stepped animation.
   let swordAngle = -Math.PI / 2;
 
-  if (attackFrame >= 0) {
+  if (circularWandCastPose) {
+    swordAngle = -Math.PI / 2;
+  } else if (attackFrame >= 0) {
     const UP = -Math.PI / 2;
     const RIGHT = 0;
     const DOWN = Math.PI / 2;
@@ -21093,10 +23247,10 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
 
     // The supplied sprite is a horizontal arch whose local -Y side is the
     // front of the bow. Rotate that local forward direction toward the cursor.
-    // Quantizing to 22.5-degree steps keeps the tiny pixel arc reasonably
-    // crisp while still making diagonal aiming readable.
+    // Quantizing to 45-degree steps avoids the awkward intermediate partial
+    // angle and keeps the bow on the cleaner diagonal/cardinal poses.
     const rotationStep =
-      Math.PI / 8;
+      Math.PI / 4;
 
     const bowRotation =
       bowMeleeActive
@@ -21346,10 +23500,15 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
           ? WAND_PIVOT_Y
           : SWORD_PIVOT_Y;
 
+    const wandHoldOffsetY =
+      currentWeapon === "wand" || currentWeapon === "rainWand" || currentWeapon === "shepherdStaff"
+        ? WAND_HOLD_OFFSET_Y
+        : 0;
+
     ctx.save();
     ctx.translate(
       Math.round(handX),
-      Math.round(handY)
+      Math.round(handY + wandHoldOffsetY)
     );
     ctx.rotate(swordAngle);
 
@@ -21388,12 +23547,6 @@ function drawJesterCloneEntity(
 
   const fade = Math.max(0, Math.min(1, clone.life / clone.duration));
   const pulse = 0.5 + 0.5 * Math.sin(worldTime * 7 + clone.phase);
-
-  ctx.fillStyle = `rgba(70, 34, 92, ${0.24 + pulse * 0.10})`;
-  ctx.fillRect(screenX - 6, screenY, 12, 3);
-
-  ctx.fillStyle = `rgba(230, 162, 255, ${0.10 + pulse * 0.10})`;
-  ctx.fillRect(screenX - 8, screenY - 1, 16, 1);
 
   ctx.save();
   ctx.globalAlpha = 0.18 * fade;
@@ -21450,11 +23603,17 @@ function drawSlashEffect(camX, camY) {
 
   const progress = 1 - (player.slashTime / player.slashDuration);
   const aim = player.attackAimAngle;
-  const radius = currentMeleeReach();
+  const masteredWandSweep = wandMasteryMeleeActive();
+  const radius = masteredWandSweep
+    ? WAND_MASTERY_REACH
+    : currentMeleeReach();
+  const halfArc = masteredWandSweep
+    ? WAND_MASTERY_HALF_ARC
+    : SWORD_HALF_ARC;
 
-  // Thinner, cleaner sweep:
-  // mostly 1px squares with only a tiny 2px lead chunk.
-  const chunkCount = 11;
+  // Thinner, cleaner sweep. Wand Mastery extends the same melee language
+  // rather than becoming a projectile.
+  const chunkCount = masteredWandSweep ? 15 : 11;
   const visibleTrail = 4.0;
   const sweepHead = progress * (chunkCount - 1 + visibleTrail);
 
@@ -21464,8 +23623,8 @@ function drawSlashEffect(camX, camY) {
 
     const t = i / (chunkCount - 1);
     const angle =
-      aim - SWORD_HALF_ARC +
-      (SWORD_HALF_ARC * 2) * t;
+      aim - halfArc +
+      (halfArc * 2) * t;
 
     const px = Math.round(screenX + Math.cos(angle) * radius);
     const py = Math.round(screenY - 8 + Math.sin(angle) * radius);
@@ -21478,16 +23637,15 @@ function drawSlashEffect(camX, camY) {
     // Very restrained dark backing so it still reads crisply,
     // without making the slash feel chunky/thick.
     if (size === 2) {
-      ctx.fillStyle = "#585860";
+      ctx.fillStyle = masteredWandSweep ? "#696577" : "#585860";
       ctx.fillRect(drawX, drawY, 2, 2);
 
-      ctx.fillStyle = "#b9b9c1";
+      ctx.fillStyle = masteredWandSweep ? "#e7e4f2" : "#b9b9c1";
       ctx.fillRect(drawX, drawY, 1, 1);
     } else {
-      ctx.fillStyle =
-        behindHead < 1.8 ? "#a9a9b2" :
-        behindHead < 3.0 ? "#96969e" :
-                           "#7f7f87";
+      ctx.fillStyle = masteredWandSweep
+        ? (behindHead < 1.8 ? "#d8d4e5" : behindHead < 3.0 ? "#bdb8cb" : "#9892aa")
+        : (behindHead < 1.8 ? "#a9a9b2" : behindHead < 3.0 ? "#96969e" : "#7f7f87");
 
       ctx.fillRect(px, py, 1, 1);
     }
@@ -21702,6 +23860,33 @@ function drawHunterNpc(camX, camY) {
   );
 }
 
+function drawJesterNpc(camX, camY) {
+  const screenX =
+    Math.round(jesterNpc.x - camX);
+
+  const screenY =
+    Math.round(jesterNpc.y - camY);
+
+  const swayOffset =
+    Math.round(Math.sin(worldTime * 1.08 + 2.35) * 1);
+
+  ctx.fillStyle =
+    "rgba(34, 46, 28, .24)";
+
+  ctx.fillRect(
+    screenX - 5,
+    screenY + 1,
+    10,
+    2
+  );
+
+  ctx.drawImage(
+    jesterNpcImage,
+    screenX - 8 + swayOffset,
+    screenY - 19
+  );
+}
+
 function drawWoodCraftBench(camX, camY) {
   const screenX =
     Math.round(
@@ -21887,7 +24072,15 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "focusFireCharging",
   "focusFireOpening",
   "focusFireActive",
+  "fireballAiming",
+  "fireballAimTime",
+  "rainCloudCasting",
+  "rainCloudCastTime",
+  "rainCloudCastDuration",
   "camouflaged",
+  "hunterSnareSetting",
+  "hunterSnareSetTime",
+  "hunterSnareSetDuration",
   "jesterBlinkFadeTime",
   "jesterBlinkFadeDuration",
   "shadowHidden",
@@ -22011,6 +24204,11 @@ function drawRemotePlayer(
   player.focusFireCharging = Boolean(remote.focusFireCasting);
   player.focusFireOpening = false;
   player.focusFireActive = false;
+  player.fireballAiming = Boolean(remote.fireballAiming);
+  player.fireballAimTime = Math.max(0, Number(remote.fireballAimTime) || 0);
+  player.rainCloudCasting = Boolean(remote.rainCloudCasting);
+  player.rainCloudCastTime = Math.max(0, Number(remote.rainCloudCastTime) || 0);
+  player.rainCloudCastDuration = Math.max(0.05, Number(remote.rainCloudCastDuration) || 0.50);
   player.camouflaged = Boolean(remote.camouflaged);
 
   player.hunterSnareSetting = Boolean(remote.hunterSnareSetting);
@@ -22042,6 +24240,10 @@ function drawRemotePlayer(
     Math.max(0.01, Number(remote.hurlReachDuration) || 0.18);
   player.hurlReachDirX = Number(remote.hurlReachDirX) || 0;
   player.hurlReachDirY = Number(remote.hurlReachDirY) || 0;
+
+  if (!reflectionMode) {
+    emitRemoteCamouflageParticles(remote);
+  }
 
   remotePlayerDrawDepth += 1;
 
@@ -22265,6 +24467,16 @@ function buildWorldDrawables(camX, camY) {
           camY
         )
     );
+
+    addDrawable(
+      drawables,
+      jesterNpc.y,
+      () =>
+        drawJesterNpc(
+          camX,
+          camY
+        )
+    );
   }
 
   for (const flower of harvestFlowers) {
@@ -22356,6 +24568,14 @@ function buildWorldDrawables(camX, camY) {
   }
 
 
+  for (const effect of enemyDeathEffects) {
+    addDrawable(
+      drawables,
+      effect.y + 0.1,
+      () => drawEnemyDeathEffect(effect, camX, camY)
+    );
+  }
+
   for (const projectile of basicProjectiles) {
     addDrawable(
       drawables,
@@ -22372,13 +24592,6 @@ function buildWorldDrawables(camX, camY) {
     );
   }
 
-  for (const orb of rainOrbs) {
-    addDrawable(
-      drawables,
-      orb.y,
-      () => drawRainOrb(orb, camX, camY)
-    );
-  }
 
   for (const cloud of rainClouds) {
     addDrawable(
@@ -22449,6 +24662,7 @@ function drawForegroundLayer(camX, camY) {
 
   drawJesterAfterimages(camX, camY);
   drawFireParticles(camX, camY);
+  drawWandSweepParticles(camX, camY);
   drawGrowthParticles(camX, camY);
   drawShadowSmoke(camX, camY);
   drawJesterConfetti(camX, camY);
@@ -22457,9 +24671,11 @@ function drawForegroundLayer(camX, camY) {
     drawFocusFireOpener(opener, camX, camY);
   }
 
+  drawFireballTargeting(camX, camY);
   drawFocusFireTargeting(camX, camY);
   drawFocusFireTargetMarker(camX, camY);
   drawCamouflageIndicator(camX, camY);
+  drawRainCloudCastIndicator(camX, camY);
   drawHunterSnarePlacementIndicator(camX, camY);
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
