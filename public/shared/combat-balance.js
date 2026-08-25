@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 5;
+    const VERSION = 7;
 
     const LEVEL_GAP_PENALTY_PER_LEVEL = 0.07;
     const MIN_LEVEL_MULTIPLIER = 0.45;
@@ -102,6 +102,26 @@
       Object.freeze({
         id: "weapon_shepherdStaff",
         name: "Shepherd Staff",
+        power: 8,
+        damageType: "magic",
+        strengthScale: 0,
+        dexScale: 0,
+        intScale: 0.70
+      }),
+
+      Object.freeze({
+        id: "weapon_lostKey",
+        name: "Tournesol",
+        power: 8,
+        damageType: "magic",
+        strengthScale: 0,
+        dexScale: 0,
+        intScale: 0.70
+      }),
+
+      Object.freeze({
+        id: "weapon_hugeSunflower",
+        name: "Tabatha's Key",
         power: 8,
         damageType: "magic",
         strengthScale: 0,
@@ -223,15 +243,41 @@
       source,
       weaponIndex
     ) {
+      const resolvedWeaponIndex = Math.floor(Number(weaponIndex));
+      const weaponProfile = WEAPON_PROFILES[resolvedWeaponIndex] || null;
+      const wandMelee = [2, 3, 8, 9, 10].includes(resolvedWeaponIndex);
+
+      if (source === "wandMasteryMelee") {
+        if (!weaponProfile || !wandMelee) return null;
+
+        return {
+          ...weaponProfile,
+          strengthScale: 0,
+          dexScale: 0,
+          intScale: Math.max(0, Number(weaponProfile.intScale) || 0.70)
+        };
+      }
+
       if (
         source === "melee" ||
         source === "bowMelee" ||
         source === "basic" ||
         source === "arrow"
       ) {
-        return WEAPON_PROFILES[
-          Math.floor(Number(weaponIndex))
-        ] || null;
+        if (!weaponProfile) return null;
+
+        // Before Wand Mastery, a wand is a physical bonk whose damage scales
+        // from STR. Mastery switches the same weapon's basic attack to INT.
+        if (source === "melee" && wandMelee) {
+          return {
+            ...weaponProfile,
+            strengthScale: Math.max(0, Number(weaponProfile.intScale) || 0.70),
+            dexScale: 0,
+            intScale: 0
+          };
+        }
+
+        return weaponProfile;
       }
 
       return ABILITY_PROFILES[source] || null;

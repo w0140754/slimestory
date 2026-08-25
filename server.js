@@ -6,7 +6,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-122";
+const BUILD_VERSION = "6-11-150";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -1425,7 +1425,11 @@ const SHOP_ITEM_IDS = new Set([
   "weapon_rainWand",
   "weapon_katana",
   "weapon_oldSword",
+  "weapon_bow",
   "weapon_dreamcatcher",
+  "weapon_shepherdStaff",
+  "weapon_lostKey",
+  "weapon_hugeSunflower",
 
   "hat_original",
   "hat_blueCap",
@@ -1435,18 +1439,21 @@ const SHOP_ITEM_IDS = new Set([
   "hat_knight",
   "hat_bandana",
   "hat_ranger",
+  "hat_wood",
 
   "shirt_traveler",
   "shirt_jester",
   "shirt_ninja",
   "shirt_knight",
   "shirt_ranger",
+  "shirt_wood",
 
   "pants_traveler",
   "pants_jester",
   "pants_ninja",
   "pants_knight",
-  "pants_ranger"
+  "pants_ranger",
+  "pants_wood"
 ]);
 
 function handleShopPurchase(
@@ -1487,10 +1494,9 @@ function handleShopPurchase(
     return;
   }
 
-  // The Axe and Wood Sword remain tutorial-only items and are never sold.
+  // The Axe remains a tutorial-only item and is never sold.
   if (
     itemId === "weapon_axe" ||
-    itemId === "weapon_sword" ||
     playerState.shopPurchases.includes(itemId)
   ) {
     sendJson(socket, {
@@ -1835,6 +1841,12 @@ function igniteServerLivingNear(
     of sharedEnemiesOnMap(mapId)
   ) {
     if (!enemy.alive) continue;
+
+    // Environmental fire may ignite an unburned enemy, but it must not keep
+    // refreshing an active Burn back to its full duration every spread pulse.
+    // Once the current Burn expires, a still-present fire source can ignite it
+    // again naturally on a later pulse.
+    if ((Number(enemy.burnTime) || 0) > 0) continue;
 
     const body = serverEnemyBodyPoint(enemy);
 
@@ -2249,7 +2261,7 @@ function handleEnvironmentAction(
       spawnSharedResource(
         entity.mapId,
         "flower",
-        entity.x + 5,
+        entity.x + 3,
         entity.y - 1,
         {
           flowerType:
@@ -2638,14 +2650,16 @@ const sharedEnemyCollections =
 const sharedEnemyActionRateLimits = new Map();
 const playerEnemyContactCooldowns = new Map();
 
-function sharedEnemySnapshot(enemyType) {
+function sharedEnemySnapshot(enemyType, mapId = null) {
   const collection =
     sharedEnemyCollections[enemyType] || [];
 
-  return collection.map(enemy => {
-    ensureServerEnemyStatusState(enemy);
+  return collection
+    .filter(enemy => !mapId || enemy.mapId === mapId)
+    .map(enemy => {
+      ensureServerEnemyStatusState(enemy);
 
-    return ({
+      return ({
     id: enemy.id,
     mapId: enemy.mapId,
     x: Number(enemy.x.toFixed(2)),
@@ -2684,18 +2698,43 @@ function sharedEnemySnapshot(enemyType) {
   });
 }
 
-function broadcastSharedEnemySnapshots() {
+function sendSharedEnemySnapshotsToSocket(socket, mapId, includeSyncComplete = false) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
   for (
     const enemyType
     of Object.keys(
       sharedEnemyCollections
     )
   ) {
-    broadcast({
+    sendJson(socket, {
       type: "enemySnapshot",
       enemyType,
-      enemies: sharedEnemySnapshot(enemyType)
+      mapId,
+      enemies: sharedEnemySnapshot(enemyType, mapId)
     });
+  }
+
+  if (includeSyncComplete) {
+    sendJson(socket, {
+      type: "enemySnapshotSyncComplete",
+      mapId
+    });
+  }
+}
+
+function broadcastSharedEnemySnapshots() {
+  for (const client of wss.clients) {
+    if (client.readyState !== WebSocket.OPEN) continue;
+
+    const playerId = client.playerId;
+    const playerState =
+      typeof playerId === "string"
+        ? players.get(playerId)
+        : null;
+    const mapId = playerState?.mapId || "spawn";
+
+    sendSharedEnemySnapshotsToSocket(client, mapId);
   }
 }
 
@@ -3574,7 +3613,7 @@ function handlePvpAttack(
 
   if (source === "melee") {
     // Melee weapons plus unmastered wand-type weapons use this path.
-    if (![0, 1, 2, 3, 4, 5, 8].includes(attacker.weaponIndex)) {
+    if (![0, 1, 2, 3, 4, 5, 8, 9, 10].includes(attacker.weaponIndex)) {
       return;
     }
 
@@ -3593,7 +3632,7 @@ function handlePvpAttack(
     knockback =
       attacker.weaponIndex === 1 ? 18 : 15;
   } else if (source === "wandMasteryMelee") {
-    if (![2, 3, 8].includes(attacker.weaponIndex)) {
+    if (![2, 3, 8, 9, 10].includes(attacker.weaponIndex)) {
       return;
     }
 
@@ -3601,8 +3640,8 @@ function handlePvpAttack(
       attacker,
       target,
       payload.aimAngle,
-      46,
-      0.54
+      49,
+      0.56
     );
 
     minimumMs = 260;
@@ -3672,7 +3711,14 @@ function handlePvpAttack(
           baseDamage,
           payload
         )
-      : baseDamage;
+      : source === "wandMasteryMelee"
+        ? Math.max(
+            1,
+            Math.round(
+              baseDamage * wandMasteryTargetDamageMultiplier(payload)
+            )
+          )
+        : baseDamage;
 
   const aimAngle = Number(payload.aimAngle);
   const knockbackX =
@@ -3680,22 +3726,51 @@ function handlePvpAttack(
   const knockbackY =
     Math.sin(aimAngle) * knockback;
 
-  const dealt = applyServerPlayerDamage(
-    target,
-    {
-      amount: damage,
-      mapId: target.mapId,
-      sourceType: `pvp:${source}`,
-      sourceId: attacker.id,
-      knockbackX,
-      knockbackY,
-      contactCooldown: 0.18
-    }
-  );
+  const applyValidatedPvpHit = () => {
+    const currentAttacker = players.get(attackerId);
+    const currentTarget = players.get(target.id);
 
-  if (dealt > 0) {
-    applyPvpCombatLock(attacker, target);
+    if (
+      !currentAttacker ||
+      !currentTarget ||
+      currentAttacker.hp <= 0 ||
+      currentTarget.hp <= 0 ||
+      currentAttacker.mapId !== currentTarget.mapId ||
+      !currentAttacker.pvpEnabled ||
+      !currentTarget.pvpEnabled
+    ) {
+      return;
+    }
+
+    const dealt = applyServerPlayerDamage(
+      currentTarget,
+      {
+        amount: damage,
+        mapId: currentTarget.mapId,
+        sourceType: `pvp:${source}`,
+        sourceId: currentAttacker.id,
+        knockbackX,
+        knockbackY,
+        contactCooldown: 0.18
+      }
+    );
+
+    if (dealt > 0) {
+      applyPvpCombatLock(currentAttacker, currentTarget);
+    }
+  };
+
+  const impactDelayMs =
+    source === "wandMasteryMelee"
+      ? clampNumber(payload.impactDelayMs, 0, 180, 0)
+      : 0;
+
+  if (impactDelayMs > 0) {
+    setTimeout(applyValidatedPvpHit, impactDelayMs);
+    return;
   }
+
+  applyValidatedPvpHit();
 }
 
 function handlePlayerDamageRequest(
@@ -4618,7 +4693,7 @@ function validateSharedEnemyMeleeHit(
   enemy,
   payload
 ) {
-  if (![0, 1, 2, 3, 4, 8].includes(playerState.weaponIndex)) {
+  if (![0, 1, 2, 3, 4, 5, 8, 9, 10].includes(playerState.weaponIndex)) {
     return false;
   }
 
@@ -4664,7 +4739,7 @@ function validateSharedEnemyWandMasteryHit(
   enemy,
   payload
 ) {
-  if (![2, 3, 8].includes(playerState.weaponIndex)) {
+  if (![2, 3, 8, 9, 10].includes(playerState.weaponIndex)) {
     return false;
   }
 
@@ -4677,7 +4752,7 @@ function validateSharedEnemyWandMasteryHit(
     (playerState.y - 8);
   const distance = Math.hypot(dx, dy);
 
-  if (distance > 38 + bodyRadius) {
+  if (distance > 41 + bodyRadius) {
     return false;
   }
 
@@ -4687,7 +4762,7 @@ function validateSharedEnemyWandMasteryHit(
   }
 
   const targetAngle = Math.atan2(dy, dx);
-  return Math.abs(angleDifference(targetAngle, aimAngle)) <= 0.54;
+  return Math.abs(angleDifference(targetAngle, aimAngle)) <= 0.56;
 }
 
 function validateSharedEnemyBowMeleeHit(
@@ -4775,6 +4850,18 @@ function scaleArrowDamage(
     1,
     Math.round(baseDamage)
   );
+}
+
+function wandMasteryTargetDamageMultiplier(payload = {}) {
+  const rawCount = Number(payload.targetCount);
+  const count = Math.max(
+    1,
+    Math.min(3, Math.round(Number.isFinite(rawCount) ? rawCount : 1))
+  );
+
+  if (count <= 1) return 1;
+  if (count === 2) return 0.75;
+  return 0.60;
 }
 
 // Eleven uninterrupted Focus Fire hits total exactly 8.0 normal-arrow units.
@@ -4911,11 +4998,16 @@ function handleSharedEnemyDamageAction(
 
     minimumMs = 260;
     critical = Boolean(payload.critical) || camouflageCritical;
-    damage = calculateServerPlayerDamage(
-      playerState,
-      enemy,
-      "melee",
-      critical
+    damage = Math.max(
+      1,
+      Math.round(
+        calculateServerPlayerDamage(
+          playerState,
+          enemy,
+          "wandMasteryMelee",
+          critical
+        ) * wandMasteryTargetDamageMultiplier(payload)
+      )
     );
     knockback =
       serverEnemyProfile(enemy)?.damageKnockback?.melee ?? 22;
@@ -4947,7 +5039,7 @@ function handleSharedEnemyDamageAction(
       serverEnemyProfile(enemy)?.damageKnockback?.bowMelee ?? 10;
   } else if (source === "basic") {
     if (
-      ![2, 3, 8].includes(playerState.weaponIndex) ||
+      ![2, 3, 8, 9, 10].includes(playerState.weaponIndex) ||
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
@@ -5045,70 +5137,89 @@ function handleSharedEnemyDamageAction(
     return;
   }
 
-  enemy.hp = Math.max(
-    0,
-    enemy.hp - damage
-  );
+  const applyValidatedDamage = () => {
+    if (!enemy.alive || enemy.carriedBy) return;
 
-  const camouflageConfused =
-    tryApplyCamouflageConfusion(
-      enemy,
-      playerState,
-      playerId,
-      payload
+    const currentPlayerState = players.get(playerId);
+    if (!currentPlayerState || currentPlayerState.hp <= 0) return;
+
+    enemy.hp = Math.max(
+      0,
+      enemy.hp - damage
     );
 
-  if (!camouflageConfused) {
-    setEnemyAggroTarget(
-      enemy,
-      playerId,
-      enemy.aggroDuration
-    );
-  }
-  enemy.lastDamagePlayerId = playerId;
+    const camouflageConfused =
+      tryApplyCamouflageConfusion(
+        enemy,
+        currentPlayerState,
+        playerId,
+        payload
+      );
 
-  if (source === "fireball") {
-    applyServerEnemyBurn(enemy, {
-      duration: STATUS_RULES.enemyBurnDuration,
-      sourcePlayerId: playerId
+    if (!camouflageConfused) {
+      setEnemyAggroTarget(
+        enemy,
+        playerId,
+        enemy.aggroDuration
+      );
+    }
+    enemy.lastDamagePlayerId = playerId;
+
+    if (source === "fireball") {
+      applyServerEnemyBurn(enemy, {
+        duration: STATUS_RULES.enemyBurnDuration,
+        sourcePlayerId: playerId
+      });
+    }
+
+    let pushAngle = Number(payload.aimAngle);
+
+    if (!Number.isFinite(pushAngle)) {
+      pushAngle = Math.atan2(
+        enemy.y - currentPlayerState.y,
+        enemy.x - currentPlayerState.x
+      );
+    }
+
+    const damageFraction =
+      damage / Math.max(1, Number(enemy.maxHp) || damage);
+
+    if (damageFraction >= ENEMY_KNOCKBACK_DAMAGE_THRESHOLD) {
+      enemy.knockbackX =
+        Math.cos(pushAngle) * knockback;
+
+      enemy.knockbackY =
+        Math.sin(pushAngle) * knockback;
+    }
+
+    broadcast({
+      type: "enemyDamage",
+      enemyType: enemy.type,
+      enemyId: enemy.id,
+      mapId: enemy.mapId,
+      amount: damage,
+      hp: enemy.hp,
+      critical,
+      source,
+      attackerId: playerId
     });
+
+    if (enemy.hp <= 0) {
+      killSharedEnemy(enemy, playerId);
+    }
+  };
+
+  const impactDelayMs =
+    source === "wandMasteryMelee"
+      ? clampNumber(payload.impactDelayMs, 0, 180, 0)
+      : 0;
+
+  if (impactDelayMs > 0) {
+    setTimeout(applyValidatedDamage, impactDelayMs);
+    return;
   }
 
-  let pushAngle = Number(payload.aimAngle);
-
-  if (!Number.isFinite(pushAngle)) {
-    pushAngle = Math.atan2(
-      enemy.y - playerState.y,
-      enemy.x - playerState.x
-    );
-  }
-
-  const damageFraction =
-    damage / Math.max(1, Number(enemy.maxHp) || damage);
-
-  if (damageFraction >= ENEMY_KNOCKBACK_DAMAGE_THRESHOLD) {
-    enemy.knockbackX =
-      Math.cos(pushAngle) * knockback;
-
-    enemy.knockbackY =
-      Math.sin(pushAngle) * knockback;
-  }
-
-  broadcast({
-    type: "enemyDamage",
-    enemyType: enemy.type,
-    enemyId: enemy.id,
-    mapId: enemy.mapId,
-    amount: damage,
-    hp: enemy.hp,
-    critical,
-    source,
-    attackerId: playerId
-  });
-
-  if (enemy.hp <= 0) {
-    killSharedEnemy(enemy, playerId);
-  }
+  applyValidatedDamage();
 }
 
 function handleSharedEnemyAction(
@@ -7250,7 +7361,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     hatIndex: clampInteger(source.hatIndex, -1, 8, -1),
     shirtIndex: clampInteger(source.shirtIndex, -1, 5, -1),
     pantsIndex: clampInteger(source.pantsIndex, -1, 5, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 8, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 10, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -7534,6 +7645,7 @@ server.on("upgrade", (request, socket, head) => {
 
 wss.on("connection", socket => {
   const id = crypto.randomUUID();
+  socket.playerId = id;
 
   const initialState = sanitizePlayerState(id, {
     mapId: "spawn",
@@ -7569,13 +7681,11 @@ wss.on("connection", socket => {
     players: [...players.values()]
   });
 
-  for (const enemyType of Object.keys(sharedEnemyCollections)) {
-    sendJson(socket, {
-      type: "enemySnapshot",
-      enemyType,
-      enemies: sharedEnemySnapshot(enemyType)
-    });
-  }
+  sendSharedEnemySnapshotsToSocket(
+    socket,
+    initialState.mapId,
+    true
+  );
 
   sendJson(socket, {
     type: "hunterSnareSnapshot",
@@ -7650,6 +7760,14 @@ wss.on("connection", socket => {
       }
 
       players.set(id, cleanState);
+
+      if (mapChanged) {
+        sendSharedEnemySnapshotsToSocket(
+          socket,
+          cleanState.mapId,
+          true
+        );
+      }
 
       broadcast({
         type: "playerState",

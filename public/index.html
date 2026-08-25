@@ -349,7 +349,9 @@
 
   #shopPanel {
     width: min(500px, calc(100vw - 36px));
-    max-height: calc(100vh - 36px);
+    height: min(540px, calc(100vh - 160px));
+    max-height: min(540px, calc(100vh - 160px));
+    min-height: 0;
     background: #202820;
     border: 3px solid #9a8756;
     box-shadow:
@@ -396,9 +398,42 @@
     cursor: pointer;
   }
 
+  #shopTabs {
+    display: flex;
+    gap: 4px;
+    padding: 7px 8px;
+    border-bottom: 2px solid #5f573d;
+    background: #242e24;
+    overflow-x: auto;
+  }
+
+  .shop-tab {
+    appearance: none;
+    flex: 0 0 auto;
+    padding: 5px 7px;
+    border: 1px solid #5f573d;
+    background: #293329;
+    color: #a9a184;
+    font: 8px/1 monospace;
+    cursor: pointer;
+  }
+
+  .shop-tab.active {
+    border-color: #bca76c;
+    background: #3a4638;
+    color: #fff2b5;
+  }
+
+  .shop-tab:hover {
+    filter: brightness(1.14);
+  }
+
   #shopGrid {
     padding: 12px;
     overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-content: start;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
@@ -406,7 +441,7 @@
 
   .shop-item {
     appearance: none;
-    min-height: 68px;
+    min-height: 78px;
     padding: 6px;
     border: 2px solid #5f573d;
     background: #293329;
@@ -415,7 +450,7 @@
     cursor: pointer;
     display: grid;
     grid-template-columns: 28px 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
     column-gap: 7px;
     align-items: center;
     text-align: left;
@@ -424,7 +459,7 @@
   .shop-item img {
     width: 28px;
     height: 28px;
-    grid-row: 1 / span 2;
+    grid-row: 1 / span 3;
     object-fit: contain;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -432,6 +467,12 @@
 
   .shop-item-name {
     font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .shop-item-meta {
+    color: #b8b197;
+    font-size: 7px;
     line-height: 1.15;
   }
 
@@ -460,6 +501,30 @@
     color: #9f9878;
     font: 8px/1 monospace;
     text-align: center;
+  }
+
+  #menuFeedbackToast {
+    position: fixed;
+    left: 50%;
+    top: 58px;
+    transform: translate(-50%, -8px);
+    z-index: 80;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 7px 11px;
+    border: 2px solid #bca76c;
+    background: rgba(28, 35, 28, 0.96);
+    box-shadow: 3px 3px 0 rgba(0,0,0,.38);
+    color: #fff2b5;
+    font: bold 10px/1.15 monospace;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .10s linear, transform .10s linear;
+  }
+
+  #menuFeedbackToast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 
   #craftOverlay {
@@ -669,8 +734,9 @@
 
   #inventoryPanel {
     width: min(520px, calc(100vw - 36px));
-    min-height: 300px;
-    max-height: calc(100vh - 36px);
+    height: min(540px, calc(100vh - 160px));
+    min-height: 0;
+    max-height: min(540px, calc(100vh - 160px));
     background: #202820;
     border: 3px solid #9a8756;
     box-shadow:
@@ -1563,6 +1629,10 @@
     display: none !important;
   }
 
+  #skillsPage.class-selected .skill-category-tabs {
+    display: none !important;
+  }
+
   .class-selection-gate {
     display: none;
     padding: 6px 2px 2px;
@@ -1820,9 +1890,17 @@
 
   @media (max-width: 560px) {
     #inventoryPanel {
-      min-height: 280px;
       width: min(520px, calc(100vw - 18px));
-      max-height: calc(100vh - 18px);
+      height: min(500px, calc(100vh - 150px));
+      min-height: 0;
+      max-height: min(500px, calc(100vh - 150px));
+    }
+
+    #shopPanel {
+      width: min(500px, calc(100vw - 18px));
+      height: min(500px, calc(100vh - 150px));
+      min-height: 0;
+      max-height: min(500px, calc(100vh - 150px));
     }
 
     .inventory-tab {
@@ -1992,6 +2070,8 @@
         <div class="menu-item" data-owned-item="weapon_wand" data-hotbar-assignable="true"><img id="inventoryWandImg" alt="Wand" /><span>Wand</span></div>
         <div class="menu-item" data-owned-item="weapon_rainWand" data-hotbar-assignable="true"><img id="inventoryRainWandImg" alt="Rain Wand" /><span>Rain Wand</span></div>
         <div class="menu-item" data-owned-item="weapon_shepherdStaff" data-hotbar-assignable="true"><img id="inventoryShepherdStaffImg" alt="Shepherd Staff" /><span>Shepherd Staff</span></div>
+        <div class="menu-item" data-owned-item="weapon_lostKey" data-hotbar-assignable="true"><img id="inventoryLostKeyImg" alt="Tournesol" /><span>Tournesol</span></div>
+        <div class="menu-item" data-owned-item="weapon_hugeSunflower" data-hotbar-assignable="true"><img id="inventoryHugeSunflowerImg" alt="Tabatha's Key" /><span>Tabatha's Key</span></div>
         <div class="menu-item" data-owned-item="hat_original"><img id="inventoryHatImg" alt="Hat" /><span>Hat</span></div>
         <div class="menu-item" data-owned-item="hat_blueCap"><img id="inventoryCapImg" alt="Blue Cap" /><span>Blue Cap</span></div>
         <div class="menu-item" data-owned-item="hat_wizard"><img id="inventoryWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span></div>
@@ -2256,7 +2336,7 @@
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Passive. Wand-type weapons normally strike in melee. Wand Mastery empowers those strikes into larger magical sweeps that can hit up to 3 targets.
+              Passive. Wand-type weapons normally strike in melee using STR. Wand Mastery empowers those strikes into larger magical sweeps that can hit up to 3 targets and changes their damage scaling from STR to INT.
             </div>
             <div class="skill-level-row">
               <span class="skill-level-text">LV 0 / 1</span>
@@ -2275,7 +2355,7 @@
               Requires a wand-type weapon. Hold to extend Fireball's targeting distance toward the cursor, then release when the reticle reaches the spot you want. Close casts can be quick taps; farther casts take longer to line up. The fireball arcs over intervening targets and ignites its landing area. 3.5-second cooldown.
             </div>
             <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
+              <span class="skill-level-text">LV 0 / 1</span>
               <button class="ability-upgrade-button" data-ability-id="fireball">Unlock</button>
             </div>
             <div class="skill-bind-label">Bind key</div>
@@ -2320,10 +2400,10 @@
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Blink toward the cursor and leave a Hallucination behind. It periodically draws in nearby enemies; each monster is released from the forced lure once it reaches the illusion.
+              Blink toward the cursor and leave a Hallucination behind. It periodically draws in nearby enemies; each monster is released from the forced lure once it reaches the illusion. After the Hallucination ends, the skill has a 15-second cooldown.
             </div>
             <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
+              <span class="skill-level-text">LV 0 / 1</span>
               <button class="ability-upgrade-button" data-ability-id="jesterBlink">Unlock</button>
             </div>
             <div class="skill-bind-label">Bind key</div>
@@ -2550,10 +2630,20 @@
       <div id="shopCoinCount">Coins 0</div>
       <button id="shopClose" aria-label="Close shop">×</button>
     </div>
+    <div id="shopTabs" role="tablist" aria-label="Shop categories">
+      <button type="button" class="shop-tab active" data-shop-filter="all">All</button>
+      <button type="button" class="shop-tab" data-shop-filter="common">Common</button>
+      <button type="button" class="shop-tab" data-shop-filter="might">Bruiser</button>
+      <button type="button" class="shop-tab" data-shop-filter="arcana">Magus</button>
+      <button type="button" class="shop-tab" data-shop-filter="precision">Ranger</button>
+      <button type="button" class="shop-tab" data-shop-filter="guile">Rogue</button>
+    </div>
     <div id="shopGrid"></div>
-    <div id="shopFooter">Everything costs 1 Coin · Esc to close</div>
+    <div id="shopFooter">Everything costs 1 Coin · Class restrictions apply when equipping armor · Esc to close</div>
   </div>
 </div>
+
+<div id="menuFeedbackToast" role="status" aria-live="polite"></div>
 
 <div id="craftOverlay" aria-hidden="true">
   <div id="craftPanel">
@@ -2617,8 +2707,8 @@
   </div>
 </div>
 
-<script src="/shared/world-content.js?v=42"></script>
-<script src="/shared/combat-balance.js?v=5"></script>
+<script src="/shared/world-content.js?v=50"></script>
+<script src="/shared/combat-balance.js?v=7"></script>
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -2626,7 +2716,11 @@ ctx.imageSmoothingEnabled = false;
 
 const VIEW_W = canvas.width;
 const VIEW_H = canvas.height;
-const CLIENT_BUILD_VERSION = "6-11-122";
+const CLIENT_BUILD_VERSION = "6-11-150";
+
+// Declared before any startup/map/input code can reference it. A later const/let
+// declaration created a temporal-dead-zone crash in v6-11-147.
+let onlineClient = null;
 
 // Most maps use the original 640x400 world. Gold Slime Den is intentionally
 // smaller so the perimeter itself is the encounter boundary rather than a
@@ -2787,6 +2881,29 @@ const sprite = {
   woodRightLeg: loadImage("assets/wood_armor_rightleg_v1.png")
 };
 
+// Inventory/equipment previews combine the actual layered armor pieces so
+// shirts read as torso + both sleeves and pants show both legs.
+const armorPreviewImages = Object.freeze({
+  shirts: Object.freeze([
+    loadImage("assets/ui/base_shirt_preview.png"),
+    loadImage("assets/ui/traveler_shirt_preview.png"),
+    loadImage("assets/ui/jester_shirt_preview.png"),
+    loadImage("assets/ui/ninja_shirt_preview.png"),
+    loadImage("assets/ui/knight_shirt_preview.png"),
+    loadImage("assets/ui/ranger_shirt_preview.png"),
+    loadImage("assets/ui/wood_shirt_preview.png")
+  ]),
+  pants: Object.freeze([
+    loadImage("assets/ui/base_pants_preview.png"),
+    loadImage("assets/ui/traveler_pants_preview.png"),
+    loadImage("assets/ui/jester_pants_preview.png"),
+    loadImage("assets/ui/ninja_pants_preview.png"),
+    loadImage("assets/ui/knight_pants_preview.png"),
+    loadImage("assets/ui/ranger_pants_preview.png"),
+    loadImage("assets/ui/wood_pants_preview.png")
+  ])
+});
+
 // On death, torso + arms + legs collapse into this single 16x16 ghost body.
 // The current head and current hat continue to render above it.
 const playerGhostBodyImage = loadImage("assets/player_ghost_body_v1.png");
@@ -2842,6 +2959,8 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 // User-drawn craftable Shepherd Staff. It uses the same hand pivot and
 // basic-projectile combat loop as the two existing wands.
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
+const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
+const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -4500,7 +4619,7 @@ function drawFlowerDrop(drop, camX, camY, index) {
 
   ctx.drawImage(
     flowerLootImage(drop.type),
-    screenX - 8,
+    screenX - 9,
     screenY - 13 + bob
   );
 }
@@ -5150,7 +5269,7 @@ function fireBowArrow(drawAmount, angle, options = {}) {
   return true;
 }
 
-const WAND_WEAPON_TYPES = Object.freeze(["wand", "rainWand", "shepherdStaff"]);
+const WAND_WEAPON_TYPES = Object.freeze(["wand", "rainWand", "shepherdStaff", "lostKeyWand", "sunflowerWand"]);
 
 function isWandTypeWeapon(weapon = equippedWeapon()) {
   return WAND_WEAPON_TYPES.includes(weapon);
@@ -5167,6 +5286,10 @@ function showWandRequiredMessage() {
 }
 
 function skillCooldownRemaining(skillId) {
+  if (skillId === "jesterBlink") {
+    return Math.max(0, Number(player.jesterBlinkCooldown) || 0);
+  }
+
   return Math.max(
     0,
     Number(player.skillCooldowns?.[skillId]) || 0
@@ -5174,6 +5297,10 @@ function skillCooldownRemaining(skillId) {
 }
 
 function skillCooldownDuration(skillId) {
+  if (skillId === "jesterBlink") {
+    return Math.max(0, Number(player.jesterBlinkCooldownDuration) || 0);
+  }
+
   return Math.max(
     0,
     Number(ACTIVE_SKILLS?.[skillId]?.cooldown) || 0
@@ -7964,36 +8091,48 @@ function drawFireParticles(camX, camY) {
   }
 }
 
-function spawnWandMasteryHitParticles(x, y, angle) {
-  // Delay the rake a hair so it appears after the monster's white hit flash
-  // peaks. Saturated arcane colours stay readable without implying an element.
-  const colors = ["#8f6cff", "#c97cff", "#6fdcff"];
-  const slashAngle = angle + 0.72;
-  const dirX = Math.cos(slashAngle);
-  const dirY = Math.sin(slashAngle);
-  const normalX = -dirY;
-  const normalY = dirX;
+function spawnWandMasteryHitParticles(x, y, angle, startDelay = 0, reverseTravel = false) {
+  // Three parallel rake marks that follow the wand's sweep path. They are
+  // revealed progressively so the slash feels drawn across the enemy.
+  const sweepAngle = angle + Math.PI / 2 - 0.12;
+  const normalX = -Math.sin(sweepAngle);
+  const normalY = Math.cos(sweepAngle);
+
+  const clawColors = ["#ffffff", "#ffffff", "#ffffff"];
 
   for (let claw = -1; claw <= 1; claw++) {
-    for (let segment = 0; segment < 5; segment++) {
-      const t = segment / 4;
-      const offset = claw * 3.2;
-      const along = (t - 0.5) * 10;
-      const life = 0.24 + segment * 0.012;
+    const offset = claw * 2.35;
+    const markAngle = sweepAngle + claw * 0.05;
+    const dirX = Math.cos(markAngle);
+    const dirY = Math.sin(markAngle);
+    const life = 0.31;
+    const colorIndex = claw + 1;
 
-      wandSweepParticles.push({
-        x: x + normalX * offset + dirX * along,
-        y: y + normalY * offset + dirY * along,
-        vx: dirX * (2.5 + segment * 0.7) + normalX * claw * 1.4,
-        vy: dirY * (2.5 + segment * 0.7) + normalY * claw * 1.4,
-        life,
-        maxLife: life,
-        delay: 0.055 + segment * 0.008,
-        color: colors[(claw + 1) % colors.length],
-        kind: "hit",
-        twinkle: segment * 0.9 + claw
-      });
-    }
+    // Keep the existing finishing point exactly where it is, but extend the
+    // beginning of the scratch backward by 4px so Wand Mastery's first contact
+    // reads more clearly. Shifting the longer mark by half the extension keeps
+    // the travel endpoint fixed for both normal and reversed claw travel.
+    const slashStartExtension = 4;
+    const slashLength = 10 + slashStartExtension;
+    const slashCenterShift =
+      (reverseTravel ? 1 : -1) * slashStartExtension / 2;
+
+    wandSweepParticles.push({
+      x: x + normalX * offset + dirX * slashCenterShift,
+      y: y + normalY * offset + dirY * slashCenterShift,
+      vx: dirX * 1.1 + normalX * claw * 0.18,
+      vy: dirY * 1.1 + normalY * claw * 0.18,
+      life,
+      maxLife: life,
+      delay: Math.max(0, Number(startDelay) || 0),
+      color: clawColors[colorIndex],
+      kind: "hit",
+      rotation: markAngle,
+      slashLength,
+      slashWidth: 1.15,
+      slashCurve: 1.2,
+      reverseTravel: Boolean(reverseTravel)
+    });
   }
 }
 
@@ -8027,7 +8166,7 @@ function drawWandSweepParticles(camX, camY) {
     const y = Math.round(particle.y - camY);
 
     ctx.save();
-    ctx.globalAlpha = alpha * (particle.kind === "hit" ? 0.96 : 0.90);
+    ctx.globalAlpha = alpha * (particle.kind === "hit" ? 0.72 : 0.90);
     ctx.fillStyle = particle.color;
 
     if (particle.kind === "glitter") {
@@ -8042,10 +8181,43 @@ function drawWandSweepParticles(camX, camY) {
         ctx.fillRect(x, y + 1, 1, 1);
       }
     } else {
-      // The impact rake is intentionally chunkier than the old white slices so
-      // it remains visible after the monster's white damage flash.
-      const size = alpha > 0.45 ? 2 : 1;
-      ctx.fillRect(x, y, size, size);
+      // Let the rake travel across the target: it draws on from one end, and
+      // once long enough the opposite end starts disappearing.
+      const rotation = Number(particle.rotation) || 0;
+      const length = Math.max(4, Number(particle.slashLength) || 8);
+      const width = Math.max(1, Number(particle.slashWidth) || 1.5);
+      const curve = Number(particle.slashCurve) || 0;
+      const age = 1 - alpha;
+      const headProgress = Math.max(0, Math.min(1, age * 2.2));
+      const tailProgress = Math.max(0, Math.min(1, (headProgress - 0.42) / 0.58));
+      const steps = Math.max(8, Math.round(length * 1.8));
+      const startStep = Math.min(steps - 1, Math.floor((steps - 1) * tailProgress));
+      const endStep = Math.max(startStep, Math.ceil((steps - 1) * headProgress));
+      const cosR = Math.cos(rotation);
+      const sinR = Math.sin(rotation);
+      const halfWidth = Math.max(0, Math.round((width - 1) / 2));
+
+      for (let i = startStep; i <= endStep; i++) {
+        const tRaw = i / (steps - 1);
+        const t = particle.reverseTravel ? 1 - tRaw : tRaw;
+        const localX = -length / 2 + t * length;
+        const arch = (1 - Math.pow((t - 0.5) / 0.5, 2));
+        const localY = -curve * arch;
+        const worldX = x + localX * cosR - localY * sinR;
+        const worldY = y + localX * sinR + localY * cosR;
+        const px = Math.round(worldX);
+        const py = Math.round(worldY);
+
+        for (let w = -halfWidth; w <= halfWidth; w++) {
+          ctx.fillRect(px, py + w, 1, 1);
+        }
+
+        if (i === endStep && headProgress < 1) {
+          const tipX = Math.round(worldX + cosR);
+          const tipY = Math.round(worldY + sinR);
+          ctx.fillRect(tipX, tipY, 1, 1);
+        }
+      }
     }
 
     ctx.restore();
@@ -8070,12 +8242,13 @@ function enemySpawnScale(enemy) {
   };
 }
 
-function spawnEnemyDeathEffect(enemy, enemyType) {
+function spawnEnemyDeathEffect(enemy, enemyType, mapId = currentMapId) {
   if (!enemy || !enemyType) return;
 
   enemyDeathEffects.push({
     enemyType,
     variant: enemy.variant || "green",
+    mapId: mapId || currentMapId,
     x: Number(enemy.x) || 0,
     y: Number(enemy.y) || 0,
     phase: Number(enemy.phase) || 0,
@@ -8824,8 +8997,8 @@ function drawPlayerReflection(camX, camY) {
 // visual effect accurately shows the player's reach.
 const SWORD_REACH = 22;
 const SWORD_HALF_ARC = 0.62;
-const WAND_MASTERY_REACH = 38;
-const WAND_MASTERY_HALF_ARC = 0.52;
+const WAND_MASTERY_REACH = 41;
+const WAND_MASTERY_HALF_ARC = 0.56;
 const WAND_MASTERY_MAX_TARGETS = 3;
 const BOW_MELEE_TRIGGER_RANGE = 24;
 const BOW_MELEE_HALF_ARC = 1.05;
@@ -8835,6 +9008,13 @@ function wandMasteryMeleeActive() {
     isWandTypeWeapon(equippedWeapon()) &&
     isAbilityUnlocked("wandMastery")
   );
+}
+
+function wandMasteryTargetDamageMultiplier(targetCount) {
+  const count = Math.max(1, Math.min(3, Number(targetCount) || 1));
+  if (count <= 1) return 1;
+  if (count === 2) return 0.75;
+  return 0.60;
 }
 
 function currentMeleeReach() {
@@ -8976,8 +9156,26 @@ function spawnRemoteJesterBlinkVisual(
 function tryCastJesterBlink() {
   if (inventoryOpen) return false;
 
+  if (jesterClone) {
+    spawnFloatingText(
+      player.x,
+      player.y - 26,
+      "ACTIVE",
+      "#e7a2ff",
+      0.7
+    );
+    return true;
+  }
+
   if (player.jesterBlinkCooldown > 0) {
-    spawnFloatingText(player.x, player.y - 26, "Recharging", "#e7a2ff", 0.7);
+    const remaining = Math.max(0, Number(player.jesterBlinkCooldown) || 0);
+    spawnFloatingText(
+      player.x,
+      player.y - 26,
+      `${remaining.toFixed(1)}s`,
+      "#e7a2ff",
+      0.7
+    );
     return true;
   }
 
@@ -9050,7 +9248,6 @@ function tryCastJesterBlink() {
   player.contactCooldown = Math.max(player.contactCooldown, 0.20);
   player.attackTime = 0;
   player.slashTime = 0;
-  player.jesterBlinkCooldown = player.jesterBlinkCooldownDuration;
   player.jesterBlinkFadeTime = player.jesterBlinkFadeDuration;
 
 
@@ -9331,27 +9528,29 @@ document.getElementById("inventoryAxeImg").src = axeImage.src;
 document.getElementById("inventoryWandImg").src = wandImage.src;
 document.getElementById("inventoryRainWandImg").src = rainWandImage.src;
 document.getElementById("inventoryShepherdStaffImg").src = shepherdStaffImage.src;
+document.getElementById("inventoryLostKeyImg").src = lostKeyWandImage.src;
+document.getElementById("inventoryHugeSunflowerImg").src = hugeSunflowerWandImage.src;
 document.getElementById("inventoryHatImg").src = sprite.hat.src;
 document.getElementById("inventoryCapImg").src = sprite.blueCap.src;
 document.getElementById("inventoryWizardHatImg").src = sprite.wizardHat.src;
 document.getElementById("inventoryBandanaHatImg").src = sprite.bandanaHat.src;
-document.getElementById("inventoryTravelerShirtImg").src = sprite.torso.src;
-document.getElementById("inventoryTravelerPantsImg").src = sprite.leftLeg.src;
+document.getElementById("inventoryTravelerShirtImg").src = shirtImageForIndex(0).src;
+document.getElementById("inventoryTravelerPantsImg").src = pantsImageForIndex(0).src;
 document.getElementById("inventoryJesterHatImg").src = sprite.jesterHat.src;
-document.getElementById("inventoryJesterShirtImg").src = sprite.jesterTorso.src;
-document.getElementById("inventoryJesterPantsImg").src = sprite.jesterLeftLeg.src;
+document.getElementById("inventoryJesterShirtImg").src = shirtImageForIndex(1).src;
+document.getElementById("inventoryJesterPantsImg").src = pantsImageForIndex(1).src;
 document.getElementById("inventoryNinjaHatImg").src = sprite.ninjaHat.src;
-document.getElementById("inventoryNinjaShirtImg").src = sprite.ninjaTorso.src;
-document.getElementById("inventoryNinjaPantsImg").src = sprite.ninjaLeftLeg.src;
+document.getElementById("inventoryNinjaShirtImg").src = shirtImageForIndex(2).src;
+document.getElementById("inventoryNinjaPantsImg").src = pantsImageForIndex(2).src;
 document.getElementById("inventoryKnightHatImg").src = sprite.knightHat.src;
-document.getElementById("inventoryKnightShirtImg").src = sprite.knightTorso.src;
-document.getElementById("inventoryKnightPantsImg").src = sprite.knightLeftLeg.src;
+document.getElementById("inventoryKnightShirtImg").src = shirtImageForIndex(3).src;
+document.getElementById("inventoryKnightPantsImg").src = pantsImageForIndex(3).src;
 document.getElementById("inventoryRangerHatImg").src = sprite.rangerHat.src;
-document.getElementById("inventoryRangerShirtImg").src = sprite.rangerTorso.src;
-document.getElementById("inventoryRangerPantsImg").src = sprite.rangerLeftLeg.src;
+document.getElementById("inventoryRangerShirtImg").src = shirtImageForIndex(4).src;
+document.getElementById("inventoryRangerPantsImg").src = pantsImageForIndex(4).src;
 document.getElementById("inventoryWoodHatImg").src = sprite.woodHat.src;
-document.getElementById("inventoryWoodShirtImg").src = sprite.woodTorso.src;
-document.getElementById("inventoryWoodPantsImg").src = sprite.woodLeftLeg.src;
+document.getElementById("inventoryWoodShirtImg").src = shirtImageForIndex(5).src;
+document.getElementById("inventoryWoodPantsImg").src = pantsImageForIndex(5).src;
 
 document.getElementById("equipBaseHatImg").src = sprite.baseHat.src;
 document.getElementById("equipHatImg").src = sprite.hat.src;
@@ -9363,20 +9562,20 @@ document.getElementById("equipKnightHatImg").src = sprite.knightHat.src;
 document.getElementById("equipBandanaHatImg").src = sprite.bandanaHat.src;
 document.getElementById("equipRangerHatImg").src = sprite.rangerHat.src;
 document.getElementById("equipWoodHatImg").src = sprite.woodHat.src;
-document.getElementById("equipBaseShirtImg").src = sprite.baseTorso.src;
-document.getElementById("equipTravelerShirtImg").src = sprite.torso.src;
-document.getElementById("equipJesterShirtImg").src = sprite.jesterTorso.src;
-document.getElementById("equipNinjaShirtImg").src = sprite.ninjaTorso.src;
-document.getElementById("equipKnightShirtImg").src = sprite.knightTorso.src;
-document.getElementById("equipRangerShirtImg").src = sprite.rangerTorso.src;
-document.getElementById("equipWoodShirtImg").src = sprite.woodTorso.src;
-document.getElementById("equipBasePantsImg").src = sprite.baseLeftLeg.src;
-document.getElementById("equipTravelerPantsImg").src = sprite.leftLeg.src;
-document.getElementById("equipJesterPantsImg").src = sprite.jesterLeftLeg.src;
-document.getElementById("equipNinjaPantsImg").src = sprite.ninjaLeftLeg.src;
-document.getElementById("equipKnightPantsImg").src = sprite.knightLeftLeg.src;
-document.getElementById("equipRangerPantsImg").src = sprite.rangerLeftLeg.src;
-document.getElementById("equipWoodPantsImg").src = sprite.woodLeftLeg.src;
+document.getElementById("equipBaseShirtImg").src = shirtImageForIndex(-1).src;
+document.getElementById("equipTravelerShirtImg").src = shirtImageForIndex(0).src;
+document.getElementById("equipJesterShirtImg").src = shirtImageForIndex(1).src;
+document.getElementById("equipNinjaShirtImg").src = shirtImageForIndex(2).src;
+document.getElementById("equipKnightShirtImg").src = shirtImageForIndex(3).src;
+document.getElementById("equipRangerShirtImg").src = shirtImageForIndex(4).src;
+document.getElementById("equipWoodShirtImg").src = shirtImageForIndex(5).src;
+document.getElementById("equipBasePantsImg").src = pantsImageForIndex(-1).src;
+document.getElementById("equipTravelerPantsImg").src = pantsImageForIndex(0).src;
+document.getElementById("equipJesterPantsImg").src = pantsImageForIndex(1).src;
+document.getElementById("equipNinjaPantsImg").src = pantsImageForIndex(2).src;
+document.getElementById("equipKnightPantsImg").src = pantsImageForIndex(3).src;
+document.getElementById("equipRangerPantsImg").src = pantsImageForIndex(4).src;
+document.getElementById("equipWoodPantsImg").src = pantsImageForIndex(5).src;
 
 slimeFlashImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVklEQVR4nO2TMQ4AIAgDhfj/L+OmoYApcbVjWy9CVMxsvGgWfkUVNLRxOM0QwMzjOloFLETR6EKyHbT0AQcQXhghwRt0ILuLIzAQ18l2cIOErPqN9DgLZicMIqXQ8kgAAAAASUVORK5CYII=";slimeImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAt0lEQVQ4T2NkoBAwwlmo4D+chQow1GMIgDTPvlbPcP7eCbgACBgqWTCkajWCmCh60A3AqhkGsBmCbMB/7wlaDPIqsnABbODhnccMWwuugZhgvTADwJpBgBgDQABmCPUNAAFchsA0gwBeA7bkX2XwmagN54MAuhiGAQaZogzS6qJgDkgS2UAQQBZ7evM1w4Xpr0FM6hkAAiiG4ALImuEEEsBrCLpmFAYSwGoINs0ggM0AEKAoM5EEAGibZRH6RFzgAAAAEGRlQkc4QTY1NkIwRTJBQzdBMDI0vGYFOwAAAABJRU5ErkJgggAA";
 
@@ -11308,7 +11507,8 @@ function clearHallucinationTaunt(enemy, cloneId = null) {
 
 function damageEnemyWithMelee(
   enemy,
-  source
+  source,
+  options = {}
 ) {
   const type = enemyTypeOf(enemy);
   const profile = enemyProfile(enemy);
@@ -11323,7 +11523,11 @@ function damageEnemyWithMelee(
       critical:
         player.shadowCritAttack,
       aimAngle:
-        player.attackAimAngle
+        player.attackAimAngle,
+      impactDelayMs:
+        Math.max(0, Math.round(Number(options.impactDelayMs) || 0)),
+      targetCount:
+        Math.max(1, Math.round(Number(options.targetCount) || 1))
     }
   );
 }
@@ -11817,6 +12021,7 @@ class OnlineClient {
       this.sharedCoins.clear();
       this.sharedResources.clear();
       this.environmentCatalogSent = false;
+      cancelPendingMapEnemySync();
       this.removeSharedCoinVisuals();
       this.removeSharedResourceVisuals();
       this.setStatus("RECONNECTING…");
@@ -12080,6 +12285,13 @@ class OnlineClient {
 
     if (message.type === "enemySnapshot") {
       this.applySharedEnemySnapshot(message);
+      return;
+    }
+
+    if (message.type === "enemySnapshotSyncComplete") {
+      if (message.mapId === currentMapId) {
+        finishMapEnemySync(message.mapId);
+      }
       return;
     }
 
@@ -13564,12 +13776,20 @@ class OnlineClient {
       const respawned =
         !wasAlive && nextAlive;
 
-      if ((firstSnapshot && nextAlive) || respawned) {
+      const syncingMapEntry =
+        pendingMapEnemySyncId === state.mapId;
+
+      if (syncingMapEntry) {
+        // This is an authoritative rebase after entering a map, not a monster
+        // actually spawning in front of the player. Keep transition history
+        // invisible and let the monster simply appear at its server position.
+        enemy.spawnAnimTime = 0;
+      } else if ((firstSnapshot && nextAlive) || respawned) {
         enemy.spawnAnimTime = ENEMY_SPAWN_ANIM_DURATION;
       }
 
-      if (wasAlive && !nextAlive) {
-        spawnEnemyDeathEffect(enemy, enemyType);
+      if (!syncingMapEntry && wasAlive && !nextAlive) {
+        spawnEnemyDeathEffect(enemy, enemyType, state.mapId);
       }
 
       const snapPosition =
@@ -13578,6 +13798,11 @@ class OnlineClient {
           enemy.y,
           enemy.serverTargetX,
           enemy.serverTargetY,
+          // A map-entry snapshot is a rebase, not a normal movement update.
+          // While the transition is covered, put the enemy at the server's
+          // authoritative position immediately so the first revealed frame
+          // cannot interpolate from a stale position left from a prior visit.
+          syncingMapEntry ||
           firstSnapshot ||
           respawned ||
           currentMapId !== state.mapId
@@ -13834,7 +14059,7 @@ class OnlineClient {
 
     if (enemy) {
       if (enemy.alive) {
-        spawnEnemyDeathEffect(enemy, message.enemyType);
+        spawnEnemyDeathEffect(enemy, message.enemyType, message.mapId);
       }
 
       enemy.hp = 0;
@@ -14027,7 +14252,8 @@ class OnlineClient {
       spawnWandMasteryHitParticles(
         Number(payload.x) || 0,
         Number(payload.y) || 0,
-        Number(payload.angle) || 0
+        Number(payload.angle) || 0,
+        Math.max(0, Number(payload.delay) || 0)
       );
       return;
     }
@@ -14571,7 +14797,7 @@ function removeLocalCasterEffectsOnDeath() {
   }
 
   clearTemporaryRainGrass();
-  jesterClone = null;
+  endLocalHallucination({ burst: false, startCooldown: true });
   player.bowDrawing = false;
   player.bowDrawAmount = 0;
   player.bowReleaseTime = 0;
@@ -14676,7 +14902,7 @@ function clearTransientWorldEffects() {
   rainClouds.length = 0;
   clearTemporaryRainGrass();
   shadowSmokeParticles.length = 0;
-  jesterClone = null;
+  endLocalHallucination({ burst: false, startCooldown: true });
   remoteJesterClones.length = 0;
   jesterConfetti.length = 0;
   jesterAfterimages.length = 0;
@@ -14693,9 +14919,175 @@ function clearTransientWorldEffects() {
   floatingTexts.length = 0;
 }
 
+let pendingMapEnemySyncId = null;
+let suppressedEnemyRenderMapId = null;
+let mapEnemySyncFallbackTimer = null;
+
+// Map changes are presented as one atomic scene load:
+// old map -> quick cover -> authoritative enemy snapshot -> quick reveal.
+// The cover/reveal are intentionally short presentation transitions; there is
+// no arbitrary network wait beyond the actual snapshot synchronization.
+const MAP_TRANSITION_COVER_DURATION = 0.08;
+const MAP_TRANSITION_REVEAL_DURATION = 0.10;
+let mapTransitionPhase = "idle";
+let mapTransitionAlpha = 0;
+let pendingMapTransition = null;
+
+function beginMapEnemySync(mapId) {
+  if (!onlineClient?.connected) {
+    pendingMapEnemySyncId = null;
+    suppressedEnemyRenderMapId = null;
+    return;
+  }
+
+  pendingMapEnemySyncId = mapId;
+  suppressedEnemyRenderMapId = mapId;
+
+  if (mapEnemySyncFallbackTimer) {
+    clearTimeout(mapEnemySyncFallbackTimer);
+  }
+
+  // Normal release comes from the server's snapshot-batch completion marker.
+  // This safety valve only prevents the transition from remaining covered
+  // forever if the connection drops halfway through a map change.
+  mapEnemySyncFallbackTimer = setTimeout(() => {
+    finishMapEnemySync(mapId);
+  }, 1200);
+}
+
+function finishMapEnemySync(mapId) {
+  if (pendingMapEnemySyncId !== mapId) return;
+
+  pendingMapEnemySyncId = null;
+
+  if (suppressedEnemyRenderMapId === mapId) {
+    suppressedEnemyRenderMapId = null;
+  }
+
+  if (mapEnemySyncFallbackTimer) {
+    clearTimeout(mapEnemySyncFallbackTimer);
+    mapEnemySyncFallbackTimer = null;
+  }
+
+  if (
+    mapTransitionPhase === "syncing" &&
+    currentMapId === mapId
+  ) {
+    mapTransitionPhase = "revealing";
+    mapTransitionAlpha = 1;
+  }
+}
+
+function cancelPendingMapEnemySync() {
+  pendingMapEnemySyncId = null;
+  suppressedEnemyRenderMapId = null;
+
+  if (mapEnemySyncFallbackTimer) {
+    clearTimeout(mapEnemySyncFallbackTimer);
+    mapEnemySyncFallbackTimer = null;
+  }
+
+  // A disconnect during the covered sync phase must never strand the player
+  // behind a permanent dark screen. Reveal the locally initialized scene; the
+  // normal reconnect path will resume authoritative synchronization afterward.
+  if (mapTransitionPhase === "syncing") {
+    mapTransitionPhase = "revealing";
+    mapTransitionAlpha = 1;
+  }
+}
+
+function shouldRenderCurrentMapEnemies() {
+  return suppressedEnemyRenderMapId !== currentMapId;
+}
+
+function requestMapTransition(mapId, entrySide) {
+  if (!mapStates[mapId]) return;
+  if (mapTransitionPhase !== "idle") return;
+
+  // Offline/disconnected play has no authoritative snapshot to wait for.
+  if (!onlineClient?.connected) {
+    activateMap(mapId, entrySide);
+    return;
+  }
+
+  pendingMapTransition = { mapId, entrySide };
+  mapTransitionPhase = "covering";
+  mapTransitionAlpha = 0;
+  inputController.clearCommands();
+  player.walkTime = 0;
+  player.wasMoving = false;
+}
+
+function updateMapTransition(dt) {
+  if (mapTransitionPhase === "idle") return false;
+
+  if (mapTransitionPhase === "covering") {
+    mapTransitionAlpha = Math.min(
+      1,
+      mapTransitionAlpha + dt / MAP_TRANSITION_COVER_DURATION
+    );
+
+    if (mapTransitionAlpha >= 1) {
+      const target = pendingMapTransition;
+      pendingMapTransition = null;
+      mapTransitionPhase = "syncing";
+
+      if (target) {
+        activateMap(target.mapId, target.entrySide);
+      }
+
+      // If the connection disappeared while the cover was closing, there is
+      // no server snapshot to await. Reveal the locally initialized map.
+      if (pendingMapEnemySyncId === null) {
+        mapTransitionPhase = "revealing";
+      }
+    }
+
+    return true;
+  }
+
+  if (mapTransitionPhase === "syncing") {
+    mapTransitionAlpha = 1;
+    return true;
+  }
+
+  if (mapTransitionPhase === "revealing") {
+    mapTransitionAlpha = Math.max(
+      0,
+      mapTransitionAlpha - dt / MAP_TRANSITION_REVEAL_DURATION
+    );
+
+    if (mapTransitionAlpha <= 0) {
+      mapTransitionAlpha = 0;
+      mapTransitionPhase = "idle";
+    }
+
+    return true;
+  }
+
+  mapTransitionPhase = "idle";
+  mapTransitionAlpha = 0;
+  return false;
+}
+
+function drawMapTransitionCover() {
+  if (mapTransitionAlpha <= 0) return;
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, mapTransitionAlpha));
+  ctx.fillStyle = "#101510";
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.restore();
+}
+
 function activateMap(mapId, entrySide) {
   const state = mapStates[mapId];
   if (!state) return;
+
+  const previousMapId = currentMapId;
+  if (previousMapId !== mapId) {
+    beginMapEnemySync(mapId);
+  }
 
   currentMapId = mapId;
   activeWorldDimensionMapId = mapId;
@@ -14784,7 +15176,7 @@ function updateMapConnection() {
     insideHorizontalGate &&
     player.x >= world.width - 12
   ) {
-    activateMap(
+    requestMapTransition(
       "meadow",
       "west"
     );
@@ -14796,7 +15188,7 @@ function updateMapConnection() {
       insideHorizontalGate &&
       player.x <= 9
     ) {
-      activateMap(
+      requestMapTransition(
         "spawn",
         "spawnEast"
       );
@@ -14807,7 +15199,7 @@ function updateMapConnection() {
       insideHorizontalGate &&
       player.x >= world.width - 9
     ) {
-      activateMap(
+      requestMapTransition(
         "goblinWoods",
         "west"
       );
@@ -14818,7 +15210,7 @@ function updateMapConnection() {
       insideVerticalGate &&
       player.y <= 16
     ) {
-      activateMap(
+      requestMapTransition(
         "ghostGrove",
         "south"
       );
@@ -14829,7 +15221,7 @@ function updateMapConnection() {
       insideVerticalGate &&
       player.y >= world.height - 9
     ) {
-      activateMap(
+      requestMapTransition(
         "hunterHollow",
         "north"
       );
@@ -14842,7 +15234,7 @@ function updateMapConnection() {
       insideVerticalGate &&
       player.y <= 16
     ) {
-      activateMap(
+      requestMapTransition(
         "meadow",
         "south"
       );
@@ -14853,7 +15245,7 @@ function updateMapConnection() {
       insideVerticalGate &&
       player.y >= world.height - 9
     ) {
-      activateMap(
+      requestMapTransition(
         "goldSlimeDen",
         "north"
       );
@@ -14866,7 +15258,7 @@ function updateMapConnection() {
     insideVerticalGate &&
     player.y <= 16
   ) {
-    activateMap(
+    requestMapTransition(
       "hunterHollow",
       "south"
     );
@@ -14879,7 +15271,7 @@ function updateMapConnection() {
     insideHorizontalGate &&
     player.x <= 9
   ) {
-    activateMap(
+    requestMapTransition(
       "meadow",
       "east"
     );
@@ -14892,7 +15284,7 @@ function updateMapConnection() {
     insideVerticalGate &&
     player.y >= world.height - 9
   ) {
-    activateMap(
+    requestMapTransition(
       "meadow",
       "north"
     );
@@ -15227,6 +15619,34 @@ const FLOAT_GLYPHS = {
   " ": ["000","000","000","000","000"]
 };
 
+let menuFeedbackToastTimer = null;
+
+function anyMenuOverlayOpen() {
+  return Boolean(
+    document.getElementById("inventoryOverlay")?.classList.contains("open") ||
+    document.getElementById("shopOverlay")?.classList.contains("open") ||
+    document.getElementById("craftOverlay")?.classList.contains("open")
+  );
+}
+
+function showMenuFeedback(text, color = "#fff2b5", duration = 0.9) {
+  const toast = document.getElementById("menuFeedbackToast");
+  if (!toast) return;
+
+  toast.textContent = String(text).toUpperCase();
+  toast.style.color = color;
+  toast.classList.add("show");
+
+  if (menuFeedbackToastTimer) {
+    clearTimeout(menuFeedbackToastTimer);
+  }
+
+  menuFeedbackToastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+    menuFeedbackToastTimer = null;
+  }, Math.max(350, Number(duration) * 1000));
+}
+
 const floatingTexts = [];
 
 function spawnFloatingText(
@@ -15238,10 +15658,16 @@ function spawnFloatingText(
   baseScale = 1,
   driftX = null
 ) {
+  const normalizedText = String(text).toUpperCase();
+
+  if (anyMenuOverlayOpen() && /[A-Z]/.test(normalizedText)) {
+    showMenuFeedback(normalizedText, color, duration);
+  }
+
   floatingTexts.push({
     x,
     y,
-    text: String(text).toUpperCase(),
+    text: normalizedText,
     color,
     life: duration,
     duration,
@@ -15677,19 +16103,41 @@ function tryHitPvpPlayers(source = "melee", maxTargets = Infinity) {
     const insideRange = distance <= reach + 8;
 
     if (insideAngle && insideRange) {
-      candidates.push({ remote, distance });
+      const relativeAngle = angleDifference(targetAngle, player.attackAimAngle);
+      const sweepProgress = Math.max(
+        0,
+        Math.min(1, (relativeAngle + hitHalfArc) / (hitHalfArc * 2))
+      );
+      candidates.push({ remote, distance, sweepProgress });
     }
   }
 
   candidates.sort((a, b) => a.distance - b.distance);
 
-  for (const { remote } of candidates.slice(0, Math.max(0, maxTargets))) {
+  const selectedTargets =
+    candidates.slice(0, Math.max(0, maxTargets));
+  const wandMasteryTargetCount =
+    source === "wandMasteryMelee"
+      ? selectedTargets.length
+      : 1;
+
+  for (const { remote, sweepProgress } of selectedTargets) {
+    const hitDelay =
+      source === "wandMasteryMelee"
+        ? Math.max(
+            0,
+            Math.min(player.slashDuration * 0.92, sweepProgress * player.slashDuration * 0.92)
+          )
+        : 0;
+
     onlineClient.sendPvpAttack(
       remote.id,
       source,
       {
         critical: player.shadowCritAttack,
-        aimAngle: player.attackAimAngle
+        aimAngle: player.attackAimAngle,
+        impactDelayMs: Math.round(hitDelay * 1000),
+        targetCount: wandMasteryTargetCount
       }
     );
 
@@ -15699,14 +16147,18 @@ function tryHitPvpPlayers(source = "melee", maxTargets = Infinity) {
       spawnWandMasteryHitParticles(
         hitX,
         hitY,
-        player.attackAimAngle
+        player.attackAimAngle,
+        hitDelay,
+        player.attackDirection === "left"
       );
       onlineClient.sendVisualEffect(
         "wandMasteryHit",
         {
           x: hitX,
           y: hitY,
-          angle: player.attackAimAngle
+          angle: player.attackAimAngle,
+          delay: hitDelay,
+          reverseTravel: player.attackDirection === "left"
         }
       );
     }
@@ -15757,21 +16209,47 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
     const insideRange = distance <= reach + bodyRadius;
 
     if (insideAngle && insideRange) {
-      candidates.push({ enemy, distance });
+      const relativeAngle = angleDifference(targetAngle, player.attackAimAngle);
+      const sweepProgress = Math.max(
+        0,
+        Math.min(1, (relativeAngle + hitHalfArc) / (hitHalfArc * 2))
+      );
+      candidates.push({ enemy, distance, sweepProgress });
     }
   }
 
   candidates.sort((a, b) => a.distance - b.distance);
 
-  for (const { enemy } of candidates.slice(0, Math.max(0, maxTargets))) {
-    damageEnemyWithMelee(enemy, source);
+  const selectedTargets =
+    candidates.slice(0, Math.max(0, maxTargets));
+  const wandMasteryTargetCount =
+    source === "wandMasteryMelee"
+      ? selectedTargets.length
+      : 1;
 
+  for (const { enemy, sweepProgress } of selectedTargets) {
     if (source === "wandMasteryMelee") {
       const target = enemyBodyPoint(enemy);
+      const hitDelay = Math.max(
+        0,
+        Math.min(player.slashDuration * 0.92, sweepProgress * player.slashDuration * 0.92)
+      );
+
+      damageEnemyWithMelee(
+        enemy,
+        source,
+        {
+          impactDelayMs: hitDelay * 1000,
+          targetCount: wandMasteryTargetCount
+        }
+      );
+
       spawnWandMasteryHitParticles(
         target.x,
         target.y,
-        player.attackAimAngle
+        player.attackAimAngle,
+        hitDelay,
+        player.attackDirection === "left"
       );
 
       if (typeof onlineClient !== "undefined") {
@@ -15780,10 +16258,13 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
           {
             x: target.x,
             y: target.y,
-            angle: player.attackAimAngle
+            angle: player.attackAimAngle,
+            delay: hitDelay
           }
         );
       }
+    } else {
+      damageEnemyWithMelee(enemy, source);
     }
   }
 }
@@ -16306,7 +16787,7 @@ const player = {
 
   // Jester mobility / trick skill.
   jesterBlinkCooldown: 0,
-  jesterBlinkCooldownDuration: 6.5,
+  jesterBlinkCooldownDuration: 15.0,
   jesterBlinkFadeTime: 0,
   jesterBlinkFadeDuration: 0.18,
 
@@ -16404,7 +16885,7 @@ const player = {
 };
 
 const HOTBAR_SLOT_COUNT = 5;
-const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff"];
+const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood"];
@@ -16418,7 +16899,9 @@ const WEAPON_ITEM_IDS = [
   "weapon_oldSword",
   "weapon_bow",
   "weapon_dreamcatcher",
-  "weapon_shepherdStaff"
+  "weapon_shepherdStaff",
+  "weapon_lostKey",
+  "weapon_hugeSunflower"
 ];
 
 const HAT_ITEM_IDS = [
@@ -16523,13 +17006,17 @@ const CRAFT_RECIPES = Object.freeze({
 });
 
 const SHOP_ITEMS = [
-  { id: "weapon_sword", name: "Wood Sword", questOnly: true },
+  { id: "weapon_sword", name: "Wood Sword" },
   { id: "weapon_axe", name: "Axe" },
   { id: "weapon_wand", name: "Fire Wand" },
   { id: "weapon_rainWand", name: "Rain Wand" },
   { id: "weapon_katana", name: "Katana" },
   { id: "weapon_oldSword", name: "Sword" },
+  { id: "weapon_bow", name: "Wood Bow" },
   { id: "weapon_dreamcatcher", name: "Dreamcatcher" },
+  { id: "weapon_shepherdStaff", name: "Shepherd Staff" },
+  { id: "weapon_lostKey", name: "Tournesol" },
+  { id: "weapon_hugeSunflower", name: "Tabatha's Key" },
 
   { id: "hat_original", name: "Hat" },
   { id: "hat_blueCap", name: "Blue Cap" },
@@ -16539,18 +17026,21 @@ const SHOP_ITEMS = [
   { id: "hat_knight", name: "Knight Helm" },
   { id: "hat_bandana", name: "Bandana" },
   { id: "hat_ranger", name: "Ranger Hat" },
+  { id: "hat_wood", name: "Wood Helm" },
 
   { id: "shirt_traveler", name: "Traveler Shirt" },
   { id: "shirt_jester", name: "Jester Shirt" },
   { id: "shirt_ninja", name: "Ninja Shirt" },
   { id: "shirt_knight", name: "Knight Chest" },
   { id: "shirt_ranger", name: "Ranger Shirt" },
+  { id: "shirt_wood", name: "Wood Chest" },
 
   { id: "pants_traveler", name: "Traveler Pants" },
   { id: "pants_jester", name: "Jester Pants" },
   { id: "pants_ninja", name: "Ninja Pants" },
   { id: "pants_knight", name: "Knight Greaves" },
-  { id: "pants_ranger", name: "Ranger Pants" }
+  { id: "pants_ranger", name: "Ranger Pants" },
+  { id: "pants_wood", name: "Wood Greaves" }
 ];
 
 function shopImageForItemId(itemId) {
@@ -16695,7 +17185,7 @@ function sanitizeHotbarAssignments() {
 }
 
 function unequipItemIfNoLongerAssigned(itemId) {
-  if (!itemId || focusFireIsCasting()) return false;
+  if (!itemId || focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
 
   const equippedItemId =
     weaponItemIdForIndex(
@@ -16714,7 +17204,7 @@ function unequipItemIfNoLongerAssigned(itemId) {
 }
 
 function assignItemToHotbar(itemId, slotIndex) {
-  if (focusFireIsCasting()) return false;
+  if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
 
   if (
     !isHotbarAssignableItem(itemId) ||
@@ -16760,7 +17250,7 @@ function assignItemToHotbar(itemId, slotIndex) {
 }
 
 function clearItemFromHotbar(itemId) {
-  if (focusFireIsCasting()) return false;
+  if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
 
   let changed = false;
 
@@ -17397,7 +17887,7 @@ const ACTIVE_SKILLS = {
   jesterBlink: {
     name: "Hallucination",
     classId: "arcana",
-    maxLevel: 5,
+    maxLevel: 1,
     noEnhancements: true
   },
   wandMastery: {
@@ -17409,14 +17899,14 @@ const ACTIVE_SKILLS = {
     levelProgression: [
       {
         name: "Wand Mastery",
-        effectText: "Empowers regular wand attacks into larger magical melee sweeps that can hit up to 3 targets."
+        effectText: "Empowers regular wand attacks into larger magical melee sweeps that can hit up to 3 targets and changes their damage scaling from STR to INT."
       }
     ]
   },
   fireball: {
     name: "Fireball",
     classId: "arcana",
-    maxLevel: 5,
+    maxLevel: 1,
     cooldown: 3.5,
     noEnhancements: true
   },
@@ -17573,6 +18063,107 @@ const PLAYER_CLASSES = Object.freeze({
   guile: Object.freeze({ name: "Rogue" })
 });
 
+const ARMOR_CLASS_REQUIREMENTS = Object.freeze({
+  hat_jester: "arcana",
+  shirt_jester: "arcana",
+  pants_jester: "arcana",
+
+  hat_knight: "might",
+  shirt_knight: "might",
+  pants_knight: "might",
+
+  hat_ninja: "guile",
+  shirt_ninja: "guile",
+  pants_ninja: "guile",
+
+  hat_ranger: "precision",
+  shirt_ranger: "precision",
+  pants_ranger: "precision"
+});
+
+const WEAPON_CLASS_REQUIREMENTS = Object.freeze({
+  weapon_wand: "arcana",
+  weapon_rainWand: "arcana",
+  weapon_lostKey: "arcana",
+  weapon_hugeSunflower: "arcana",
+  weapon_dreamcatcher: "precision",
+  weapon_katana: "guile"
+});
+
+function armorRequiredClass(itemId) {
+  return ARMOR_CLASS_REQUIREMENTS[itemId] || null;
+}
+
+function weaponRequiredClass(itemId) {
+  return WEAPON_CLASS_REQUIREMENTS[itemId] || null;
+}
+
+function equipmentRequiredClass(itemId) {
+  return armorRequiredClass(itemId) || weaponRequiredClass(itemId);
+}
+
+function equipmentItemCanBeEquipped(itemId) {
+  const requiredClass = equipmentRequiredClass(itemId);
+  return !requiredClass || player.classId === requiredClass;
+}
+
+function armorItemCanBeEquipped(itemId) {
+  return equipmentItemCanBeEquipped(itemId);
+}
+
+function showEquipmentClassRestriction(itemId) {
+  const requiredClass = equipmentRequiredClass(itemId);
+  if (!requiredClass) return;
+
+  const className = PLAYER_CLASSES[requiredClass]?.name || "CLASS";
+  spawnFloatingText(
+    player.x,
+    player.y - 31,
+    `REQUIRES ${className.toUpperCase()}`,
+    "#ffb4bc",
+    0.9
+  );
+}
+
+function showArmorClassRestriction(itemId) {
+  showEquipmentClassRestriction(itemId);
+}
+
+function shopCategoryForItem(item) {
+  return equipmentRequiredClass(item?.id) || "common";
+}
+
+function weaponTypeForShopItem(itemId) {
+  if (["weapon_bow", "weapon_dreamcatcher"].includes(itemId)) return "Bow";
+  if (["weapon_wand", "weapon_rainWand", "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower"].includes(itemId)) return "Wand";
+  if (itemId === "weapon_axe") return "Axe";
+  if (itemId === "weapon_katana") return "Katana";
+  if (["weapon_sword", "weapon_oldSword"].includes(itemId)) return "Sword";
+  return "Weapon";
+}
+
+function shopItemMetadata(item) {
+  if (!item?.id) return "";
+
+  const requiredClass = equipmentRequiredClass(item.id);
+
+  if (WEAPON_ITEM_IDS.includes(item.id)) {
+    const weaponType = weaponTypeForShopItem(item.id);
+    return requiredClass
+      ? `${weaponType} · Requires ${PLAYER_CLASSES[requiredClass]?.name || "Unknown"}`
+      : `Weapon Type · ${weaponType} · Common`;
+  }
+
+  if (requiredClass) {
+    return `Required Class · ${PLAYER_CLASSES[requiredClass]?.name || "Unknown"}`;
+  }
+
+  if (HAT_ITEM_IDS.includes(item.id)) return "Head Armor · Common";
+  if (SHIRT_ITEM_IDS.includes(item.id)) return "Torso Armor · Common";
+  if (PANTS_ITEM_IDS.includes(item.id)) return "Leg Armor · Common";
+  return "Common";
+}
+
 function playerHasChosenClass() {
   return Boolean(player.classId && PLAYER_CLASSES[player.classId]);
 }
@@ -17613,6 +18204,7 @@ function updateClassSelectionUi() {
 
   if (skillsPage) {
     skillsPage.classList.toggle("class-unselected", !chosen);
+    skillsPage.classList.toggle("class-selected", chosen);
   }
 
   document.querySelectorAll(".skill-category-tab").forEach(tab => {
@@ -17631,7 +18223,9 @@ function updateClassSelectionUi() {
 }
 
 function abilityLevel(skillId) {
-  return Number(player.abilities[skillId] || 0);
+  const rawLevel = Math.max(0, Number(player.abilities[skillId] || 0));
+  const maxLevel = Math.max(0, Number(ACTIVE_SKILLS[skillId]?.maxLevel) || rawLevel);
+  return Math.min(rawLevel, maxLevel);
 }
 
 function isAbilityUnlocked(skillId) {
@@ -18828,6 +19422,12 @@ function equipWeaponIndex(index) {
     return false;
   }
 
+  const itemId = weaponItemIdForIndex(index);
+  if (!equipmentItemCanBeEquipped(itemId)) {
+    showEquipmentClassRestriction(itemId);
+    return false;
+  }
+
   player.weaponIndex = index;
   return true;
 }
@@ -19013,6 +19613,8 @@ function weaponDisplayName(style) {
   if (style === "wand") return "Wand";
   if (style === "rainWand") return "Rain Wand";
   if (style === "shepherdStaff") return "Shepherd Staff";
+  if (style === "lostKeyWand") return "Tournesol";
+  if (style === "sunflowerWand") return "Tabatha's Key";
   if (style === "katana") return "Katana";
   if (style === "oldSword") return "Sword";
   if (style === "bow") return "Wood Bow";
@@ -19033,23 +19635,13 @@ function hatImageForIndex(index) {
 }
 
 function shirtImageForIndex(index) {
-  if (index < 0) return sprite.baseTorso;
-  if (index === 1) return sprite.jesterTorso;
-  if (index === 2) return sprite.ninjaTorso;
-  if (index === 3) return sprite.knightTorso;
-  if (index === 4) return sprite.rangerTorso;
-  if (index === 5) return sprite.woodTorso;
-  return sprite.torso;
+  if (index < 0) return armorPreviewImages.shirts[0];
+  return armorPreviewImages.shirts[Math.min(6, index + 1)] || armorPreviewImages.shirts[1];
 }
 
 function pantsImageForIndex(index) {
-  if (index < 0) return sprite.baseLeftLeg;
-  if (index === 1) return sprite.jesterLeftLeg;
-  if (index === 2) return sprite.ninjaLeftLeg;
-  if (index === 3) return sprite.knightLeftLeg;
-  if (index === 4) return sprite.rangerLeftLeg;
-  if (index === 5) return sprite.woodLeftLeg;
-  return sprite.leftLeg;
+  if (index < 0) return armorPreviewImages.pants[0];
+  return armorPreviewImages.pants[Math.min(6, index + 1)] || armorPreviewImages.pants[1];
 }
 
 function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
@@ -19160,6 +19752,8 @@ function weaponImageForIndex(index) {
   if (index === 6) return bowImage;
   if (index === 7) return dreamcatcherBowImage;
   if (index === 8) return shepherdStaffImage;
+  if (index === 9) return lostKeyWandImage;
+  if (index === 10) return hugeSunflowerWandImage;
   return swordImage;
 }
 
@@ -19592,6 +20186,8 @@ function updateInventoryUi() {
   updatePvpUi();
 }
 
+let shopCategoryFilter = "all";
+
 function updateShopUi() {
   const grid =
     document.getElementById(
@@ -19613,6 +20209,14 @@ function updateShopUi() {
   grid.innerHTML = "";
 
   for (const item of SHOP_ITEMS) {
+    const itemCategory = shopCategoryForItem(item);
+    if (
+      shopCategoryFilter !== "all" &&
+      itemCategory !== shopCategoryFilter
+    ) {
+      continue;
+    }
+
     const owned =
       playerOwnsItem(item.id);
 
@@ -19665,6 +20269,15 @@ function updateShopUi() {
     name.textContent =
       item.name;
 
+    const meta =
+      document.createElement("span");
+
+    meta.className =
+      "shop-item-meta";
+
+    meta.textContent =
+      shopItemMetadata(item);
+
     const price =
       document.createElement("span");
 
@@ -19683,6 +20296,7 @@ function updateShopUi() {
     button.append(
       image,
       name,
+      meta,
       price
     );
 
@@ -20001,6 +20615,22 @@ document.getElementById("shopClose").addEventListener("click", () => {
   setShopOpen(false);
 });
 
+document.getElementById("shopTabs").addEventListener("click", event => {
+  const button = event.target.closest("[data-shop-filter]");
+  if (!button) return;
+
+  shopCategoryFilter = button.dataset.shopFilter || "all";
+
+  document.querySelectorAll(".shop-tab").forEach(tab => {
+    tab.classList.toggle(
+      "active",
+      tab.dataset.shopFilter === shopCategoryFilter
+    );
+  });
+
+  updateShopUi();
+});
+
 document.getElementById("shopGrid").addEventListener("click", event => {
   const button =
     event.target.closest(
@@ -20105,6 +20735,14 @@ document.querySelectorAll(".hat-choice").forEach(button => {
       return;
     }
 
+    if (index >= 0) {
+      const itemId = HAT_ITEM_IDS[index];
+      if (!armorItemCanBeEquipped(itemId)) {
+        showArmorClassRestriction(itemId);
+        return;
+      }
+    }
+
     player.hatIndex = index;
     updateInventoryUi();
   });
@@ -20146,6 +20784,14 @@ document.querySelectorAll(".shirt-choice").forEach(button => {
       return;
     }
 
+    if (index >= 0) {
+      const itemId = SHIRT_ITEM_IDS[index];
+      if (!armorItemCanBeEquipped(itemId)) {
+        showArmorClassRestriction(itemId);
+        return;
+      }
+    }
+
     player.shirtIndex = index;
     updateInventoryUi();
   });
@@ -20163,6 +20809,14 @@ document.querySelectorAll(".pants-choice").forEach(button => {
       !playerOwnsPantsIndex(index)
     ) {
       return;
+    }
+
+    if (index >= 0) {
+      const itemId = PANTS_ITEM_IDS[index];
+      if (!armorItemCanBeEquipped(itemId)) {
+        showArmorClassRestriction(itemId);
+        return;
+      }
     }
 
     player.pantsIndex = index;
@@ -20429,6 +21083,13 @@ function handleMenuKeyDown(key) {
     return false;
   }
 
+  // Rain Cloud is a committed summon. Do not allow the inventory/menu to open
+  // mid-channel, because that exposes equipment/hotbar mutations while the
+  // player is meant to be action-locked.
+  if (player.rainCloudCasting) {
+    return true;
+  }
+
   // Escape acts as the universal menu key. If a contextual station/shop is
   // open, close that first. Otherwise toggle the main inventory/menu overlay.
   if (craftingOpen) {
@@ -20571,6 +21232,8 @@ function attackCooldownForWeapon(weapon) {
   if (weapon === "wand") return 0.38;
   if (weapon === "rainWand") return 0.46;
   if (weapon === "shepherdStaff") return 0.42;
+  if (weapon === "lostKeyWand") return 0.38;
+  if (weapon === "sunflowerWand") return 0.38;
   if (weapon === "katana") return 0.42;
   return player.attackCooldownDuration;
 }
@@ -21326,6 +21989,33 @@ function updateWorldObjectStates(dt) {
   }
 }
 
+function startHallucinationCooldown() {
+  player.jesterBlinkCooldown = Math.max(
+    Number(player.jesterBlinkCooldown) || 0,
+    Number(player.jesterBlinkCooldownDuration) || 15
+  );
+}
+
+function endLocalHallucination({ burst = false, startCooldown = true } = {}) {
+  if (!jesterClone) return false;
+
+  if (burst) {
+    spawnJesterConfettiBurst(
+      jesterClone.x,
+      jesterClone.y,
+      34
+    );
+  }
+
+  jesterClone = null;
+
+  if (startCooldown) {
+    startHallucinationCooldown();
+  }
+
+  return true;
+}
+
 function updateJesterRuntime(dt) {
   tickTimer(
     player,
@@ -21403,17 +22093,11 @@ function updateJesterRuntime(dt) {
     }
 
     if (jesterClone.life <= 0) {
-      spawnJesterConfettiBurst(
-        jesterClone.x,
-        jesterClone.y,
-        34
-      );
-
-      jesterClone = null;
+      endLocalHallucination({ burst: true, startCooldown: true });
     } else if (
       jesterClone.mapId !== currentMapId
     ) {
-      jesterClone = null;
+      endLocalHallucination({ burst: false, startCooldown: true });
     }
   }
 
@@ -21998,6 +22682,13 @@ class GameSimulation {
   update(dt) {
     updateCanvasCursor();
 
+    if (updateMapTransition(dt)) {
+      updateHudUi();
+      updateHotbar();
+      updateInventoryUi();
+      return;
+    }
+
     if (inventoryOpen || shopOpen || craftingOpen) {
       updateInventoryUi();
       updateHotbar();
@@ -22563,9 +23254,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   const circularWandCastPose =
     (player.rainCloudCasting || player.fireballAiming) &&
     (
-      currentWeaponForPose === "wand" ||
-      currentWeaponForPose === "rainWand" ||
-      currentWeaponForPose === "shepherdStaff"
+      isWandTypeWeapon(currentWeaponForPose)
     );
 
   let bowDrawArmAngle = 0;
@@ -23006,6 +23695,21 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
           baseY + rightArmOffsetY + supportLift
         );
       }
+    } else if (!currentWeaponForPose && !attacking && !circularWandCastPose) {
+      // Truly unarmed: neither arm is reserved as a weapon arm. Both should
+      // participate in the normal walk cycle. This also clears the stale pose
+      // that could remain after removing the equipped weapon from the hotbar.
+      ctx.drawImage(
+        appearance.leftArm,
+        baseX,
+        baseY + leftArmOffsetY
+      );
+
+      ctx.drawImage(
+        appearance.rightArm,
+        baseX,
+        baseY + rightArmOffsetY
+      );
     } else if (useRightHand) {
       // Left arm stays in its normal walking pose.
       ctx.drawImage(
@@ -23480,28 +24184,32 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
             ? rainWandImage
             : currentWeapon === "shepherdStaff"
               ? shepherdStaffImage
-              : currentWeapon === "katana"
-              ? katanaImage
-              : currentWeapon === "oldSword"
-                ? oldSwordImage
-                : swordImage;
+              : currentWeapon === "lostKeyWand"
+                ? lostKeyWandImage
+                : currentWeapon === "sunflowerWand"
+                  ? hugeSunflowerWandImage
+                  : currentWeapon === "katana"
+                    ? katanaImage
+                    : currentWeapon === "oldSword"
+                      ? oldSwordImage
+                      : swordImage;
 
     const weaponPivotX =
       currentWeapon === "axe"
         ? AXE_PIVOT_X
-        : currentWeapon === "wand" || currentWeapon === "rainWand" || currentWeapon === "shepherdStaff"
+        : isWandTypeWeapon(currentWeapon)
           ? WAND_PIVOT_X
           : SWORD_PIVOT_X;
 
     const weaponPivotY =
       currentWeapon === "axe"
         ? AXE_PIVOT_Y
-        : currentWeapon === "wand" || currentWeapon === "rainWand" || currentWeapon === "shepherdStaff"
+        : isWandTypeWeapon(currentWeapon)
           ? WAND_PIVOT_Y
           : SWORD_PIVOT_Y;
 
     const wandHoldOffsetY =
-      currentWeapon === "wand" || currentWeapon === "rainWand" || currentWeapon === "shepherdStaff"
+      isWandTypeWeapon(currentWeapon)
         ? WAND_HOLD_OFFSET_Y
         : 0;
 
@@ -24541,39 +25249,42 @@ function buildWorldDrawables(camX, camY) {
     );
   });
 
-  for (
-    const { enemy, profile }
-    of activeEnemyRecords()
-  ) {
-    if (
-      typeof profile.draw !== "function"
+  if (shouldRenderCurrentMapEnemies()) {
+    for (
+      const { enemy, profile }
+      of activeEnemyRecords()
     ) {
-      continue;
+      if (
+        typeof profile.draw !== "function"
+      ) {
+        continue;
+      }
+
+      const sortY =
+        typeof profile.drawSortY === "function"
+          ? profile.drawSortY(enemy)
+          : enemy.y;
+
+      addDrawable(
+        drawables,
+        sortY,
+        () => profile.draw(
+          enemy,
+          camX,
+          camY
+        )
+      );
     }
 
-    const sortY =
-      typeof profile.drawSortY === "function"
-        ? profile.drawSortY(enemy)
-        : enemy.y;
+    for (const effect of enemyDeathEffects) {
+      if (effect.mapId && effect.mapId !== currentMapId) continue;
 
-    addDrawable(
-      drawables,
-      sortY,
-      () => profile.draw(
-        enemy,
-        camX,
-        camY
-      )
-    );
-  }
-
-
-  for (const effect of enemyDeathEffects) {
-    addDrawable(
-      drawables,
-      effect.y + 0.1,
-      () => drawEnemyDeathEffect(effect, camX, camY)
-    );
+      addDrawable(
+        drawables,
+        effect.y + 0.1,
+        () => drawEnemyDeathEffect(effect, camX, camY)
+      );
+    }
   }
 
   for (const projectile of basicProjectiles) {
@@ -24696,6 +25407,7 @@ class GameRenderer {
     drawGroundLayer(camera.x, camera.y);
     drawSortedWorldLayer(camera.x, camera.y);
     drawForegroundLayer(camera.x, camera.y);
+    drawMapTransitionCover();
   }
 }
 
@@ -24778,7 +25490,7 @@ const gameSimulation = new GameSimulation(
 
 const gameRenderer = new GameRenderer(gameState);
 
-const onlineClient = new OnlineClient();
+onlineClient = new OnlineClient();
 onlineClient.connect();
 
 const gameApp = new GameApp(
