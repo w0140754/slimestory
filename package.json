@@ -1,11 +1,13 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.11.16",
+  "version": "0.6.11.300",
   "private": true,
-  "description": "Slime Story: opt-in server-authoritative PvP, attacker-locked monster aggro, crafting UI, Ranger shop, and bow combat",
+  "description": "Slime Story: server-authoritative multiplayer browser action RPG prototype",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node --check public/client-config.js && node --check public/client-utils.js && node --check public/client-world.js && node --check public/shared/terrain-presentation.js && node --check public/shared/map-draft-format.js && node --check public/client-terrain.js && node --check public/client-maps.js && node --check public/client-enemies.js && node --check public/client-enemy-runtime.js && node --check public/client-enemy-rendering.js && node --check public/client-combat.js && node --check public/client-abilities.js && node --check public/client-magus-abilities.js && node --check public/client-class-abilities.js && node --check public/client-status.js && node --check public/client-fire-environment.js && node --check public/client-network.js && node --check public/client-simulation-foundation.js && node --check public/game.js && node --check public/client-input.js && node --check public/client-app.js && node --check public/map-editor.js && node --check public/shared/world-content.js && node --check public/shared/terrain-rules.js && node --check public/shared/combat-balance.js && node --check public/shared/rain-field.js && node --check public/shared/camouflage-rules.js && node --check public/shared/enemy-net-protocol.js && node --check public/shared/player-net-protocol.js && node scripts/check-map-data.js && node scripts/check-editor-terrain-roundtrip.js && node scripts/check-map-draft-import.js && node scripts/check-map-editor-dom-contract.js && node scripts/check-map-object-coverage.js && node scripts/check-map-draft-adoption.js && node scripts/check-runtime-world-content.js && node scripts/check-rock-mining.js && node scripts/check-scenery-rock-asset.js && node scripts/check-water-edge.js && node scripts/check-resource-regrow-tuning.js && node scripts/check-pvp-rebuild.js && node scripts/check-large-map-coordinate-bounds.js",
+    "adopt-map": "node scripts/adopt-map-draft.js"
   },
   "engines": {
     "node": ">=20"

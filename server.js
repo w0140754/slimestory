@@ -2,19 +2,547 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-150";
+const BUILD_VERSION = "6-11-300";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
+const TERRAIN_RULES = require("./public/shared/terrain-rules.js");
 const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
+const RAIN_FIELD = require("./public/shared/rain-field.js");
+const CAMOUFLAGE_RULES = require("./public/shared/camouflage-rules.js");
+const ENEMY_NET_PROTOCOL = require("./public/shared/enemy-net-protocol.js");
+const PLAYER_NET_PROTOCOL = require("./public/shared/player-net-protocol.js");
+const {
+  browserRuntimeWorldContentSource,
+  injectRuntimeWorldContentUrl
+} = require("./tools/runtime-world-content.js");
 
 const ALLOWED_MAPS = new Set(
   Object.keys(WORLD_CONTENT.maps)
 );
+
+// -----------------------------------------------------------------------------
+// LOCAL NETWORK / BANDWIDTH DIAGNOSTICS
+// -----------------------------------------------------------------------------
+// These counters are console-only: they do not create network traffic. The WS
+// outbound figure is an estimate of bytes on the wire, including frame headers
+// and a close approximation of permessage-deflate for messages >= 1 KB. HTTP
+// bytes are counted after gzip/Brotli compression, so the combined OUT estimate
+// is useful for comparing local builds even while Render is unavailable.
+const NETWORK_DIAGNOSTICS_INTERVAL_MS = 15000;
+const NETWORK_DIAGNOSTICS_TOP_TYPES = 6;
+const WS_COMPRESSION_THRESHOLD = 1024;
+
+function makeNetworkCounter() {
+  return {
+    wsOutWireBytes: 0,
+    wsOutPayloadBytes: 0,
+    wsOutDeliveries: 0,
+    wsOutEvents: 0,
+    wsOutEventPayloadBytes: 0,
+    wsOutEventRecipients: 0,
+    wsInPayloadBytes: 0,
+    wsInMessages: 0,
+    httpOutBytes: 0,
+    byWsOutType: new Map(),
+    byWsOutEventType: new Map(),
+    byWsOutEnemyDamageSource: new Map(),
+    byWsOutMap: new Map(),
+    byWsInType: new Map(),
+    byWsInEnemyActionSource: new Map(),
+    byHttpPath: new Map()
+  };
+}
+
+const networkTotals = makeNetworkCounter();
+let networkPrevious = makeNetworkCounter();
+let networkLastReportAt = Date.now();
+
+// Fire-specific gameplay counters are intentionally console-only. They let us
+// compare identical burn/spread tests between builds without adding packets.
+function makeFireDiagnostics() {
+  return {
+    spreadPulses: 0,
+    spreadSources: 0,
+    environmentIgnitions: 0,
+    rainGrassIgnitions: 0,
+    enemyIgnitions: 0,
+    playerIgnitions: 0,
+    enemyDamageTicks: 0,
+    playerDamageTicks: 0,
+    legacyPlayerBurnDamageRequests: 0,
+    legacyPlayerIgniteRequests: 0,
+    legacyRainGrassStateReports: 0
+  };
+}
+
+let fireDiagnostics = makeFireDiagnostics();
+
+function makeRainDiagnostics() {
+  return {
+    fieldsCreated: 0, grassQueries: 0, grassCellChecks: 0, grassEnters: 0, grassExits: 0,
+    enemyWetEnters: 0, enemyWetExits: 0, playerWetEnters: 0, playerWetExits: 0,
+    cellIgnitions: 0, cellExtinguishes: 0, fieldDeltaEvents: 0, ghostDamageTicks: 0,
+    legacyMagicGrassSlow: 0, legacyWet: 0, legacyRainDamage: 0
+  };
+}
+let rainDiagnostics = makeRainDiagnostics();
+
+function addMetric(map, key, bytes, count = 1, recipients = 0) {
+  const label = String(key || "unknown");
+  const current = map.get(label) || { bytes: 0, count: 0, recipients: 0 };
+  current.bytes += Math.max(0, Number(bytes) || 0);
+  current.count += Math.max(0, Number(count) || 0);
+  current.recipients += Math.max(0, Number(recipients) || 0);
+  map.set(label, current);
+}
+
+function websocketFrameOverhead(payloadBytes) {
+  if (payloadBytes <= 125) return 2;
+  if (payloadBytes <= 65535) return 4;
+  return 10;
+}
+
+function encodedMessageType(encoded) {
+  const match = /"type"\s*:\s*"([^"]+)"/.exec(encoded);
+  return match?.[1] || "unknown";
+}
+
+function encodedMessageSource(encoded) {
+  const match = /"source"\s*:\s*"([^"]+)"/.exec(encoded);
+  return match?.[1] || "unknown";
+}
+
+function estimateWsWireBytes(socket, encoded) {
+  const rawBytes = Buffer.byteLength(encoded);
+  let payloadBytes = rawBytes;
+
+  if (
+    rawBytes >= WS_COMPRESSION_THRESHOLD &&
+    String(socket?.extensions || "").includes("permessage-deflate")
+  ) {
+    try {
+      // serverNoContextTakeover=true means each large message is independently
+      // compressed, so a raw-deflate sample is a useful close wire estimate.
+      payloadBytes = zlib.deflateRawSync(
+        Buffer.from(encoded),
+        { level: 4 }
+      ).length;
+    } catch {
+      payloadBytes = rawBytes;
+    }
+  }
+
+  return payloadBytes + websocketFrameOverhead(payloadBytes);
+}
+
+function recordWsOutbound(socket, encoded, type = null) {
+  const payloadBytes = Buffer.byteLength(encoded);
+  const wireBytes = estimateWsWireBytes(socket, encoded);
+  const messageType = type || encodedMessageType(encoded);
+  const playerState =
+    typeof socket?.playerId === "string"
+      ? players.get(socket.playerId)
+      : null;
+  const mapId = playerState?.mapId || "unassigned";
+
+  networkTotals.wsOutPayloadBytes += payloadBytes;
+  networkTotals.wsOutWireBytes += wireBytes;
+  networkTotals.wsOutDeliveries += 1;
+  addMetric(networkTotals.byWsOutType, messageType, wireBytes);
+  if (messageType === "enemyDamage") {
+    addMetric(
+      networkTotals.byWsOutEnemyDamageSource,
+      encodedMessageSource(encoded),
+      wireBytes
+    );
+  }
+  addMetric(networkTotals.byWsOutMap, mapId, wireBytes);
+}
+
+function recordWsLogicalOutbound(encoded, type = null, recipients = 1) {
+  const recipientCount = Math.max(0, Number(recipients) || 0);
+  if (!recipientCount) return;
+
+  const payloadBytes = Buffer.byteLength(encoded);
+  const messageType = type || encodedMessageType(encoded);
+
+  networkTotals.wsOutEvents += 1;
+  networkTotals.wsOutEventPayloadBytes += payloadBytes;
+  networkTotals.wsOutEventRecipients += recipientCount;
+  addMetric(
+    networkTotals.byWsOutEventType,
+    messageType,
+    payloadBytes,
+    1,
+    recipientCount
+  );
+}
+
+function recordWsInbound(raw, type = null, detail = null) {
+  const payloadBytes = Buffer.isBuffer(raw)
+    ? raw.length
+    : Buffer.byteLength(String(raw || ""));
+
+  const messageType = type || "unknown";
+  networkTotals.wsInPayloadBytes += payloadBytes;
+  networkTotals.wsInMessages += 1;
+  addMetric(networkTotals.byWsInType, messageType, payloadBytes);
+
+  if (messageType === "enemyAction" && detail) {
+    addMetric(
+      networkTotals.byWsInEnemyActionSource,
+      detail,
+      payloadBytes
+    );
+  }
+}
+
+function recordHttpOutbound(requestPath, bytes) {
+  const count = Math.max(0, Number(bytes) || 0);
+  if (!count) return;
+  networkTotals.httpOutBytes += count;
+  addMetric(networkTotals.byHttpPath, requestPath || "unknown", count);
+}
+
+function formatBytes(bytes) {
+  const value = Math.max(0, Number(bytes) || 0);
+  if (value < 1024) return `${Math.round(value)} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function projectedMbPerHour(bytes, elapsedMs) {
+  if (!(elapsedMs > 0)) return 0;
+  return bytes * (3600000 / elapsedMs) / (1024 * 1024);
+}
+
+function deltaMetricMap(current, previous) {
+  const result = [];
+  for (const [key, value] of current.entries()) {
+    const old = previous.get(key) || { bytes: 0, count: 0, recipients: 0 };
+    const bytes = value.bytes - old.bytes;
+    const count = value.count - old.count;
+    const recipients =
+      (value.recipients || 0) - (old.recipients || 0);
+    if (bytes > 0 || count > 0 || recipients > 0) {
+      result.push({ key, bytes, count, recipients });
+    }
+  }
+  return result.sort((a, b) => b.bytes - a.bytes);
+}
+
+function cloneMetricMap(source) {
+  return new Map(
+    [...source.entries()].map(([key, value]) => [key, { ...value }])
+  );
+}
+
+function reportEnemyMotionDiagnostics(mapCounts) {
+  if (typeof worldEntitiesById === "undefined") return;
+
+  for (const [mapId, recipients] of Object.entries(mapCounts)) {
+    let alive = 0;
+    let precise = 0;
+    let passive = 0;
+    let nearestDistance = Infinity;
+    const reasonCounts = new Map();
+
+    const livingPlayers = [...players.values()].filter(player =>
+      player.mapId === mapId && player.hp > 0
+    );
+
+    for (const enemy of worldEntitiesById.values()) {
+      if (!enemy?.alive || enemy.mapId !== mapId) continue;
+      alive += 1;
+
+      for (const player of livingPlayers) {
+        const dx = (Number(player.x) || 0) - (Number(enemy.x) || 0);
+        const dy = (Number(player.y) || 0) - (Number(enemy.y) || 0);
+        nearestDistance = Math.min(nearestDistance, Math.hypot(dx, dy));
+      }
+
+      const reasons = enemyPreciseMotionReasons(enemy);
+      if (reasons.length) {
+        precise += 1;
+        for (const reason of reasons) {
+          reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+        }
+      } else {
+        passive += 1;
+      }
+    }
+
+    const reasonsText = [...reasonCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([reason, count]) => `${reason}=${count}`)
+      .join(", ") || "none";
+
+    const nearestText = Number.isFinite(nearestDistance)
+      ? `${nearestDistance.toFixed(1)}px`
+      : "n/a";
+
+    console.log(
+      `[ENEMY NET] ${mapId} recipients=${recipients} alive=${alive} ` +
+      `precise=${precise} passive=${passive} nearest=${nearestText} ` +
+      `motion=${ENEMY_NETWORK_DELTA_HZ}Hz/compact state=bitmask+health | ` +
+      `precise reasons: ${reasonsText}`
+    );
+  }
+}
+
+function reportPassiveEnemyNetworkDiagnostics(mapCounts) {
+  // Only surface maps that currently have players; empty maps can continue
+  // simulating server-side without cluttering the bandwidth report.
+  const mapIds = Object.keys(mapCounts || {});
+
+  for (const mapId of mapIds) {
+    const diag = passiveEnemyNetworkDiagnostics.get(mapId);
+    if (!diag) continue;
+
+    const avgBatch =
+      diag.sentEvents > 0
+        ? diag.sentRecords / diag.sentEvents
+        : 0;
+    const promotionSamples = Math.max(0, Number(diag.promotionSamples) || 0);
+    const avgPromotionAge =
+      promotionSamples > 0
+        ? diag.promotionSyncAgeMs / promotionSamples
+        : 0;
+    const avgPromotionDelta =
+      promotionSamples > 0
+        ? diag.promotionServerDelta / promotionSamples
+        : 0;
+    const avgEstimatedDrift =
+      promotionSamples > 0
+        ? diag.promotionEstimatedDrift / promotionSamples
+        : 0;
+
+    console.log(
+      `[ENEMY PASSIVE TX] ${mapId} planTick=${ENEMY_PASSIVE_PLAN_TICK_MS}ms ` +
+      `decisions=${diag.decisions} corrections=${diag.heartbeats} ` +
+      `transitions=${diag.transitions} queued=${diag.queued} ` +
+      `coalescedSameTick=${diag.coalesced} ` +
+      `sent=${diag.sentRecords} rec/${diag.sentEvents} events ` +
+      `(avg=${avgBatch.toFixed(1)}/event) | ` +
+      `promote=${diag.promotions} demote=${diag.demotions} ` +
+      `dropPending=${diag.droppedOnPromote} samples=${promotionSamples} ` +
+      `planAge=${Math.round(avgPromotionAge)}ms avg ` +
+      `estDrift=${avgEstimatedDrift.toFixed(1)}px avg/` +
+      `${diag.promotionEstimatedDriftMax.toFixed(1)}px max ` +
+      `serverTravel=${avgPromotionDelta.toFixed(1)}px avg/` +
+      `${diag.promotionServerDeltaMax.toFixed(1)}px max`
+    );
+  }
+
+  passiveEnemyNetworkDiagnostics.clear();
+}
+
+function reportNetworkDiagnostics() {
+  const now = Date.now();
+  const elapsedMs = Math.max(1, now - networkLastReportAt);
+
+  const wsOut = networkTotals.wsOutWireBytes - networkPrevious.wsOutWireBytes;
+  const wsPayloadOut = networkTotals.wsOutPayloadBytes - networkPrevious.wsOutPayloadBytes;
+  const httpOut = networkTotals.httpOutBytes - networkPrevious.httpOutBytes;
+  const totalOut = wsOut + httpOut;
+  const wsIn = networkTotals.wsInPayloadBytes - networkPrevious.wsInPayloadBytes;
+  const deliveries = networkTotals.wsOutDeliveries - networkPrevious.wsOutDeliveries;
+  const logicalEvents = networkTotals.wsOutEvents - networkPrevious.wsOutEvents;
+  const logicalEventRecipients =
+    networkTotals.wsOutEventRecipients - networkPrevious.wsOutEventRecipients;
+  const inboundMessages = networkTotals.wsInMessages - networkPrevious.wsInMessages;
+  const avgFanout = logicalEvents > 0
+    ? logicalEventRecipients / logicalEvents
+    : 0;
+
+  const mapCounts = {};
+  for (const player of players.values()) {
+    const mapId = player.mapId || "unknown";
+    mapCounts[mapId] = (mapCounts[mapId] || 0) + 1;
+  }
+
+  console.log(
+    `[NET ${Math.round(elapsedMs / 1000)}s] clients=${players.size} ` +
+    `maps=${JSON.stringify(mapCounts)} | ` +
+    `OUT≈${formatBytes(totalOut)} ` +
+    `(${projectedMbPerHour(totalOut, elapsedMs).toFixed(1)} MB/h) ` +
+    `[WS≈${formatBytes(wsOut)} wire (${projectedMbPerHour(wsOut, elapsedMs).toFixed(1)} MB/h) / ${formatBytes(wsPayloadOut)} JSON, ` +
+    `HTTP=${formatBytes(httpOut)}] | ` +
+    `IN=${formatBytes(wsIn)} | ` +
+    `${deliveries} WS deliveries / ${logicalEvents} logical events ` +
+    `(fanout=${avgFanout.toFixed(2)}) / ${inboundMessages} inbound msgs`
+  );
+
+  const topOut = deltaMetricMap(
+    networkTotals.byWsOutType,
+    networkPrevious.byWsOutType
+  ).slice(0, NETWORK_DIAGNOSTICS_TOP_TYPES);
+  const outEventsByType = new Map(
+    deltaMetricMap(
+      networkTotals.byWsOutEventType,
+      networkPrevious.byWsOutEventType
+    ).map(item => [item.key, item])
+  );
+
+  if (topOut.length) {
+    console.log(
+      "[NET OUT top] " +
+      topOut.map(item =>
+        `${item.key}=${formatBytes(item.bytes)}/${item.count}`
+      ).join(" | ")
+    );
+
+    console.log(
+      "[NET OUT shape] " +
+      topOut.map(item => {
+        const event = outEventsByType.get(item.key);
+        const events = event?.count || 0;
+        const recipients = event?.recipients || 0;
+        const fanout = events > 0 ? recipients / events : 0;
+        const bytesPerDelivery = item.count > 0 ? item.bytes / item.count : 0;
+        const payloadPerEvent = events > 0 ? event.bytes / events : 0;
+        return (
+          `${item.key}:ev=${events},del=${item.count},fan=${fanout.toFixed(2)},` +
+          `${Math.round(bytesPerDelivery)}B/del,${Math.round(payloadPerEvent)}B/event`
+        );
+      }).join(" | ")
+    );
+  }
+
+  const damageOut = deltaMetricMap(
+    networkTotals.byWsOutEnemyDamageSource,
+    networkPrevious.byWsOutEnemyDamageSource
+  );
+
+  if (damageOut.length) {
+    console.log(
+      "[NET DAMAGE OUT] " +
+      damageOut.map(item =>
+        `${item.key}=${formatBytes(item.bytes)}/${item.count}`
+      ).join(" | ")
+    );
+  }
+
+  const byMap = deltaMetricMap(
+    networkTotals.byWsOutMap,
+    networkPrevious.byWsOutMap
+  ).slice(0, 8);
+
+  if (byMap.length) {
+    console.log(
+      "[NET OUT maps] " +
+      byMap.map(item => `${item.key}=${formatBytes(item.bytes)}/${item.count}`)
+        .join(" | ")
+    );
+  }
+
+  const topIn = deltaMetricMap(
+    networkTotals.byWsInType,
+    networkPrevious.byWsInType
+  ).slice(0, NETWORK_DIAGNOSTICS_TOP_TYPES);
+
+  if (topIn.length) {
+    console.log(
+      "[NET IN top] " +
+      topIn.map(item => `${item.key}=${formatBytes(item.bytes)}/${item.count}`)
+        .join(" | ")
+    );
+  }
+
+  const enemyActionIn = deltaMetricMap(
+    networkTotals.byWsInEnemyActionSource,
+    networkPrevious.byWsInEnemyActionSource
+  );
+
+  if (enemyActionIn.length) {
+    console.log(
+      "[NET ENEMY ACTION IN] " +
+      enemyActionIn.map(item =>
+        `${item.key}=${formatBytes(item.bytes)}/${item.count}`
+      ).join(" | ")
+    );
+  }
+
+  const topHttp = deltaMetricMap(
+    networkTotals.byHttpPath,
+    networkPrevious.byHttpPath
+  ).slice(0, 3);
+
+  if (topHttp.length) {
+    console.log(
+      "[NET HTTP top] " +
+      topHttp.map(item =>
+        `${item.key}=${formatBytes(item.bytes)}/${item.count}`
+      ).join(" | ")
+    );
+  }
+
+  const sessionOut = networkTotals.wsOutWireBytes + networkTotals.httpOutBytes;
+  const sessionFanout = networkTotals.wsOutEvents > 0
+    ? networkTotals.wsOutEventRecipients / networkTotals.wsOutEvents
+    : 0;
+  console.log(
+    `[NET session] OUT≈${formatBytes(sessionOut)} ` +
+    `[WS≈${formatBytes(networkTotals.wsOutWireBytes)} wire / ${formatBytes(networkTotals.wsOutPayloadBytes)} JSON, HTTP=${formatBytes(networkTotals.httpOutBytes)}] ` +
+    `events=${networkTotals.wsOutEvents} deliveries=${networkTotals.wsOutDeliveries} ` +
+    `fanout=${sessionFanout.toFixed(2)}`
+  );
+
+  reportEnemyMotionDiagnostics(mapCounts);
+  reportPassiveEnemyNetworkDiagnostics(mapCounts);
+
+  console.log(
+    `[FIRE ${Math.round(elapsedMs / 1000)}s] ` +
+    `spread=${fireDiagnostics.spreadPulses} pulses/${fireDiagnostics.spreadSources} sources | ` +
+    `ignite env=${fireDiagnostics.environmentIgnitions} grass=${fireDiagnostics.rainGrassIgnitions} ` +
+    `mob=${fireDiagnostics.enemyIgnitions} player=${fireDiagnostics.playerIgnitions} | ` +
+    `DoT mob=${fireDiagnostics.enemyDamageTicks} ticks player=${fireDiagnostics.playerDamageTicks} ticks | ` +
+    `legacyIN selfDamage=${fireDiagnostics.legacyPlayerBurnDamageRequests} ` +
+    `playerIgnite=${fireDiagnostics.legacyPlayerIgniteRequests} ` +
+    `rainGrassState=${fireDiagnostics.legacyRainGrassStateReports}`
+  );
+
+  console.log(
+    `[RAIN ${Math.round(elapsedMs / 1000)}s] ` +
+    `fields=${rainDiagnostics.fieldsCreated} queries=${rainDiagnostics.grassQueries}/${rainDiagnostics.grassCellChecks} cellChecks | ` +
+    `grass enter=${rainDiagnostics.grassEnters} exit=${rainDiagnostics.grassExits} | ` +
+    `wet mob=${rainDiagnostics.enemyWetEnters}/${rainDiagnostics.enemyWetExits} player=${rainDiagnostics.playerWetEnters}/${rainDiagnostics.playerWetExits} | ` +
+    `fieldFire ignite=${rainDiagnostics.cellIgnitions} extinguish=${rainDiagnostics.cellExtinguishes} deltas=${rainDiagnostics.fieldDeltaEvents} | ` +
+    `ghostTicks=${rainDiagnostics.ghostDamageTicks} | ` +
+    `legacyIN magicGrassSlow=${rainDiagnostics.legacyMagicGrassSlow} wet=${rainDiagnostics.legacyWet} rainDamage=${rainDiagnostics.legacyRainDamage}`
+  );
+  fireDiagnostics = makeFireDiagnostics();
+  rainDiagnostics = makeRainDiagnostics();
+  console.log("");
+
+  networkPrevious = {
+    wsOutWireBytes: networkTotals.wsOutWireBytes,
+    wsOutPayloadBytes: networkTotals.wsOutPayloadBytes,
+    wsOutDeliveries: networkTotals.wsOutDeliveries,
+    wsOutEvents: networkTotals.wsOutEvents,
+    wsOutEventPayloadBytes: networkTotals.wsOutEventPayloadBytes,
+    wsOutEventRecipients: networkTotals.wsOutEventRecipients,
+    wsInPayloadBytes: networkTotals.wsInPayloadBytes,
+    wsInMessages: networkTotals.wsInMessages,
+    httpOutBytes: networkTotals.httpOutBytes,
+    byWsOutType: cloneMetricMap(networkTotals.byWsOutType),
+    byWsOutEventType: cloneMetricMap(networkTotals.byWsOutEventType),
+    byWsOutEnemyDamageSource: cloneMetricMap(networkTotals.byWsOutEnemyDamageSource),
+    byWsOutMap: cloneMetricMap(networkTotals.byWsOutMap),
+    byWsInType: cloneMetricMap(networkTotals.byWsInType),
+    byWsInEnemyActionSource: cloneMetricMap(networkTotals.byWsInEnemyActionSource),
+    byHttpPath: cloneMetricMap(networkTotals.byHttpPath)
+  };
+  networkLastReportAt = now;
+}
+
+setInterval(reportNetworkDiagnostics, NETWORK_DIAGNOSTICS_INTERVAL_MS).unref();
 
 function mapWorldDimensions(mapId) {
   const dimensions =
@@ -34,6 +562,20 @@ function mapWorldDimensions(mapId) {
 
 
 // -----------------------------------------------------------------------------
+// SHARED ENEMY AGGRO RULES
+// -----------------------------------------------------------------------------
+// Acquisition and retention are deliberately separate. Species may differ in
+// how they first acquire a player, but every enemy retains a valid target by the
+// same shared engagement rule. Recent combat/contact keeps engagement alive;
+// when the target has remained outside the close-contact radius with no combat
+// pulse for the full memory window, aggro ends. Home position is never consulted
+// while deciding whether combat should continue.
+const ENEMY_AGGRO_PROVOKED = "provoked";
+const ENEMY_AGGRO_PROXIMITY = "proximity";
+const ENEMY_ENGAGEMENT_RADIUS = 120;
+const ENEMY_ENGAGEMENT_MEMORY_SECONDS = 3.5;
+
+// -----------------------------------------------------------------------------
 // GENERIC SERVER ENEMY RUNTIME METADATA
 // -----------------------------------------------------------------------------
 // Shared systems consume these properties instead of branching on individual
@@ -48,8 +590,6 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     hurlable: true,
     snareable: true,
     rainEffect: "none",
-    patrolLeashRadius: 90,
-    combatLeashRadius: 240,
     damageKnockback: Object.freeze({
       melee: 32,
       bowMelee: 12,
@@ -73,8 +613,6 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     hurlable: true,
     snareable: true,
     rainEffect: "none",
-    patrolLeashRadius: 120,
-    combatLeashRadius: 260,
     damageKnockback: Object.freeze({
       melee: 28,
       bowMelee: 13,
@@ -89,11 +627,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
       enemy.moving = false;
     },
     snapshotExtra(enemy) {
+      // Walking/facing are presentation reconstructed from compact motion.
+      // Only gameplay-relevant lunge state belongs in authoritative snapshots.
       return {
-        moving: enemy.moving,
-        walkTime: Number(
-          enemy.walkTime.toFixed(3)
-        ),
         lungeTime: Number(
           enemy.lungeTime.toFixed(3)
         ),
@@ -115,8 +651,6 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     hurlable: false,
     snareable: false,
     rainEffect: "damage",
-    patrolLeashRadius: 145,
-    combatLeashRadius: 280,
     damageKnockback: Object.freeze({
       melee: 22,
       bowMelee: 10,
@@ -140,8 +674,7 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     hurlable: false,
     snareable: true,
     rainEffect: "none",
-    patrolLeashRadius: 85,
-    combatLeashRadius: 320,
+    patrolRadius: 85,
     damageKnockback: Object.freeze({
       melee: 12,
       bowMelee: 5,
@@ -171,11 +704,28 @@ function serverEnemyProfile(enemyOrType) {
 // Keep the rules here so Fireball, rain, environmental fire, and future status
 // skills all agree on duration, extinguishing, source attribution, and movement.
 const STATUS_RULES = Object.freeze({
+  // Mob Burn is a combat DoT. Fireball/spread can choose its own duration later
+  // without changing environmental lifetime or player hazard rules.
   enemyBurnDuration: 3.0,
+  enemyBurnTickInterval: 0.5,
+  enemyBurnDamagePerTick: 2,
+  fireballBurnPowerPerSecond: 20,
   enemyWetDuration: 3.0,
   enemyWetSpeedMultiplier: 0.75,
-  playerBurnDuration: 5.0,
-  playerWetDuration: 3.0
+
+  // Player Burn is a separate hazard profile: six seconds, evaluated twice
+  // per second, accumulating 1% max HP each half-second (~2% max HP/sec).
+  // Fractional damage is accumulated server-side so a 50-HP player still
+  // loses about 12% over a full Burn instead of being forced to lose 1 HP
+  // every half-second. Burn-specific resistance can shorten this duration later.
+  playerBurnDuration: 6.0,
+  playerBurnTickInterval: 0.5,
+  playerBurnMaxHpFractionPerTick: 0.01,
+  playerWetDuration: 3.0,
+
+  // Environment objects own their individual burnDuration. Spread itself is a
+  // fixed server pulse and only newly-ignited state changes replicate.
+  environmentSpreadInterval: 0.5
 });
 
 function ensureServerEnemyStatusState(enemy) {
@@ -183,7 +733,11 @@ function ensureServerEnemyStatusState(enemy) {
 
   enemy.burnTime = Math.max(0, Number(enemy.burnTime) || 0);
   enemy.burnTickTimer = Math.max(0, Number(enemy.burnTickTimer) || 0);
-  enemy.burnTickInterval = Math.max(0.05, Number(enemy.burnTickInterval) || 0.5);
+  enemy.burnTickInterval = Math.max(0.05, Number(enemy.burnTickInterval) || STATUS_RULES.enemyBurnTickInterval);
+  enemy.burnDamagePerTick = Math.max(
+    1,
+    Math.round(Number(enemy.burnDamagePerTick) || STATUS_RULES.enemyBurnDamagePerTick)
+  );
   enemy.wetTime = Math.max(0, Number(enemy.wetTime) || 0);
   enemy.wetDuration = Math.max(0.1, Number(enemy.wetDuration) || STATUS_RULES.enemyWetDuration);
 
@@ -202,11 +756,12 @@ function clearServerEnemyBurn(enemy) {
   const changed = enemy.burnTime > 0 || enemy.burnTickTimer > 0;
   enemy.burnTime = 0;
   enemy.burnTickTimer = 0;
+  enemy.burnDamagePerTick = STATUS_RULES.enemyBurnDamagePerTick;
   return changed;
 }
 
 function applyServerEnemyWet(enemy, duration = STATUS_RULES.enemyWetDuration) {
-  if (!enemy?.alive) return false;
+  if (!enemy?.alive || enemy.returningHome) return false;
   ensureServerEnemyStatusState(enemy);
 
   clearServerEnemyBurn(enemy);
@@ -221,12 +776,13 @@ function applyServerEnemyBurn(
   enemy,
   {
     duration = STATUS_RULES.enemyBurnDuration,
+    damagePerTick = STATUS_RULES.enemyBurnDamagePerTick,
     sourcePlayerId = null,
     forceThroughWet = false,
     refresh = true
   } = {}
 ) {
-  if (!enemy?.alive) return false;
+  if (!enemy?.alive || enemy.returningHome) return false;
   ensureServerEnemyStatusState(enemy);
 
   if (serverEnemyIsWet(enemy) && !forceThroughWet) {
@@ -238,13 +794,26 @@ function applyServerEnemyBurn(
   }
 
   const burnDuration = Math.max(0.1, Number(duration) || STATUS_RULES.enemyBurnDuration);
+  const incomingDamagePerTick = Math.max(
+    1,
+    Math.round(Number(damagePerTick) || STATUS_RULES.enemyBurnDamagePerTick)
+  );
+  const wasBurning = enemy.burnTime > 0;
+  if (wasBurning && !refresh) return false;
+
   enemy.burnTime = refresh
     ? Math.max(enemy.burnTime, burnDuration)
     : burnDuration;
-  enemy.burnTickTimer = enemy.burnTickInterval;
+  enemy.burnDamagePerTick = wasBurning && refresh
+    ? Math.max(enemy.burnDamagePerTick, incomingDamagePerTick)
+    : incomingDamagePerTick;
+  if (!wasBurning) {
+    enemy.burnTickTimer = enemy.burnTickInterval;
+    fireDiagnostics.enemyIgnitions += 1;
+  }
 
   if (sourcePlayerId && players.has(sourcePlayerId)) {
-    setEnemyAggroTarget(enemy, sourcePlayerId, enemy.aggroDuration);
+    setEnemyAggroTarget(enemy, sourcePlayerId);
     enemy.lastDamagePlayerId = sourcePlayerId;
   }
 
@@ -255,24 +824,28 @@ function clearServerPlayerBurn(target) {
   if (!target) return false;
   const changed = (Number(target.burnTime) || 0) > 0;
   target.burnTime = 0;
+  target.burnTickTimer = 0;
+  target.burnDamageAccumulator = 0;
+  target.burnSourcePlayerId = null;
   return changed;
 }
 
-function applyServerPlayerWet(target, duration = STATUS_RULES.playerWetDuration) {
-  if (!target || target.hp <= 0) return false;
-  clearServerPlayerBurn(target);
-  target.wetTime = Math.max(
-    Number(target.wetTime) || 0,
-    Math.max(0.1, Number(duration) || STATUS_RULES.playerWetDuration)
-  );
-  return true;
+function broadcastServerPlayerBurnState(target) {
+  if (!target?.mapId) return;
+  broadcastToMap(target.mapId, {
+    type: "playerIgnited",
+    targetId: target.id,
+    mapId: target.mapId,
+    burnTime: Math.max(0, Number(target.burnTime) || 0)
+  });
 }
 
 function applyServerPlayerBurn(
   target,
   {
     duration = STATUS_RULES.playerBurnDuration,
-    forceThroughWet = false
+    forceThroughWet = false,
+    sourcePlayerId = null
   } = {}
 ) {
   if (!target || target.hp <= 0) return false;
@@ -285,11 +858,40 @@ function applyServerPlayerBurn(
     target.wetTime = 0;
   }
 
-  target.burnTime = Math.max(
-    Number(target.burnTime) || 0,
-    Math.max(0.1, Number(duration) || STATUS_RULES.playerBurnDuration)
+  const previousBurnTime = Math.max(
+    0,
+    Number(target.burnTime) || 0
   );
-  return true;
+  const incomingBurnDuration = Math.max(
+    0.1,
+    Number(duration) || STATUS_RULES.playerBurnDuration
+  );
+  const wasBurning = previousBurnTime > 0;
+  const sourceOwnsRefresh =
+    !wasBurning ||
+    incomingBurnDuration > previousBurnTime + 0.01;
+
+  target.burnTime = Math.max(
+    previousBurnTime,
+    incomingBurnDuration
+  );
+  if (!wasBurning) {
+    target.burnTickTimer = STATUS_RULES.playerBurnTickInterval;
+    target.burnDamageAccumulator = 0;
+    fireDiagnostics.playerIgnitions += 1;
+  }
+
+  if (
+    sourceOwnsRefresh &&
+    sourcePlayerId &&
+    players.has(sourcePlayerId)
+  ) {
+    target.burnSourcePlayerId = sourcePlayerId;
+  } else if (!wasBurning) {
+    target.burnSourcePlayerId = null;
+  }
+
+  return !wasBurning;
 }
 
 function clearServerEnemyStatuses(enemy) {
@@ -348,10 +950,7 @@ function ensureServerEnemySnareState(enemy) {
     Number(enemy.snareSlowTime) || 0
   );
 
-  enemy.magicGrassSlowTime = Math.max(
-    0,
-    Number(enemy.magicGrassSlowTime) || 0
-  );
+  enemy.magicGrassFieldActive = Boolean(enemy.magicGrassFieldActive);
 
   enemy.snareSlowMultiplier = Math.max(
     0.1,
@@ -377,6 +976,7 @@ function serverEnemyIsSnareable(enemy) {
   return Boolean(
     enemy &&
     enemy.alive &&
+    !enemy.returningHome &&
     !enemy.carriedBy &&
     profile &&
     (
@@ -397,8 +997,8 @@ function serverEnemyMovementMultiplier(enemy) {
   if (enemy.snareSlowTime > 0) {
     multiplier = Math.min(multiplier, enemy.snareSlowMultiplier);
   }
-  if (enemy.magicGrassSlowTime > 0) {
-    multiplier = Math.min(multiplier, 0.80);
+  if (enemy.magicGrassFieldActive) {
+    multiplier = Math.min(multiplier, RAIN_FIELD.SPEED_MULTIPLIER);
   }
   if (enemy.wetTime > 0) {
     multiplier = Math.min(multiplier, STATUS_RULES.enemyWetSpeedMultiplier);
@@ -416,12 +1016,6 @@ function tickSharedEnemySnareStatuses(dt) {
 
     ensureServerEnemySnareState(enemy);
 
-    if (enemy.magicGrassSlowTime > 0) {
-      enemy.magicGrassSlowTime = Math.max(
-        0,
-        enemy.magicGrassSlowTime - dt
-      );
-    }
 
     if (enemy.snareRootTime > 0) {
       enemy.snareRootTime = Math.max(
@@ -546,6 +1140,13 @@ function validateWorldContent() {
 validateWorldContent();
 
 const players = new Map();
+const persistentStateRestoredPlayers = new Set();
+
+// Connection indexes are transport-only mirrors of authoritative player state.
+// They let map-scoped broadcasts iterate only sockets that can actually receive
+// the event instead of scanning every connected client for every packet.
+const socketsByPlayerId = new Map();
+const socketsByMap = new Map();
 
 const HUNTER_SNARE_TRIGGER_RADIUS = 9;
 const HUNTER_SNARE_ROOT_SECONDS = 0.65;
@@ -554,7 +1155,10 @@ const HUNTER_SNARE_SLOW_MULTIPLIER = 0.45;
 const HUNTER_SNARE_MAX_ACTIVE = 3;
 const HUNTER_SNARE_MAX_CHARGES = 3;
 const HUNTER_SNARE_CHARGE_SECONDS = 15.0;
+const HUNTER_SNARE_SETUP_SECONDS = 1.25;
+const HUNTER_SNARE_SETUP_MOVE_TOLERANCE = 0.75;
 const hunterSnares = new Map();
+const hunterSnareSetups = new Map();
 let nextHunterSnareId = 1;
 
 function hunterSnaresForOwner(ownerId) {
@@ -563,14 +1167,37 @@ function hunterSnaresForOwner(ownerId) {
     .sort((a, b) => a.createdAt - b.createdAt);
 }
 
-function hunterSnareSnapshot() {
-  return [...hunterSnares.values()].map(snare => ({
-    id: snare.id,
-    ownerId: snare.ownerId,
-    mapId: snare.mapId,
-    x: snare.x,
-    y: snare.y
-  }));
+function hunterSnareSnapshot(mapId = null) {
+  return [...hunterSnares.values()]
+    .filter(snare => !mapId || snare.mapId === mapId)
+    .map(snare => ({
+      id: snare.id,
+      ownerId: snare.ownerId,
+      mapId: snare.mapId,
+      x: snare.x,
+      y: snare.y
+    }));
+}
+
+function hunterSnareSetupSnapshot(mapId = null) {
+  const now = Date.now();
+
+  return [...hunterSnareSetups.values()]
+    .filter(setup => !mapId || setup.mapId === mapId)
+    .map(setup => ({
+      ownerId: setup.ownerId,
+      mapId: setup.mapId,
+      x: setup.x,
+      y: setup.y,
+      duration: HUNTER_SNARE_SETUP_SECONDS,
+      elapsed: Math.max(
+        0,
+        Math.min(
+          HUNTER_SNARE_SETUP_SECONDS,
+          (now - setup.startedAt) / 1000
+        )
+      )
+    }));
 }
 
 function removeHunterSnare(snareId, reason = "removed") {
@@ -579,7 +1206,7 @@ function removeHunterSnare(snareId, reason = "removed") {
 
   hunterSnares.delete(snareId);
 
-  broadcast({
+  broadcastToMap(snare.mapId, {
     type: "hunterSnareRemoved",
     snareId,
     ownerId: snare.ownerId,
@@ -607,7 +1234,7 @@ function broadcastHunterSnareChargeState(playerId) {
   const playerState = players.get(playerId);
   if (!playerState) return;
 
-  broadcast({
+  sendToPlayer(playerId, {
     type: "hunterSnareChargeState",
     ownerId: playerId,
     charges: Math.max(0, Math.floor(playerState.hunterSnareCharges || 0))
@@ -642,13 +1269,10 @@ function tickHunterSnareCharges(dt) {
       continue;
     }
 
-    const rechargeMultiplier =
-      playerState.camouflaged ? 2 : 1;
-
     playerState.hunterSnareChargeTime = Math.max(
       0,
       Number(playerState.hunterSnareChargeTime) || 0
-    ) + dt * rechargeMultiplier;
+    ) + dt;
 
     let changed = false;
     while (
@@ -670,31 +1294,137 @@ function tickHunterSnareCharges(dt) {
   }
 }
 
-function handleHunterSnarePlace(playerId, message) {
+function rejectHunterSnareSetup(
+  playerId,
+  reason,
+  playerState = players.get(playerId)
+) {
+  sendToPlayer(playerId, {
+    type: "hunterSnareSetupRejected",
+    ownerId: playerId,
+    reason,
+    charges: Math.max(
+      0,
+      Math.floor(playerState?.hunterSnareCharges || 0)
+    )
+  });
+}
+
+function cancelHunterSnareSetup(
+  playerId,
+  reason = "cancelled",
+  broadcast = true
+) {
+  const setup = hunterSnareSetups.get(playerId);
+  if (!setup) return null;
+
+  hunterSnareSetups.delete(playerId);
+
+  if (broadcast) {
+    broadcastToMap(setup.mapId, {
+      type: "hunterSnareSetupCancelled",
+      ownerId: playerId,
+      mapId: setup.mapId,
+      reason,
+      duration: HUNTER_SNARE_SETUP_SECONDS
+    });
+  }
+
+  return setup;
+}
+
+function handleHunterSnareBegin(playerId) {
   const playerState = players.get(playerId);
-  if (!playerState || playerState.hp <= 0) return;
+  if (!playerState || playerState.hp <= 0) {
+    rejectHunterSnareSetup(playerId, "unavailable", playerState);
+    return;
+  }
+
+  if (hunterSnareSetups.has(playerId)) {
+    rejectHunterSnareSetup(playerId, "alreadySetting", playerState);
+    return;
+  }
 
   if ((playerState.hunterSnareCharges || 0) <= 0) {
-    broadcast({
-      type: "hunterSnarePlaceRejected",
-      ownerId: playerId,
-      reason: "noCharges",
-      charges: 0
-    });
+    rejectHunterSnareSetup(playerId, "noCharges", playerState);
     return;
   }
 
-  const x = Number(message.x);
-  const y = Number(message.y);
+  const now = Date.now();
+  const setup = {
+    ownerId: playerId,
+    mapId: playerState.mapId,
+    x: playerState.x,
+    y: playerState.y,
+    startedAt: now,
+    completesAt: now + HUNTER_SNARE_SETUP_SECONDS * 1000
+  };
 
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  hunterSnareSetups.set(playerId, setup);
 
-  // The setup is performed by the owning client (2.5s normally, 1.25s while
-  // Camouflaged). The authoritative
-  // server still validates that the completed trap lands at the player's feet.
-  if (Math.hypot(x - playerState.x, y - playerState.y) > 14) {
-    return;
+  broadcastToMap(setup.mapId, {
+    type: "hunterSnareSetupStarted",
+    ownerId: playerId,
+    mapId: setup.mapId,
+    x: setup.x,
+    y: setup.y,
+    duration: HUNTER_SNARE_SETUP_SECONDS,
+    elapsed: 0
+  });
+}
+
+function handleHunterSnareCancel(playerId) {
+  cancelHunterSnareSetup(
+    playerId,
+    "playerCancelled"
+  );
+}
+
+function finishHunterSnareSetup(playerId) {
+  const setup = hunterSnareSetups.get(playerId);
+  if (!setup) return false;
+
+  const playerState = players.get(playerId);
+
+  if (
+    !playerState ||
+    playerState.hp <= 0 ||
+    playerState.mapId !== setup.mapId
+  ) {
+    cancelHunterSnareSetup(
+      playerId,
+      "ownerUnavailable"
+    );
+    return false;
   }
+
+  if (
+    Math.hypot(
+      playerState.x - setup.x,
+      playerState.y - setup.y
+    ) > HUNTER_SNARE_SETUP_MOVE_TOLERANCE
+  ) {
+    cancelHunterSnareSetup(
+      playerId,
+      "movement"
+    );
+    return false;
+  }
+
+  if ((playerState.hunterSnareCharges || 0) <= 0) {
+    cancelHunterSnareSetup(
+      playerId,
+      "noCharges"
+    );
+    rejectHunterSnareSetup(
+      playerId,
+      "noCharges",
+      playerState
+    );
+    return false;
+  }
+
+  hunterSnareSetups.delete(playerId);
 
   playerState.hunterSnareCharges = Math.max(
     0,
@@ -720,18 +1450,58 @@ function handleHunterSnarePlace(playerId, message) {
   const snare = {
     id: `snare:${nextHunterSnareId++}`,
     ownerId: playerId,
-    mapId: playerState.mapId,
-    x: playerState.x,
-    y: playerState.y,
+    mapId: setup.mapId,
+    x: setup.x,
+    y: setup.y,
     createdAt: Date.now()
   };
 
   hunterSnares.set(snare.id, snare);
 
-  broadcast({
+  broadcastToMap(snare.mapId, {
     type: "hunterSnarePlaced",
-    ...snare
+    ...snare,
+    setupDuration: HUNTER_SNARE_SETUP_SECONDS
   });
+
+  return true;
+}
+
+function tickHunterSnareSetups() {
+  const now = Date.now();
+
+  for (const [playerId, setup] of hunterSnareSetups.entries()) {
+    const playerState = players.get(playerId);
+
+    if (
+      !playerState ||
+      playerState.hp <= 0 ||
+      playerState.mapId !== setup.mapId
+    ) {
+      cancelHunterSnareSetup(
+        playerId,
+        "ownerUnavailable"
+      );
+      continue;
+    }
+
+    if (
+      Math.hypot(
+        playerState.x - setup.x,
+        playerState.y - setup.y
+      ) > HUNTER_SNARE_SETUP_MOVE_TOLERANCE
+    ) {
+      cancelHunterSnareSetup(
+        playerId,
+        "movement"
+      );
+      continue;
+    }
+
+    if (now >= setup.completesAt) {
+      finishHunterSnareSetup(playerId);
+    }
+  }
 }
 
 function tickHunterSnares() {
@@ -751,6 +1521,8 @@ function tickHunterSnares() {
     }
 
     let triggeredEnemy = null;
+    let triggeredPlayer = null;
+    let bestDistance = HUNTER_SNARE_TRIGGER_RADIUS + 0.001;
 
     for (const enemy of sharedEnemiesOnMap(snare.mapId)) {
       if (!serverEnemyIsSnareable(enemy)) continue;
@@ -763,13 +1535,73 @@ function tickHunterSnares() {
         enemy.y - snare.y
       );
 
-      if (distance <= HUNTER_SNARE_TRIGGER_RADIUS) {
+      if (distance <= bestDistance) {
+        bestDistance = distance;
         triggeredEnemy = enemy;
-        break;
+        triggeredPlayer = null;
       }
     }
 
-    if (!triggeredEnemy) continue;
+    // PvP players can spring the same physical trap. Camouflage does not make
+    // the Ranger intangible: stepping onto a snare still catches them, and the
+    // SNARED tell briefly gives away where the hidden player actually is.
+    for (const target of players.values()) {
+      if (
+        target.id === owner.id ||
+        target.mapId !== snare.mapId ||
+        !pvpPlayersCanHarm(owner, target)
+      ) {
+        continue;
+      }
+
+      const distance = Math.hypot(
+        target.x - snare.x,
+        target.y - snare.y
+      );
+
+      if (distance <= bestDistance) {
+        bestDistance = distance;
+        triggeredEnemy = null;
+        triggeredPlayer = target;
+      }
+    }
+
+    if (!triggeredEnemy && !triggeredPlayer) continue;
+
+    const removed = removeHunterSnare(
+      snare.id,
+      "triggered"
+    );
+
+    if (triggeredPlayer) {
+      const now = Date.now();
+      triggeredPlayer.pvpSnareRootUntil = Math.max(
+        Number(triggeredPlayer.pvpSnareRootUntil) || 0,
+        now + HUNTER_SNARE_ROOT_SECONDS * 1000
+      );
+      triggeredPlayer.pvpSnareSlowUntil = Math.max(
+        Number(triggeredPlayer.pvpSnareSlowUntil) || 0,
+        now + HUNTER_SNARE_SLOW_SECONDS * 1000
+      );
+      triggeredPlayer.pvpSnareSlowMultiplier =
+        HUNTER_SNARE_SLOW_MULTIPLIER;
+
+      applyPvpCombatLock(owner, triggeredPlayer);
+
+      broadcastToMap(snare.mapId, {
+        type: "hunterSnareTriggered",
+        snareId: snare.id,
+        ownerId: snare.ownerId,
+        mapId: snare.mapId,
+        x: removed?.x ?? snare.x,
+        y: removed?.y ?? snare.y,
+        targetPlayerId: triggeredPlayer.id,
+        rootSeconds: HUNTER_SNARE_ROOT_SECONDS,
+        slowSeconds: HUNTER_SNARE_SLOW_SECONDS,
+        slowMultiplier: HUNTER_SNARE_SLOW_MULTIPLIER
+      });
+      continue;
+    }
 
     ensureServerEnemySnareState(triggeredEnemy);
     triggeredEnemy.snareRootTime =
@@ -779,12 +1611,7 @@ function tickHunterSnares() {
     triggeredEnemy.snareSlowMultiplier =
       HUNTER_SNARE_SLOW_MULTIPLIER;
 
-    const removed = removeHunterSnare(
-      snare.id,
-      "triggered"
-    );
-
-    broadcast({
+    broadcastToMap(snare.mapId, {
       type: "hunterSnareTriggered",
       snareId: snare.id,
       ownerId: snare.ownerId,
@@ -806,7 +1633,36 @@ function tickHunterSnares() {
 // immediately toggle themselves safe.
 const PVP_DAMAGE_MULTIPLIER = 0.50;
 const PVP_COMBAT_LOCK_MS = 10_000;
+const PVP_PLAYER_BURN_DURATION = 3.0;
+const PVP_FIREBALL_LANDING_RADIUS = 13;
+const PVP_LOCK_REBROADCAST_GRACE_MS = 1_000;
 const pvpAttackRateLimits = new Map();
+
+function pvpPlayersCanHarm(attacker, target) {
+  return Boolean(
+    attacker &&
+    target &&
+    attacker.id !== target.id &&
+    attacker.hp > 0 &&
+    target.hp > 0 &&
+    attacker.mapId === target.mapId &&
+    attacker.pvpEnabled &&
+    target.pvpEnabled
+  );
+}
+
+function playerOwnedEffectMayAffectTarget(sourcePlayerId, target) {
+  if (!target || target.hp <= 0) return false;
+  if (!sourcePlayerId) return true;
+
+  const source = players.get(sourcePlayerId);
+  if (!source) return false;
+
+  // Self-inflicted fire/status remains possible regardless of PvP toggle.
+  if (source.id === target.id) return true;
+
+  return pvpPlayersCanHarm(source, target);
+}
 
 
 // -----------------------------------------------------------------------------
@@ -819,20 +1675,36 @@ const pvpAttackRateLimits = new Map();
 // This avoids duplicating the large existing map-layout code while still giving
 // every connected player one authoritative environment for the session.
 const sharedEnvironment = new Map();
+// Secondary map index for persistent world objects. The authoritative entity
+// objects still live in sharedEnvironment; this index only prevents every
+// map-local query from scanning unrelated maps as the world gains more props.
+const sharedEnvironmentByMap = new Map();
 const dirtyEnvironmentIds = new Set();
+// Moving rocks use their own compact 10 Hz correction stream rather than a
+// full generic environmentEntitySnapshot every tick.
+const dirtyRockMotionIds = new Set();
+// Immutable tree positions used only by server-side Hurl collision. These are
+// deliberately separate from sharedEnvironment because they have no mutable
+// state to replicate.
+const staticHurlTreesByMap = new Map();
 
 const sharedResources = new Map();
 let nextSharedResourceId = 1;
 
 let environmentSpreadTimer = 0;
-const ENVIRONMENT_SPREAD_INTERVAL = 0.24;
+const ENVIRONMENT_SPREAD_INTERVAL = STATUS_RULES.environmentSpreadInterval;
 
 // Regrowth uses one timestamp stored on the existing environment entity.
 // There are no per-tree/per-grass setTimeout timers.
-const TREE_REGROW_MIN_MS = 180_000;
-const TREE_REGROW_MAX_MS = 240_000;
-const GRASS_REGROW_MIN_MS = 90_000;
-const GRASS_REGROW_MAX_MS = 120_000;
+const TREE_REGROW_MIN_MS = 360_000;
+const TREE_REGROW_MAX_MS = 540_000;
+const GRASS_REGROW_MIN_MS = 180_000;
+const GRASS_REGROW_MAX_MS = 300_000;
+const FLOWER_REGROW_MIN_MS = 600_000;
+const FLOWER_REGROW_MAX_MS = 900_000;
+const ROCK_REGROW_MIN_MS = 720_000;
+const ROCK_REGROW_MAX_MS = 1_080_000;
+const RESOURCE_REGROW_CLEAR_RADIUS = 96;
 
 function randomRegrowTimestamp(
   minMs,
@@ -884,6 +1756,42 @@ function scheduleGrassRegrow(entity) {
   return true;
 }
 
+function scheduleFlowerRegrow(entity) {
+  if (
+    !entity ||
+    entity.kind !== "flower" ||
+    entity.regrowAt > 0
+  ) {
+    return false;
+  }
+
+  entity.regrowAt =
+    randomRegrowTimestamp(
+      FLOWER_REGROW_MIN_MS,
+      FLOWER_REGROW_MAX_MS
+    );
+
+  return true;
+}
+
+function scheduleRockRegrow(entity) {
+  if (
+    !entity ||
+    entity.kind !== "rock" ||
+    entity.regrowAt > 0
+  ) {
+    return false;
+  }
+
+  entity.regrowAt =
+    randomRegrowTimestamp(
+      ROCK_REGROW_MIN_MS,
+      ROCK_REGROW_MAX_MS
+    );
+
+  return true;
+}
+
 function resetTreeToFresh(entity) {
   entity.hp = entity.maxHp;
   entity.isStump = false;
@@ -908,6 +1816,91 @@ function resetGrassToFresh(entity) {
   entity.regrowAt = 0;
 
   markEnvironmentDirty(entity);
+}
+
+function resetFlowerToFresh(entity) {
+  entity.cut = false;
+  entity.burnt = false;
+  entity.burnTime = 0;
+  entity.looted = false;
+  entity.regrowAt = 0;
+
+  markEnvironmentDirty(entity);
+}
+
+function livingPlayerNearEnvironmentHome(
+  entity,
+  radius = RESOURCE_REGROW_CLEAR_RADIUS
+) {
+  if (!entity) return false;
+
+  const homeX = Number(entity.homeX ?? entity.x) || 0;
+  const homeY = Number(entity.homeY ?? entity.y) || 0;
+  const radiusSquared = radius * radius;
+
+  for (const playerState of players.values()) {
+    if (
+      playerState.mapId !== entity.mapId ||
+      playerState.hp <= 0
+    ) {
+      continue;
+    }
+
+    const dx = playerState.x - homeX;
+    const dy = playerState.y - homeY;
+    if (dx * dx + dy * dy <= radiusSquared) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function livingPlayerNearRockHome(entity, radius = RESOURCE_REGROW_CLEAR_RADIUS) {
+  return Boolean(
+    entity?.kind === "rock" &&
+    livingPlayerNearEnvironmentHome(entity, radius)
+  );
+}
+
+function resetRockToFresh(entity) {
+  entity.hp = entity.maxHp;
+  entity.depleted = false;
+  entity.regrowAt = 0;
+  entity.x = entity.homeX;
+  entity.y = entity.homeY;
+  entity.carriedBy = null;
+  entity.pickupTime = 0;
+  entity.hurlTime = 0;
+  entity.hurlVelocityX = 0;
+  entity.hurlVelocityY = 0;
+  entity.hurlThrownBy = null;
+  entity.rollTime = 0;
+  entity.rollVelocityX = 0;
+  entity.rollVelocityY = 0;
+  markEnvironmentDirty(entity, true);
+}
+
+function environmentMapBucket(mapId, create = false) {
+  if (!mapId) return null;
+
+  let bucket = sharedEnvironmentByMap.get(mapId) || null;
+
+  if (!bucket && create) {
+    bucket = new Map();
+    sharedEnvironmentByMap.set(mapId, bucket);
+  }
+
+  return bucket;
+}
+
+function registerSharedEnvironmentEntity(entity) {
+  if (!entity?.id || !entity.mapId) return false;
+  if (sharedEnvironment.has(entity.id)) return false;
+
+  sharedEnvironment.set(entity.id, entity);
+  environmentMapBucket(entity.mapId, true).set(entity.id, entity);
+  return true;
 }
 
 function environmentEntitySnapshot(entity) {
@@ -946,6 +1939,31 @@ function environmentEntitySnapshot(entity) {
     };
   }
 
+  if (entity.kind === "rock") {
+    return {
+      ...common,
+      homeX: entity.homeX,
+      homeY: entity.homeY,
+      variant: entity.variant || "plain",
+      hp: entity.hp,
+      maxHp: entity.maxHp,
+      depleted: Boolean(entity.depleted),
+      carriedBy: entity.carriedBy || null,
+      pickupTime: Number((entity.pickupTime || 0).toFixed(3)),
+      pickupDuration: entity.pickupDuration || 0.18,
+      pickupDirX: Number((entity.pickupDirX || 0).toFixed(3)),
+      pickupDirY: Number((entity.pickupDirY || 0).toFixed(3)),
+      hurlTime: Number((entity.hurlTime || 0).toFixed(3)),
+      hurlDuration: entity.hurlDuration || 0.58,
+      hurlVelocityX: Number((entity.hurlVelocityX || 0).toFixed(2)),
+      hurlVelocityY: Number((entity.hurlVelocityY || 0).toFixed(2)),
+      rollTime: Number((entity.rollTime || 0).toFixed(3)),
+      rollDuration: entity.rollDuration || 0.24,
+      rollVelocityX: Number((entity.rollVelocityX || 0).toFixed(2)),
+      rollVelocityY: Number((entity.rollVelocityY || 0).toFixed(2))
+    };
+  }
+
   return {
     ...common,
     cut: entity.cut,
@@ -957,44 +1975,120 @@ function environmentEntitySnapshot(entity) {
   };
 }
 
-function sharedEnvironmentSnapshot() {
-  return [...sharedEnvironment.values()]
+function environmentEntityHasNonDefaultState(entity) {
+  if (!entity) return false;
+  if (entity.kind === "tree") {
+    return entity.hp < entity.maxHp || entity.isStump || entity.falling ||
+      entity.canopyBurnTime > 0 || entity.canopyBurned;
+  }
+  if (entity.kind === "grass") {
+    return Boolean(entity.cut || entity.burnt || entity.burnTime > 0);
+  }
+  if (entity.kind === "rock") {
+    return Boolean(
+      entity.hp < entity.maxHp ||
+      entity.depleted ||
+      entity.carriedBy ||
+      entity.hurlTime > 0 ||
+      entity.rollTime > 0 ||
+      Math.abs(entity.x - entity.homeX) > 0.01 ||
+      Math.abs(entity.y - entity.homeY) > 0.01
+    );
+  }
+  return Boolean(entity.cut || entity.burnt || entity.burnTime > 0 || entity.looted);
+}
+
+function sharedEnvironmentChangesSnapshot(mapId) {
+  return environmentEntitiesOnMap(mapId)
+    .filter(environmentEntityHasNonDefaultState)
     .map(environmentEntitySnapshot);
 }
 
-function markEnvironmentDirty(entity) {
-  if (entity?.id) {
-    dirtyEnvironmentIds.add(entity.id);
+function markEnvironmentDirty(entity, fullState = false) {
+  if (!entity?.id) return;
+
+  if (entity.kind === "rock" && !fullState) {
+    dirtyRockMotionIds.add(entity.id);
+    return;
+  }
+
+  if (entity.kind === "rock") {
+    dirtyRockMotionIds.delete(entity.id);
+  }
+  dirtyEnvironmentIds.add(entity.id);
+}
+
+function compactRockMotionSnapshot(rock) {
+  return [
+    rock.id,
+    Number((Number(rock.x) || 0).toFixed(2)),
+    Number((Number(rock.y) || 0).toFixed(2))
+  ];
+}
+
+function flushRockMotionPatches() {
+  if (dirtyRockMotionIds.size === 0) return;
+
+  const byMap = new Map();
+
+  for (const entityId of dirtyRockMotionIds) {
+    const rock = sharedEnvironment.get(entityId);
+    if (!rock || rock.kind !== "rock") continue;
+
+    if (!byMap.has(rock.mapId)) byMap.set(rock.mapId, []);
+    byMap.get(rock.mapId).push(compactRockMotionSnapshot(rock));
+  }
+
+  dirtyRockMotionIds.clear();
+
+  for (const [mapId, rocks] of byMap.entries()) {
+    if (!rocks.length) continue;
+    broadcastToMap(mapId, {
+      type: "rockMotion",
+      mapId,
+      rocks
+    });
   }
 }
 
 function flushEnvironmentPatches() {
-  if (dirtyEnvironmentIds.size === 0) return;
+  if (dirtyEnvironmentIds.size > 0) {
+    const byMap = new Map();
 
-  const entities = [];
+    for (const entityId of dirtyEnvironmentIds) {
+      const entity = sharedEnvironment.get(entityId);
+      if (!entity) continue;
 
-  for (const entityId of dirtyEnvironmentIds) {
-    const entity = sharedEnvironment.get(entityId);
-    if (entity) {
-      entities.push(environmentEntitySnapshot(entity));
+      if (!byMap.has(entity.mapId)) {
+        byMap.set(entity.mapId, []);
+      }
+
+      byMap.get(entity.mapId).push(
+        environmentEntitySnapshot(entity)
+      );
+    }
+
+    dirtyEnvironmentIds.clear();
+
+    for (const [mapId, entities] of byMap.entries()) {
+      if (entities.length === 0) continue;
+
+      broadcastToMap(mapId, {
+        type: "environmentPatch",
+        mapId,
+        entities
+      });
     }
   }
 
-  dirtyEnvironmentIds.clear();
-
-  if (entities.length > 0) {
-    broadcast({
-      type: "environmentPatch",
-      entities
-    });
-  }
+  flushRockMotionPatches();
 }
 
 function sanitizeEnvironmentCatalogEntity(mapId, source) {
   if (
     !source ||
     typeof source !== "object" ||
-    !["tree", "grass", "flower"].includes(source.kind)
+    !["tree", "grass", "flower", "rock"].includes(source.kind)
   ) {
     return null;
   }
@@ -1009,8 +2103,9 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
     return null;
   }
 
-  const x = clampNumber(source.x, 0, 640, 0);
-  const y = clampNumber(source.y, 0, 400, 0);
+  const dimensions = mapWorldDimensions(mapId);
+  const x = clampNumber(source.x, 0, dimensions.width, 0);
+  const y = clampNumber(source.y, 0, dimensions.height, 0);
 
   if (kind === "tree") {
     return {
@@ -1041,7 +2136,9 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
         0,
         8,
         0
-      )
+      ),
+      fireImmune: Boolean(source.fireImmune),
+      nonInteractive: Boolean(source.nonInteractive)
     };
   }
 
@@ -1057,7 +2154,42 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       burnt: false,
       burnTime: 0,
       burnDuration: 1.05,
-      regrowAt: 0
+      regrowAt: 0,
+      width: clampNumber(source.width, 6, 40, 13)
+    };
+  }
+
+  if (kind === "rock") {
+    return {
+      id,
+      mapId,
+      kind,
+      x,
+      y,
+      homeX: x,
+      homeY: y,
+      variant:
+        source.variant === "grass"
+          ? "grass"
+          : "plain",
+      hp: 3,
+      maxHp: 3,
+      depleted: false,
+      regrowAt: 0,
+      carriedBy: null,
+      pickupTime: 0,
+      pickupDuration: 0.18,
+      pickupDirX: 0,
+      pickupDirY: 0,
+      hurlTime: 0,
+      hurlDuration: 0.58,
+      hurlVelocityX: 0,
+      hurlVelocityY: 0,
+      hurlThrownBy: null,
+      rollTime: 0,
+      rollDuration: 0.24,
+      rollVelocityX: 0,
+      rollVelocityY: 0
     };
   }
 
@@ -1073,6 +2205,7 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
     burnTime: 0,
     burnDuration: 1.15,
     looted: false,
+    regrowAt: 0,
 
     flowerType:
       source.flowerType === "blue"
@@ -1081,9 +2214,45 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
   };
 }
 
+function registerStaticHurlTreeCatalog(mapId, sourceTrees) {
+  if (!Array.isArray(sourceTrees)) return false;
+
+  const dimensions = mapWorldDimensions(mapId);
+  const existing = staticHurlTreesByMap.get(mapId) || [];
+  const trees = existing.slice();
+  const seen = new Set(
+    trees.map(tree => `${Number(tree.x).toFixed(2)}:${Number(tree.y).toFixed(2)}`)
+  );
+  let added = 0;
+
+  for (const source of sourceTrees.slice(0, 500)) {
+    if (!Array.isArray(source) || source.length < 2) continue;
+
+    const x = clampNumber(source[0], 0, dimensions.width, 0);
+    const y = clampNumber(source[1], 0, dimensions.height, 0);
+    const key = `${x.toFixed(2)}:${y.toFixed(2)}`;
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    trees.push({ x, y });
+    added += 1;
+  }
+
+  if (added > 0 || !staticHurlTreesByMap.has(mapId)) {
+    staticHurlTreesByMap.set(mapId, trees);
+  }
+
+  return added > 0;
+}
+
+function staticHurlTreesOnMap(mapId) {
+  return staticHurlTreesByMap.get(mapId) || [];
+}
+
 function handleEnvironmentCatalog(
   playerId,
-  message
+  message,
+  socket = null
 ) {
   const playerState = players.get(playerId);
   if (!playerState) return;
@@ -1096,9 +2265,31 @@ function handleEnvironmentCatalog(
       ? message.entities.slice(0, 500)
       : [];
 
+  const compactStaticTrees = Array.isArray(message.staticTrees)
+    ? message.staticTrees
+    : [];
+
+  const staticCatalogAdded = registerStaticHurlTreeCatalog(
+    mapId,
+    compactStaticTrees
+  );
+
   let addedAny = false;
+  let mutableCatalogCount = 0;
 
   for (const source of entities) {
+    // Immutable perimeter trees belong in staticTrees and never enter the
+    // mutable authoritative environment registry.
+    if (
+      source?.kind === "tree" &&
+      Boolean(source.fireImmune) &&
+      Boolean(source.nonInteractive)
+    ) {
+      continue;
+    }
+
+    mutableCatalogCount += 1;
+
     const entity =
       sanitizeEnvironmentCatalogEntity(
         mapId,
@@ -1109,32 +2300,39 @@ function handleEnvironmentCatalog(
 
     // Existing authoritative state always wins over a reconnecting/default
     // client's catalog.
-    if (!sharedEnvironment.has(entity.id)) {
-      sharedEnvironment.set(
-        entity.id,
-        entity
-      );
-
+    if (registerSharedEnvironmentEntity(entity)) {
       addedAny = true;
     }
   }
 
-  // Send the complete authority after registration. This also corrects random
-  // canopy variants on later clients to the first registered version.
-  broadcast({
-    type: "environmentSnapshot",
-    entities: sharedEnvironmentSnapshot()
-  });
+  // The connection/map-entry path already sends the authoritative environment
+  // for the player's current map. Only the very first catalog registration for
+  // that current map needs a reply (the server had no state to send yet).
+  // Off-map catalogs are registration-only: their state will be sent if/when
+  // the player actually enters that map.
+  if (
+    socket &&
+    addedAny &&
+    playerState.mapId === mapId
+  ) {
+    sendJson(socket, {
+      type: "environmentSnapshot",
+      mapId,
+      sparse: true,
+      entities: sharedEnvironmentChangesSnapshot(mapId)
+    });
+  }
 
-  if (addedAny) {
+  if (addedAny || staticCatalogAdded) {
     console.log(
-      `Environment catalog registered for ${mapId}: ${entities.length}`
+      `Environment catalog registered for ${mapId}: ${mutableCatalogCount} mutable + ${staticHurlTreesOnMap(mapId).length} static trees`
     );
   }
 }
 
-function sharedResourceSnapshot() {
+function sharedResourceSnapshot(mapId = null) {
   return [...sharedResources.values()]
+    .filter(resource => !mapId || resource.mapId === mapId)
     .map(resource => ({
       id: resource.id,
       mapId: resource.mapId,
@@ -1153,7 +2351,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "flower", "goldSlimeBubble"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble"].includes(kind)) {
     return null;
   }
 
@@ -1178,7 +2376,7 @@ function spawnSharedResource(
     resource
   );
 
-  broadcast({
+  broadcastToMap(mapId, {
     type: "resourceSpawn",
     resource: {
       ...resource
@@ -1196,11 +2394,13 @@ function removeSharedResource(
     return false;
   }
 
+  const resource = sharedResources.get(resourceId);
   sharedResources.delete(resourceId);
 
-  broadcast({
+  broadcastToMap(resource?.mapId, {
     type: "resourceRemoved",
     resourceId,
+    mapId: resource?.mapId || null,
     reason
   });
 
@@ -1219,6 +2419,8 @@ function tickSharedResources(dt) {
     }
   }
 }
+
+const SHARED_LOOT_PICKUP_RADIUS = 36;
 
 function handleResourcePickup(
   playerId,
@@ -1239,25 +2441,32 @@ function handleResourcePickup(
     (playerState.y - 4) - resource.y
   );
 
-  if (distance > 14) return;
+  // The browser starts magnet pickup at 24 px. Keep a wider server grace
+  // radius so ordinary movement replication delay does not reject a pickup
+  // that was visibly in range on the collecting player's screen.
+  if (distance > SHARED_LOOT_PICKUP_RADIUS) return;
 
   // Remove first so pickup races have exactly one winner.
   sharedResources.delete(resource.id);
 
   if (resource.kind === "wood") {
     playerState.wood += 1;
+  } else if (resource.kind === "stone") {
+    playerState.stone += 1;
   } else if (resource.kind === "flower") {
     playerState.flowers += 1;
   } else if (resource.kind === "goldSlimeBubble") {
     playerState.goldSlimeBubbles += 1;
   }
 
-  broadcast({
+  broadcastToMap(resource.mapId, {
     type: "resourcePicked",
     resourceId: resource.id,
     resourceKind: resource.kind,
+    mapId: resource.mapId,
     collectorId: playerId,
     totalWood: playerState.wood,
+    totalStone: playerState.stone,
     totalFlowers: playerState.flowers,
     totalGoldSlimeBubbles: playerState.goldSlimeBubbles
   });
@@ -1430,6 +2639,7 @@ const SHOP_ITEM_IDS = new Set([
   "weapon_shepherdStaff",
   "weapon_lostKey",
   "weapon_hugeSunflower",
+  "weapon_pickaxe",
 
   "hat_original",
   "hat_blueCap",
@@ -1440,6 +2650,7 @@ const SHOP_ITEM_IDS = new Set([
   "hat_bandana",
   "hat_ranger",
   "hat_wood",
+  "hat_arcanist",
 
   "shirt_traveler",
   "shirt_jester",
@@ -1447,13 +2658,15 @@ const SHOP_ITEM_IDS = new Set([
   "shirt_knight",
   "shirt_ranger",
   "shirt_wood",
+  "shirt_arcanist",
 
   "pants_traveler",
   "pants_jester",
   "pants_ninja",
   "pants_knight",
   "pants_ranger",
-  "pants_wood"
+  "pants_wood",
+  "pants_arcanist"
 ]);
 
 function handleShopPurchase(
@@ -1579,18 +2792,15 @@ function environmentEntitiesOnMap(
   mapId,
   kind = null
 ) {
-  const result = [];
+  const bucket = environmentMapBucket(mapId);
+  if (!bucket) return [];
 
-  for (const entity of sharedEnvironment.values()) {
-    if (
-      entity.mapId === mapId &&
-      (!kind || entity.kind === kind)
-    ) {
-      result.push(entity);
-    }
+  if (!kind) {
+    return [...bucket.values()];
   }
 
-  return result;
+  return [...bucket.values()]
+    .filter(entity => entity.kind === kind);
 }
 
 function environmentMeleeValid(
@@ -1639,9 +2849,11 @@ function environmentMeleeValid(
 
 function igniteEnvironmentEntity(entity, sourcePlayerId = null) {
   if (!entity) return false;
+  if (entity.kind === "rock") return false;
 
   if (entity.kind === "tree") {
     if (
+      entity.fireImmune ||
       entity.isStump ||
       entity.falling ||
       entity.canopyBurned ||
@@ -1655,6 +2867,7 @@ function igniteEnvironmentEntity(entity, sourcePlayerId = null) {
     entity.burnSourcePlayerId = sourcePlayerId || entity.burnSourcePlayerId || null;
 
     markEnvironmentDirty(entity);
+    fireDiagnostics.environmentIgnitions += 1;
     return true;
   }
 
@@ -1676,11 +2889,13 @@ function igniteEnvironmentEntity(entity, sourcePlayerId = null) {
   }
 
   markEnvironmentDirty(entity);
+  fireDiagnostics.environmentIgnitions += 1;
   return true;
 }
 
 function extinguishEnvironmentEntity(entity) {
   if (!entity) return false;
+  if (entity.kind === "rock") return false;
 
   if (entity.kind === "tree") {
     if (entity.canopyBurnTime <= 0) {
@@ -1834,8 +3049,11 @@ function igniteServerLivingNear(
   x,
   y,
   radius,
-  sourcePlayerId = null
+  sourcePlayerId = null,
+  burnDamagePerTick = STATUS_RULES.enemyBurnDamagePerTick
 ) {
+  let changed = false;
+
   for (
     const enemy
     of sharedEnemiesOnMap(mapId)
@@ -1861,10 +3079,11 @@ function igniteServerLivingNear(
 
     // Wet enemies resist ordinary environmental ignition. If they do catch,
     // keep the original player attribution attached to the whole fire chain.
-    applyServerEnemyBurn(enemy, {
+    changed = applyServerEnemyBurn(enemy, {
       sourcePlayerId,
-      duration: STATUS_RULES.enemyBurnDuration
-    });
+      duration: STATUS_RULES.enemyBurnDuration,
+      damagePerTick: burnDamagePerTick
+    }) || changed;
   }
 
   for (const playerState of players.values()) {
@@ -1885,21 +3104,48 @@ function igniteServerLivingNear(
       continue;
     }
 
-    if (!applyServerPlayerBurn(playerState)) {
+    if (
+      !playerOwnedEffectMayAffectTarget(
+        sourcePlayerId,
+        playerState
+      )
+    ) {
       continue;
     }
 
-    broadcast({
-      type: "playerIgnited",
-      targetId: playerState.id,
-      mapId,
-      burnTime: playerState.burnTime
-    });
+    const pvpSource =
+      sourcePlayerId &&
+      sourcePlayerId !== playerState.id
+        ? players.get(sourcePlayerId)
+        : null;
+
+    if (!applyServerPlayerBurn(
+      playerState,
+      {
+        duration:
+          pvpSource
+            ? PVP_PLAYER_BURN_DURATION
+            : STATUS_RULES.playerBurnDuration,
+        sourcePlayerId: sourcePlayerId || null
+      }
+    )) {
+      continue;
+    }
+
+    if (pvpSource) {
+      applyPvpCombatLock(pvpSource, playerState);
+    }
+
+    changed = true;
+    broadcastServerPlayerBurnState(playerState);
   }
+
+  return changed;
 }
 
 function spreadSharedEnvironmentFire() {
   const sources = [];
+  fireDiagnostics.spreadPulses += 1;
 
   for (const entity of sharedEnvironment.values()) {
     const burning =
@@ -1923,12 +3169,15 @@ function spreadSharedEnvironmentFire() {
       continue;
     }
 
+    ensureServerEnemyStatusState(enemy);
+
     const profile = serverEnemyProfile(enemy);
     const body = serverEnemyBodyPoint(enemy);
 
     sources.push({
       mapId: enemy.mapId,
       sourcePlayerId: enemy.lastDamagePlayerId || enemy.aggroTargetId || null,
+      burnDamagePerTick: enemy.burnDamagePerTick,
       x: body.x,
       y: body.y,
       radius: 13,
@@ -1941,7 +3190,9 @@ function spreadSharedEnvironmentFire() {
     if (playerState.burnTime > 0) {
       sources.push({
         mapId: playerState.mapId,
-        sourcePlayerId: playerState.id,
+        sourcePlayerId:
+          playerState.burnSourcePlayerId ||
+          null,
         x: playerState.x,
         y: playerState.y - 8,
         radius: 13,
@@ -1949,6 +3200,8 @@ function spreadSharedEnvironmentFire() {
       });
     }
   }
+
+  fireDiagnostics.spreadSources += sources.length;
 
   // Snapshot first: newly ignited vegetation waits for the next spread pulse.
   for (const source of sources) {
@@ -1972,8 +3225,468 @@ function spreadSharedEnvironmentFire() {
         11,
         source.radius - 1
       ),
+      source.sourcePlayerId || null,
+      source.burnDamagePerTick || STATUS_RULES.enemyBurnDamagePerTick
+    );
+
+    igniteServerRainGrassNear(
+      source.mapId,
+      source.x,
+      source.y,
+      source.radius,
       source.sourcePlayerId || null
     );
+
+  }
+}
+
+function spawnRockStoneDrops(rock) {
+  const offsets = [-4, 4];
+  for (const offsetX of offsets) {
+    spawnSharedResource(
+      rock.mapId,
+      "stone",
+      rock.x + offsetX,
+      rock.y - 1
+    );
+  }
+}
+
+function damageServerRock(
+  rock,
+  amount = 1,
+  sourcePlayerId = null,
+  source = "mining"
+) {
+  if (
+    !rock ||
+    rock.kind !== "rock" ||
+    rock.depleted
+  ) {
+    return false;
+  }
+
+  const damage = Math.max(1, Math.floor(Number(amount) || 1));
+  rock.hp = Math.max(0, (Number(rock.hp) || rock.maxHp || 3) - damage);
+
+  if (rock.hp <= 0) {
+    rock.hp = 0;
+    rock.depleted = true;
+    rock.carriedBy = null;
+    rock.pickupTime = 0;
+    rock.hurlTime = 0;
+    rock.hurlVelocityX = 0;
+    rock.hurlVelocityY = 0;
+    rock.hurlThrownBy = null;
+    rock.rollTime = 0;
+    rock.rollVelocityX = 0;
+    rock.rollVelocityY = 0;
+    scheduleRockRegrow(rock);
+    spawnRockStoneDrops(rock);
+
+    if (source === "mining" && sourcePlayerId) {
+      sendToPlayer(sourcePlayerId, {
+        type: "environmentReward",
+        targetId: sourcePlayerId,
+        reward: "miningExp",
+        amount: 1
+      });
+    }
+  }
+
+  markEnvironmentDirty(rock, true);
+  return rock.depleted;
+}
+
+function ensureServerRockHurlState(rock) {
+  if (!rock || rock.kind !== "rock") return rock;
+
+  rock.carriedBy =
+    typeof rock.carriedBy === "string"
+      ? rock.carriedBy
+      : null;
+  rock.pickupTime = Math.max(0, Number(rock.pickupTime) || 0);
+  rock.pickupDuration = Math.max(0.01, Number(rock.pickupDuration) || 0.18);
+  rock.pickupDirX = Number(rock.pickupDirX) || 0;
+  rock.pickupDirY = Number(rock.pickupDirY) || 0;
+  rock.hurlTime = Math.max(0, Number(rock.hurlTime) || 0);
+  rock.hurlDuration = Math.max(0.01, Number(rock.hurlDuration) || 0.58);
+  rock.hurlVelocityX = Number(rock.hurlVelocityX) || 0;
+  rock.hurlVelocityY = Number(rock.hurlVelocityY) || 0;
+  rock.hurlThrownBy =
+    typeof rock.hurlThrownBy === "string"
+      ? rock.hurlThrownBy
+      : null;
+  rock.rollTime = Math.max(0, Number(rock.rollTime) || 0);
+  rock.rollDuration = Math.max(0.01, Number(rock.rollDuration) || 0.24);
+  rock.rollVelocityX = Number(rock.rollVelocityX) || 0;
+  rock.rollVelocityY = Number(rock.rollVelocityY) || 0;
+  return rock;
+}
+
+function broadcastRockState(rock, stateCode) {
+  if (!rock || rock.kind !== "rock") return;
+
+  dirtyRockMotionIds.delete(rock.id);
+
+  let packet;
+
+  if (stateCode === "c") {
+    packet = [
+      rock.id,
+      "c",
+      rock.carriedBy || null,
+      Number((rock.pickupTime || 0).toFixed(3)),
+      Number((rock.pickupDirX || 0).toFixed(2)),
+      Number((rock.pickupDirY || 0).toFixed(2))
+    ];
+  } else if (stateCode === "t") {
+    packet = [
+      rock.id,
+      "t",
+      Number((rock.x || 0).toFixed(2)),
+      Number((rock.y || 0).toFixed(2)),
+      Number((rock.hurlDuration || 0.58).toFixed(3)),
+      Number((rock.hurlVelocityX || 0).toFixed(2)),
+      Number((rock.hurlVelocityY || 0).toFixed(2))
+    ];
+  } else if (stateCode === "r") {
+    packet = [
+      rock.id,
+      "r",
+      Number((rock.x || 0).toFixed(2)),
+      Number((rock.y || 0).toFixed(2)),
+      Number((rock.rollDuration || 0.24).toFixed(3)),
+      Number((rock.rollVelocityX || 0).toFixed(2)),
+      Number((rock.rollVelocityY || 0).toFixed(2))
+    ];
+  } else {
+    packet = [
+      rock.id,
+      "i",
+      Number((rock.x || 0).toFixed(2)),
+      Number((rock.y || 0).toFixed(2))
+    ];
+  }
+
+  broadcastToMap(rock.mapId, {
+    type: "rockState",
+    mapId: rock.mapId,
+    rock: packet
+  });
+}
+
+function clearServerRockHurlState(rock) {
+  if (!rock || rock.kind !== "rock") return;
+  rock.carriedBy = null;
+  rock.pickupTime = 0;
+  rock.pickupDirX = 0;
+  rock.pickupDirY = 0;
+  rock.hurlTime = 0;
+  rock.hurlVelocityX = 0;
+  rock.hurlVelocityY = 0;
+  rock.hurlThrownBy = null;
+  rock.rollTime = 0;
+  rock.rollVelocityX = 0;
+  rock.rollVelocityY = 0;
+  broadcastRockState(rock, "i");
+}
+
+function playerCarriesAnyHurlObject(playerId) {
+  if (!playerId) return false;
+
+  if (
+    allSharedEnemies().some(enemy =>
+      enemy.carriedBy === playerId
+    )
+  ) {
+    return true;
+  }
+
+  return environmentEntitiesOnMap(
+    players.get(playerId)?.mapId,
+    "rock"
+  ).some(rock => rock.carriedBy === playerId);
+}
+
+function finishServerRockHurl(rock) {
+  if (!rock || rock.kind !== "rock") return;
+  clearServerRockHurlState(rock);
+}
+
+function startServerRockLandingRoll(rock) {
+  if (!rock || rock.kind !== "rock") return;
+
+  const velocityX = Number(rock.hurlVelocityX) || 0;
+  const velocityY = Number(rock.hurlVelocityY) || 0;
+  const speed = Math.hypot(velocityX, velocityY);
+
+  rock.carriedBy = null;
+  rock.pickupTime = 0;
+  rock.hurlTime = 0;
+  rock.hurlThrownBy = null;
+  rock.hurlVelocityX = 0;
+  rock.hurlVelocityY = 0;
+
+  if (speed < 1) {
+    rock.rollTime = 0;
+    rock.rollVelocityX = 0;
+    rock.rollVelocityY = 0;
+    broadcastRockState(rock, "i");
+    return;
+  }
+
+  const rollSpeed = 68;
+  rock.rollTime = rock.rollDuration;
+  rock.rollVelocityX = (velocityX / speed) * rollSpeed;
+  rock.rollVelocityY = (velocityY / speed) * rollSpeed;
+  broadcastRockState(rock, "r");
+}
+
+function rockRollHitsEnemy(rock, x, y) {
+  return sharedEnemiesOnMap(rock.mapId).some(target =>
+    target.alive &&
+    !target.carriedBy &&
+    Math.hypot(target.x - x, target.y - y) <= 9
+  );
+}
+
+function tickServerRockRoll(rock, dt) {
+  if ((Number(rock.rollTime) || 0) <= 0) return false;
+
+  const duration = Math.max(0.01, Number(rock.rollDuration) || 0.24);
+  const remainingFraction = Math.max(0, Math.min(1, rock.rollTime / duration));
+  const velocityX = (Number(rock.rollVelocityX) || 0) * remainingFraction;
+  const velocityY = (Number(rock.rollVelocityY) || 0) * remainingFraction;
+  const nextX = rock.x + velocityX * dt;
+  const nextY = rock.y + velocityY * dt;
+
+  rock.rollTime = Math.max(0, rock.rollTime - dt);
+
+  if (
+    !mapPointAllowed(rock.mapId, nextX, nextY) ||
+    hurlObjectHitsTree(rock.mapId, nextX, nextY) ||
+    rockRollHitsEnemy(rock, nextX, nextY)
+  ) {
+    finishServerRockHurl(rock);
+    return true;
+  }
+
+  rock.x = nextX;
+  rock.y = nextY;
+  markEnvironmentDirty(rock);
+
+  if (rock.rollTime <= 0) {
+    finishServerRockHurl(rock);
+  }
+
+  return true;
+}
+
+function tryRockHurlCollision(rock) {
+  const attackerId = rock.hurlThrownBy;
+  const velocityX = rock.hurlVelocityX;
+  const velocityY = rock.hurlVelocityY;
+
+  for (const target of sharedEnemiesOnMap(rock.mapId)) {
+    if (
+      !target.alive ||
+      target.carriedBy ||
+      target.hurlTime > 0
+    ) {
+      continue;
+    }
+
+    if (Math.hypot(target.x - rock.x, target.y - rock.y) > 11) {
+      continue;
+    }
+
+    broadcastHurlEnemyDamage(
+      target,
+      8 + Math.floor(Math.random() * 5),
+      attackerId,
+      "hurlRock",
+      velocityX,
+      velocityY
+    );
+
+    if (damageServerRock(rock, 1, attackerId, "hurl")) {
+      return true;
+    }
+
+    finishServerRockHurl(rock);
+    return true;
+  }
+
+  if (
+    hurlObjectHitsTree(
+      rock.mapId,
+      rock.x,
+      rock.y
+    )
+  ) {
+    // Trees are solid Hurl obstacles, not Hurl damage targets. The impact still
+    // chips the thrown rock itself.
+    if (damageServerRock(rock, 1, attackerId, "hurl")) {
+      return true;
+    }
+    finishServerRockHurl(rock);
+    return true;
+  }
+
+  return false;
+}
+
+function tickServerRockHurl(rock, dt) {
+  ensureServerRockHurlState(rock);
+
+  if (rock.carriedBy) {
+    const carrier = players.get(rock.carriedBy);
+
+    if (
+      !carrier ||
+      carrier.hp <= 0 ||
+      carrier.mapId !== rock.mapId
+    ) {
+      clearServerRockHurlState(rock);
+      return;
+    }
+
+    // Carried rocks piggyback visually on the already-replicated player
+    // position. Keep the authoritative server coordinate current for a future
+    // throw/disconnect, but send no rock motion packets while carried.
+    rock.x = carrier.x;
+    rock.y = carrier.y;
+    rock.pickupTime = Math.max(0, rock.pickupTime - dt);
+    return;
+  }
+
+  if (tickServerRockRoll(rock, dt)) return;
+  if (rock.hurlTime <= 0) return;
+
+  rock.hurlTime = Math.max(0, rock.hurlTime - dt);
+
+  const nextX = rock.x + rock.hurlVelocityX * dt;
+  const nextY = rock.y + rock.hurlVelocityY * dt;
+
+  // The large black void is visual space, not legal Hurl space. Rocks land at
+  // their last valid grass position when their center hits the island wall.
+  if (!mapPointAllowed(rock.mapId, nextX, nextY)) {
+    if (!damageServerRock(rock, 1, rock.hurlThrownBy, "hurl")) {
+      finishServerRockHurl(rock);
+    }
+    return;
+  }
+
+  rock.x = nextX;
+  rock.y = nextY;
+  markEnvironmentDirty(rock);
+
+  if (tryRockHurlCollision(rock)) return;
+
+  if (rock.hurlTime <= 0) {
+    if (damageServerRock(rock, 1, rock.hurlThrownBy, "hurl")) {
+      return;
+    }
+    startServerRockLandingRoll(rock);
+  }
+}
+
+function handleRockHurlAction(
+  playerId,
+  rock,
+  action,
+  payload
+) {
+  const playerState = players.get(playerId);
+
+  if (
+    !playerState ||
+    playerState.hp <= 0 ||
+    !rock ||
+    rock.kind !== "rock" ||
+    rock.depleted ||
+    rock.mapId !== playerState.mapId
+  ) {
+    return;
+  }
+
+  ensureServerRockHurlState(rock);
+
+  if (action === "hurlGrab") {
+    if (rock.carriedBy || rock.hurlTime > 0 || rock.rollTime > 0) return;
+    if (playerCarriesAnyHurlObject(playerId)) return;
+
+    const distance = Math.hypot(
+      rock.x - playerState.x,
+      rock.y - playerState.y
+    );
+
+    if (distance > 24) return;
+
+    if (
+      sharedEnemyActionRateLimited(
+        playerId,
+        rock.id,
+        "rockHurlGrab",
+        300
+      )
+    ) {
+      return;
+    }
+
+    const pickupDx = rock.x - playerState.x;
+    const pickupDy = rock.y - playerState.y;
+    const pickupLength = Math.hypot(pickupDx, pickupDy) || 1;
+
+    rock.carriedBy = playerId;
+    rock.pickupTime = rock.pickupDuration;
+    rock.pickupDirX = pickupDx / pickupLength;
+    rock.pickupDirY = pickupDy / pickupLength;
+    rock.hurlTime = 0;
+    rock.hurlVelocityX = 0;
+    rock.hurlVelocityY = 0;
+    rock.hurlThrownBy = null;
+    rock.rollTime = 0;
+    rock.rollVelocityX = 0;
+    rock.rollVelocityY = 0;
+    broadcastRockState(rock, "c");
+    return;
+  }
+
+  if (action === "hurlThrow") {
+    if (rock.carriedBy !== playerId) return;
+
+    const aimAngle = Number(payload.aimAngle);
+    if (!Number.isFinite(aimAngle)) return;
+
+    if (
+      sharedEnemyActionRateLimited(
+        playerId,
+        rock.id,
+        "rockHurlThrow",
+        220
+      )
+    ) {
+      return;
+    }
+
+    const throwSpeed = 126;
+
+    rock.x = playerState.x;
+    rock.y = playerState.y;
+    rock.carriedBy = null;
+    rock.pickupTime = 0;
+    rock.pickupDirX = 0;
+    rock.pickupDirY = 0;
+    rock.hurlTime = rock.hurlDuration;
+    rock.hurlVelocityX = Math.cos(aimAngle) * throwSpeed;
+    rock.hurlVelocityY = Math.sin(aimAngle) * throwSpeed;
+    rock.hurlThrownBy = playerId;
+    rock.rollTime = 0;
+    rock.rollVelocityX = 0;
+    rock.rollVelocityY = 0;
+    broadcastRockState(rock, "t");
   }
 }
 
@@ -1981,12 +3694,29 @@ function tickSharedEnvironment(dt) {
   const now = Date.now();
 
   for (const entity of sharedEnvironment.values()) {
+    if (entity.kind === "rock") {
+      if (
+        entity.depleted &&
+        entity.regrowAt > 0 &&
+        now >= entity.regrowAt
+      ) {
+        if (!livingPlayerNearRockHome(entity)) {
+          resetRockToFresh(entity);
+        }
+        continue;
+      }
+
+      if (!entity.depleted) {
+        tickServerRockHurl(entity, dt);
+      }
+      continue;
+    }
+
     if (
       entity.kind === "tree" &&
       entity.falling
     ) {
       entity.fallTime -= dt;
-      markEnvironmentDirty(entity);
 
       if (entity.fallTime <= 0) {
         entity.fallTime = 0;
@@ -2003,7 +3733,7 @@ function tickSharedEnvironment(dt) {
         );
 
         if (entity.lastHitPlayerId) {
-          broadcast({
+          sendToPlayer(entity.lastHitPlayerId, {
             type: "environmentReward",
             targetId:
               entity.lastHitPlayerId,
@@ -2021,7 +3751,6 @@ function tickSharedEnvironment(dt) {
       entity.canopyBurnTime > 0
     ) {
       entity.canopyBurnTime -= dt;
-      markEnvironmentDirty(entity);
 
       if (entity.canopyBurnTime <= 0) {
         entity.canopyBurnTime = 0;
@@ -2037,7 +3766,6 @@ function tickSharedEnvironment(dt) {
       entity.burnTime > 0
     ) {
       entity.burnTime -= dt;
-      markEnvironmentDirty(entity);
 
       if (entity.burnTime <= 0) {
         entity.burnTime = 0;
@@ -2051,6 +3779,7 @@ function tickSharedEnvironment(dt) {
 
         if (entity.kind === "flower") {
           entity.looted = true;
+          scheduleFlowerRegrow(entity);
         }
 
         markEnvironmentDirty(entity);
@@ -2062,7 +3791,9 @@ function tickSharedEnvironment(dt) {
       entity.regrowAt > 0 &&
       now >= entity.regrowAt
     ) {
-      resetTreeToFresh(entity);
+      if (!livingPlayerNearEnvironmentHome(entity)) {
+        resetTreeToFresh(entity);
+      }
       continue;
     }
 
@@ -2072,6 +3803,17 @@ function tickSharedEnvironment(dt) {
       now >= entity.regrowAt
     ) {
       resetGrassToFresh(entity);
+      continue;
+    }
+
+    if (
+      entity.kind === "flower" &&
+      entity.regrowAt > 0 &&
+      now >= entity.regrowAt
+    ) {
+      if (!livingPlayerNearEnvironmentHome(entity)) {
+        resetFlowerToFresh(entity);
+      }
     }
   }
 
@@ -2083,6 +3825,7 @@ function tickSharedEnvironment(dt) {
   ) {
     environmentSpreadTimer = 0;
     spreadSharedEnvironmentFire();
+    spreadServerRainGrassFire();
   }
 }
 
@@ -2105,17 +3848,19 @@ function handleEnvironmentAction(
     action === "igniteNear" ||
     action === "extinguishNear"
   ) {
+    const dimensions = mapWorldDimensions(playerState.mapId);
+
     const x = clampNumber(
       payload.x,
       0,
-      640,
+      dimensions.width,
       playerState.x
     );
 
     const y = clampNumber(
       payload.y,
       0,
-      400,
+      dimensions.height,
       playerState.y
     );
 
@@ -2148,8 +3893,21 @@ function handleEnvironmentAction(
         radius,
         playerId
       );
+      igniteServerRainGrassNear(
+        playerState.mapId,
+        x,
+        y,
+        radius,
+        playerId
+      );
     } else {
       extinguishEnvironmentNear(
+        playerState.mapId,
+        x,
+        y,
+        radius
+      );
+      extinguishServerRainGrassNear(
         playerState.mapId,
         x,
         y,
@@ -2171,9 +3929,55 @@ function handleEnvironmentAction(
     return;
   }
 
+  if (
+    entity.kind === "rock" &&
+    (
+      action === "hurlGrab" ||
+      action === "hurlThrow"
+    )
+  ) {
+    handleRockHurlAction(
+      playerId,
+      entity,
+      action,
+      payload
+    );
+    return;
+  }
+
+  if (action === "hitRock") {
+    if (
+      entity.kind !== "rock" ||
+      entity.depleted ||
+      entity.carriedBy ||
+      entity.hurlTime > 0 ||
+      entity.rollTime > 0 ||
+      !environmentMeleeValid(
+        playerState,
+        entity,
+        [11],
+        8,
+        7,
+        0.92
+      ) ||
+      sharedEnemyActionRateLimited(
+        playerId,
+        entity.id,
+        "mineRock",
+        250
+      )
+    ) {
+      return;
+    }
+
+    damageServerRock(entity, 1, playerId, "mining");
+    return;
+  }
+
   if (action === "hitTree") {
     if (
       entity.kind !== "tree" ||
+      entity.nonInteractive ||
       entity.isStump ||
       entity.falling ||
       !environmentMeleeValid(
@@ -2254,6 +4058,7 @@ function handleEnvironmentAction(
 
     entity.cut = true;
     entity.burnTime = 0;
+    scheduleFlowerRegrow(entity);
 
     if (!entity.looted) {
       entity.looted = true;
@@ -2281,8 +4086,10 @@ function handleEnvironmentAction(
 const sharedCoins = new Map();
 let nextSharedCoinId = 1;
 
-function sharedCoinSnapshot() {
-  return [...sharedCoins.values()].map(coin => ({
+function sharedCoinSnapshot(mapId = null) {
+  return [...sharedCoins.values()]
+    .filter(coin => !mapId || coin.mapId === mapId)
+    .map(coin => ({
     id: coin.id,
     mapId: coin.mapId,
     x: coin.x,
@@ -2302,7 +4109,7 @@ function spawnSharedCoin(mapId, x, y) {
 
   sharedCoins.set(coin.id, coin);
 
-  broadcast({
+  broadcastToMap(mapId, {
     type: "coinSpawn",
     coin: {
       ...coin
@@ -2315,11 +4122,13 @@ function spawnSharedCoin(mapId, x, y) {
 function removeSharedCoin(coinId, reason = "expired") {
   if (!sharedCoins.has(coinId)) return false;
 
+  const coin = sharedCoins.get(coinId);
   sharedCoins.delete(coinId);
 
-  broadcast({
+  broadcastToMap(coin?.mapId, {
     type: "coinRemoved",
     coinId,
+    mapId: coin?.mapId || null,
     reason
   });
 
@@ -2348,9 +4157,10 @@ function handleCoinPickup(playerId, coinId) {
     (playerState.y - 4) - coin.y
   );
 
-  // Slightly more forgiving than the 9 px client pickup radius to account for
-  // the normal 20 Hz player-state network delay.
-  if (distance > 13) return;
+  // Match the generous loot-magnet behavior. The extra authoritative grace
+  // accounts for the player moving between their last replicated position and
+  // the local pickup trigger.
+  if (distance > SHARED_LOOT_PICKUP_RADIUS) return;
 
   // Delete before broadcasting so two clients racing for the same coin cannot
   // both be approved.
@@ -2359,9 +4169,10 @@ function handleCoinPickup(playerId, coinId) {
   playerState.coins =
     (Number.isFinite(playerState.coins) ? playerState.coins : 0) + 1;
 
-  broadcast({
+  broadcastToMap(coin.mapId, {
     type: "coinPicked",
     coinId: coin.id,
+    mapId: coin.mapId,
     collectorId: playerId,
     totalCoins: playerState.coins
   });
@@ -2397,24 +4208,26 @@ function makeServerGoblin(spawn) {
     speed: 20,
     chaseSpeed: 34,
     detectionRadius: 90,
-    leashRadius: 120,
-    combatLeashRadius: 260,
+    aggroMode: ENEMY_AGGRO_PROXIMITY,
 
-    aggroTime: 0,
-    aggroDuration: 5.0,
     aggroTargetId: null,
+    aggroEngagementTime: 0,
     confusionTime: 0,
     confusionTargetId: null,
+    wasEngaged: false,
+    returningHome: false,
+    returnStuckTime: 0,
 
     wanderTargetX: x,
     wanderTargetY: y,
     wanderDecisionTime: 0,
     pauseTime: 0,
+    wanderStuckTime: 0,
     wanderRadiusX: 24,
     wanderRadiusY: 18,
 
-    maxHp: 90,
-    hp: 90,
+    maxHp: 270,
+    hp: 270,
     alive: true,
     respawnTime: 0,
 
@@ -2471,18 +4284,25 @@ function makeServerGhost(spawn) {
     speed: 10,
     chaseSpeed: 32,
     detectionRadius: 110,
-    leashRadius: 145,
-    combatLeashRadius: 280,
+    aggroMode: ENEMY_AGGRO_PROXIMITY,
 
-    aggroTime: 0,
-    aggroDuration: 5.5,
     aggroTargetId: null,
+    aggroEngagementTime: 0,
     confusionTime: 0,
     confusionTargetId: null,
     outOfCombatTime: 0,
+    wasEngaged: false,
+    returningHome: false,
+    returnStuckTime: 0,
 
-    wanderAngle: Math.random() * Math.PI * 2,
-    wanderTimer: 0.8 + Math.random() * 1.2,
+    // Passive ghosts now use the same locked-destination "train track" rule
+    // as other ordinary mobs. They still phase through terrain.
+    wanderTargetX: x,
+    wanderTargetY: y,
+    pauseTime: 0,
+    wanderStuckTime: 0,
+    wanderRadiusX: 48,
+    wanderRadiusY: 30,
 
     maxHp: 150,
     hp: 150,
@@ -2531,13 +4351,11 @@ function makeServerBigGoldSlime(spawn) {
     speed: 11,
     chaseSpeed: 28,
     detectionRadius: 96,
-    leashRadius: 85,
-    patrolLeashRadius: 85,
-    combatLeashRadius: 320,
+    patrolRadius: 85,
+    aggroMode: ENEMY_AGGRO_PROXIMITY,
 
-    aggroTime: 0,
-    aggroDuration: 12,
     aggroTargetId: null,
+    aggroEngagementTime: 0,
     confusionTime: 0,
     confusionTargetId: null,
 
@@ -2622,6 +4440,11 @@ for (const entities of worldEntitiesByType.values()) {
       );
     }
 
+    // Compact, server-assigned identity for high-frequency replication. The
+    // stable string id remains the gameplay/persistence identity; networkId is
+    // only a dense transport handle learned from authoritative snapshots.
+    entity.networkId = worldEntitiesById.size + 1;
+
     worldEntitiesById.set(
       entity.id,
       entity
@@ -2661,6 +4484,7 @@ function sharedEnemySnapshot(enemyType, mapId = null) {
 
       return ({
     id: enemy.id,
+    networkId: enemy.networkId,
     mapId: enemy.mapId,
     x: Number(enemy.x.toFixed(2)),
     y: Number(enemy.y.toFixed(2)),
@@ -2669,11 +4493,11 @@ function sharedEnemySnapshot(enemyType, mapId = null) {
     hp: enemy.hp,
     maxHp: enemy.maxHp,
     alive: enemy.alive,
-    aggroTime: Number((enemy.aggroTime || 0).toFixed(2)),
     aggroTargetId: enemy.aggroTargetId || null,
     confusionTime: Number((enemy.confusionTime || 0).toFixed(2)),
     confusionTargetId: enemy.confusionTargetId || null,
     burnTime: Number(enemy.burnTime.toFixed(2)),
+    burnDamagePerTick: enemy.burnDamagePerTick,
     respawnTime: Number(enemy.respawnTime.toFixed(2)),
     carriedBy: enemy.carriedBy || null,
     pickupTime: Number((enemy.pickupTime || 0).toFixed(3)),
@@ -2723,6 +4547,70 @@ function sendSharedEnemySnapshotsToSocket(socket, mapId, includeSyncComplete = f
   }
 }
 
+function passiveIntentSnapshotGroups(mapId) {
+  const groups = {};
+  let sentRecords = 0;
+
+  for (const enemyType of Object.keys(sharedEnemyCollections)) {
+    const states = sharedEnemySnapshot(enemyType, mapId);
+
+    for (const state of states) {
+      const enemy = worldEntitiesById.get(state.id);
+      if (!enemy || !enemy.alive || enemy.mapId !== mapId) continue;
+      if (enemyNeedsPreciseMotion(enemy)) continue;
+
+      const motionCache = enemyMotionNetworkCache.get(state.id) || {
+        velocityX: 0,
+        velocityY: 0,
+        passiveTargetX: Number(state.x) || 0,
+        passiveTargetY: Number(state.y) || 0,
+        passiveSpeed: 0,
+        passiveDir: state.dir === -1 ? -1 : 1,
+        passiveIntentKey: null,
+        passiveAnchorX: Number(state.x) || 0,
+        passiveAnchorY: Number(state.y) || 0,
+        passiveSentTargetX: Number(state.x) || 0,
+        passiveSentTargetY: Number(state.y) || 0,
+        passiveSentSpeed: 0,
+        passiveSentStartDelayMs: 0,
+        passiveSentDir: state.dir === -1 ? -1 : 1,
+        passiveSentIntentKey: null,
+        observedX: Number(state.x) || 0,
+        observedY: Number(state.y) || 0,
+        observedAt: Date.now()
+      };
+
+      const descriptor = enemyPassiveIntentDescriptor(
+        enemyType,
+        enemy,
+        state,
+        motionCache
+      );
+
+      if (!groups[enemyType]) groups[enemyType] = [];
+      groups[enemyType].push(descriptor.record);
+      sentRecords += 1;
+    }
+  }
+
+  return sentRecords > 0 ? groups : null;
+}
+
+function sendPassiveIntentSnapshotToSocket(socket, mapId) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+
+  const groups = passiveIntentSnapshotGroups(mapId);
+  if (!groups) return false;
+
+  sendJson(socket, {
+    type: "enemyWanderIntent",
+    mapId,
+    groups
+  });
+
+  return true;
+}
+
 function broadcastSharedEnemySnapshots() {
   for (const client of wss.clients) {
     if (client.readyState !== WebSocket.OPEN) continue;
@@ -2738,6 +4626,927 @@ function broadcastSharedEnemySnapshots() {
   }
 }
 
+// -----------------------------------------------------------------------------
+// ENEMY NETWORK BANDWIDTH
+// -----------------------------------------------------------------------------
+// Full enemy snapshots are intentionally reserved for connect/map-entry and a
+// slow correction keyframe. Normal play sends:
+//   1) compact movement/animation records only when an enemy actually moves;
+//   2) compact authoritative HP deltas only when no combat event carried HP;
+//   3) compact low-frequency state transitions keyed by numeric network ID.
+//
+// Countdown-style transitions are replicated on meaningful start/extend/end;
+// clients advance visual copies locally between authoritative updates.
+// Precise combat motion is intentionally lower-rate than the server simulation.
+// Clients interpolate + briefly extrapolate compact integer-pixel anchors.
+const ENEMY_NETWORK_DELTA_HZ = 8;
+const ENEMY_NETWORK_KEYFRAME_MS = 10000;
+const ENEMY_MOTION_MIN_DISTANCE = 0.5;
+const ENEMY_MOTION_HEARTBEAT_MS = 750;
+const ENEMY_ACTIVE_MOVING_SPEED_EPSILON = 0.5;
+
+// Passive enemies use long-lived, server-authoritative movement legs. Once a
+// destination is chosen the AI is locked to that leg until it arrives (or a
+// gameplay state such as aggro interrupts it). Networking therefore sends one
+// enemyWanderIntent at the start of the leg and no movement refresh heartbeat.
+// The 75 ms check below is only a cheap state/plan change detector; it does not
+// re-plan movement and emits nothing while the locked leg is unchanged.
+const ENEMY_PASSIVE_INTENT_CHECK_MS = 75;
+
+// Safety valve for a genuinely obstructed passive leg. A destination may be
+// abandoned only after the server has failed to make meaningful movement for
+// this long; ordinary in-transit mobs never reconsider their destination.
+const ENEMY_PASSIVE_STUCK_REPLAN_SECONDS = 1.0;
+
+// Temporary, deliberately strict bridge between combat and passive wandering.
+// A mob that has been engaged must return to its home position before becoming
+// passive again. Returning mobs remain in the precise server stream and ignore
+// player interaction until they arrive. This keeps the authority handoff clean
+// while we validate the new planner; interruption can be added later.
+const ENEMY_RETURN_HOME_ARRIVAL_DISTANCE = 1.5;
+const ENEMY_RETURN_HOME_STUCK_SECONDS = 2.0;
+const ENEMY_PASSIVE_PLAN_TICK_MS = Math.round(1000 / ENEMY_NETWORK_DELTA_HZ);
+// Promote a passive enemy before it reaches melee/contact range so any visual
+// drift can reconcile while the creature is still approaching the player.
+const ENEMY_PRECISE_NEAR_PLAYER_DISTANCE = 72;
+const ENEMY_PASSIVE_SPEED_EPSILON = 0.08;
+const ENEMY_PASSIVE_TARGET_EPSILON = 0.75;
+const ENEMY_PASSIVE_SPEED_CHANGE_EPSILON = 0.35;
+
+// Enemy replication is split by semantic lifetime instead of sending generic
+// object patches. Motion owns position, dedicated combat events own direct-hit
+// HP and one-shot effects, enemyHealthDelta catches authoritative HP mutations
+// that had no combat event (notably Burn ticks), and enemyStateDelta carries
+// only low-frequency transitions that cannot be derived locally.
+//
+// Wet is intentionally absent here. Rain geometry is already authoritative and
+// replicated, and clients derive continuous Wet + its 3s linger from that same
+// geometry. Re-sending wetTime while the server continuously refreshed it was
+// one of the largest sources of redundant state traffic in combat-heavy Rain.
+const ENEMY_STATE = ENEMY_NET_PROTOCOL.STATE;
+const ENEMY_NET_SCALE = ENEMY_NET_PROTOCOL.SCALE;
+const ENEMY_BURN_EXTENSION_SYNC_MS = 250;
+
+const enemyMotionNetworkCache = new Map();
+const enemyStateNetworkCache = new Map();
+const enemyHealthNetworkCache = new Map();
+const pendingPassiveEnemyIntents = new Map();
+const passiveEnemyNetworkDiagnostics = new Map();
+let lastEnemyNetworkKeyframeAt = Date.now();
+
+function sendEncodedToMap(mapId, encoded) {
+  let recipients = 0;
+  const type = encodedMessageType(encoded);
+  const bucket = socketMapBucket(mapId);
+
+  if (bucket) {
+    for (const client of bucket) {
+      if (client.readyState !== WebSocket.OPEN) continue;
+
+      if (sendEncoded(client, encoded, type)) {
+        recipients += 1;
+      }
+    }
+  }
+
+  recordWsLogicalOutbound(encoded, type, recipients);
+  return recipients;
+}
+
+function mapHasNetworkRecipients(mapId) {
+  const bucket = socketMapBucket(mapId);
+  if (!bucket?.size) return false;
+  for (const client of bucket) {
+    if (client.readyState === WebSocket.OPEN) return true;
+  }
+  return false;
+}
+
+function passiveDiagForMap(mapId) {
+  let entry = passiveEnemyNetworkDiagnostics.get(mapId);
+  if (!entry) {
+    entry = {
+      decisions: 0,
+      heartbeats: 0,
+      transitions: 0,
+      queued: 0,
+      coalesced: 0,
+      sentRecords: 0,
+      sentEvents: 0,
+      promotions: 0,
+      demotions: 0,
+      droppedOnPromote: 0,
+      promotionSamples: 0,
+      promotionSyncAgeMs: 0,
+      promotionServerDelta: 0,
+      promotionServerDeltaMax: 0,
+      promotionEstimatedDrift: 0,
+      promotionEstimatedDriftMax: 0
+    };
+    passiveEnemyNetworkDiagnostics.set(mapId, entry);
+  }
+  return entry;
+}
+
+function pendingPassiveMap(mapId) {
+  let pending = pendingPassiveEnemyIntents.get(mapId);
+  if (!pending) {
+    pending = new Map();
+    pendingPassiveEnemyIntents.set(mapId, pending);
+  }
+  return pending;
+}
+
+function queuePassiveEnemyIntent(mapId, enemyType, enemyId, reason = "decision") {
+  const pending = pendingPassiveMap(mapId);
+  const hadPending = pending.has(enemyId);
+
+  if (mapHasNetworkRecipients(mapId)) {
+    const diag = passiveDiagForMap(mapId);
+    if (hadPending) {
+      diag.coalesced += 1;
+    } else {
+      diag.queued += 1;
+    }
+
+    if (reason === "decision") diag.decisions += 1;
+    if (reason === "heartbeat") diag.heartbeats += 1;
+    if (reason === "transition") diag.transitions += 1;
+  }
+
+  pending.set(enemyId, { enemyType, enemyId });
+}
+
+function discardPendingPassiveEnemyIntent(mapId, enemyId) {
+  const pending = pendingPassiveEnemyIntents.get(mapId);
+  if (!pending?.has(enemyId)) return false;
+  pending.delete(enemyId);
+  if (!pending.size) pendingPassiveEnemyIntents.delete(mapId);
+  return true;
+}
+
+function passiveServerDeltaSinceLastSync(cache, currentX, currentY) {
+  if (!cache || !Number.isFinite(cache.passiveAnchorX) || !Number.isFinite(cache.passiveAnchorY)) {
+    return 0;
+  }
+  return Math.hypot(
+    currentX - cache.passiveAnchorX,
+    currentY - cache.passiveAnchorY
+  );
+}
+
+function passiveEstimatedClientDrift(cache, currentX, currentY, now) {
+  if (
+    !cache ||
+    !cache.passiveSentAt ||
+    !Number.isFinite(cache.passiveAnchorX) ||
+    !Number.isFinite(cache.passiveAnchorY) ||
+    !Number.isFinite(cache.passiveSentTargetX) ||
+    !Number.isFinite(cache.passiveSentTargetY)
+  ) {
+    return 0;
+  }
+
+  const anchorX = cache.passiveAnchorX;
+  const anchorY = cache.passiveAnchorY;
+  const targetX = cache.passiveSentTargetX;
+  const targetY = cache.passiveSentTargetY;
+  const speed = Math.max(0, Number(cache.passiveSentSpeed) || 0);
+  const dx = targetX - anchorX;
+  const dy = targetY - anchorY;
+  const distance = Math.hypot(dx, dy);
+  const startDelayMs = Math.max(0, Number(cache.passiveSentStartDelayMs) || 0);
+  const elapsed = Math.max(
+    0,
+    now - cache.passiveSentAt - startDelayMs
+  ) / 1000;
+
+  let estimatedX = anchorX;
+  let estimatedY = anchorY;
+
+  if (distance > 0.001 && speed > 0) {
+    const travelled = Math.min(distance, speed * elapsed);
+    estimatedX = anchorX + (dx / distance) * travelled;
+    estimatedY = anchorY + (dy / distance) * travelled;
+  }
+
+  return Math.hypot(
+    currentX - estimatedX,
+    currentY - estimatedY
+  );
+}
+
+function flushPassiveEnemyIntents(mapId, now) {
+  const pending = pendingPassiveEnemyIntents.get(mapId);
+  if (!pending?.size) return false;
+
+  const groups = {};
+  let sentRecords = 0;
+
+  for (const { enemyType, enemyId } of pending.values()) {
+    const enemy = worldEntitiesById.get(enemyId);
+    const motionCache = enemyMotionNetworkCache.get(enemyId);
+
+    if (
+      !enemy ||
+      !enemy.alive ||
+      enemy.mapId !== mapId ||
+      enemyNeedsPreciseMotion(enemy) ||
+      !motionCache
+    ) {
+      continue;
+    }
+
+    const state = {
+      id: enemy.id,
+      x: enemy.x,
+      y: enemy.y,
+      dir: enemy.dir
+    };
+    const descriptor = enemyPassiveIntentDescriptor(
+      enemyType,
+      enemy,
+      state,
+      motionCache
+    );
+
+    if (!groups[enemyType]) groups[enemyType] = [];
+    groups[enemyType].push(descriptor.record);
+    sentRecords += 1;
+
+    motionCache.record = enemyMotionRecord(state, enemy);
+    motionCache.passiveSentAt = now;
+    motionCache.passiveTargetX = descriptor.targetX;
+    motionCache.passiveTargetY = descriptor.targetY;
+    motionCache.passiveSpeed = descriptor.speed;
+    motionCache.passiveDir = descriptor.dir;
+    motionCache.passiveIntentKey = descriptor.intentKey;
+    motionCache.passiveAnchorX = Number(enemy.x) || 0;
+    motionCache.passiveAnchorY = Number(enemy.y) || 0;
+    // Keep a separate copy of what was actually transmitted. The observed
+    // passive target can change again before the next network tick, and using
+    // an unsent target would make promotion-drift diagnostics lie.
+    motionCache.passiveSentTargetX = descriptor.targetX;
+    motionCache.passiveSentTargetY = descriptor.targetY;
+    motionCache.passiveSentSpeed = descriptor.speed;
+    motionCache.passiveSentStartDelayMs = descriptor.startDelayMs;
+    motionCache.passiveSentDir = descriptor.dir;
+    motionCache.passiveSentIntentKey = descriptor.intentKey;
+    motionCache.sentAt = now;
+  }
+
+  pending.clear();
+  pendingPassiveEnemyIntents.delete(mapId);
+
+  if (!sentRecords) return false;
+
+  const recipients = sendEncodedToMap(
+    mapId,
+    JSON.stringify({
+      type: "enemyWanderIntent",
+      mapId,
+      groups
+    })
+  );
+
+  if (recipients > 0) {
+    const diag = passiveDiagForMap(mapId);
+    diag.sentRecords += sentRecords;
+    diag.sentEvents += 1;
+  }
+  return recipients > 0;
+}
+
+function enemyHasNearbyPlayer(enemy, maxDistance = ENEMY_PRECISE_NEAR_PLAYER_DISTANCE) {
+  const maxDistanceSq = maxDistance * maxDistance;
+
+  for (const playerState of players.values()) {
+    if (!playerIsVisibleToEnemy(playerState, enemy.mapId, enemy.x, enemy.y)) {
+      continue;
+    }
+
+    const dx = (Number(playerState.x) || 0) - (Number(enemy.x) || 0);
+    const dy = (Number(playerState.y) || 0) - (Number(enemy.y) || 0);
+
+    if (dx * dx + dy * dy <= maxDistanceSq) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function enemyPreciseMotionReasons(enemy) {
+  if (!enemy || !enemy.alive) return [];
+
+  const reasons = [];
+
+  // Keep this list exactly aligned with enemyNeedsPreciseMotion(). It is also
+  // surfaced in the local diagnostics so we can see why passive networking is
+  // (or is not) engaging on a real map instead of guessing from packet totals.
+  if (enemy.type === "bigGoldSlime") reasons.push("boss");
+  if (enemy.returningHome) reasons.push("returningHome");
+  if (!enemy.returningHome && enemyHasNearbyPlayer(enemy)) reasons.push("nearby");
+  if (enemy.aggroTargetId) reasons.push("aggroTarget");
+  if ((Number(enemy.confusionTime) || 0) > 0 || enemy.confusionTargetId) reasons.push("confusion");
+  if ((Number(enemy.tauntTime) || 0) > 0 || enemy.tauntOwnerId) reasons.push("redirect");
+  if (enemy.carriedBy) reasons.push("carried");
+  if ((Number(enemy.pickupTime) || 0) > 0) reasons.push("pickup");
+  if ((Number(enemy.hurlTime) || 0) > 0) reasons.push("hurl");
+  if ((Number(enemy.lungeTime) || 0) > 0) reasons.push("lunge");
+  if ((Number(enemy.snareRootTime) || 0) > 0) reasons.push("snareRoot");
+  if ((Number(enemy.snareSlowTime) || 0) > 0) reasons.push("snareSlow");
+  // Wet and Magic Grass are derived speed modifiers. They do not promote a
+  // passive enemy into the 10 Hz precise-motion stream; a changed effective
+  // speed produces one new passive wander intent instead.
+  if (
+    Math.hypot(
+      Number(enemy.knockbackX) || 0,
+      Number(enemy.knockbackY) || 0
+    ) > 0.25
+  ) reasons.push("knockback");
+
+  return reasons;
+}
+
+function enemyNeedsPreciseMotion(enemy) {
+  return enemyPreciseMotionReasons(enemy).length > 0;
+}
+
+function enemyPassiveIntentDescriptor(enemyType, enemy, state, motionCache) {
+  const currentX = Number(state.x) || 0;
+  const currentY = Number(state.y) || 0;
+  const velocityX = Number(motionCache?.velocityX) || 0;
+  const velocityY = Number(motionCache?.velocityY) || 0;
+  const sampledSpeed = Math.hypot(velocityX, velocityY);
+
+  let targetX = currentX;
+  let targetY = currentY;
+  let speed = 0;
+  let startDelayMs = 0;
+  let intentKey = "idle";
+  let stableTarget = false;
+
+  if (enemyType === "slime" || enemyType === "goblin" || enemyType === "ghost") {
+    targetX = Number(enemy?.wanderTargetX);
+    targetY = Number(enemy?.wanderTargetY);
+
+    if (!Number.isFinite(targetX)) targetX = currentX;
+    if (!Number.isFinite(targetY)) targetY = currentY;
+
+    const distanceToTarget = Math.hypot(
+      targetX - currentX,
+      targetY - currentY
+    );
+    const pauseSeconds = Math.max(0, Number(enemy?.pauseTime) || 0);
+    // A newly-chosen target can intentionally begin with a short idle pause.
+    // Send that pause as part of the plan instead of sending speed=0 now and a
+    // second speed>0 packet a few hundred milliseconds later.
+    startDelayMs = Math.round(Math.min(1.5, pauseSeconds) * 1000);
+    const derivedMovementMultiplier = serverEnemyMovementMultiplier(enemy);
+    speed = distanceToTarget > 1.25
+      ? Math.max(0, Number(enemy?.speed) || sampledSpeed) * derivedMovementMultiplier
+      : 0;
+    stableTarget = true;
+    intentKey = `target:${targetX.toFixed(1)}:${targetY.toFixed(1)}:${speed.toFixed(1)}`;
+  } else {
+    // Fallback for any future passive species without explicit wander targets.
+    // Give the client a generous point along the sampled movement vector.
+    if (sampledSpeed > ENEMY_PASSIVE_SPEED_EPSILON) {
+      const ux = velocityX / sampledSpeed;
+      const uy = velocityY / sampledSpeed;
+      targetX = currentX + ux * 64;
+      targetY = currentY + uy * 64;
+      speed = sampledSpeed;
+      intentKey = `vector:${(Math.round(ux * 20) / 20).toFixed(2)}:${(Math.round(uy * 20) / 20).toFixed(2)}`;
+    }
+  }
+
+  return {
+    record: [
+      enemy.networkId,
+      Number(currentX.toFixed(1)),
+      Number(currentY.toFixed(1)),
+      Number(Number(targetX).toFixed(1)),
+      Number(Number(targetY).toFixed(1)),
+      Number(Number(speed).toFixed(1)),
+      state.dir === -1 ? -1 : 1,
+      Math.max(0, Math.round(startDelayMs))
+    ],
+    targetX: Number(targetX),
+    targetY: Number(targetY),
+    speed: Number(speed),
+    startDelayMs: Math.max(0, Math.round(startDelayMs)),
+    dir: state.dir === -1 ? -1 : 1,
+    intentKey,
+    stableTarget
+  };
+}
+
+function passiveIntentQueueReason(cache, descriptor, now) {
+  if (!cache) return "decision";
+
+  const targetDx = descriptor.targetX - (Number(cache.passiveTargetX) || 0);
+  const targetDy = descriptor.targetY - (Number(cache.passiveTargetY) || 0);
+  const targetChanged =
+    descriptor.stableTarget &&
+    targetDx * targetDx + targetDy * targetDy >=
+      ENEMY_PASSIVE_TARGET_EPSILON * ENEMY_PASSIVE_TARGET_EPSILON;
+
+  const intentChanged =
+    descriptor.intentKey !== cache.passiveIntentKey;
+
+  const speedChanged =
+    Math.abs(descriptor.speed - (Number(cache.passiveSpeed) || 0)) >=
+    ENEMY_PASSIVE_SPEED_CHANGE_EPSILON;
+
+  // Facing is derived naturally from the path on the browser. A direction
+  // flip by itself is not a new network plan and used to create needless
+  // passive chatter near obstacles.
+  if (targetChanged || intentChanged || speedChanged) {
+    return "decision";
+  }
+
+  // Locked passive legs are silent until the AI actually changes state or
+  // chooses a new destination. There is intentionally no passive heartbeat.
+  return null;
+}
+
+function enemyMotionRecord(state, enemy) {
+  // High-frequency motion contains only transport identity + authoritative
+  // pixel anchors. Pixel-art rendering already resolves to whole pixels, while
+  // client interpolation keeps motion sub-pixel smooth between anchors.
+  return [
+    enemy.networkId,
+    Math.round(Number(state.x) || 0),
+    Math.round(Number(state.y) || 0)
+  ];
+}
+
+function motionRecordChanged(previous, current, now, movingChanged = false) {
+  if (!previous) return false;
+
+  const dx = current[1] - previous.record[1];
+  const dy = current[2] - previous.record[2];
+  const movedEnough =
+    dx * dx + dy * dy >=
+    ENEMY_MOTION_MIN_DISTANCE * ENEMY_MOTION_MIN_DISTANCE;
+
+  // A final same-position anchor when motion stops is important because the
+  // client otherwise has no way to know that short extrapolation should end.
+  const heartbeatDue =
+    now - previous.sentAt >= ENEMY_MOTION_HEARTBEAT_MS &&
+    (Math.abs(dx) > 0.02 || Math.abs(dy) > 0.02);
+
+  return movedEnough || movingChanged || heartbeatDue;
+}
+
+function quantizedUnit(value) {
+  return Math.round((Number(value) || 0) * ENEMY_NET_SCALE.UNIT_VECTOR);
+}
+
+function countdownMs(value) {
+  return Math.max(0, Math.round((Number(value) || 0) * ENEMY_NET_SCALE.SECONDS_MS));
+}
+
+function makeEnemyStateCache(state, now) {
+  const burnTime = Math.max(0, Number(state.burnTime) || 0);
+  return {
+    observed: {
+      alive: Boolean(state.alive),
+      aggroTargetId: typeof state.aggroTargetId === "string" ? state.aggroTargetId : null,
+      burnTime,
+      burnDamagePerTick: Math.max(1, Math.round(Number(state.burnDamagePerTick) || 1)),
+      carriedBy: typeof state.carriedBy === "string" ? state.carriedBy : null,
+      pickupTime: Math.max(0, Number(state.pickupTime) || 0),
+      pickupDirX: Number(state.pickupDirX) || 0,
+      pickupDirY: Number(state.pickupDirY) || 0,
+      hurlTime: Math.max(0, Number(state.hurlTime) || 0),
+      lungeTime: Math.max(0, Number(state.lungeTime) || 0),
+      lungeDirX: Number(state.lungeDirX) || 0,
+      lungeDirY: Number(state.lungeDirY) || 0
+    },
+    burnSentExpiresAt: burnTime > 0 ? now + burnTime * 1000 : 0
+  };
+}
+
+function compactStateRecordForEnemy(state, cacheEntry, now) {
+  const previous = cacheEntry.observed;
+  let mask = 0;
+  const values = [];
+
+  const currentAggro = typeof state.aggroTargetId === "string"
+    ? state.aggroTargetId
+    : null;
+  if (currentAggro !== previous.aggroTargetId) {
+    mask |= ENEMY_STATE.AGGRO_TARGET;
+    values.push(currentAggro);
+  }
+
+  const currentBurn = Math.max(0, Number(state.burnTime) || 0);
+  const currentBurnDamage = Math.max(
+    1,
+    Math.round(Number(state.burnDamagePerTick) || STATUS_RULES.enemyBurnDamagePerTick)
+  );
+  const burnStarted = currentBurn > 0 && previous.burnTime <= 0;
+  const burnEnded = currentBurn <= 0 && previous.burnTime > 0;
+  const burnDamageChanged = currentBurn > 0 && currentBurnDamage !== previous.burnDamagePerTick;
+  const burnExpiresAt = currentBurn > 0 ? now + currentBurn * 1000 : 0;
+  const burnMeaningfullyExtended =
+    currentBurn > 0 &&
+    previous.burnTime > 0 &&
+    burnExpiresAt > cacheEntry.burnSentExpiresAt + ENEMY_BURN_EXTENSION_SYNC_MS;
+
+  if (burnStarted || burnEnded || burnDamageChanged || burnMeaningfullyExtended) {
+    mask |= ENEMY_STATE.BURN;
+    values.push(countdownMs(currentBurn), currentBurnDamage);
+    cacheEntry.burnSentExpiresAt = burnExpiresAt;
+  }
+
+  const currentCarrier = typeof state.carriedBy === "string" ? state.carriedBy : null;
+  const currentPickup = Math.max(0, Number(state.pickupTime) || 0);
+  const pickupStarted = currentPickup > 0 && previous.pickupTime <= 0;
+  if (currentCarrier !== previous.carriedBy || pickupStarted) {
+    mask |= ENEMY_STATE.CARRY;
+    values.push(
+      currentCarrier,
+      countdownMs(currentPickup),
+      quantizedUnit(state.pickupDirX),
+      quantizedUnit(state.pickupDirY)
+    );
+  }
+
+  const currentHurl = Math.max(0, Number(state.hurlTime) || 0);
+  const hurlStarted = currentHurl > 0 && previous.hurlTime <= 0;
+  const hurlEnded = currentHurl <= 0 && previous.hurlTime > 0;
+  if (hurlStarted || hurlEnded) {
+    mask |= ENEMY_STATE.HURL;
+    values.push(countdownMs(currentHurl));
+  }
+
+  const currentLunge = Math.max(0, Number(state.lungeTime) || 0);
+  const lungeStarted = currentLunge > 0 && previous.lungeTime <= 0;
+  const lungeEnded = currentLunge <= 0 && previous.lungeTime > 0;
+  if (lungeStarted || lungeEnded) {
+    mask |= ENEMY_STATE.LUNGE;
+    values.push(
+      countdownMs(currentLunge),
+      quantizedUnit(state.lungeDirX),
+      quantizedUnit(state.lungeDirY)
+    );
+  }
+
+  const currentAlive = Boolean(state.alive);
+  // Death already has an enemyKilled event (with drops/XP semantics). Only the
+  // false -> true transition belongs here so respawn is not duplicated.
+  if (currentAlive && !previous.alive) {
+    mask |= ENEMY_STATE.RESPAWN;
+    values.push(Math.max(0, Math.round(Number(state.hp) || 0)));
+    // RESPawn already carries the authoritative HP, so suppress a redundant
+    // enemyHealthDelta for the same transition on this network tick.
+    noteEnemyHealthReplicated(state.id, state.hp);
+  }
+
+  cacheEntry.observed = {
+    alive: currentAlive,
+    aggroTargetId: currentAggro,
+    burnTime: currentBurn,
+    burnDamagePerTick: currentBurnDamage,
+    carriedBy: currentCarrier,
+    pickupTime: currentPickup,
+    pickupDirX: Number(state.pickupDirX) || 0,
+    pickupDirY: Number(state.pickupDirY) || 0,
+    hurlTime: currentHurl,
+    lungeTime: currentLunge,
+    lungeDirX: Number(state.lungeDirX) || 0,
+    lungeDirY: Number(state.lungeDirY) || 0
+  };
+
+  if (!mask) return null;
+  return [state.networkId, mask, ...values];
+}
+
+function compactHealthRecordForEnemy(state) {
+  const hp = Math.max(0, Math.round(Number(state.hp) || 0));
+  let cache = enemyHealthNetworkCache.get(state.id);
+
+  if (!cache) {
+    cache = { sentHp: hp };
+    enemyHealthNetworkCache.set(state.id, cache);
+    return null;
+  }
+
+  if (cache.sentHp === hp) return null;
+  cache.sentHp = hp;
+  return [state.networkId, hp];
+}
+
+function noteEnemyHealthReplicated(enemyId, hp) {
+  if (typeof enemyId !== "string" || !Number.isFinite(Number(hp))) return;
+  const cache = enemyHealthNetworkCache.get(enemyId);
+  if (cache) cache.sentHp = Math.max(0, Math.round(Number(hp) || 0));
+}
+
+function noteEnemyHealthFromEvent(payload) {
+  if (!payload || typeof payload.enemyId !== "string") return;
+
+  if (payload.type === "enemyDamage" || payload.type === "enemyHeal") {
+    noteEnemyHealthReplicated(payload.enemyId, payload.hp);
+  } else if (payload.type === "enemyKilled") {
+    noteEnemyHealthReplicated(payload.enemyId, 0);
+  }
+}
+
+function broadcastSharedEnemyNetworkDeltas() {
+  const now = Date.now();
+
+  for (const mapId of ALLOWED_MAPS) {
+    const motionRecords = [];
+    const stateRecords = [];
+    const healthRecords = [];
+
+    for (const enemyType of Object.keys(sharedEnemyCollections)) {
+      const states = sharedEnemySnapshot(enemyType, mapId);
+
+      for (const state of states) {
+        const enemy = worldEntitiesById.get(state.id);
+        const motion = enemyMotionRecord(state, enemy);
+        let motionCache = enemyMotionNetworkCache.get(state.id);
+
+        if (!motionCache) {
+          motionCache = {
+            record: motion,
+            sentAt: now,
+            mode: enemyNeedsPreciseMotion(enemy) ? "active" : "passive",
+            observedX: Number(state.x) || 0,
+            observedY: Number(state.y) || 0,
+            observedAt: now,
+            velocityX: 0,
+            velocityY: 0,
+            passiveSentAt: 0,
+            passiveQueuedAt: 0,
+            passiveCheckedAt: now,
+            passiveTargetX: Number(state.x) || 0,
+            passiveTargetY: Number(state.y) || 0,
+            passiveSpeed: 0,
+            passiveDir: state.dir === -1 ? -1 : 1,
+            passiveIntentKey: null,
+            passiveAnchorX: Number(state.x) || 0,
+            passiveAnchorY: Number(state.y) || 0,
+            passiveSentTargetX: Number(state.x) || 0,
+            passiveSentTargetY: Number(state.y) || 0,
+            passiveSentSpeed: 0,
+            passiveSentStartDelayMs: 0,
+            passiveSentDir: state.dir === -1 ? -1 : 1,
+            passiveSentIntentKey: null,
+            alive: Boolean(state.alive),
+            activeMoving: false
+          };
+          enemyMotionNetworkCache.set(state.id, motionCache);
+        } else {
+          const observedElapsed = Math.max(
+            0.001,
+            (now - (motionCache.observedAt || now)) / 1000
+          );
+          const currentX = Number(state.x) || 0;
+          const currentY = Number(state.y) || 0;
+          const rawVelocityX =
+            (currentX - (Number(motionCache.observedX) || 0)) /
+            observedElapsed;
+          const rawVelocityY =
+            (currentY - (Number(motionCache.observedY) || 0)) /
+            observedElapsed;
+
+          motionCache.velocityX =
+            Math.abs(rawVelocityX) >= ENEMY_PASSIVE_SPEED_EPSILON
+              ? rawVelocityX
+              : 0;
+          motionCache.velocityY =
+            Math.abs(rawVelocityY) >= ENEMY_PASSIVE_SPEED_EPSILON
+              ? rawVelocityY
+              : 0;
+          motionCache.observedX = currentX;
+          motionCache.observedY = currentY;
+          motionCache.observedAt = now;
+
+          const activeMoving =
+            Math.hypot(rawVelocityX, rawVelocityY) >=
+            ENEMY_ACTIVE_MOVING_SPEED_EPSILON;
+          const activeMovingChanged =
+            Boolean(motionCache.activeMoving) !== activeMoving;
+
+          const precise = enemyNeedsPreciseMotion(enemy);
+          const nextMode = precise ? "active" : "passive";
+          const modeChanged = motionCache.mode !== nextMode;
+          const wasNetworkAlive = Boolean(motionCache.alive);
+          const nextNetworkAlive = Boolean(state.alive);
+          const aliveChanged = wasNetworkAlive !== nextNetworkAlive;
+          const respawned = !wasNetworkAlive && nextNetworkAlive;
+          motionCache.alive = nextNetworkAlive;
+
+          if (respawned) {
+            // A respawn is a teleport/discontinuity, not real movement. Without
+            // resetting the passive velocity sample here, the death-position ->
+            // spawn-position jump becomes a gigantic wander velocity for one
+            // intent interval and clients briefly extrapolate the mob far off
+            // screen before the next anchor corrects it.
+            motionCache.velocityX = 0;
+            motionCache.velocityY = 0;
+            motionCache.observedX = currentX;
+            motionCache.observedY = currentY;
+            motionCache.observedAt = now;
+          }
+
+          if (precise) {
+            if (modeChanged) {
+              const hasRecipients = mapHasNetworkRecipients(mapId);
+              const diag = hasRecipients ? passiveDiagForMap(mapId) : null;
+              if (diag) diag.promotions += 1;
+
+              const droppedPending =
+                discardPendingPassiveEnemyIntent(mapId, state.id);
+              if (diag && droppedPending) {
+                diag.droppedOnPromote += 1;
+              }
+
+              if (diag && motionCache.passiveSentAt > 0) {
+                const syncAge = Math.max(0, now - motionCache.passiveSentAt);
+                const serverDelta = passiveServerDeltaSinceLastSync(
+                  motionCache,
+                  currentX,
+                  currentY
+                );
+                const estimatedDrift = passiveEstimatedClientDrift(
+                  motionCache,
+                  currentX,
+                  currentY,
+                  now
+                );
+                diag.promotionSamples += 1;
+                diag.promotionSyncAgeMs += syncAge;
+                diag.promotionServerDelta += serverDelta;
+                diag.promotionServerDeltaMax = Math.max(
+                  diag.promotionServerDeltaMax,
+                  serverDelta
+                );
+                diag.promotionEstimatedDrift += estimatedDrift;
+                diag.promotionEstimatedDriftMax = Math.max(
+                  diag.promotionEstimatedDriftMax,
+                  estimatedDrift
+                );
+              }
+            }
+
+            if (
+              modeChanged ||
+              aliveChanged ||
+              motionRecordChanged(
+                motionCache,
+                motion,
+                now,
+                activeMovingChanged
+              )
+            ) {
+              motionRecords.push(...motion);
+              motionCache.record = motion;
+              motionCache.sentAt = now;
+            }
+            motionCache.activeMoving = activeMoving;
+          } else if (state.alive) {
+            if (modeChanged && mapHasNetworkRecipients(mapId)) {
+              passiveDiagForMap(mapId).demotions += 1;
+            }
+
+            const passiveCheckDue =
+              modeChanged ||
+              aliveChanged ||
+              now - (motionCache.passiveCheckedAt || 0) >=
+                ENEMY_PASSIVE_INTENT_CHECK_MS;
+
+            if (passiveCheckDue) {
+              motionCache.passiveCheckedAt = now;
+              const descriptor = enemyPassiveIntentDescriptor(
+                enemyType,
+                enemy,
+                state,
+                motionCache
+              );
+
+              const queueReason =
+                modeChanged || aliveChanged
+                  ? "transition"
+                  : passiveIntentQueueReason(motionCache, descriptor, now);
+
+              if (queueReason) {
+                queuePassiveEnemyIntent(
+                  mapId,
+                  enemyType,
+                  state.id,
+                  queueReason
+                );
+
+                // These fields track the latest observed/queued passive plan.
+                // The separate passiveSent* fields track exactly what the browser
+                // has actually received, so promotion diagnostics remain honest.
+                motionCache.passiveQueuedAt = now;
+                motionCache.passiveTargetX = descriptor.targetX;
+                motionCache.passiveTargetY = descriptor.targetY;
+                motionCache.passiveSpeed = descriptor.speed;
+                motionCache.passiveDir = descriptor.dir;
+                motionCache.passiveIntentKey = descriptor.intentKey;
+
+              }
+            }
+          }
+
+          motionCache.mode = nextMode;
+        }
+
+        let stateCache = enemyStateNetworkCache.get(state.id);
+        if (!stateCache) {
+          stateCache = makeEnemyStateCache(state, now);
+          enemyStateNetworkCache.set(state.id, stateCache);
+        } else {
+          const record = compactStateRecordForEnemy(state, stateCache, now);
+          if (record) stateRecords.push(record);
+        }
+
+        const healthRecord = compactHealthRecordForEnemy(state);
+        if (healthRecord) healthRecords.push(...healthRecord);
+      }
+    }
+
+    if (motionRecords.length > 0) {
+      sendEncodedToMap(
+        mapId,
+        JSON.stringify({
+          type: "enemyMotion",
+          m: mapId,
+          r: motionRecords
+        })
+      );
+    }
+
+    // Flush once after scanning the whole map. This batches decisions that
+    // happened during the same 10 Hz network tick, but never delays a genuine
+    // wander plan into a later tick on purpose.
+    flushPassiveEnemyIntents(mapId, now);
+
+    if (healthRecords.length > 0) {
+      sendEncodedToMap(
+        mapId,
+        JSON.stringify({
+          type: "enemyHealthDelta",
+          m: mapId,
+          r: healthRecords
+        })
+      );
+    }
+
+    if (stateRecords.length > 0) {
+      sendEncodedToMap(
+        mapId,
+        JSON.stringify({
+          type: "enemyStateDelta",
+          m: mapId,
+          r: stateRecords
+        })
+      );
+    }
+  }
+
+  if (now - lastEnemyNetworkKeyframeAt >= ENEMY_NETWORK_KEYFRAME_MS) {
+    broadcastSharedEnemySnapshots();
+    lastEnemyNetworkKeyframeAt = now;
+  }
+}
+
+function playerIsVisibleToEnemy(playerState, mapId, observerX, observerY) {
+  if (
+    !playerState ||
+    playerState.mapId !== mapId ||
+    playerState.shadowHidden ||
+    playerState.hp <= 0
+  ) {
+    return false;
+  }
+
+  if (!playerState.camouflaged) return true;
+
+  const closeEnough =
+    Number.isFinite(observerX) &&
+    Number.isFinite(observerY) &&
+    Math.hypot(
+      playerState.x - observerX,
+      playerState.y - observerY
+    ) <= CAMOUFLAGE_CLOSE_REVEAL_DISTANCE;
+
+  if (!closeEnough) return false;
+
+  revealServerCamouflage(playerState, "detected");
+  return true;
+}
+
 function nearestVisiblePlayer(
   mapId,
   x,
@@ -2748,11 +5557,7 @@ function nearestVisiblePlayer(
   let bestDistance = Infinity;
 
   for (const playerState of players.values()) {
-    if (
-      playerState.mapId !== mapId ||
-      playerState.shadowHidden ||
-      playerState.hp <= 0
-    ) {
+    if (!playerIsVisibleToEnemy(playerState, mapId, x, y)) {
       continue;
     }
 
@@ -2760,15 +5565,6 @@ function nearestVisiblePlayer(
       playerState.x - x,
       playerState.y - y
     );
-
-    if (playerState.camouflaged) {
-      if (distance > CAMOUFLAGE_CLOSE_REVEAL_DISTANCE) {
-        continue;
-      }
-
-      playerState.camouflaged = false;
-      playerState.camouflageReadyUntil = 0;
-    }
 
     if (
       distance < bestDistance &&
@@ -2797,53 +5593,432 @@ function visibleAggroPlayerById(
 
   const playerState = players.get(playerId);
 
-  if (
-    !playerState ||
-    playerState.mapId !== mapId ||
-    playerState.shadowHidden ||
-    playerState.hp <= 0
-  ) {
+  if (!playerIsVisibleToEnemy(playerState, mapId, observerX, observerY)) {
     return null;
-  }
-
-  if (playerState.camouflaged) {
-    if (
-      !Number.isFinite(observerX) ||
-      !Number.isFinite(observerY) ||
-      Math.hypot(
-        playerState.x - observerX,
-        playerState.y - observerY
-      ) > CAMOUFLAGE_CLOSE_REVEAL_DISTANCE
-    ) {
-      return null;
-    }
-
-    playerState.camouflaged = false;
-    playerState.camouflageReadyUntil = 0;
   }
 
   return playerState;
 }
 
-function setEnemyAggroTarget(
-  enemy,
-  playerId,
-  duration = enemy.aggroDuration ?? 4.5
-) {
-  enemy.aggroTargetId = playerId || null;
-  enemy.aggroTime = Math.max(
-    enemy.aggroTime || 0,
-    duration
-  );
+function refreshEnemyEngagement(enemy, playerId = null) {
+  if (!enemy?.alive || enemy.returningHome || !enemy.aggroTargetId) return false;
+  if (playerId && enemy.aggroTargetId !== playerId) return false;
+
+  enemy.aggroEngagementTime = ENEMY_ENGAGEMENT_MEMORY_SECONDS;
+  return true;
+}
+
+function setEnemyAggroTarget(enemy, playerId) {
+  if (!enemy || enemy.returningHome) return;
+
+  const nextTargetId = playerId || null;
+  enemy.aggroTargetId = nextTargetId;
+
+  if (nextTargetId) {
+    enemy.wasEngaged = true;
+    refreshEnemyEngagement(enemy, nextTargetId);
+  } else {
+    enemy.aggroEngagementTime = 0;
+  }
 }
 
 function clearEnemyAggroTarget(enemy) {
+  if (!enemy) return;
   enemy.aggroTargetId = null;
-  enemy.aggroTime = 0;
+  enemy.aggroEngagementTime = 0;
 }
 
-const CAMOUFLAGE_CONFUSION_DURATION = 1.25;
-const CAMOUFLAGE_CLOSE_REVEAL_DISTANCE = 18;
+function enemyUsesProximityAggro(enemy) {
+  return enemy?.aggroMode === ENEMY_AGGRO_PROXIMITY;
+}
+
+function resolveEnemyAggroTarget(
+  enemy,
+  dt = 0,
+  { allowAcquire = true } = {}
+) {
+  if (!enemy?.alive || enemy.returningHome) return null;
+
+  let target = visibleAggroPlayerById(
+    enemy.aggroTargetId,
+    enemy.mapId,
+    enemy.x,
+    enemy.y
+  );
+
+  if (!target && enemy.aggroTargetId) {
+    // Death, map changes, disconnects, Shadow Hide, and Camouflage invalidate
+    // the target immediately. Distance-based escape is handled separately.
+    clearEnemyAggroTarget(enemy);
+  }
+
+  if (target) {
+    const targetDistance = Math.hypot(
+      target.x - enemy.x,
+      target.y - enemy.y
+    );
+
+    if (targetDistance <= ENEMY_ENGAGEMENT_RADIUS) {
+      refreshEnemyEngagement(enemy, target.id);
+    } else {
+      enemy.aggroEngagementTime = Math.max(
+        0,
+        (Number(enemy.aggroEngagementTime) || 0) - Math.max(0, Number(dt) || 0)
+      );
+
+      if (enemy.aggroEngagementTime <= 0) {
+        clearEnemyAggroTarget(enemy);
+        target = null;
+      }
+    }
+  }
+
+  if (!target && allowAcquire && enemyUsesProximityAggro(enemy)) {
+    const nearby = nearestVisiblePlayer(
+      enemy.mapId,
+      enemy.x,
+      enemy.y,
+      Math.max(0, Number(enemy.detectionRadius) || 0)
+    );
+
+    if (nearby) {
+      target = nearby.player;
+      setEnemyAggroTarget(enemy, target.id);
+    }
+  }
+
+  return target;
+}
+
+function chooseServerGhostWanderTarget(ghost) {
+  const candidates = [];
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const radiusX = (ghost.wanderRadiusX || 48) * (0.72 + Math.random() * 0.28);
+    const radiusY = (ghost.wanderRadiusY || 30) * (0.72 + Math.random() * 0.28);
+    const x = Math.max(
+      10,
+      Math.min(630, ghost.homeX + Math.cos(angle) * radiusX)
+    );
+    const y = Math.max(
+      24,
+      Math.min(395, ghost.homeY + Math.sin(angle) * radiusY)
+    );
+    candidates.push({
+      x,
+      y,
+      distance: Math.hypot(x - ghost.x, y - ghost.y)
+    });
+  }
+
+  candidates.sort((a, b) => b.distance - a.distance);
+  const pool = candidates.slice(0, Math.min(4, candidates.length));
+  const chosen = pool[Math.floor(Math.random() * pool.length)] || {
+    x: ghost.homeX,
+    y: ghost.homeY
+  };
+
+  ghost.wanderTargetX = chosen.x;
+  ghost.wanderTargetY = chosen.y;
+  ghost.wanderStuckTime = 0;
+}
+
+function chooseServerEnemyPassiveTarget(enemy) {
+  if (!enemy) return;
+  if (enemy.type === "slime") {
+    chooseServerSlimeWanderTarget(enemy);
+  } else if (enemy.type === "goblin") {
+    chooseServerGoblinWanderTarget(enemy);
+  } else if (enemy.type === "ghost") {
+    chooseServerGhostWanderTarget(enemy);
+  }
+}
+
+function beginEnemyReturningHome(enemy) {
+  if (
+    !enemy ||
+    !enemy.alive ||
+    enemy.type === "bigGoldSlime" ||
+    enemy.returningHome
+  ) {
+    return false;
+  }
+
+  enemy.returningHome = true;
+  enemy.returnStuckTime = 0;
+  enemy.wasEngaged = false;
+  clearEnemyAggroTarget(enemy);
+
+  enemy.tauntTime = 0;
+  enemy.tauntOwnerId = null;
+  enemy.tauntCloneId = null;
+  enemy.confusionTime = 0;
+  enemy.confusionTargetId = null;
+  enemy.knockbackX = 0;
+  enemy.knockbackY = 0;
+  clearServerEnemyStatuses(enemy);
+  clearServerEnemySnareState(enemy);
+  enemy.magicGrassFieldActive = false;
+
+  if (enemy.type === "goblin") {
+    enemy.lungeTime = 0;
+    enemy.lungeTargetId = null;
+    enemy.attackHit = false;
+    enemy.moving = true;
+  }
+
+  return true;
+}
+
+function finishEnemyReturningHome(enemy) {
+  enemy.x = enemy.homeX;
+  enemy.y = enemy.homeY;
+  enemy.returningHome = false;
+  enemy.returnStuckTime = 0;
+  enemy.wasEngaged = false;
+  enemy.pauseTime = 0.80 + Math.random() * 0.70;
+  enemy.wanderTargetX = enemy.homeX;
+  enemy.wanderTargetY = enemy.homeY;
+  enemy.wanderStuckTime = 0;
+
+  // Pick the next locked passive leg immediately. The passive transition packet
+  // can therefore carry both the home anchor and the post-return pause instead
+  // of requiring a second "start moving" packet a moment later.
+  chooseServerEnemyPassiveTarget(enemy);
+
+  if (enemy.type === "goblin") {
+    enemy.moving = false;
+  }
+}
+
+function tickEnemyReturningHome(enemy, dt) {
+  if (!enemy?.returningHome) return false;
+
+  const dx = enemy.homeX - enemy.x;
+  const dy = enemy.homeY - enemy.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance <= ENEMY_RETURN_HOME_ARRIVAL_DISTANCE) {
+    finishEnemyReturningHome(enemy);
+    return true;
+  }
+
+  const moveX = dx / distance;
+  const moveY = dy / distance;
+  const speed = Math.max(
+    Number(enemy.chaseSpeed) || 0,
+    Number(enemy.speed) || 0,
+    12
+  );
+  const beforeX = enemy.x;
+  const beforeY = enemy.y;
+
+  if (enemy.type === "slime") {
+    moveServerSlime(enemy, moveX, moveY, speed, dt);
+  } else if (enemy.type === "goblin") {
+    // Returning goblins may phase through decorative tree-base collision so a
+    // strict straight return cannot deadlock behind a tree. They still respect
+    // the map's actual walkable/water bounds through mapPointAllowed().
+    const nextX = enemy.x + moveX * speed * dt;
+    const nextY = enemy.y + moveY * speed * dt;
+    if (mapPointAllowed(enemy.mapId, nextX, enemy.y)) enemy.x = nextX;
+    if (mapPointAllowed(enemy.mapId, enemy.x, nextY)) enemy.y = nextY;
+    enemy.moving = true;
+    enemy.walkTime += dt;
+  } else if (enemy.type === "ghost") {
+    // Ghosts already phase through terrain. Keep the return deterministic.
+    enemy.x += moveX * speed * dt;
+    enemy.y += moveY * speed * dt;
+  }
+
+  if (Math.abs(moveX) > 0.04) {
+    enemy.dir = moveX >= 0 ? 1 : -1;
+  }
+
+  const progressed = Math.hypot(enemy.x - beforeX, enemy.y - beforeY);
+  if (progressed < 0.02) {
+    enemy.returnStuckTime = (Number(enemy.returnStuckTime) || 0) + dt;
+  } else {
+    enemy.returnStuckTime = 0;
+  }
+
+  // A return should never create an immortal permanently-stuck mob. This is a
+  // rare safety fallback for pathological collision geometry during the first
+  // strict-state test. The normal path remains fully server simulated.
+  if (enemy.returnStuckTime >= ENEMY_RETURN_HOME_STUCK_SECONDS) {
+    finishEnemyReturningHome(enemy);
+  }
+
+  return true;
+}
+
+const CAMOUFLAGE_CONFUSION_DURATION = CAMOUFLAGE_RULES.CONFUSION_DURATION;
+const CAMOUFLAGE_CLOSE_REVEAL_DISTANCE = CAMOUFLAGE_RULES.CLOSE_REVEAL_DISTANCE;
+const serverCamouflageStates = new Map();
+
+function makeServerCamouflageState(playerState = null) {
+  const now = Date.now();
+  return {
+    phase: "exposed",
+    buildStartedAt: 0,
+    buildCoverId: null,
+    sourceCoverId: null,
+    graceUntil: 0,
+    openerReadyUntil: 0,
+    lastMovementAt: now,
+    mapId: playerState?.mapId || null
+  };
+}
+
+function serverCamouflageStateFor(playerState) {
+  if (!playerState?.id) return null;
+  let state = serverCamouflageStates.get(playerState.id);
+  if (!state) {
+    state = makeServerCamouflageState(playerState);
+    serverCamouflageStates.set(playerState.id, state);
+  }
+  return state;
+}
+
+function playerHasCamouflageUnlocked(playerState) {
+  return Boolean(
+    playerState &&
+    playerState.classId === "precision" &&
+    (Number(playerState.abilities?.camouflage) || 0) > 0
+  );
+}
+
+function serverCamouflageCoverAt(mapId, x, y) {
+  if (!mapId) return null;
+
+  for (const entity of environmentEntitiesOnMap(mapId)) {
+    if (entity.kind === "tree") {
+      if (
+        entity.isStump ||
+        entity.falling ||
+        entity.canopyBurned ||
+        (Number(entity.canopyBurnTime) || 0) > 0
+      ) {
+        continue;
+      }
+
+      if (
+        CAMOUFLAGE_RULES.pointInTreeCover(
+          x,
+          y,
+          entity.x,
+          entity.y
+        )
+      ) {
+        return {
+          id: CAMOUFLAGE_RULES.treeCoverId(
+            mapId,
+            entity.id,
+            entity.x,
+            entity.y
+          ),
+          type: "tree"
+        };
+      }
+      continue;
+    }
+
+    if (entity.kind !== "grass") continue;
+    if (
+      entity.cut ||
+      entity.burnt ||
+      (Number(entity.burnTime) || 0) > 0
+    ) {
+      continue;
+    }
+
+    if (
+      CAMOUFLAGE_RULES.pointInGrassCover(
+        x,
+        y,
+        entity.x,
+        entity.y,
+        entity.width || 13
+      )
+    ) {
+      return {
+        id: CAMOUFLAGE_RULES.grassCoverId(
+          mapId,
+          entity.id,
+          entity.x,
+          entity.y
+        ),
+        type: "grass"
+      };
+    }
+  }
+
+  for (const tree of staticHurlTreesOnMap(mapId)) {
+    if (
+      CAMOUFLAGE_RULES.pointInTreeCover(
+        x,
+        y,
+        tree.x,
+        tree.y
+      )
+    ) {
+      return {
+        id: CAMOUFLAGE_RULES.treeCoverId(
+          mapId,
+          null,
+          tree.x,
+          tree.y
+        ),
+        type: "tree"
+      };
+    }
+  }
+
+  // Rain-created Magic Grass is shared cover too. The server reconstructs the
+  // same deterministic cells as every client, so no extra cover packets are
+  // needed. A cell qualifies independently once grown and stops qualifying
+  // while burning, once consumed, or when its natural lifetime ends.
+  const nowMs = Date.now();
+  for (const field of activeServerRainFields.values()) {
+    if (field.mapId !== mapId || nowMs >= field.expiresAtMs) continue;
+
+    for (const cell of field.cells) {
+      const bit = RAIN_FIELD.cellBit(cell.index);
+      if (field.burntMask & bit) continue;
+      if ((Number(field.burnExpiresAtMs[cell.index]) || 0) > 0) continue;
+      if (!RAIN_FIELD.cellIsGrown(cell, field.startedAtMs, nowMs)) continue;
+      if (
+        nowMs < field.startedAtMs +
+          (cell.growDelay + CAMOUFLAGE_RULES.RAIN_GRASS_COVER_MATURITY_DELAY) * 1000
+      ) {
+        continue;
+      }
+      if (!RAIN_FIELD.cellIsNaturallyAlive(cell, field.startedAtMs, nowMs)) continue;
+
+      if (
+        CAMOUFLAGE_RULES.pointInGrassCover(
+          x,
+          y,
+          cell.x,
+          cell.y,
+          cell.width || 13
+        )
+      ) {
+        return {
+          id: CAMOUFLAGE_RULES.rainGrassCoverId(
+            mapId,
+            field.ownerId,
+            field.patchId,
+            cell.index
+          ),
+          type: CAMOUFLAGE_RULES.RAIN_GRASS_KIND
+        };
+      }
+    }
+  }
+
+  return null;
+}
 
 function playerIsTargetedByPveEnemy(playerId) {
   if (!playerId) return false;
@@ -2851,10 +6026,7 @@ function playerIsTargetedByPveEnemy(playerId) {
   for (const enemy of allSharedEnemies()) {
     if (!enemy?.alive) continue;
 
-    if (
-      enemy.aggroTargetId === playerId &&
-      (Number(enemy.aggroTime) || 0) > 0
-    ) {
+    if (enemy.aggroTargetId === playerId) {
       return true;
     }
 
@@ -2869,16 +6041,245 @@ function playerIsTargetedByPveEnemy(playerId) {
   return false;
 }
 
-function camouflageOpeningIsValid(
-  playerState,
-  payload = {}
-) {
-  return Boolean(
-    payload.camouflageOpening &&
-    playerState &&
-    Number.isFinite(playerState.camouflageReadyUntil) &&
-    playerState.camouflageReadyUntil >= Date.now()
+function enemyIsCloseEnoughToRevealCamouflage(playerState) {
+  if (!playerState) return false;
+
+  for (const enemy of allSharedEnemies()) {
+    if (!enemy?.alive || enemy.mapId !== playerState.mapId) continue;
+    if (
+      Math.hypot(
+        (Number(enemy.x) || 0) - playerState.x,
+        (Number(enemy.y) || 0) - playerState.y
+      ) <= CAMOUFLAGE_CLOSE_REVEAL_DISTANCE
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function broadcastServerCamouflageState(playerState, state, reason = "state") {
+  if (!playerState || !state) return;
+  broadcastToMap(playerState.mapId, {
+    type: "camouflageState",
+    playerId: playerState.id,
+    mapId: playerState.mapId,
+    camouflaged: Boolean(playerState.camouflaged),
+    sourceCoverId: state.sourceCoverId || null,
+    reason
+  });
+}
+
+function resetServerCamouflageState(playerState, reason = "reset", broadcast = false) {
+  if (!playerState?.id) return;
+  const state = serverCamouflageStateFor(playerState);
+  const wasCamouflaged = Boolean(playerState.camouflaged || state.phase === "camouflaged");
+
+  playerState.camouflaged = false;
+  state.phase = "exposed";
+  state.buildStartedAt = 0;
+  state.buildCoverId = null;
+  state.sourceCoverId = null;
+  state.graceUntil = 0;
+  state.openerReadyUntil = 0;
+  state.lastMovementAt = Date.now();
+  state.mapId = playerState.mapId;
+
+  if (broadcast && wasCamouflaged) {
+    broadcastServerCamouflageState(playerState, state, reason);
+  }
+}
+
+function revealServerCamouflage(playerState, reason = "reveal", options = {}) {
+  if (!playerState?.id) return false;
+  const state = serverCamouflageStateFor(playerState);
+  const wasCamouflaged = Boolean(playerState.camouflaged || state.phase === "camouflaged");
+
+  playerState.camouflaged = false;
+  state.phase = "exposed";
+  state.buildStartedAt = 0;
+  state.buildCoverId = null;
+  state.sourceCoverId = null;
+  state.graceUntil = 0;
+  if (!options.keepOpener) state.openerReadyUntil = 0;
+
+  if (wasCamouflaged) {
+    broadcastServerCamouflageState(playerState, state, reason);
+  }
+  return wasCamouflaged;
+}
+
+function enterServerCamouflage(playerState, state, cover, now = Date.now()) {
+  if (!playerState || !state || !cover) return false;
+  if (playerState.camouflaged && state.phase === "camouflaged") return true;
+
+  playerState.camouflaged = true;
+  state.phase = "camouflaged";
+  state.buildStartedAt = 0;
+  state.buildCoverId = null;
+  state.sourceCoverId = cover.id;
+  state.graceUntil = now + CAMOUFLAGE_RULES.GRACE_DURATION * 1000;
+  state.openerReadyUntil = 0;
+  broadcastServerCamouflageState(playerState, state, "entered");
+  return true;
+}
+
+function noteServerCamouflagePlayerUpdate(previousState, nextState) {
+  if (!nextState?.id) return;
+  const state = serverCamouflageStateFor(nextState);
+  const now = Date.now();
+
+  if (state.mapId !== nextState.mapId) {
+    resetServerCamouflageState(nextState, "map", false);
+    state.mapId = nextState.mapId;
+    return;
+  }
+
+  if (!previousState) return;
+
+  const moved =
+    Math.hypot(
+      (Number(nextState.x) || 0) - (Number(previousState.x) || 0),
+      (Number(nextState.y) || 0) - (Number(previousState.y) || 0)
+    ) > 0.01 ||
+    Math.abs(
+      (Number(nextState.walkTime) || 0) - (Number(previousState.walkTime) || 0)
+    ) > 0.001;
+
+  if (moved) {
+    state.lastMovementAt = now;
+    if (state.phase === "building") {
+      state.phase = "exposed";
+      state.buildStartedAt = 0;
+      state.buildCoverId = null;
+    }
+  }
+}
+
+function serverPlayerCanBuildCamouflage(playerState, state, now) {
+  if (
+    !playerHasCamouflageUnlocked(playerState) ||
+    playerState.hp <= 0 ||
+    playerState.shadowHidden ||
+    playerIsTargetedByPveEnemy(playerState.id) ||
+    hunterSnareSetups.has(playerState.id)
+  ) {
+    return false;
+  }
+
+  if (
+    (Number(playerState.attackTime) || 0) > 0 ||
+    playerState.bowDrawing ||
+    playerState.focusFireCasting ||
+    playerState.fireballAiming ||
+    playerState.rainCloudCasting
+  ) {
+    return false;
+  }
+
+  // A motion packet resets lastMovementAt. Waiting one network frame prevents
+  // the server from starting a cover timer on the exact frame movement stops.
+  return now - state.lastMovementAt >= 75;
+}
+
+function updateServerCamouflagePlayer(playerState, now = Date.now()) {
+  if (!playerState?.id) return;
+  const state = serverCamouflageStateFor(playerState);
+
+  if (
+    !playerHasCamouflageUnlocked(playerState) ||
+    playerState.hp <= 0 ||
+    playerState.shadowHidden
+  ) {
+    revealServerCamouflage(playerState, "unavailable");
+    state.phase = "exposed";
+    state.buildStartedAt = 0;
+    state.buildCoverId = null;
+    return;
+  }
+
+  const cover = serverCamouflageCoverAt(
+    playerState.mapId,
+    playerState.x,
+    playerState.y
   );
+
+
+  if (playerState.camouflaged || state.phase === "camouflaged") {
+    if (
+      playerIsTargetedByPveEnemy(playerState.id) ||
+      enemyIsCloseEnoughToRevealCamouflage(playerState)
+    ) {
+      revealServerCamouflage(playerState, "detected");
+      return;
+    }
+
+    if (cover) {
+      state.graceUntil = now + CAMOUFLAGE_RULES.GRACE_DURATION * 1000;
+      return;
+    }
+
+    if (now >= state.graceUntil) {
+      revealServerCamouflage(playerState, "leftCover");
+    }
+    return;
+  }
+
+  if (!serverPlayerCanBuildCamouflage(playerState, state, now)) {
+    state.phase = "exposed";
+    state.buildStartedAt = 0;
+    state.buildCoverId = null;
+    return;
+  }
+
+  if (!cover) {
+    state.phase = "exposed";
+    state.buildStartedAt = 0;
+    state.buildCoverId = null;
+    return;
+  }
+
+  if (state.phase !== "building" || state.buildCoverId !== cover.id) {
+    state.phase = "building";
+    state.buildStartedAt = now;
+    state.buildCoverId = cover.id;
+    return;
+  }
+
+  if (now - state.buildStartedAt >= CAMOUFLAGE_RULES.BUILD_DURATION * 1000) {
+    enterServerCamouflage(playerState, state, cover, now);
+  }
+}
+
+function tickServerCamouflage() {
+  const now = Date.now();
+  for (const playerState of players.values()) {
+    updateServerCamouflagePlayer(playerState, now);
+  }
+}
+
+function handleCamouflageBreak(playerId) {
+  const playerState = players.get(playerId);
+  if (!playerState) return false;
+
+  // Resolve a just-finished build before validating the attack break. This
+  // avoids a 30 Hz tick-boundary race when the client commits at exactly 1s.
+  updateServerCamouflagePlayer(playerState, Date.now());
+  const state = serverCamouflageStateFor(playerState);
+  if (!playerState.camouflaged || state.phase !== "camouflaged") return false;
+
+  state.openerReadyUntil = Date.now() + CAMOUFLAGE_RULES.OPENER_WINDOW_MS;
+  revealServerCamouflage(playerState, "attack", { keepOpener: true });
+  return true;
+}
+
+function camouflageOpeningIsValid(playerState, payload = {}) {
+  if (!playerState?.id) return false;
+  const state = serverCamouflageStateFor(playerState);
+  // The opener token is granted only by the authoritative camouflageBreak
+  // transition. Damage packets do not get to mint or extend it.
+  return state.openerReadyUntil >= Date.now();
 }
 
 function tryApplyCamouflageConfusion(
@@ -2891,14 +6292,14 @@ function tryApplyCamouflageConfusion(
     return false;
   }
 
-  playerState.camouflaged = false;
-  playerState.camouflageReadyUntil = 0;
+  const state = serverCamouflageStateFor(playerState);
+  state.openerReadyUntil = 0;
 
   clearEnemyAggroTarget(enemy);
   enemy.confusionTime = CAMOUFLAGE_CONFUSION_DURATION;
   enemy.confusionTargetId = playerId;
 
-  broadcast({
+  broadcastToMap(enemy.mapId, {
     type: "enemyConfused",
     enemyType: enemy.type,
     enemyId: enemy.id,
@@ -2937,8 +6338,7 @@ function tickEnemyConfusion(enemy, dt) {
   if (target) {
     setEnemyAggroTarget(
       enemy,
-      target.id,
-      enemy.aggroDuration
+      target.id
     );
   }
 
@@ -3078,14 +6478,16 @@ function moveServerGoblin(
 }
 
 function chooseServerGoblinWanderTarget(goblin) {
-  for (let attempt = 0; attempt < 12; attempt++) {
+  const candidates = [];
+
+  for (let attempt = 0; attempt < 16; attempt++) {
     const angle = Math.random() * Math.PI * 2;
 
     const radiusX =
-      5 + Math.random() * goblin.wanderRadiusX;
+      goblin.wanderRadiusX * (0.72 + Math.random() * 0.28);
 
     const radiusY =
-      4 + Math.random() * goblin.wanderRadiusY;
+      goblin.wanderRadiusY * (0.72 + Math.random() * 0.28);
 
     const x = Math.max(
       12,
@@ -3109,16 +6511,30 @@ function chooseServerGoblinWanderTarget(goblin) {
       continue;
     }
 
-    goblin.wanderTargetX = x;
-    goblin.wanderTargetY = y;
-    goblin.wanderDecisionTime =
-      0.65 + Math.random() * 0.9;
-    return;
+    candidates.push({
+      x,
+      y,
+      distance: Math.hypot(x - goblin.x, y - goblin.y)
+    });
   }
 
-  goblin.wanderTargetX = goblin.homeX;
-  goblin.wanderTargetY = goblin.homeY;
-  goblin.wanderDecisionTime = 0.7;
+  // Keep the existing home territory, but prefer one of the longer valid legs
+  // inside it. This makes each MoveStart useful for longer without expanding
+  // the mob's designed roaming footprint.
+  candidates.sort((a, b) => b.distance - a.distance);
+  const pool = candidates.slice(0, Math.min(4, candidates.length));
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+  if (chosen) {
+    goblin.wanderTargetX = chosen.x;
+    goblin.wanderTargetY = chosen.y;
+  } else {
+    goblin.wanderTargetX = goblin.homeX;
+    goblin.wanderTargetY = goblin.homeY;
+  }
+
+  goblin.wanderDecisionTime = 0;
+  goblin.wanderStuckTime = 0;
 }
 
 function resetServerGoblin(goblin) {
@@ -3130,14 +6546,18 @@ function resetServerGoblin(goblin) {
   goblin.alive = true;
   goblin.respawnTime = 0;
 
-  goblin.aggroTime = 0;
   goblin.aggroTargetId = null;
+  goblin.aggroEngagementTime = 0;
   goblin.confusionTime = 0;
   goblin.confusionTargetId = null;
+  goblin.wasEngaged = false;
+  goblin.returningHome = false;
+  goblin.returnStuckTime = 0;
   goblin.wanderTargetX = goblin.homeX;
   goblin.wanderTargetY = goblin.homeY;
   goblin.wanderDecisionTime = 0;
   goblin.pauseTime = 0;
+  goblin.wanderStuckTime = 0;
 
   goblin.moving = false;
   goblin.attackCooldown =
@@ -3170,15 +6590,17 @@ function resetServerGhost(ghost) {
   ghost.alive = true;
   ghost.respawnTime = 0;
 
-  ghost.aggroTime = 0;
   ghost.aggroTargetId = null;
+  ghost.aggroEngagementTime = 0;
   ghost.confusionTime = 0;
   ghost.confusionTargetId = null;
-  ghost.wanderAngle =
-    Math.random() * Math.PI * 2;
-
-  ghost.wanderTimer =
-    0.8 + Math.random() * 1.2;
+  ghost.wasEngaged = false;
+  ghost.returningHome = false;
+  ghost.returnStuckTime = 0;
+  ghost.wanderTargetX = ghost.homeX;
+  ghost.wanderTargetY = ghost.homeY;
+  ghost.pauseTime = 0;
+  ghost.wanderStuckTime = 0;
 
   ghost.burnTime = 0;
   ghost.burnTickTimer = 0;
@@ -3220,16 +6642,8 @@ function handleAuthoritativePlayerDeath(target) {
   target.hp = 0;
   clearServerPlayerBurn(target);
   target.wetTime = 0;
-  target.shadowHidden = false;
-  target.camouflaged = false;
-  target.camouflageReadyUntil = 0;
-  target.focusFireCasting = false;
-  target.hunterSnareSetting = false;
-  target.attackTime = 0;
-  target.bowDrawing = false;
-  target.bowDrawAmount = 0;
-  target.bowReleaseTime = 0;
-  target.hurlReachTime = 0;
+  resetServerPlayerPresentationState(target);
+  resetServerCamouflageState(target, "death", true);
 
   focusFireDamageChains.delete(target.id);
 
@@ -3253,6 +6667,7 @@ function applyServerPlayerDamage(
     mapId = target.mapId,
     sourceType = "world",
     sourceId = null,
+    damageType = "physical",
     knockbackX = 0,
     knockbackY = 0,
     contactCooldown = 0.5
@@ -3266,14 +6681,28 @@ function applyServerPlayerDamage(
     return 0;
   }
 
-  const requestedDamage = Math.max(
+  const rawDamage = Math.max(
     0,
     Math.round(Number(amount) || 0)
   );
 
-  if (requestedDamage <= 0) {
+  if (rawDamage <= 0) {
     return 0;
   }
+
+  const equippedProtection = {
+    hatIndex: target.hatIndex,
+    shirtIndex: target.shirtIndex,
+    pantsIndex: target.pantsIndex
+  };
+  const armor = COMBAT_BALANCE.playerArmorFromGear(equippedProtection);
+  const resist = COMBAT_BALANCE.playerResistFromGear(equippedProtection);
+
+  const requestedDamage = COMBAT_BALANCE.mitigatePlayerDamage(
+    rawDamage,
+    { armor, resist },
+    damageType
+  );
 
   const actualDamage = Math.min(
     target.hp,
@@ -3287,14 +6716,19 @@ function applyServerPlayerDamage(
 
   // Camouflage never prevents collision/contact damage. Being struck reveals
   // the player immediately on the authoritative server as well as the client.
-  target.camouflaged = false;
-  target.camouflageReadyUntil = 0;
+  if (actualDamage > 0) {
+    revealServerCamouflage(target, "hit");
+    cancelHunterSnareSetup(
+      target.id,
+      "hit"
+    );
+  }
 
   if (target.hp <= 0) {
     handleAuthoritativePlayerDeath(target);
   }
 
-  broadcast({
+  broadcastToMap(target.mapId, {
     type: "playerDamage",
     targetId: target.id,
     mapId: target.mapId,
@@ -3303,6 +6737,9 @@ function applyServerPlayerDamage(
     maxHp: target.maxHp,
     sourceType,
     sourceId,
+    damageType,
+    armor,
+    resist,
     knockbackX,
     knockbackY,
     contactCooldown
@@ -3312,6 +6749,7 @@ function applyServerPlayerDamage(
 }
 
 function handlePlayerIgniteRequest(playerId, message) {
+  fireDiagnostics.legacyPlayerIgniteRequests += 1;
   const requester = players.get(playerId);
   if (!requester || requester.hp <= 0) return;
 
@@ -3335,17 +6773,32 @@ function handlePlayerIgniteRequest(playerId, message) {
     return;
   }
 
+  if (
+    target.id !== requester.id &&
+    !pvpPlayersCanHarm(requester, target)
+  ) {
+    return;
+  }
+
   // Burning magic grass obeys the same Wet protection rule as other fire.
-  // If Wet blocks the ignition, do not emit an ignition event at all.
+  // Player-attributed fire uses the shorter PvP burn window against opponents.
   const ignited = applyServerPlayerBurn(target, {
-    duration: STATUS_RULES.playerBurnDuration
+    duration:
+      target.id === requester.id
+        ? STATUS_RULES.playerBurnDuration
+        : PVP_PLAYER_BURN_DURATION,
+    sourcePlayerId: requester.id
   });
 
   if (!ignited) {
     return;
   }
 
-  broadcast({
+  if (target.id !== requester.id) {
+    applyPvpCombatLock(requester, target);
+  }
+
+  broadcastToMap(target.mapId, {
     type: "playerIgnited",
     targetId: target.id,
     mapId: target.mapId,
@@ -3389,7 +6842,7 @@ function applyServerPlayerHeal(
 
   target.hp += actualHeal;
 
-  broadcast({
+  broadcastToMap(target.mapId, {
     type: "playerHeal",
     targetId: target.id,
     mapId: target.mapId,
@@ -3411,22 +6864,37 @@ function broadcastEnemyHitPlayer(
   knockbackMagnitude,
   contactCooldown
 ) {
-  return applyServerPlayerDamage(
+  const dealt = applyServerPlayerDamage(
     target,
     {
       amount,
       mapId: enemy.mapId,
       sourceType: enemy.type,
       sourceId: enemy.id,
+      damageType: "physical",
       knockbackX: nx * knockbackMagnitude,
       knockbackY: ny * knockbackMagnitude,
       contactCooldown
     }
   );
+
+  if (dealt > 0) {
+    refreshEnemyEngagement(enemy, target?.id || null);
+  }
+
+  return dealt;
 }
 
 function isBowWeaponIndex(index) {
   return index === 6 || index === 7;
+}
+
+function wandAttackRateLimitMs(weaponIndex) {
+  if (!COMBAT_BALANCE.isWandWeaponIndex(weaponIndex)) return 260;
+  const cooldown = COMBAT_BALANCE.wandAttackCooldown(weaponIndex);
+  // Leave a small transport/frame grace while still enforcing the equipped
+  // wand's Slow / Normal / Quick cadence authoritatively.
+  return Math.max(260, Math.round(cooldown * 1000) - 80);
 }
 
 function pvpAttackRateLimited(
@@ -3490,12 +6958,14 @@ function calculateServerPvpDamage(
     weaponIndex: attacker.weaponIndex,
     playerLevel: attacker.level || 1,
     stats: attacker.stats || {},
+    classId: attacker.classId || null,
 
     // Reuse the neutral physical/magic multiplier from slime while still
     // letting player level differences affect the first-pass PvP tuning.
     monsterType: "slime",
     monsterLevel: target.level || 1,
-    critical
+    critical,
+    abilityLevel: serverCombatAbilityLevel(attacker, source)
   });
 
   return Math.max(
@@ -3507,7 +6977,14 @@ function calculateServerPvpDamage(
 }
 
 function applyPvpCombatLock(attacker, target) {
-  const until = Date.now() + PVP_COMBAT_LOCK_MS;
+  if (!attacker || !target || attacker.mapId !== target.mapId) return;
+
+  const now = Date.now();
+  const until = now + PVP_COMBAT_LOCK_MS;
+  const previousUntil = Math.max(
+    Number(attacker.pvpCombatUntil) || 0,
+    Number(target.pvpCombatUntil) || 0
+  );
 
   attacker.pvpCombatUntil = Math.max(
     Number(attacker.pvpCombatUntil) || 0,
@@ -3519,7 +6996,16 @@ function applyPvpCombatLock(attacker, target) {
     until
   );
 
-  broadcast({
+  // Continuous Rain/Burn may refresh the lock many times per second. Broadcast
+  // only when the visible client deadline meaningfully advances.
+  if (
+    previousUntil > now &&
+    until - previousUntil < PVP_LOCK_REBROADCAST_GRACE_MS
+  ) {
+    return;
+  }
+
+  broadcastToMap(attacker.mapId, {
     type: "pvpCombatLock",
     playerIds: [attacker.id, target.id],
     until
@@ -3570,9 +7056,9 @@ function handlePvpToggle(
     )
   });
 
-  broadcast({
+  broadcastToMap(playerState.mapId, {
     type: "playerState",
-    player: playerState
+    player: publicPlayerState(playerState)
   });
 }
 
@@ -3586,14 +7072,7 @@ function handlePvpAttack(
   );
 
   if (
-    !attacker ||
-    !target ||
-    attacker.id === target.id ||
-    attacker.hp <= 0 ||
-    target.hp <= 0 ||
-    attacker.mapId !== target.mapId ||
-    !attacker.pvpEnabled ||
-    !target.pvpEnabled ||
+    !pvpPlayersCanHarm(attacker, target) ||
     target.shadowHidden
   ) {
     return;
@@ -3613,7 +7092,7 @@ function handlePvpAttack(
 
   if (source === "melee") {
     // Melee weapons plus unmastered wand-type weapons use this path.
-    if (![0, 1, 2, 3, 4, 5, 8, 9, 10].includes(attacker.weaponIndex)) {
+    if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11].includes(attacker.weaponIndex)) {
       return;
     }
 
@@ -3628,11 +7107,16 @@ function handlePvpAttack(
       0.92
     );
 
-    minimumMs = 260;
+    minimumMs = COMBAT_BALANCE.isWandWeaponIndex(attacker.weaponIndex)
+      ? wandAttackRateLimitMs(attacker.weaponIndex)
+      : 260;
     knockback =
       attacker.weaponIndex === 1 ? 18 : 15;
   } else if (source === "wandMasteryMelee") {
-    if (![2, 3, 8, 9, 10].includes(attacker.weaponIndex)) {
+    if (
+      (Number(attacker.abilities?.wandMastery) || 0) <= 0 ||
+      ![2, 3, 8, 9, 10].includes(attacker.weaponIndex)
+    ) {
       return;
     }
 
@@ -3644,7 +7128,7 @@ function handlePvpAttack(
       0.56
     );
 
-    minimumMs = 260;
+    minimumMs = wandAttackRateLimitMs(attacker.weaponIndex);
     knockback = 15;
   } else if (source === "bowMelee") {
     if (!isBowWeaponIndex(attacker.weaponIndex)) {
@@ -3669,18 +7153,68 @@ function handlePvpAttack(
     arrowCharge =
       arrowChargeProfileFromPayload(payload);
 
-    valid = pvpAimHitsTarget(
-      attacker,
-      target,
-      payload.aimAngle,
-      arrowCharge.maxDistance + 12,
-      0.72
-    );
+    const projectileX = Number(payload.projectileX);
+    const projectileY = Number(payload.projectileY);
+    const hasProjectileHitPoint =
+      Number.isFinite(projectileX) &&
+      Number.isFinite(projectileY);
+
+    if (hasProjectileHitPoint) {
+      const targetDistance = Math.hypot(
+        target.x - projectileX,
+        (target.y - 8) - projectileY
+      );
+      const travelDistance = Math.hypot(
+        projectileX - attacker.x,
+        projectileY - (attacker.y - 8)
+      );
+
+      valid =
+        targetDistance <= 12 &&
+        travelDistance <= arrowCharge.maxDistance + 20;
+    } else {
+      valid = pvpAimHitsTarget(
+        attacker,
+        target,
+        payload.aimAngle,
+        arrowCharge.maxDistance + 12,
+        0.72
+      );
+    }
 
     minimumMs = 180;
     knockback = 12;
+  } else if (source === "fireball") {
+    if (
+      (Number(attacker.abilities?.fireball) || 0) <= 0 ||
+      !COMBAT_BALANCE.isWandWeaponIndex(attacker.weaponIndex)
+    ) {
+      return;
+    }
+
+    const impactX = Number(payload.impactX);
+    const impactY = Number(payload.impactY);
+
+    if (
+      !Number.isFinite(impactX) ||
+      !Number.isFinite(impactY) ||
+      Math.hypot(
+        impactX - attacker.x,
+        impactY - (attacker.y - 8)
+      ) > 220
+    ) {
+      return;
+    }
+
+    valid =
+      Math.hypot(
+        target.x - impactX,
+        (target.y - 8) - impactY
+      ) <= PVP_FIREBALL_LANDING_RADIUS + 6;
+
+    minimumMs = 3000;
+    knockback = 18;
   } else {
-    // Magic/skills are deliberately not PvP-enabled in the first pass.
     return;
   }
 
@@ -3707,15 +7241,27 @@ function handlePvpAttack(
 
   const damage =
     source === "arrow"
-      ? scaleArrowDamage(
-          baseDamage,
-          payload
+      ? Math.max(
+          1,
+          Math.round(
+            scaleArrowDamage(
+              baseDamage,
+              payload
+            ) * focusFireDamageMultiplier(
+              attacker.id,
+              target,
+              payload
+            )
+          )
         )
       : source === "wandMasteryMelee"
         ? Math.max(
             1,
             Math.round(
-              baseDamage * wandMasteryTargetDamageMultiplier(payload)
+              baseDamage * wandMasteryTargetDamageMultiplier(
+                payload,
+                Number(attacker.abilities?.wandMastery) || 1
+              )
             )
           )
         : baseDamage;
@@ -3733,11 +7279,10 @@ function handlePvpAttack(
     if (
       !currentAttacker ||
       !currentTarget ||
-      currentAttacker.hp <= 0 ||
-      currentTarget.hp <= 0 ||
-      currentAttacker.mapId !== currentTarget.mapId ||
-      !currentAttacker.pvpEnabled ||
-      !currentTarget.pvpEnabled
+      !pvpPlayersCanHarm(
+        currentAttacker,
+        currentTarget
+      )
     ) {
       return;
     }
@@ -3749,6 +7294,9 @@ function handlePvpAttack(
         mapId: currentTarget.mapId,
         sourceType: `pvp:${source}`,
         sourceId: currentAttacker.id,
+        damageType:
+          COMBAT_BALANCE.profileForAttack(source, currentAttacker.weaponIndex)?.damageType ||
+          "physical",
         knockbackX,
         knockbackY,
         contactCooldown: 0.18
@@ -3756,6 +7304,20 @@ function handlePvpAttack(
     );
 
     if (dealt > 0) {
+      if (source === "fireball") {
+        applyServerPlayerBurn(
+          currentTarget,
+          {
+            duration: PVP_PLAYER_BURN_DURATION,
+            sourcePlayerId: currentAttacker.id
+          }
+        );
+
+        if ((Number(currentTarget.burnTime) || 0) > 0) {
+          broadcastServerPlayerBurnState(currentTarget);
+        }
+      }
+
       applyPvpCombatLock(currentAttacker, currentTarget);
     }
   };
@@ -3794,9 +7356,10 @@ function handlePlayerDamageRequest(
   let minimumMs = 400;
 
   if (source === "burn") {
-    damage = 2;
-    minimumMs = 450;
-    contactCooldown = 0;
+    // v253+ clients never request their own Burn ticks. Count and ignore any
+    // stale-client request rather than letting it double-apply percentage Burn.
+    fireDiagnostics.legacyPlayerBurnDamageRequests += 1;
+    return;
   } else {
     return;
   }
@@ -3817,6 +7380,7 @@ function handlePlayerDamageRequest(
     {
       amount: damage,
       sourceType: source,
+      damageType: "magic",
       knockbackX,
       knockbackY,
       contactCooldown
@@ -3870,6 +7434,15 @@ function handlePlayerRespawn(
   // Only accept a respawn reset after the authoritative HP reached zero.
   if (target.hp > 0) return;
 
+  const deathMapId = target.mapId;
+
+  // Respawn changes maps outside the normal playerState map-transition path.
+  // Tell observers on the death map immediately so a backgrounded tab cannot
+  // retain the dead player's ghost indefinitely after that player respawns.
+  if (deathMapId) {
+    leavePlayerMap(playerId, deathMapId);
+  }
+
   target.hp = target.maxHp;
   target.isDead = false;
   target.mapId = "spawn";
@@ -3878,21 +7451,103 @@ function handlePlayerRespawn(
   target.x = 172;
   target.y = 112;
   target.burnTime = 0;
+  target.burnTickTimer = 0;
+  target.burnDamageAccumulator = 0;
+  target.burnSourcePlayerId = null;
   target.wetTime = 0;
-  target.shadowHidden = false;
-  target.camouflaged = false;
-  target.camouflageReadyUntil = 0;
-  target.focusFireCasting = false;
-  target.hunterSnareSetting = false;
-  target.attackTime = 0;
-  target.bowDrawing = false;
-  target.bowDrawAmount = 0;
-  target.bowReleaseTime = 0;
+  resetServerPlayerPresentationState(target);
+  resetServerCamouflageState(target, "respawn", false);
 
-  broadcast({
+  const socket = socketsByPlayerId.get(playerId);
+  if (socket) {
+    movePlayerSocketToMap(socket, target.mapId);
+  }
+
+  broadcastToMap(target.mapId, {
     type: "playerRespawn",
-    player: target
+    player: publicPlayerState(target)
   });
+}
+
+function tickServerPlayerBurns(dt) {
+  for (const target of players.values()) {
+    if (target.hp <= 0) {
+      clearServerPlayerBurn(target);
+      continue;
+    }
+
+    if ((Number(target.burnTime) || 0) <= 0) continue;
+
+    target.burnTime = Math.max(0, Number(target.burnTime) - dt);
+    target.burnTickTimer =
+      Math.max(0, Number(target.burnTickTimer) || STATUS_RULES.playerBurnTickInterval) - dt;
+
+    while (
+      target.burnTickTimer <= 0 &&
+      target.burnTime > 0 &&
+      target.hp > 0
+    ) {
+      // Player Burn is percentage-based, but HP is intentionally integer.
+      // Accumulate the fractional 1%-of-max-HP half-second slices and only
+      // emit an authoritative damage event once at least 1 HP is owed.
+      target.burnDamageAccumulator = Math.max(
+        0,
+        Number(target.burnDamageAccumulator) || 0
+      ) + Math.max(1, Number(target.maxHp) || 1) *
+        STATUS_RULES.playerBurnMaxHpFractionPerTick;
+
+      const burnSourcePlayerId =
+        target.burnSourcePlayerId || null;
+      const burnSource =
+        burnSourcePlayerId &&
+        burnSourcePlayerId !== target.id
+          ? players.get(burnSourcePlayerId)
+          : null;
+
+      if (
+        burnSource &&
+        !pvpPlayersCanHarm(burnSource, target)
+      ) {
+        clearServerPlayerBurn(target);
+        broadcastServerPlayerBurnState(target);
+        break;
+      }
+
+      const wholeDamage = Math.floor(target.burnDamageAccumulator + 1e-9);
+      if (wholeDamage > 0) {
+        target.burnDamageAccumulator -= wholeDamage;
+        applyServerPlayerDamage(target, {
+          amount: wholeDamage,
+          sourceType:
+            burnSource
+              ? "pvp:burn"
+              : "burn",
+          sourceId:
+            burnSource
+              ? burnSource.id
+              : null,
+          // Burn Resistance will eventually be its own status rule. Ordinary
+          // armor/magic resistance should not distort the promised % max-HP rate.
+          damageType: "burn",
+          contactCooldown: 0
+        });
+
+        if (burnSource) {
+          applyPvpCombatLock(burnSource, target);
+        }
+      }
+
+      fireDiagnostics.playerDamageTicks += 1;
+      target.burnTickTimer += STATUS_RULES.playerBurnTickInterval;
+    }
+
+    if (target.burnTime <= 0) {
+      target.burnTime = 0;
+      target.burnTickTimer = 0;
+      target.burnDamageAccumulator = 0;
+      target.burnSourcePlayerId = null;
+    }
+  }
 }
 
 function playerContactAvailable(playerId) {
@@ -3921,7 +7576,9 @@ function tickEnemyStatuses(enemy, dt) {
   }
 
   if (enemy.wetTime > 0) {
+    const wasWet = enemy.wetTime > 0;
     enemy.wetTime = Math.max(0, enemy.wetTime - dt);
+    if (wasWet && enemy.wetTime <= 0) rainDiagnostics.enemyWetExits += 1;
   }
 
   if (enemy.burnTime <= 0) {
@@ -3936,26 +7593,25 @@ function tickEnemyStatuses(enemy, dt) {
     enemy.burnTime > 0 &&
     enemy.alive
   ) {
-    const damage = 2;
+    const damage = Math.max(
+      1,
+      Math.round(Number(enemy.burnDamagePerTick) || STATUS_RULES.enemyBurnDamagePerTick)
+    );
 
     enemy.hp = Math.max(
       0,
       enemy.hp - damage
     );
 
+    refreshEnemyEngagement(enemy, enemy.lastDamagePlayerId);
+
     enemy.burnTickTimer +=
       enemy.burnTickInterval;
+    fireDiagnostics.enemyDamageTicks += 1;
 
-    broadcast({
-      type: "enemyDamage",
-      enemyType: enemy.type,
-      enemyId: enemy.id,
-      mapId: enemy.mapId,
-      amount: damage,
-      hp: enemy.hp,
-      critical: false,
-      source: "burn"
-    });
+    // Deliberately no per-enemy enemyDamage packet here. The compact 8 Hz
+    // enemyHealthDelta batches authoritative Burn HP changes for the map while
+    // clients simulate the tiny burn number locally.
 
     if (enemy.hp <= 0) {
       killSharedEnemy(
@@ -3969,6 +7625,7 @@ function tickEnemyStatuses(enemy, dt) {
   if (enemy.burnTime <= 0) {
     enemy.burnTime = 0;
     enemy.burnTickTimer = 0;
+    enemy.burnDamagePerTick = STATUS_RULES.enemyBurnDamagePerTick;
   }
 }
 
@@ -3988,6 +7645,9 @@ function killSharedEnemy(
   clearEnemyAggroTarget(enemy);
   enemy.confusionTime = 0;
   enemy.confusionTargetId = null;
+  enemy.returningHome = false;
+  enemy.wasEngaged = false;
+  enemy.returnStuckTime = 0;
 
   const profile =
     serverEnemyProfile(enemy);
@@ -4054,7 +7714,7 @@ function killSharedEnemy(
     );
   });
 
-  broadcast({
+  broadcastToMap(enemy.mapId, {
     type: "enemyKilled",
     enemyType: enemy.type,
     enemyId: enemy.id,
@@ -4077,6 +7737,13 @@ function tickSharedGhosts(dt) {
       continue;
     }
 
+    // RETURNING_HOME is deliberately isolated from combat/status AI in this
+    // first state-machine pass. It stays server-authoritative until home.
+    if (ghost.returningHome) {
+      tickEnemyReturningHome(ghost, dt);
+      continue;
+    }
+
     tickEnemyStatuses(ghost, dt);
     if (!ghost.alive) continue;
 
@@ -4086,11 +7753,8 @@ function tickSharedGhosts(dt) {
     );
     releaseEnemyTauntOnContact(ghost);
 
-    if (ghost.aggroTime > 0) {
-      ghost.aggroTime = Math.max(
-        0,
-        ghost.aggroTime - dt
-      );
+    if (ghost.tauntTime > 0) {
+      ghost.wasEngaged = true;
     }
 
     const confused =
@@ -4105,53 +7769,8 @@ function tickSharedGhosts(dt) {
     } else if (ghost.tauntTime > 0) {
       targetX = ghost.tauntX;
       targetY = ghost.tauntY;
-      ghost.aggroTime = ghost.aggroDuration;
     } else {
-      targetPlayer = visibleAggroPlayerById(
-        ghost.aggroTargetId,
-        ghost.mapId,
-        ghost.x,
-        ghost.y
-      );
-
-      if (targetPlayer) {
-        const targetDistance = Math.hypot(
-          targetPlayer.x - ghost.x,
-          targetPlayer.y - ghost.y
-        );
-
-        // Staying close keeps the same target angry. Being farther away lets
-        // the existing aggro timer run out instead of switching to whoever is
-        // currently nearest.
-        if (targetDistance <= ghost.detectionRadius) {
-          ghost.aggroTime = ghost.aggroDuration;
-        } else if (ghost.aggroTime <= 0) {
-          ghost.aggroTargetId = null;
-          targetPlayer = null;
-        }
-      } else if (ghost.aggroTargetId) {
-        ghost.aggroTargetId = null;
-      }
-
-      // Only acquire a new proximity target when there is no valid remembered
-      // target. Damage always replaces this target with the actual attacker.
-      if (!targetPlayer) {
-        const nearby = nearestVisiblePlayer(
-          ghost.mapId,
-          ghost.x,
-          ghost.y,
-          ghost.detectionRadius
-        );
-
-        if (nearby) {
-          targetPlayer = nearby.player;
-          setEnemyAggroTarget(
-            ghost,
-            targetPlayer.id,
-            ghost.aggroDuration
-          );
-        }
-      }
+      targetPlayer = resolveEnemyAggroTarget(ghost, dt);
 
       if (targetPlayer) {
         targetX = targetPlayer.x;
@@ -4159,40 +7778,26 @@ function tickSharedGhosts(dt) {
       }
     }
 
-    const homeDx = ghost.homeX - ghost.x;
-    const homeDy = ghost.homeY - ghost.y;
-
-    const distanceFromHome = Math.hypot(
-      homeDx,
-      homeDy
-    );
+    if (
+      !confused &&
+      ghost.wasEngaged &&
+      ghost.tauntTime <= 0 &&
+      !targetPlayer &&
+      !ghost.aggroTargetId
+    ) {
+      beginEnemyReturningHome(ghost);
+      tickEnemyReturningHome(ghost, dt);
+      continue;
+    }
 
     let moveX = 0;
     let moveY = 0;
     let speed = ghost.speed;
 
-    const ghostCombatActive =
-      ghost.aggroTime > 0 ||
-      ghost.tauntTime > 0 ||
-      targetX !== null;
-
-    const ghostActiveLeash =
-      ghostCombatActive
-        ? (ghost.combatLeashRadius || 280)
-        : ghost.leashRadius;
-
-    if (distanceFromHome >= ghostActiveLeash) {
-      clearEnemyAggroTarget(ghost);
-      targetPlayer = null;
-      targetX = null;
-      targetY = null;
-    }
-
     if (confused) {
       moveX = 0;
       moveY = 0;
     } else if (
-      ghost.aggroTime > 0 &&
       targetX !== null
     ) {
       const dx = targetX - ghost.x;
@@ -4205,39 +7810,35 @@ function tickSharedGhosts(dt) {
       }
 
       speed = ghost.chaseSpeed;
-    } else if (
-      distanceFromHome >
-      ghost.leashRadius * 0.82
-    ) {
-      if (distanceFromHome > 0.001) {
-        moveX = homeDx / distanceFromHome;
-        moveY = homeDy / distanceFromHome;
-      }
-
-      speed = 14;
+    } else if (ghost.pauseTime > 0) {
+      ghost.pauseTime = Math.max(0, ghost.pauseTime - dt);
     } else {
-      ghost.wanderTimer -= dt;
+      let dx = ghost.wanderTargetX - ghost.x;
+      let dy = ghost.wanderTargetY - ghost.y;
+      let distance = Math.hypot(dx, dy);
 
-      if (ghost.wanderTimer <= 0) {
-        ghost.wanderAngle +=
-          (Math.random() - 0.5) * 1.8;
-
-        ghost.wanderTimer =
-          0.8 + Math.random() * 1.6;
+      if (distance < 2) {
+        ghost.pauseTime = 0.90 + Math.random() * 1.10;
+        chooseServerGhostWanderTarget(ghost);
+        dx = ghost.wanderTargetX - ghost.x;
+        dy = ghost.wanderTargetY - ghost.y;
+        distance = Math.hypot(dx, dy);
       }
 
-      moveX = Math.cos(ghost.wanderAngle);
-      moveY =
-        Math.sin(ghost.wanderAngle) * 0.65;
+      if (distance > 0.001) {
+        moveX = dx / distance;
+        moveY = dy / distance;
+      }
     }
 
     if (Math.abs(moveX) > 0.04) {
       ghost.dir = moveX >= 0 ? 1 : -1;
     }
 
-    // Ghosts intentionally phase through terrain. Hunter's Snare defaults to
-    // ignoring ghosts, but the generic movement modifier keeps this path
-    // compatible with future floating enemies that may opt into snares.
+    const beforeX = ghost.x;
+    const beforeY = ghost.y;
+
+    // Ghosts intentionally phase through terrain.
     const snareMoveMultiplier =
       serverEnemyMovementMultiplier(ghost);
     ghost.x += moveX * speed * snareMoveMultiplier * dt;
@@ -4252,6 +7853,27 @@ function tickSharedGhosts(dt) {
       24,
       Math.min(395, ghost.y)
     );
+
+    if (
+      !confused &&
+      !ghost.aggroTargetId &&
+      ghost.tauntTime <= 0 &&
+      ghost.pauseTime <= 0 &&
+      Math.hypot(
+        ghost.wanderTargetX - ghost.x,
+        ghost.wanderTargetY - ghost.y
+      ) > 2
+    ) {
+      const progress = Math.hypot(ghost.x - beforeX, ghost.y - beforeY);
+      ghost.wanderStuckTime = progress < 0.02
+        ? ghost.wanderStuckTime + dt
+        : 0;
+      if (ghost.wanderStuckTime >= ENEMY_PASSIVE_STUCK_REPLAN_SECONDS) {
+        chooseServerGhostWanderTarget(ghost);
+      }
+    } else {
+      ghost.wanderStuckTime = 0;
+    }
 
     ghost.x += ghost.knockbackX * dt;
     ghost.y += ghost.knockbackY * dt;
@@ -4315,14 +7937,14 @@ function tickSharedGoblins(dt) {
       continue;
     }
 
+    if (goblin.returningHome) {
+      tickEnemyReturningHome(goblin, dt);
+      continue;
+    }
+
     goblin.attackCooldown = Math.max(
       0,
       goblin.attackCooldown - dt
-    );
-
-    goblin.aggroTime = Math.max(
-      0,
-      goblin.aggroTime - dt
     );
 
     goblin.tauntTime = Math.max(
@@ -4330,6 +7952,10 @@ function tickSharedGoblins(dt) {
       goblin.tauntTime - dt
     );
     releaseEnemyTauntOnContact(goblin);
+
+    if (goblin.tauntTime > 0) {
+      goblin.wasEngaged = true;
+    }
 
     tickEnemyStatuses(goblin, dt);
     if (!goblin.alive) continue;
@@ -4432,59 +8058,14 @@ function tickSharedGoblins(dt) {
       if (goblin.tauntTime > 0) {
         targetX = goblin.tauntX;
         targetY = goblin.tauntY;
-        goblin.aggroTime = goblin.aggroDuration;
       } else {
-        targetPlayer = visibleAggroPlayerById(
-          goblin.aggroTargetId,
-          goblin.mapId,
-          goblin.x,
-          goblin.y
-        );
-
-        if (targetPlayer) {
-          const targetDistance = Math.hypot(
-            targetPlayer.x - goblin.x,
-            targetPlayer.y - goblin.y
-          );
-
-          if (targetDistance <= goblin.detectionRadius) {
-            goblin.aggroTime = goblin.aggroDuration;
-          } else if (goblin.aggroTime <= 0) {
-            goblin.aggroTargetId = null;
-            targetPlayer = null;
-          }
-        } else if (goblin.aggroTargetId) {
-          goblin.aggroTargetId = null;
-        }
-
-        if (!targetPlayer) {
-          const nearby = nearestVisiblePlayer(
-            goblin.mapId,
-            goblin.x,
-            goblin.y,
-            goblin.detectionRadius
-          );
-
-          if (nearby) {
-            targetPlayer = nearby.player;
-            setEnemyAggroTarget(
-              goblin,
-              targetPlayer.id,
-              goblin.aggroDuration
-            );
-          }
-        }
+        targetPlayer = resolveEnemyAggroTarget(goblin, dt);
 
         if (targetPlayer) {
           targetX = targetPlayer.x;
           targetY = targetPlayer.y - 3;
         }
       }
-
-      const distanceFromHome = Math.hypot(
-        goblin.x - goblin.homeX,
-        goblin.y - goblin.homeY
-      );
 
       let targetDistance = Infinity;
       let targetDx = 0;
@@ -4502,8 +8083,7 @@ function tickSharedGoblins(dt) {
       }
 
       const pursuing =
-        goblin.aggroTime > 0 &&
-        distanceFromHome < (goblin.combatLeashRadius || 260) &&
+        targetX !== null &&
         targetDistance > 1;
 
       if (
@@ -4553,21 +8133,19 @@ function tickSharedGoblins(dt) {
             moveX >= 0 ? 1 : -1;
         }
       } else {
+        // Once an engaged goblin loses its target, do not drop directly into
+        // passive wandering from an arbitrary combat coordinate. The strict
+        // return state owns the trip home and remains precisely replicated.
         if (
-          goblin.aggroTime > 0 &&
-          distanceFromHome >= (goblin.combatLeashRadius || 260)
+          !confused &&
+          goblin.wasEngaged &&
+          goblin.tauntTime <= 0 &&
+          !targetPlayer &&
+          !goblin.aggroTargetId
         ) {
-          clearEnemyAggroTarget(goblin);
-          targetPlayer = null;
-        }
-
-        if (
-          goblin.aggroTime <= 0 &&
-          distanceFromHome >= goblin.leashRadius
-        ) {
-          goblin.wanderTargetX = goblin.homeX;
-          goblin.wanderTargetY = goblin.homeY;
-          goblin.wanderDecisionTime = 0.45;
+          beginEnemyReturningHome(goblin);
+          tickEnemyReturningHome(goblin, dt);
+          continue;
         }
 
         if (goblin.pauseTime > 0) {
@@ -4575,9 +8153,8 @@ function tickSharedGoblins(dt) {
             0,
             goblin.pauseTime - dt
           );
+          goblin.wanderStuckTime = 0;
         } else {
-          goblin.wanderDecisionTime -= dt;
-
           let dx =
             goblin.wanderTargetX - goblin.x;
 
@@ -4586,17 +8163,12 @@ function tickSharedGoblins(dt) {
 
           let distance = Math.hypot(dx, dy);
 
-          if (
-            distance < 2 ||
-            goblin.wanderDecisionTime <= 0
-          ) {
-            if (
-              distance < 2 &&
-              Math.random() < 0.42
-            ) {
-              goblin.pauseTime =
-                0.18 + Math.random() * 0.35;
-            }
+          // Train Track Rule: arrival (or a true stuck watchdog) is the only
+          // passive reason to choose another destination. There is no timer
+          // that makes an in-transit goblin change its mind.
+          if (distance < 2) {
+            goblin.pauseTime =
+              0.80 + Math.random() * 1.00;
 
             chooseServerGoblinWanderTarget(
               goblin
@@ -4614,6 +8186,8 @@ function tickSharedGoblins(dt) {
           if (distance > 0.001) {
             const moveX = dx / distance;
             const moveY = dy / distance;
+            const beforeX = goblin.x;
+            const beforeY = goblin.y;
 
             moveServerGoblin(
               goblin,
@@ -4629,6 +8203,21 @@ function tickSharedGoblins(dt) {
             if (Math.abs(moveX) > 0.05) {
               goblin.dir =
                 moveX >= 0 ? 1 : -1;
+            }
+
+            const progress = Math.hypot(
+              goblin.x - beforeX,
+              goblin.y - beforeY
+            );
+            goblin.wanderStuckTime = progress < 0.02
+              ? goblin.wanderStuckTime + dt
+              : 0;
+
+            if (
+              goblin.wanderStuckTime >=
+              ENEMY_PASSIVE_STUCK_REPLAN_SECONDS
+            ) {
+              chooseServerGoblinWanderTarget(goblin);
             }
           }
         }
@@ -4693,7 +8282,7 @@ function validateSharedEnemyMeleeHit(
   enemy,
   payload
 ) {
-  if (![0, 1, 2, 3, 4, 5, 8, 9, 10].includes(playerState.weaponIndex)) {
+  if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11].includes(playerState.weaponIndex)) {
     return false;
   }
 
@@ -4752,7 +8341,12 @@ function validateSharedEnemyWandMasteryHit(
     (playerState.y - 8);
   const distance = Math.hypot(dx, dy);
 
-  if (distance > 41 + bodyRadius) {
+  // Passive enemies are reconstructed from server path plans on the client, so
+  // their rendered body can be a few pixels ahead/behind the authoritative
+  // simulation at the instant of a melee swing. Give Wand Mastery a small
+  // reconciliation grace rather than rejecting a hit that visibly connected.
+  const reconciliationRangeGrace = 8;
+  if (distance > 41 + bodyRadius + reconciliationRangeGrace) {
     return false;
   }
 
@@ -4762,7 +8356,11 @@ function validateSharedEnemyWandMasteryHit(
   }
 
   const targetAngle = Math.atan2(dy, dx);
-  return Math.abs(angleDifference(targetAngle, aimAngle)) <= 0.56;
+  const reconciliationAngleGrace = 0.08;
+  return (
+    Math.abs(angleDifference(targetAngle, aimAngle)) <=
+    0.56 + reconciliationAngleGrace
+  );
 }
 
 function validateSharedEnemyBowMeleeHit(
@@ -4806,6 +8404,19 @@ function validateSharedEnemyBowMeleeHit(
   );
 }
 
+function serverCombatAbilityLevel(playerState, source) {
+  if (source === "fireball") {
+    return Math.max(0, Number(playerState?.abilities?.fireball) || 0);
+  }
+  if (source === "rain") {
+    return Math.max(0, Number(playerState?.abilities?.rainCloud) || 0);
+  }
+  if (source === "wandMasteryMelee") {
+    return Math.max(0, Number(playerState?.abilities?.wandMastery) || 0);
+  }
+  return 1;
+}
+
 function calculateServerPlayerDamage(
   playerState,
   enemy,
@@ -4821,14 +8432,90 @@ function calculateServerPlayerDamage(
       playerState.level || 1,
     stats:
       playerState.stats || {},
+    classId:
+      playerState.classId || null,
     monsterType:
       enemy.type,
     monsterLevel:
       enemy.level || 1,
     critical,
     rainPower:
-      options.rainPower ?? 2
+      options.rainPower ?? 2,
+    abilityLevel:
+      options.abilityLevel ?? serverCombatAbilityLevel(playerState, source)
   });
+}
+
+const FIREBALL_SPLASH_BURN_RADIUS = 30;
+const FIREBALL_SPLASH_MAX_TOTAL_TARGETS = 5;
+
+function applyServerFireballSplashBurn(playerId, mapId, payload) {
+  const playerState = players.get(playerId);
+  if (!playerState || playerState.hp <= 0 || playerState.mapId !== mapId) return 0;
+  if ((Number(playerState.abilities?.fireball) || 0) <= 0) return 0;
+  if (!COMBAT_BALANCE.isWandWeaponIndex(playerState.weaponIndex)) return 0;
+
+  const impactX = Number(payload.x);
+  const impactY = Number(payload.y);
+  if (!Number.isFinite(impactX) || !Number.isFinite(impactY)) return 0;
+
+  // Fireball's selected landing point is at most 150px away, but the caster
+  // can keep moving while the projectile is airborne. This is validation grace,
+  // not the blast radius.
+  if (Math.hypot(impactX - playerState.x, impactY - playerState.y) > 220) return 0;
+
+  if (sharedEnemyActionRateLimited(playerId, "fireballSplash", "impact", 3000)) {
+    return 0;
+  }
+
+  const primaryEnemyId = typeof payload.primaryEnemyId === "string"
+    ? payload.primaryEnemyId
+    : null;
+  const maxSplashTargets = primaryEnemyId
+    ? FIREBALL_SPLASH_MAX_TOTAL_TARGETS - 1
+    : FIREBALL_SPLASH_MAX_TOTAL_TARGETS;
+
+  const candidates = [];
+  for (const enemy of allSharedEnemies()) {
+    if (!enemy.alive || enemy.mapId !== mapId || enemy.returningHome || enemy.carriedBy) continue;
+    if (primaryEnemyId && enemy.id === primaryEnemyId) continue;
+
+    const profile = serverEnemyProfile(enemy);
+    const bodyX = enemy.x;
+    const bodyY = enemy.y + (profile?.bodyOffsetY ?? -11);
+    const distance = Math.hypot(bodyX - impactX, bodyY - impactY);
+    if (distance > FIREBALL_SPLASH_BURN_RADIUS) continue;
+    candidates.push({ enemy, distance });
+  }
+
+  candidates.sort((a, b) => a.distance - b.distance);
+
+  let applied = 0;
+  for (const { enemy } of candidates) {
+    if (applied >= maxSplashTargets) break;
+
+    const burnDamagePerTick = Math.max(
+      1,
+      calculateServerPlayerDamage(
+        playerState,
+        enemy,
+        "fireballBurnTick",
+        false,
+        { abilityLevel: 1 }
+      )
+    );
+
+    const ignited = applyServerEnemyBurn(enemy, {
+      duration: STATUS_RULES.enemyBurnDuration,
+      damagePerTick: burnDamagePerTick,
+      sourcePlayerId: playerId,
+      refresh: false
+    });
+
+    if (ignited) applied += 1;
+  }
+
+  return applied;
 }
 
 function arrowChargeProfileFromPayload(payload = {}) {
@@ -4852,11 +8539,19 @@ function scaleArrowDamage(
   );
 }
 
-function wandMasteryTargetDamageMultiplier(payload = {}) {
+function wandMasteryMaxTargetsForLevel(level) {
+  const cleanLevel = Math.max(1, Math.floor(Number(level) || 1));
+  if (cleanLevel >= 20) return 3;
+  if (cleanLevel >= 10) return 2;
+  return 1;
+}
+
+function wandMasteryTargetDamageMultiplier(payload = {}, masteryLevel = 1) {
   const rawCount = Number(payload.targetCount);
+  const maxTargets = wandMasteryMaxTargetsForLevel(masteryLevel);
   const count = Math.max(
     1,
-    Math.min(3, Math.round(Number.isFinite(rawCount) ? rawCount : 1))
+    Math.min(maxTargets, Math.round(Number.isFinite(rawCount) ? rawCount : 1))
   );
 
   if (count <= 1) return 1;
@@ -4946,13 +8641,8 @@ function handleSharedEnemyDamageAction(
   let knockback = 0;
   let minimumMs = 180;
 
-  // The prepared Camo opener is validated against server-held state. A client
-  // cannot manufacture repeat criticals just by setting camouflageOpening.
-  const camouflageCritical =
-    camouflageOpeningIsValid(
-      playerState,
-      payload
-    );
+  // Camouflage's prepared opener is reserved for the brief Confusion/reacquire
+  // delay after a successful ambush. It no longer modifies attack damage.
 
   if (source !== "arrow") {
     focusFireDamageChains.delete(playerId);
@@ -4969,11 +8659,11 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    minimumMs = 260;
+    minimumMs = COMBAT_BALANCE.isWandWeaponIndex(playerState.weaponIndex)
+      ? wandAttackRateLimitMs(playerState.weaponIndex)
+      : 260;
 
-    critical =
-      Boolean(payload.critical) ||
-      camouflageCritical;
+    critical = Boolean(payload.critical);
 
     damage =
       calculateServerPlayerDamage(
@@ -4986,6 +8676,10 @@ function handleSharedEnemyDamageAction(
     knockback =
       serverEnemyProfile(enemy)?.damageKnockback?.melee ?? 22;
   } else if (source === "wandMasteryMelee") {
+    if ((Number(playerState.abilities?.wandMastery) || 0) <= 0) {
+      return;
+    }
+
     if (
       !validateSharedEnemyWandMasteryHit(
         playerState,
@@ -4996,8 +8690,8 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    minimumMs = 260;
-    critical = Boolean(payload.critical) || camouflageCritical;
+    minimumMs = wandAttackRateLimitMs(playerState.weaponIndex);
+    critical = Boolean(payload.critical);
     damage = Math.max(
       1,
       Math.round(
@@ -5006,7 +8700,10 @@ function handleSharedEnemyDamageAction(
           enemy,
           "wandMasteryMelee",
           critical
-        ) * wandMasteryTargetDamageMultiplier(payload)
+        ) * wandMasteryTargetDamageMultiplier(
+          payload,
+          Number(playerState.abilities?.wandMastery) || 1
+        )
       )
     );
     knockback =
@@ -5023,9 +8720,7 @@ function handleSharedEnemyDamageAction(
     }
 
     minimumMs = 300;
-    critical =
-      Boolean(payload.critical) ||
-      camouflageCritical;
+    critical = Boolean(payload.critical);
 
     damage =
       calculateServerPlayerDamage(
@@ -5048,7 +8743,7 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    critical = camouflageCritical;
+    critical = false;
 
     damage =
       calculateServerPlayerDamage(
@@ -5074,7 +8769,7 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    critical = camouflageCritical;
+    critical = false;
 
     const focusMultiplier =
       focusFireDamageMultiplier(
@@ -5102,6 +8797,13 @@ function handleSharedEnemyDamageAction(
       serverEnemyProfile(enemy)?.damageKnockback?.arrow ?? 16;
   } else if (source === "fireball") {
     if (
+      (Number(playerState.abilities?.fireball) || 0) <= 0 ||
+      !COMBAT_BALANCE.isWandWeaponIndex(playerState.weaponIndex)
+    ) {
+      return;
+    }
+
+    if (
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
@@ -5110,7 +8812,7 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    critical = camouflageCritical;
+    critical = false;
 
     damage =
       calculateServerPlayerDamage(
@@ -5138,7 +8840,7 @@ function handleSharedEnemyDamageAction(
   }
 
   const applyValidatedDamage = () => {
-    if (!enemy.alive || enemy.carriedBy) return;
+    if (!enemy.alive || enemy.carriedBy || enemy.returningHome) return;
 
     const currentPlayerState = players.get(playerId);
     if (!currentPlayerState || currentPlayerState.hp <= 0) return;
@@ -5147,6 +8849,7 @@ function handleSharedEnemyDamageAction(
       0,
       enemy.hp - damage
     );
+    enemy.wasEngaged = true;
 
     const camouflageConfused =
       tryApplyCamouflageConfusion(
@@ -5159,15 +8862,31 @@ function handleSharedEnemyDamageAction(
     if (!camouflageConfused) {
       setEnemyAggroTarget(
         enemy,
-        playerId,
-        enemy.aggroDuration
+        playerId
       );
     }
     enemy.lastDamagePlayerId = playerId;
 
     if (source === "fireball") {
+      // Fireball impact and On-Fire both use the same Magic Power -> spell
+      // Power -> resistance/level/mastery damage pipeline. The impact uses the
+      // Fireball skill's current Power (up to 200). Burn is 20 Power/sec and
+      // ticks twice per second, so each authoritative Burn tick is calculated
+      // exactly like a spell hit at 10 Power (minimum 1 damage per tick).
+      const burnDamagePerTick = Math.max(
+        1,
+        calculateServerPlayerDamage(
+          currentPlayerState,
+          enemy,
+          "fireballBurnTick",
+          false,
+          { abilityLevel: 1 }
+        )
+      );
+
       applyServerEnemyBurn(enemy, {
         duration: STATUS_RULES.enemyBurnDuration,
+        damagePerTick: burnDamagePerTick,
         sourcePlayerId: playerId
       });
     }
@@ -5192,7 +8911,7 @@ function handleSharedEnemyDamageAction(
         Math.sin(pushAngle) * knockback;
     }
 
-    broadcast({
+    broadcastToMap(enemy.mapId, {
       type: "enemyDamage",
       enemyType: enemy.type,
       enemyId: enemy.id,
@@ -5201,7 +8920,8 @@ function handleSharedEnemyDamageAction(
       hp: enemy.hp,
       critical,
       source,
-      attackerId: playerId
+      attackerId: playerId,
+      aimAngle: Number.isFinite(pushAngle) ? pushAngle : null
     });
 
     if (enemy.hp <= 0) {
@@ -5237,6 +8957,12 @@ function handleSharedEnemyAction(
 
   const playerState = players.get(playerId);
   if (!playerState || playerState.hp <= 0) return;
+
+  // Temporary strict reset state: while returning home the server owns the
+  // entire transit and ignores player attempts to damage, taunt, snare, burn,
+  // wet, or hurl the enemy. Interruption will be layered on after this state
+  // machine proves visually/network-stable.
+  if (enemy.returningHome) return;
 
   const action = String(message.action || "");
 
@@ -5293,27 +9019,9 @@ function handleSharedEnemyAction(
     return;
   }
 
-  if (action === "magicGrassSlow") {
-    if (!enemy.alive) return;
-
-    ensureServerEnemySnareState(enemy);
-    enemy.magicGrassSlowTime = Math.max(
-      enemy.magicGrassSlowTime,
-      clampNumber(payload.duration, 0.15, 0.75, 0.50)
-    );
-    return;
-  }
-
-  if (action === "wet") {
-    if (!enemy.alive) return;
-    if (serverEnemyProfile(enemy)?.rainEffect === "damage") return;
-
-    applyServerEnemyWet(
-      enemy,
-      clampNumber(payload.duration, 0.25, 8, STATUS_RULES.enemyWetDuration)
-    );
-    return;
-  }
+  if (action === "magicGrassSlow") { rainDiagnostics.legacyMagicGrassSlow += 1; return; }
+  if (action === "wet") { rainDiagnostics.legacyWet += 1; return; }
+  if (action === "rainDamage") { rainDiagnostics.legacyRainDamage += 1; return; }
 
   if (action === "ignite") {
     if (!enemy.alive) return;
@@ -5332,7 +9040,7 @@ function handleSharedEnemyAction(
     return;
   }
 
-  if (action === "clearTaunt") {
+  if (action === "clearRedirect" || action === "clearTaunt") {
     const cloneId =
       typeof payload.cloneId === "string"
         ? payload.cloneId.slice(0, 96)
@@ -5359,7 +9067,7 @@ function handleSharedEnemyAction(
     return;
   }
 
-  if (action === "taunt") {
+  if (action === "redirect" || action === "taunt") {
     if (!enemy.alive || enemy.hurlTime > 0) return;
 
     const cloneId =
@@ -5376,17 +9084,19 @@ function handleSharedEnemyAction(
       return;
     }
 
+    const dimensions = mapWorldDimensions(enemy.mapId);
+
     const tauntX = clampNumber(
       payload.x,
       0,
-      640,
+      dimensions.width,
       enemy.x
     );
 
     const tauntY = clampNumber(
       payload.y,
       0,
-      400,
+      dimensions.height,
       enemy.y
     );
 
@@ -5411,81 +9121,19 @@ function handleSharedEnemyAction(
     enemy.tauntTime = duration;
     enemy.tauntOwnerId = playerId;
     enemy.tauntCloneId = cloneId;
-    enemy.aggroTime = Math.max(
-      enemy.aggroTime,
-      duration
-    );
+    enemy.wasEngaged = true;
     return;
   }
 
-  const rainEffect =
-    serverEnemyProfile(enemy)?.rainEffect;
-
-  if (
-    action === "rainDamage" &&
-    rainEffect === "damage"
-  ) {
-    if (!enemy.alive) return;
-
-    const rainPower = Math.round(
-      clampNumber(payload.power, 1, 3, 2)
-    );
-
-    const damage =
-      calculateServerPlayerDamage(
-        playerState,
-        enemy,
-        "rain",
-        false,
-        { rainPower }
-      );
-
-    enemy.hp = Math.max(
-      0,
-      enemy.hp - damage
-    );
-
-    clearServerEnemyBurn(enemy);
-
-    setEnemyAggroTarget(
-      enemy,
-      playerId,
-      enemy.aggroDuration
-    );
-    enemy.lastDamagePlayerId = playerId;
-
-    broadcast({
-      type: "enemyDamage",
-      enemyType: enemy.type,
-      enemyId: enemy.id,
-      mapId: enemy.mapId,
-      amount: damage,
-      hp: enemy.hp,
-      critical: false,
-      source: "rain",
-      attackerId: playerId
-    });
-
-    if (enemy.hp <= 0) {
-      killSharedEnemy(enemy, playerId);
-    }
-  }
 
 }
 
 // -----------------------------------------------------------------------------
 // SHARED SLIME WORLD
 // -----------------------------------------------------------------------------
-const MEADOW_POND = {
-  x: 300,
-  y: 258,
-  width: 120,
-  height: 58
-};
-
 function bigGoldSlimePositionAllowed(slime, x, y) {
   // Gold Slime Den now has true map dimensions instead of an inset invisible
-  // leash. The elite can pursue anywhere the player can actually stand.
+  // restriction. The elite can pursue anywhere the player can actually stand.
   return mapPointAllowed(slime.mapId, x, y, 10);
 }
 
@@ -5529,8 +9177,8 @@ function resetServerBigGoldSlime(slime) {
   slime.hp = slime.maxHp;
   slime.alive = true;
   slime.respawnTime = 0;
-  slime.aggroTime = 0;
   slime.aggroTargetId = null;
+  slime.aggroEngagementTime = 0;
   slime.confusionTime = 0;
   slime.confusionTargetId = null;
   slime.outOfCombatTime = 0;
@@ -5591,13 +9239,6 @@ function tickSharedBigGoldSlimes(dt) {
     );
     releaseEnemyTauntOnContact(slime);
 
-    if (slime.aggroTime > 0) {
-      slime.aggroTime = Math.max(
-        0,
-        slime.aggroTime - dt
-      );
-    }
-
     const confused =
       tickEnemyConfusion(slime, dt);
 
@@ -5610,38 +9251,8 @@ function tickSharedBigGoldSlimes(dt) {
     } else if (slime.tauntTime > 0) {
       targetX = slime.tauntX;
       targetY = slime.tauntY;
-      slime.aggroTime = slime.aggroDuration;
     } else {
-      targetPlayer = visibleAggroPlayerById(
-        slime.aggroTargetId,
-        slime.mapId,
-        slime.x,
-        slime.y
-      );
-
-      if (!targetPlayer && slime.aggroTargetId) {
-        clearEnemyAggroTarget(slime);
-      }
-
-      // This elite is aggressive on sight, but Camouflage still suppresses
-      // acquisition unless the hunter gets very close.
-      if (!targetPlayer) {
-        const nearby = nearestVisiblePlayer(
-          slime.mapId,
-          slime.x,
-          slime.y,
-          slime.detectionRadius
-        );
-
-        if (nearby) {
-          targetPlayer = nearby.player;
-          setEnemyAggroTarget(
-            slime,
-            targetPlayer.id,
-            slime.aggroDuration
-          );
-        }
-      }
+      targetPlayer = resolveEnemyAggroTarget(slime, dt);
 
       if (targetPlayer) {
         targetX = targetPlayer.x;
@@ -5654,24 +9265,8 @@ function tickSharedBigGoldSlimes(dt) {
     const distanceFromHome =
       Math.hypot(homeDx, homeDy);
 
-    const combatActive =
-      slime.aggroTime > 0 ||
-      slime.tauntTime > 0 ||
-      targetX !== null;
-
-    const activeLeash = combatActive
-      ? slime.combatLeashRadius
-      : slime.patrolLeashRadius;
-
-    if (distanceFromHome >= activeLeash) {
-      clearEnemyAggroTarget(slime);
-      targetPlayer = null;
-      targetX = null;
-      targetY = null;
-    }
-
     const stillInCombat =
-      slime.aggroTime > 0 ||
+      Boolean(slime.aggroTargetId) ||
       slime.tauntTime > 0 ||
       slime.confusionTime > 0 ||
       targetX !== null;
@@ -5720,8 +9315,7 @@ function tickSharedBigGoldSlimes(dt) {
       moveY = 0;
     } else if (
       targetX !== null &&
-      targetY !== null &&
-      distanceFromHome < slime.combatLeashRadius
+      targetY !== null
     ) {
       const dx = targetX - slime.x;
       const dy = targetY - slime.y;
@@ -5736,7 +9330,7 @@ function tickSharedBigGoldSlimes(dt) {
         : slime.chaseSpeed;
     } else if (
       distanceFromHome >
-      slime.patrolLeashRadius * 0.78
+      slime.patrolRadius * 0.78
     ) {
       const length = distanceFromHome || 1;
       moveX = homeDx / length;
@@ -5864,14 +9458,18 @@ function makeServerSlime(spawn) {
 
     speed: variant === "goldBaby" ? 21 : 16,
     chaseSpeed: variant === "goldBaby" ? 30 : 22,
-    patrolLeashRadius: 90,
-    combatLeashRadius: 240,
+    detectionRadius: 72,
+    aggroMode: aggressiveByDefault
+      ? ENEMY_AGGRO_PROXIMITY
+      : ENEMY_AGGRO_PROVOKED,
 
-    aggroTime: 0,
-    aggroDuration: 4.5,
     aggroTargetId: null,
+    aggroEngagementTime: 0,
     confusionTime: 0,
     confusionTargetId: null,
+    wasEngaged: false,
+    returningHome: false,
+    returnStuckTime: 0,
 
     // Hallucination decoy. While active, the clone position has priority over
     // real players.
@@ -5884,6 +9482,7 @@ function makeServerSlime(spawn) {
     wanderTargetY: y,
     wanderDecisionTime: 0,
     pauseTime: 0,
+    wanderStuckTime: 0,
     wanderRadiusX,
     wanderRadiusY,
 
@@ -5971,19 +9570,44 @@ function mapPointAllowed(
   const definition =
     WORLD_CONTENT.maps[mapId] || {};
 
-  const waterRects =
-    definition.collision?.waterRects || [];
+  const terrainOccupancy = TERRAIN_RULES.circleCanOccupy(
+    definition,
+    x,
+    y,
+    padding
+  );
 
-  for (const rect of waterRects) {
+  if (terrainOccupancy !== null) {
+    if (!terrainOccupancy) return false;
+  } else {
+    // Legacy maps keep their existing collision contract until they are
+    // deliberately migrated to first-class terrain data.
+    const walkableRects =
+      definition.collision?.walkableRects || [];
+
     if (
-      pointInsideRect(
-        x,
-        y,
-        rect,
-        padding
+      walkableRects.length > 0 &&
+      !walkableRects.some(rect =>
+        pointInsideRect(x, y, rect, 0)
       )
     ) {
       return false;
+    }
+
+    const waterRects =
+      definition.collision?.waterRects || [];
+
+    for (const rect of waterRects) {
+      if (
+        pointInsideRect(
+          x,
+          y,
+          rect,
+          padding
+        )
+      ) {
+        return false;
+      }
     }
   }
 
@@ -6019,10 +9643,12 @@ function moveServerSlime(slime, moveX, moveY, speed, dt) {
 }
 
 function chooseServerSlimeWanderTarget(slime) {
-  for (let attempt = 0; attempt < 12; attempt++) {
+  const candidates = [];
+
+  for (let attempt = 0; attempt < 16; attempt++) {
     const angle = Math.random() * Math.PI * 2;
-    const radiusX = 5 + Math.random() * slime.wanderRadiusX;
-    const radiusY = 4 + Math.random() * slime.wanderRadiusY;
+    const radiusX = slime.wanderRadiusX * (0.72 + Math.random() * 0.28);
+    const radiusY = slime.wanderRadiusY * (0.72 + Math.random() * 0.28);
 
     const x = Math.max(
       12,
@@ -6036,53 +9662,30 @@ function chooseServerSlimeWanderTarget(slime) {
 
     if (!slimePositionAllowed(slime, x, y)) continue;
 
-    slime.wanderTargetX = x;
-    slime.wanderTargetY = y;
-    slime.wanderDecisionTime = 0.8 + Math.random();
-    return;
+    candidates.push({
+      x,
+      y,
+      distance: Math.hypot(x - slime.x, y - slime.y)
+    });
   }
 
-  slime.wanderTargetX = slime.homeX;
-  slime.wanderTargetY = slime.homeY;
-  slime.wanderDecisionTime = 0.8;
-}
+  // Prefer a longer leg without enlarging the existing wander radius. Picking
+  // randomly from the farthest few candidates avoids repetitive ping-pong while
+  // substantially reducing how often passive AI needs a new destination.
+  candidates.sort((a, b) => b.distance - a.distance);
+  const pool = candidates.slice(0, Math.min(4, candidates.length));
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
 
-function nearestPlayerForSlime(slime) {
-  let best = null;
-  let bestDistance = Infinity;
-
-  for (const playerState of players.values()) {
-    if (
-      playerState.mapId !== slime.mapId ||
-      playerState.shadowHidden ||
-      playerState.hp <= 0
-    ) {
-      continue;
-    }
-
-    const distance = Math.hypot(
-      playerState.x - slime.x,
-      playerState.y - slime.y
-    );
-
-    if (playerState.camouflaged) {
-      if (distance > CAMOUFLAGE_CLOSE_REVEAL_DISTANCE) {
-        continue;
-      }
-
-      playerState.camouflaged = false;
-      playerState.camouflageReadyUntil = 0;
-    }
-
-    if (distance < bestDistance) {
-      best = playerState;
-      bestDistance = distance;
-    }
+  if (chosen) {
+    slime.wanderTargetX = chosen.x;
+    slime.wanderTargetY = chosen.y;
+  } else {
+    slime.wanderTargetX = slime.homeX;
+    slime.wanderTargetY = slime.homeY;
   }
 
-  return best
-    ? { player: best, distance: bestDistance }
-    : null;
+  slime.wanderDecisionTime = 0;
+  slime.wanderStuckTime = 0;
 }
 
 function resetServerSlime(slime) {
@@ -6094,11 +9697,15 @@ function resetServerSlime(slime) {
   slime.wanderTargetY = slime.homeY;
   slime.wanderDecisionTime = 0;
   slime.pauseTime = 0;
+  slime.wanderStuckTime = 0;
 
-  slime.aggroTime = 0;
   slime.aggroTargetId = null;
+  slime.aggroEngagementTime = 0;
   slime.confusionTime = 0;
   slime.confusionTargetId = null;
+  slime.wasEngaged = false;
+  slime.returningHome = false;
+  slime.returnStuckTime = 0;
 
   slime.tauntTime = 0;
   slime.tauntX = slime.homeX;
@@ -6138,8 +9745,7 @@ function broadcastHurlEnemyDamage(
 
   setEnemyAggroTarget(
     enemy,
-    attackerId,
-    enemy.aggroDuration
+    attackerId
   );
 
   const speed = Math.hypot(velocityX, velocityY) || 1;
@@ -6148,7 +9754,7 @@ function broadcastHurlEnemyDamage(
     enemy.knockbackY = velocityY / speed * 58;
   }
 
-  broadcast({
+  broadcastToMap(enemy.mapId, {
     type: "enemyDamage",
     enemyType: enemy.type,
     enemyId: enemy.id,
@@ -6165,49 +9771,30 @@ function broadcastHurlEnemyDamage(
   }
 }
 
-function damageTreeFromHurl(
-  mapId,
-  x,
-  y,
-  attackerId,
-  directionX
-) {
-  let bestTree = null;
-  let bestDistance = Infinity;
-
-  for (const entity of sharedEnvironment.values()) {
+function hurlObjectHitsTree(mapId, x, y, radius = 12) {
+  // Mutable/choppable trees remain authoritative environment entities.
+  for (const entity of environmentEntitiesOnMap(mapId, "tree")) {
     if (
-      entity.mapId !== mapId ||
-      entity.kind !== "tree" ||
       entity.isStump ||
       entity.falling
     ) {
       continue;
     }
 
-    const distance = Math.hypot(entity.x - x, entity.y - y);
-
-    if (distance <= 12 && distance < bestDistance) {
-      bestTree = entity;
-      bestDistance = distance;
+    if (Math.hypot(entity.x - x, entity.y - y) <= radius) {
+      return true;
     }
   }
 
-  if (!bestTree) return false;
-
-  bestTree.hp = Math.max(0, bestTree.hp - 1);
-  bestTree.lastHitPlayerId = attackerId;
-  scheduleTreeRegrow(bestTree);
-  markEnvironmentDirty(bestTree);
-
-  if (bestTree.hp <= 0) {
-    bestTree.falling = true;
-    bestTree.fallTime = bestTree.fallDuration;
-    bestTree.fallDirection = directionX >= 0 ? 1 : -1;
-    markEnvironmentDirty(bestTree);
+  // Decorative fire-immune trees are immutable collision points only. They
+  // never enter sharedEnvironment and therefore can never generate patches.
+  for (const tree of staticHurlTreesOnMap(mapId)) {
+    if (Math.hypot(tree.x - x, tree.y - y) <= radius) {
+      return true;
+    }
   }
 
-  return true;
+  return false;
 }
 
 function serverEnemyPositionAllowedForHurl(enemy, x, y) {
@@ -6286,14 +9873,14 @@ function tryHurlCollision(enemy) {
   }
 
   if (
-    damageTreeFromHurl(
+    hurlObjectHitsTree(
       enemy.mapId,
       enemy.x,
-      enemy.y,
-      attackerId,
-      velocityX
+      enemy.y
     )
   ) {
+    // The thrown monster can smack into a tree and take its landing hit, but
+    // the tree itself is never chopped/damaged by Hurl.
     finishServerEnemyHurl(enemy, attackerId, true);
     return true;
   }
@@ -6372,11 +9959,7 @@ function handleGenericEnemyHurlAction(
   if (action === "hurlGrab") {
     if (enemy.carriedBy || enemy.hurlTime > 0) return;
 
-    if (
-      allSharedEnemies().some(candidate =>
-        candidate.carriedBy === playerId
-      )
-    ) {
+    if (playerCarriesAnyHurlObject(playerId)) {
       return;
     }
 
@@ -6453,15 +10036,18 @@ function handleGenericEnemyHurlAction(
 }
 
 function tryServerSlimeContact(slime) {
+  // Hallucination redirects the slime's movement/aggro destination only. It
+  // must not make the slime physically harmless to real players it happens
+  // to overlap while chasing the clone. Carry/Hurl transit still suppresses
+  // ordinary touch damage because those are non-contact control states.
   if (
-    slime.tauntTime > 0 ||
     slime.carriedBy ||
     slime.hurlTime > 0
   ) {
     return;
   }
 
-  const target = nearestPlayerForSlime(slime);
+  const target = nearestVisiblePlayer(slime.mapId, slime.x, slime.y, 9);
 
   if (
     !target ||
@@ -6545,6 +10131,11 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
+    if (slime.returningHome) {
+      tickEnemyReturningHome(slime, dt);
+      continue;
+    }
+
     tickEnemyStatuses(slime, dt);
     if (!slime.alive) continue;
 
@@ -6567,6 +10158,7 @@ function tickSharedSlimes(dt) {
         slime.tauntOwnerId = null;
         slime.tauntCloneId = null;
       } else {
+        slime.wasEngaged = true;
         releaseEnemyTauntOnContact(slime);
       }
     }
@@ -6574,34 +10166,8 @@ function tickSharedSlimes(dt) {
     const confused =
       tickEnemyConfusion(slime, dt);
 
-    if (
-      !confused &&
-      slime.aggressiveOnSight &&
-      slime.tauntTime <= 0
-    ) {
-      const nearest = nearestPlayerForSlime(slime);
-
-      if (
-        nearest &&
-        nearest.distance <= 72
-      ) {
-        setEnemyAggroTarget(
-          slime,
-          nearest.player.id,
-          slime.aggroDuration
-        );
-      }
-    }
-
     if (!confused) {
       tryServerSlimeContact(slime);
-    }
-
-    if (slime.aggroTime > 0) {
-      slime.aggroTime = Math.max(
-        0,
-        slime.aggroTime - dt
-      );
     }
 
     if (
@@ -6642,16 +10208,8 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
-    const distanceFromHome = Math.hypot(
-      slime.x - slime.homeX,
-      slime.y - slime.homeY
-    );
-
     // The decoy has absolute priority while it exists.
-    if (
-      slime.tauntTime > 0 &&
-      distanceFromHome < (slime.combatLeashRadius || 240)
-    ) {
+    if (slime.tauntTime > 0) {
       const dx =
         slime.tauntX - slime.x;
 
@@ -6679,22 +10237,10 @@ function tickSharedSlimes(dt) {
         }
       }
 
-      // Contact with the Hallucination clears its forced taunt above; until then,
-      // the illusion retains priority over ordinary player aggro.
       continue;
     }
 
-    let targetPlayer = visibleAggroPlayerById(
-      slime.aggroTargetId,
-      slime.mapId,
-      slime.x,
-      slime.y
-    );
-
-    if (!targetPlayer && slime.aggroTargetId) {
-      // The remembered attacker died, hid, disconnected, or changed maps.
-      clearEnemyAggroTarget(slime);
-    }
+    let targetPlayer = resolveEnemyAggroTarget(slime, dt);
 
     const targetDistance = targetPlayer
       ? Math.hypot(
@@ -6703,16 +10249,9 @@ function tickSharedSlimes(dt) {
         )
       : Infinity;
 
-    if (slime.aggroTime <= 0 && targetPlayer) {
-      slime.aggroTargetId = null;
-      targetPlayer = null;
-    }
-
     if (
-      slime.aggroTime > 0 &&
       targetPlayer &&
-      targetDistance > 1 &&
-      distanceFromHome < (slime.combatLeashRadius || 240)
+      targetDistance > 1
     ) {
       const dx =
         targetPlayer.x - slime.x;
@@ -6742,8 +10281,15 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
-    if (distanceFromHome >= (slime.combatLeashRadius || 240)) {
-      clearEnemyAggroTarget(slime);
+    if (
+      slime.wasEngaged &&
+      slime.tauntTime <= 0 &&
+      !targetPlayer &&
+      !slime.aggroTargetId
+    ) {
+      beginEnemyReturningHome(slime);
+      tickEnemyReturningHome(slime, dt);
+      continue;
     }
 
     if (slime.pauseTime > 0) {
@@ -6751,22 +10297,19 @@ function tickSharedSlimes(dt) {
         0,
         slime.pauseTime - dt
       );
+      slime.wanderStuckTime = 0;
       continue;
     }
-
-    slime.wanderDecisionTime -= dt;
 
     let dx = slime.wanderTargetX - slime.x;
     let dy = slime.wanderTargetY - slime.y;
     let distance = Math.hypot(dx, dy);
 
-    if (
-      distance < 2 ||
-      slime.wanderDecisionTime <= 0
-    ) {
-      if (distance < 2 && Math.random() < 0.45) {
-        slime.pauseTime = 0.20 + Math.random() * 0.35;
-      }
+    // Train Track Rule: passive slimes keep the destination they chose until
+    // they arrive. The old short wanderDecisionTime expiry is intentionally
+    // gone; only arrival or the true stuck watchdog can choose a new leg.
+    if (distance < 2) {
+      slime.pauseTime = 0.80 + Math.random() * 1.20;
 
       chooseServerSlimeWanderTarget(slime);
 
@@ -6778,6 +10321,8 @@ function tickSharedSlimes(dt) {
     if (distance > 0.001) {
       const moveX = dx / distance;
       const moveY = dy / distance;
+      const beforeX = slime.x;
+      const beforeY = slime.y;
 
       moveServerSlime(
         slime,
@@ -6789,6 +10334,21 @@ function tickSharedSlimes(dt) {
 
       if (Math.abs(moveX) > 0.05) {
         slime.dir = moveX >= 0 ? 1 : -1;
+      }
+
+      const progress = Math.hypot(
+        slime.x - beforeX,
+        slime.y - beforeY
+      );
+      slime.wanderStuckTime = progress < 0.02
+        ? slime.wanderStuckTime + dt
+        : 0;
+
+      if (
+        slime.wanderStuckTime >=
+        ENEMY_PASSIVE_STUCK_REPLAN_SECONDS
+      ) {
+        chooseServerSlimeWanderTarget(slime);
       }
     }
   }
@@ -6808,7 +10368,8 @@ function angleDifference(a, b) {
 
 
 
-// 30 Hz authoritative slime simulation, 15 Hz network snapshots.
+// 30 Hz authoritative enemy simulation. Normal enemy replication is a compact
+// 10 Hz precise combat stream plus event-driven passive wander plans; full snapshots are map-entry/keyframe only.
 let previousSlimeTick = Date.now();
 setInterval(() => {
   const now = Date.now();
@@ -6820,7 +10381,15 @@ setInterval(() => {
   previousSlimeTick = now;
 
   tickSharedEnemySnareStatuses(dt);
+  tickServerPlayerBurns(dt);
+  tickServerPlayerWetTimers(dt);
+  tickServerPlayerPresentation(dt);
+  tickServerCamouflage();
+  tickHunterSnareSetups();
   tickHunterSnareCharges(dt);
+  tickServerHallucinations(dt);
+  tickServerRainClouds(dt);
+  tickServerRainGrassMembership();
   tickSharedSlimes(dt);
   tickSharedGoblins(dt);
   tickSharedGhosts(dt);
@@ -6836,8 +10405,8 @@ setInterval(() => {
 }, 1000 / 10);
 
 setInterval(() => {
-  broadcastSharedEnemySnapshots();
-}, 1000 / 15);
+  broadcastSharedEnemyNetworkDeltas();
+}, 1000 / ENEMY_NETWORK_DELTA_HZ);
 
 function clampNumber(value, min, max, fallback = 0) {
   const number = Number(value);
@@ -6852,6 +10421,140 @@ function clampInteger(value, min, max, fallback = 0) {
 }
 
 
+
+// -----------------------------------------------------------------------------
+// COMPACT PLAYER ACTION / AIM REPLICATION
+// -----------------------------------------------------------------------------
+function serverPlayerDirectionFromCode(code) {
+  switch (Number(code)) {
+    case PLAYER_NET_PROTOCOL.DIRECTION.RIGHT: return "right";
+    case PLAYER_NET_PROTOCOL.DIRECTION.UP: return "up";
+    case PLAYER_NET_PROTOCOL.DIRECTION.DOWN: return "down";
+    default: return "left";
+  }
+}
+
+function handlePlayerAim(playerId, message) {
+  const target = players.get(playerId);
+  if (!target || target.hp <= 0) return;
+  const q = clampInteger(message?.a, 0, PLAYER_NET_PROTOCOL.AIM_STEPS - 1, 0);
+  target.attackAimAngle = PLAYER_NET_PROTOCOL.decodeAim(q);
+  broadcastToMap(target.mapId, { type: "playerAim", id: target.id, a: q }, socketsByPlayerId.get(playerId));
+}
+
+function handlePlayerAction(playerId, message) {
+  const target = players.get(playerId);
+  if (!target || target.hp <= 0 || !Array.isArray(message?.a)) return;
+  const data = message.a;
+  const code = clampInteger(data[0], 1, 32, 0);
+  const A = PLAYER_NET_PROTOCOL.ACTION;
+  let outgoing = null;
+
+  if (code === A.ATTACK) {
+    const duration = clampNumber((Number(data[1]) || 300) / 1000, 0.05, 1, 0.30);
+    const dirCode = clampInteger(data[2], 0, 3, 0);
+    const handCode = data[3] === 1 ? 1 : 0;
+    const aimQ = clampInteger(data[4], 0, PLAYER_NET_PROTOCOL.AIM_STEPS - 1, PLAYER_NET_PROTOCOL.encodeAim(target.attackAimAngle));
+    target.attackDuration = duration;
+    target.attackTime = duration;
+    target.attackDirection = serverPlayerDirectionFromCode(dirCode);
+    target.attackHand = handCode ? "right" : "left";
+    target.attackAimAngle = PLAYER_NET_PROTOCOL.decodeAim(aimQ);
+    outgoing = [code, Math.round(duration * 1000), dirCode, handCode, aimQ];
+  } else if (code === A.BOW_DRAW) {
+    const active = data[1] === 1;
+    const duration = clampNumber((Number(data[2]) || 1000) / 1000, 0.05, 3, 1.0);
+    target.bowDrawing = active;
+    target.bowDrawDuration = duration;
+    if (active) { target.bowDrawAmount = 0; target.bowReleaseTime = 0; }
+    outgoing = [code, active ? 1 : 0, Math.round(duration * 1000)];
+  } else if (code === A.BOW_RELEASE) {
+    const duration = clampNumber((Number(data[1]) || 120) / 1000, 0.03, 0.5, 0.12);
+    const drawQ = clampInteger(data[2], 0, 255, 0);
+    const aimQ = clampInteger(data[3], 0, PLAYER_NET_PROTOCOL.AIM_STEPS - 1, PLAYER_NET_PROTOCOL.encodeAim(target.attackAimAngle));
+    target.bowDrawing = false;
+    target.bowReleaseDuration = duration;
+    target.bowReleaseTime = duration;
+    target.bowDrawAmount = drawQ / 255;
+    target.attackAimAngle = PLAYER_NET_PROTOCOL.decodeAim(aimQ);
+    outgoing = [code, Math.round(duration * 1000), drawQ, aimQ];
+  } else if (code === A.FOCUS_FIRE) {
+    const active = data[1] === 1;
+    target.focusFireCasting = active;
+    outgoing = [code, active ? 1 : 0];
+  } else if (code === A.FIREBALL_AIM) {
+    const active = data[1] === 1;
+    target.fireballAiming = active;
+    target.fireballAimTime = 0;
+    outgoing = [code, active ? 1 : 0];
+  } else if (code === A.RAIN_CAST) {
+    const active = data[1] === 1;
+    const duration = clampNumber((Number(data[2]) || 500) / 1000, 0.05, 1, 0.50);
+    target.rainCloudCasting = active;
+    target.rainCloudCastDuration = duration;
+    target.rainCloudCastTime = 0;
+    outgoing = [code, active ? 1 : 0, Math.round(duration * 1000)];
+  } else if (code === A.SHADOW_HIDE) {
+    const active = data[1] === 1;
+    target.shadowHidden = active;
+    if (active) target.shadowHideRevealTime = 0;
+    outgoing = [code, active ? 1 : 0];
+  } else if (code === A.SHADOW_REVEAL) {
+    const duration = clampNumber((Number(data[1]) || 160) / 1000, 0.03, 1, 0.16);
+    target.shadowHideRevealTime = duration;
+    outgoing = [code, Math.round(duration * 1000)];
+  } else if (code === A.HURL_REACH) {
+    const duration = clampNumber((Number(data[1]) || 180) / 1000, 0.05, 0.5, 0.18);
+    const dx = clampNumber((Number(data[2]) || 0) / 1000, -1, 1, 0);
+    const dy = clampNumber((Number(data[3]) || 0) / 1000, -1, 1, 0);
+    target.hurlReachDuration = duration;
+    target.hurlReachTime = duration;
+    target.hurlReachDirX = dx;
+    target.hurlReachDirY = dy;
+    outgoing = [code, Math.round(duration * 1000), Math.round(dx * 1000), Math.round(dy * 1000)];
+  }
+
+  if (outgoing) {
+    broadcastToMap(target.mapId, { type: "playerAction", id: target.id, a: outgoing }, socketsByPlayerId.get(playerId));
+  }
+}
+
+function resetServerPlayerPresentationState(target) {
+  if (!target) return;
+  target.attackTime = 0;
+  target.bowDrawing = false;
+  target.bowDrawAmount = 0;
+  target.bowReleaseTime = 0;
+  target.focusFireCasting = false;
+  target.fireballAiming = false;
+  target.fireballAimTime = 0;
+  target.rainCloudCasting = false;
+  target.rainCloudCastTime = 0;
+  target.shadowHidden = false;
+  target.shadowHideRevealTime = 0;
+  target.hurlReachTime = 0;
+}
+
+function tickServerPlayerPresentation(dt) {
+  for (const target of players.values()) {
+    target.attackTime = Math.max(0, (Number(target.attackTime) || 0) - dt);
+    target.shadowHideRevealTime = Math.max(0, (Number(target.shadowHideRevealTime) || 0) - dt);
+    target.hurlReachTime = Math.max(0, (Number(target.hurlReachTime) || 0) - dt);
+    if (target.bowDrawing) {
+      target.bowDrawAmount = Math.min(1, (Number(target.bowDrawAmount) || 0) + dt / Math.max(0.05, Number(target.bowDrawDuration) || 1));
+      target.bowReleaseTime = 0;
+    } else if ((Number(target.bowReleaseTime) || 0) > 0) {
+      target.bowReleaseTime = Math.max(0, target.bowReleaseTime - dt);
+      target.bowDrawAmount = Math.max(0, (Number(target.bowDrawAmount) || 0) - dt / 0.09);
+    }
+    if (target.fireballAiming) target.fireballAimTime = Math.max(0, (Number(target.fireballAimTime) || 0) + dt);
+    else target.fireballAimTime = 0;
+    if (target.rainCloudCasting) {
+      target.rainCloudCastTime = Math.min(Math.max(0.05, Number(target.rainCloudCastDuration) || 0.50), Math.max(0, Number(target.rainCloudCastTime) || 0) + dt);
+    } else target.rainCloudCastTime = 0;
+  }
+}
+
 // -----------------------------------------------------------------------------
 // MAP-SCOPED COMBAT / ABILITY VISUAL EVENTS
 // -----------------------------------------------------------------------------
@@ -6863,6 +10566,425 @@ function sanitizeVisualPoint(value, fallback = 0) {
 
 function sanitizeVisualVelocity(value) {
   return clampNumber(value, -320, 320, 0);
+}
+
+// -----------------------------------------------------------------------------
+// SERVER-CLOCKED HALLUCINATION
+// -----------------------------------------------------------------------------
+// The decoy's gameplay clock lives on the server so backgrounding the caster
+// cannot pause its redirect lifetime while other players continue to see the map.
+const SERVER_HALLUCINATION_DURATION = 5.8;
+const SERVER_HALLUCINATION_REDIRECT_RADIUS = 120;
+const SERVER_HALLUCINATION_CONTACT_RADIUS = 8.5;
+const SERVER_HALLUCINATION_RETURN_LOCKOUT_MS = 350;
+const activeServerHallucinations = new Map();
+
+function clearServerHallucinationRedirects(clone) {
+  if (!clone) return;
+  for (const enemy of allSharedEnemies()) {
+    if (
+      enemy.mapId === clone.mapId &&
+      enemy.tauntOwnerId === clone.ownerId &&
+      (!clone.cloneId || enemy.tauntCloneId === clone.cloneId)
+    ) {
+      enemy.tauntTime = 0;
+      enemy.tauntOwnerId = null;
+      enemy.tauntCloneId = null;
+    }
+  }
+}
+
+function removeServerHallucinationForOwner(ownerId, mapId = null) {
+  const clone = activeServerHallucinations.get(ownerId);
+  if (!clone) return false;
+  if (mapId && clone.mapId !== mapId) return false;
+  activeServerHallucinations.delete(ownerId);
+  clearServerHallucinationRedirects(clone);
+  return true;
+}
+
+function startServerHallucination(ownerId, mapId, payload) {
+  removeServerHallucinationForOwner(ownerId);
+  const cloneId = typeof payload.cloneId === "string" && payload.cloneId
+    ? payload.cloneId.slice(0, 96)
+    : `hallucination:${ownerId}:${Date.now().toString(36)}`;
+
+  const startedAtMs = Date.now();
+  const clone = {
+    ownerId,
+    mapId,
+    cloneId,
+    x: sanitizeVisualPoint(payload.startX),
+    y: sanitizeVisualPoint(payload.startY),
+    startedAtMs,
+    hatIndex: clampInteger(payload.hatIndex, -1, 9, -1),
+    shirtIndex: clampInteger(payload.shirtIndex, -1, 6, -1),
+    pantsIndex: clampInteger(payload.pantsIndex, -1, 6, -1),
+    expiresAtMs: startedAtMs + SERVER_HALLUCINATION_DURATION * 1000,
+    redirectedEnemyIds: new Set(),
+    releasedEnemyIds: new Set()
+  };
+
+  activeServerHallucinations.set(ownerId, clone);
+
+  // Redirect is a one-shot snapshot at cast time, not a pulsing taunt aura.
+  // Only enemies that are already actively targeting this caster are eligible.
+  // Passive enemies, enemies targeting somebody else, and enemies that aggro
+  // after the Hallucination was cast are deliberately left alone.
+  for (const enemy of allSharedEnemies()) {
+    if (!enemy.alive || enemy.mapId !== mapId) continue;
+    if (enemy.returningHome || enemy.hurlTime > 0 || enemy.carriedBy) continue;
+    if (enemy.aggroTargetId !== ownerId) continue;
+    if (Math.hypot(enemy.x - clone.x, enemy.y - clone.y) > SERVER_HALLUCINATION_REDIRECT_RADIUS) continue;
+
+    enemy.tauntX = clone.x;
+    enemy.tauntY = clone.y;
+    enemy.tauntTime = SERVER_HALLUCINATION_DURATION;
+    enemy.tauntOwnerId = ownerId;
+    enemy.tauntCloneId = clone.cloneId;
+    clone.redirectedEnemyIds.add(enemy.id);
+  }
+}
+
+function completeServerHallucinationReturn(ownerId, mapId, payload) {
+  const clone = activeServerHallucinations.get(ownerId);
+  const owner = players.get(ownerId);
+  const nowMs = Date.now();
+
+  if (!clone || !owner || owner.hp <= 0) return false;
+  if (clone.mapId !== mapId || owner.mapId !== mapId) return false;
+  if (nowMs >= clone.expiresAtMs) return false;
+  if (nowMs - (Number(clone.startedAtMs) || 0) < SERVER_HALLUCINATION_RETURN_LOCKOUT_MS) return false;
+  if (payload.cloneId && payload.cloneId !== clone.cloneId) return false;
+
+  // The clone position is server-owned. Never trust a client-supplied return
+  // destination; snap the authoritative player record to the active illusion.
+  payload.endX = clone.x;
+  payload.endY = clone.y;
+  payload.cloneId = clone.cloneId;
+  owner.x = clone.x;
+  owner.y = clone.y;
+
+  activeServerHallucinations.delete(ownerId);
+  clearServerHallucinationRedirects(clone);
+  return true;
+}
+
+function tickServerHallucinations(dt) {
+  const nowMs = Date.now();
+
+  for (const [ownerId, clone] of activeServerHallucinations) {
+    const owner = players.get(ownerId);
+    if (
+      !owner ||
+      owner.hp <= 0 ||
+      owner.mapId !== clone.mapId ||
+      nowMs >= clone.expiresAtMs
+    ) {
+      activeServerHallucinations.delete(ownerId);
+      clearServerHallucinationRedirects(clone);
+      continue;
+    }
+
+    // Redirect was assigned once when the clone was created. From here the
+    // server only watches those originally redirected enemies for contact.
+    // There is intentionally no repeating redirect/taunt pulse.
+    for (const enemy of allSharedEnemies()) {
+      if (!clone.redirectedEnemyIds?.has(enemy.id)) continue;
+      if (!enemy.alive || enemy.mapId !== clone.mapId) continue;
+      if (clone.releasedEnemyIds.has(enemy.id)) continue;
+
+      if (Math.hypot(enemy.x - clone.x, enemy.y - clone.y) <= SERVER_HALLUCINATION_CONTACT_RADIUS) {
+        clone.releasedEnemyIds.add(enemy.id);
+        enemy.releasedHallucinationId = clone.cloneId;
+        if (
+          enemy.tauntOwnerId === ownerId &&
+          enemy.tauntCloneId === clone.cloneId
+        ) {
+          enemy.tauntTime = 0;
+          enemy.tauntOwnerId = null;
+          enemy.tauntCloneId = null;
+        }
+      }
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// SERVER-AUTHORITATIVE RAIN CLOUD + MAGIC GRASS FIELD
+// -----------------------------------------------------------------------------
+// One Rain Cloud creates one deterministic 20-cell field. Growth/expiry are
+// time-derived and cost zero packets. Server owns Wet, grass slow, ghost rain
+// damage, field fire, and rain extinguishing. Only field ignition/extinguish
+// state changes replicate.
+const SERVER_RAIN_CLOUD_ORBIT_MAX_RADIUS = 28;
+const SERVER_RAIN_CLOUD_ORBIT_EXPAND_TIME = 7.0;
+const SERVER_RAIN_CLOUD_ORBIT_ANGULAR_SPEED = 0.72;
+const SERVER_RAIN_CLOUD_MOVE_SPEED = 22;
+const SERVER_RAIN_CLOUD_RADIUS = 24;
+const SERVER_RAIN_CLOUD_EFFECT_INTERVAL = 0.50;
+const SERVER_RAIN_GHOST_DAMAGE_INTERVAL = 0.50;
+const SERVER_RAIN_GHOST_POWER = 2;
+const activeServerRainClouds = new Map();
+const activeServerRainFields = new Map();
+let serverRainPatchSequence = 0;
+function serverRainFieldKey(ownerId, patchId) { return `${String(ownerId)}|${Number(patchId) || 0}`; }
+function createServerRainField(ownerId, mapId, patchId, centerX, centerY, startedAtMs = Date.now()) {
+  const dimensions = mapWorldDimensions(mapId);
+  const cells = RAIN_FIELD.generateCells({ ownerId, patchId, centerX, centerY, worldWidth: dimensions.width, worldHeight: dimensions.height });
+  const field = { ownerId: String(ownerId), mapId, patchId: Number(patchId)||0, centerX, centerY, startedAtMs,
+    expiresAtMs: RAIN_FIELD.fieldExpiresAtMs(startedAtMs), cells, burningMask:0, burntMask:0,
+    burnExpiresAtMs:Array(RAIN_FIELD.CELL_COUNT).fill(0), burnSourcePlayerIds:Array(RAIN_FIELD.CELL_COUNT).fill(null) };
+  activeServerRainFields.set(serverRainFieldKey(ownerId,patchId),field); rainDiagnostics.fieldsCreated += 1; return field;
+}
+function removeServerRainGrassForOwner(ownerId, mapId = null) {
+  const normalized=String(ownerId); for (const [key,field] of activeServerRainFields) if (field.ownerId===normalized && (!mapId||field.mapId===mapId)) activeServerRainFields.delete(key);
+}
+function serverRainFieldCellAvailable(field,cell,nowMs=Date.now()) {
+  if(!field||!cell) return false; const bit=RAIN_FIELD.cellBit(cell.index); if(field.burntMask & bit) return false;
+  const mapDefinition=WORLD_CONTENT.maps[field.mapId]||{};
+  if(TERRAIN_RULES.canGrowMagicGrassAt(mapDefinition,cell.x,cell.y)===false)return false;
+  return RAIN_FIELD.cellIsGrown(cell,field.startedAtMs,nowMs)&&RAIN_FIELD.cellIsNaturallyAlive(cell,field.startedAtMs,nowMs);
+}
+function serverRainFieldCellBurning(field,index,nowMs=Date.now()) {
+  if(!field) return false; const bit=RAIN_FIELD.cellBit(index); return Boolean(field.burningMask&bit) && (Number(field.burnExpiresAtMs[index])||0)>nowMs;
+}
+function broadcastServerRainFieldDelta(field,{burningAddedMask=0,extinguishedMask=0,burnEnds=[]}={}) {
+  if(!field?.mapId||(!burningAddedMask&&!extinguishedMask)) return false;
+  broadcastToMap(field.mapId,{type:"rainFieldDelta",ownerId:field.ownerId,patchId:field.patchId,burningAddedMask:burningAddedMask>>>0,extinguishedMask:extinguishedMask>>>0,burnEnds});
+  rainDiagnostics.fieldDeltaEvents += 1; return true;
+}
+function settleServerRainFields(nowMs=Date.now()) {
+  for(const [key,field] of activeServerRainFields){
+    if(nowMs>=field.expiresAtMs){activeServerRainFields.delete(key);continue;}
+    for(let i=0;i<RAIN_FIELD.CELL_COUNT;i+=1){const bit=RAIN_FIELD.cellBit(i); if(!(field.burningMask&bit))continue;
+      const end=Number(field.burnExpiresAtMs[i])||0; if(end>0&&nowMs>=end){field.burningMask=(field.burningMask&~bit)>>>0;field.burntMask=(field.burntMask|bit)>>>0;field.burnExpiresAtMs[i]=0;field.burnSourcePlayerIds[i]=null;}}
+  }
+}
+function igniteServerRainFieldCell(field,index,sourcePlayerId=null,nowMs=Date.now()) {
+  const cell=field?.cells?.[index]; if(!serverRainFieldCellAvailable(field,cell,nowMs)||serverRainFieldCellBurning(field,index,nowMs))return false;
+  const bit=RAIN_FIELD.cellBit(index); field.burningMask=(field.burningMask|bit)>>>0; field.burnExpiresAtMs[index]=nowMs+RAIN_FIELD.BURN_DURATION*1000;
+  field.burnSourcePlayerIds[index]=sourcePlayerId||field.ownerId||null; fireDiagnostics.rainGrassIgnitions+=1; rainDiagnostics.cellIgnitions+=1; return true;
+}
+function igniteServerRainGrassNear(mapId,x,y,radius,sourcePlayerId=null,{chance=1,maxIgnitions=Infinity}={}) {
+  const now=Date.now(); settleServerRainFields(now); let total=0; const radiusSq=radius*radius; const changes=[];
+  for(const field of activeServerRainFields.values()){if(field.mapId!==mapId)continue; const fdx=field.centerX-x,fdy=field.centerY-y,broad=Math.max(RAIN_FIELD.FIELD_RADIUS_X,RAIN_FIELD.FIELD_RADIUS_Y)+radius+16;
+    if(fdx*fdx+fdy*fdy>broad*broad)continue; let mask=0; const ends=[];
+    for(const cell of field.cells){if(total>=maxIgnitions)break;if(!serverRainFieldCellAvailable(field,cell,now)||serverRainFieldCellBurning(field,cell.index,now))continue;
+      const dx=cell.x-x,dy=(cell.y-5)-y;if(dx*dx+dy*dy>radiusSq||Math.random()>chance)continue;
+      if(igniteServerRainFieldCell(field,cell.index,sourcePlayerId,now)){mask|=RAIN_FIELD.cellBit(cell.index);ends.push([cell.index,RAIN_FIELD.BURN_DURATION]);total+=1;}}
+    if(mask)changes.push([field,mask,ends]); if(total>=maxIgnitions)break;}
+  for(const [field,mask,ends] of changes) broadcastServerRainFieldDelta(field,{burningAddedMask:mask,burnEnds:ends}); return total>0;
+}
+function extinguishServerRainGrassNear(mapId,x,y,radius){const now=Date.now();settleServerRainFields(now);const r2=radius*radius;let changed=false;
+  for(const field of activeServerRainFields.values()){if(field.mapId!==mapId||!field.burningMask)continue;let mask=0;for(const cell of field.cells){if(!serverRainFieldCellBurning(field,cell.index,now))continue;
+    const dx=cell.x-x,dy=(cell.y-5)-y;if(dx*dx+dy*dy>r2)continue;const bit=RAIN_FIELD.cellBit(cell.index);field.burningMask=(field.burningMask&~bit)>>>0;field.burnExpiresAtMs[cell.index]=0;field.burnSourcePlayerIds[cell.index]=null;mask|=bit;changed=true;rainDiagnostics.cellExtinguishes+=1;}
+    if(mask)broadcastServerRainFieldDelta(field,{extinguishedMask:mask});} return changed;}
+function burningServerRainGrassNear(mapId,x,y,radius){const now=Date.now(),r2=radius*radius;settleServerRainFields(now);for(const field of activeServerRainFields.values()){if(field.mapId!==mapId||!field.burningMask)continue;
+  for(const cell of field.cells){if(!serverRainFieldCellBurning(field,cell.index,now))continue;const dx=cell.x-x,dy=(cell.y-5)-y;if(dx*dx+dy*dy<=r2)return true;}}return false;}
+function pointIsInServerRainGrass(mapId,x,y,entityRadius=7,now=Date.now()){rainDiagnostics.grassQueries+=1;for(const field of activeServerRainFields.values()){if(field.mapId!==mapId)continue;
+  const broad=Math.max(RAIN_FIELD.FIELD_RADIUS_X,RAIN_FIELD.FIELD_RADIUS_Y)+entityRadius+16,fdx=field.centerX-x,fdy=field.centerY-y;if(fdx*fdx+fdy*fdy>broad*broad)continue;
+  for(const cell of field.cells){rainDiagnostics.grassCellChecks+=1;if(!serverRainFieldCellAvailable(field,cell,now))continue;const r=RAIN_FIELD.combinedHitRadius(cell,entityRadius),dx=x-cell.x,dy=y-cell.y;if(dx*dx+dy*dy<=r*r)return true;}}return false;}
+function updateEnemyRainGrassDerivedState(enemy,now=Date.now()){if(!enemy?.alive)return false;const active=pointIsInServerRainGrass(enemy.mapId,Number(enemy.x)||0,Number(enemy.y)||0,7,now);
+  if(Boolean(enemy.magicGrassFieldActive)!==active){if(active)rainDiagnostics.grassEnters+=1;else rainDiagnostics.grassExits+=1;enemy.magicGrassFieldActive=active;}return active;}
+function tickServerRainGrassMembership(){const now=Date.now();settleServerRainFields(now);for(const enemy of allSharedEnemies()){if(!enemy.alive){enemy.magicGrassFieldActive=false;continue;}updateEnemyRainGrassDerivedState(enemy,now);}}
+function spreadServerRainGrassFire(){const now=Date.now();settleServerRainFields(now);const sources=[];for(const field of activeServerRainFields.values())for(const cell of field.cells)if(serverRainFieldCellBurning(field,cell.index,now))sources.push({field,cell});
+  fireDiagnostics.spreadSources+=sources.length;for(const {field,cell} of sources){const sourceId=field.burnSourcePlayerIds[cell.index]||field.ownerId;igniteServerLivingNear(field.mapId,cell.x,cell.y-5,14,sourceId);
+    if(Math.random()>RAIN_FIELD.FIRE_CHAIN_CHANCE)continue;igniteEnvironmentNear(field.mapId,cell.x,cell.y-5,RAIN_FIELD.FIRE_CHAIN_RADIUS,sourceId);igniteServerRainGrassNear(field.mapId,cell.x,cell.y-5,RAIN_FIELD.FIRE_CHAIN_RADIUS,sourceId,{chance:1,maxIgnitions:RAIN_FIELD.FIRE_CHAIN_MAX_IGNITIONS});}}
+function removeServerRainCloudForOwner(ownerId,mapId=null){const cloud=activeServerRainClouds.get(ownerId);if(!cloud)return false;if(mapId&&cloud.mapId!==mapId)return false;activeServerRainClouds.delete(ownerId);return true;}
+function resolveServerRainCloudTarget(ownerId, mapId, requestedX, requestedY) {
+  const dimensions = mapWorldDimensions(mapId);
+  const owner = players.get(ownerId);
+  const originX = Number(owner?.x);
+  const originY = Number(owner?.y) - 8;
+  const fallbackX = Number.isFinite(originX) ? originX : dimensions.width / 2;
+  const fallbackY = Number.isFinite(originY) ? originY : dimensions.height / 2;
+
+  let targetX = clampNumber(requestedX, 6, dimensions.width - 6, fallbackX);
+  let targetY = clampNumber(requestedY, 10, dimensions.height - 4, fallbackY);
+
+  // Rain Cloud's authored range is 80px. Enforce it here as well as on the
+  // client so the server remains authoritative about the final summon point.
+  const dx = targetX - fallbackX;
+  const dy = targetY - fallbackY;
+  const distance = Math.hypot(dx, dy);
+  if (distance > 80) {
+    const scale = 80 / distance;
+    targetX = fallbackX + dx * scale;
+    targetY = fallbackY + dy * scale;
+  }
+
+  const mapDefinition = WORLD_CONTENT.maps[mapId] || {};
+  if (TERRAIN_RULES.terrainDefinition(mapDefinition)) {
+    const resolved = TERRAIN_RULES.clampSegmentToNonVoid(
+      mapDefinition,
+      Number.isFinite(Number(owner?.x)) ? Number(owner.x) : fallbackX,
+      Number.isFinite(Number(owner?.y)) ? Number(owner.y) : fallbackY,
+      targetX,
+      targetY
+    );
+    targetX = resolved.x;
+    targetY = resolved.y;
+  }
+
+  return { x: targetX, y: targetY };
+}
+
+function startServerRainCloud(ownerId, mapId, payload) {
+  const life = clampNumber(payload.cloudLife, 4, 24, 12);
+  const target = resolveServerRainCloudTarget(
+    ownerId,
+    mapId,
+    payload.targetX,
+    payload.targetY
+  );
+  const x = target.x;
+  const y = target.y;
+  const orbitAngle = clampNumber(payload.orbitAngle, -Math.PI * 4, Math.PI * 4, 0);
+  const patchId = clampInteger(payload.patchId, 1, 1000000000, ++serverRainPatchSequence);
+  const startedAtMs = Date.now();
+  const cloud = {
+    ownerId, mapId, x, y, targetX: x, targetY: y, orbitCenterX: x, orbitCenterY: y,
+    orbitAngle, orbitElapsed: 0, orbitRadius: 0, moveSpeed: SERVER_RAIN_CLOUD_MOVE_SPEED,
+    life, startedAtMs, expiresAtMs: startedAtMs + life * 1000, effectPulseTimer: 0,
+    ghostDamageTimer: 0, radius: SERVER_RAIN_CLOUD_RADIUS, patchId
+  };
+  activeServerRainClouds.set(ownerId, cloud);
+  createServerRainField(ownerId, mapId, patchId, x, y, startedAtMs);
+  return cloud;
+}
+function broadcastServerPlayerWetState(target){
+  if(!target?.mapId)return;
+  broadcastToMap(target.mapId,{type:"playerWetState",id:target.id,wetTime:Math.max(0,Number(target.wetTime)||0)});
+}
+function applyServerPlayerWet(target,duration=STATUS_RULES.playerWetDuration){if(!target||target.hp<=0)return false;const wasWet=(Number(target.wetTime)||0)>0;clearServerPlayerBurn(target);target.wetTime=Math.max(Number(target.wetTime)||0,Math.max(.1,Number(duration)||STATUS_RULES.playerWetDuration));if(!wasWet){rainDiagnostics.playerWetEnters+=1;broadcastServerPlayerWetState(target);}return !wasWet;}
+function clearServerPlayerWet(target){if(!target||(Number(target.wetTime)||0)<=0)return false;target.wetTime=0;rainDiagnostics.playerWetExits+=1;broadcastServerPlayerWetState(target);return true;}
+function tickServerPlayerWetTimers(dt){for(const target of players.values()){if((Number(target.wetTime)||0)<=0)continue;target.wetTime=Math.max(0,target.wetTime-dt);if(target.wetTime<=0){rainDiagnostics.playerWetExits+=1;broadcastServerPlayerWetState(target);}}}
+function serverRainCloudAffectsPoint(cloud,x,y,inset=0){const r=Math.max(1,cloud.radius-inset),dx=x-cloud.x,dy=y-cloud.y;return dx*dx+dy*dy<=r*r;}
+function applyServerRainCloudToLiving(cloud,owner,damageTick){for(const enemy of allSharedEnemies()){if(!enemy.alive||enemy.returningHome||enemy.mapId!==cloud.mapId)continue;const profile=serverEnemyProfile(enemy),body=serverEnemyBodyPoint(enemy),inset=profile?.rainRadiusInset??2;if(!serverRainCloudAffectsPoint(cloud,body.x,body.y,inset))continue;
+  const burning=burningServerRainGrassNear(cloud.mapId,body.x,body.y,14);if(profile?.rainEffect==="damage"){if(!burning)clearServerEnemyBurn(enemy);if(!damageTick)continue;if(!owner||owner.hp<=0||(Number(owner.abilities?.rainCloud)||0)<=0||!COMBAT_BALANCE.isWandWeaponIndex(owner.weaponIndex))continue;
+    const damage=calculateServerPlayerDamage(owner,enemy,"rain",false,{rainPower:SERVER_RAIN_GHOST_POWER});enemy.hp=Math.max(0,enemy.hp-damage);setEnemyAggroTarget(enemy,owner.id);enemy.lastDamagePlayerId=owner.id;broadcastToMap(enemy.mapId,{type:"enemyDamage",enemyType:enemy.type,enemyId:enemy.id,mapId:enemy.mapId,amount:damage,hp:enemy.hp,critical:false,source:"rain",attackerId:owner.id});rainDiagnostics.ghostDamageTicks+=1;if(enemy.hp<=0)killSharedEnemy(enemy,owner.id);continue;}
+  if(burning){if(enemy.wetTime>0){enemy.wetTime=0;rainDiagnostics.enemyWetExits+=1;}continue;}const wasWet=enemy.wetTime>0;applyServerEnemyWet(enemy,STATUS_RULES.enemyWetDuration);if(!wasWet&&enemy.wetTime>0)rainDiagnostics.enemyWetEnters+=1;}}
+function tickServerRainClouds(dt){const now=Date.now();settleServerRainFields(now);for(const [ownerId,cloud] of activeServerRainClouds){const owner=players.get(ownerId);if(!owner||owner.hp<=0||owner.mapId!==cloud.mapId||now>=cloud.expiresAtMs){activeServerRainClouds.delete(ownerId);continue;}
+  cloud.orbitElapsed=Math.max(0,(now-cloud.startedAtMs)/1000);cloud.orbitAngle+=SERVER_RAIN_CLOUD_ORBIT_ANGULAR_SPEED*dt;const progress=Math.max(0,Math.min(1,cloud.orbitElapsed/SERVER_RAIN_CLOUD_ORBIT_EXPAND_TIME)),eased=progress*progress*(3-2*progress);cloud.orbitRadius=SERVER_RAIN_CLOUD_ORBIT_MAX_RADIUS*eased;const d=mapWorldDimensions(cloud.mapId);let orbitTargetX=clampNumber(cloud.orbitCenterX+Math.cos(cloud.orbitAngle)*cloud.orbitRadius,6,d.width-6,cloud.x);let orbitTargetY=clampNumber(cloud.orbitCenterY+Math.sin(cloud.orbitAngle)*cloud.orbitRadius*.72,10,d.height-4,cloud.y);const mapDefinition=WORLD_CONTENT.maps[cloud.mapId]||{};if(TERRAIN_RULES.terrainDefinition(mapDefinition)){const resolved=TERRAIN_RULES.clampSegmentToNonVoid(mapDefinition,cloud.x,cloud.y,orbitTargetX,orbitTargetY);orbitTargetX=resolved.x;orbitTargetY=resolved.y;}cloud.targetX=orbitTargetX;cloud.targetY=orbitTargetY;const dx=cloud.targetX-cloud.x,dy=cloud.targetY-cloud.y,dist=Math.hypot(dx,dy);if(dist>.25){const step=Math.min(dist,cloud.moveSpeed*dt);cloud.x+=dx/dist*step;cloud.y+=dy/dist*step;}else{cloud.x=cloud.targetX;cloud.y=cloud.targetY;}
+  cloud.effectPulseTimer-=dt;if(cloud.effectPulseTimer<=0){cloud.effectPulseTimer+=SERVER_RAIN_CLOUD_EFFECT_INTERVAL;extinguishEnvironmentNear(cloud.mapId,cloud.x,cloud.y,cloud.radius);extinguishServerRainGrassNear(cloud.mapId,cloud.x,cloud.y,cloud.radius);}cloud.ghostDamageTimer-=dt;const damageTick=cloud.ghostDamageTimer<=0;if(damageTick)cloud.ghostDamageTimer+=SERVER_RAIN_GHOST_DAMAGE_INTERVAL;applyServerRainCloudToLiving(cloud,owner,damageTick);
+  for (const target of players.values()) {
+    if (
+      target.mapId !== cloud.mapId ||
+      target.hp <= 0 ||
+      !serverRainCloudAffectsPoint(
+        cloud,
+        target.x,
+        target.y - 8,
+        1
+      )
+    ) {
+      continue;
+    }
+
+    const isOwner = target.id === ownerId;
+
+    // Your own Rain Cloud still wets you. Against another player, Wet/slow is
+    // a PvP status and therefore requires mutual opt-in just like direct hits.
+    if (
+      !isOwner &&
+      (!owner || !pvpPlayersCanHarm(owner, target))
+    ) {
+      continue;
+    }
+
+    const burning = burningServerRainGrassNear(
+      cloud.mapId,
+      target.x,
+      target.y - 8,
+      12
+    );
+
+    if (burning) {
+      clearServerPlayerWet(target);
+      continue;
+    }
+
+    const hadBurn = (Number(target.burnTime) || 0) > 0;
+    applyServerPlayerWet(
+      target,
+      STATUS_RULES.playerWetDuration
+    );
+
+    if (!isOwner && owner) {
+      applyPvpCombatLock(owner, target);
+    }
+
+    if (hadBurn && target.burnTime <= 0) {
+      broadcastServerPlayerBurnState(target);
+    }
+  }
+}}
+
+function transientAbilitySnapshotForMap(
+  mapId,
+  excludeOwnerId = null
+) {
+  const nowMs = Date.now();
+  const excluded = excludeOwnerId ? String(excludeOwnerId) : null;
+
+  const rainClouds = [];
+  for (const [ownerId, cloud] of activeServerRainClouds) {
+    if (
+      cloud.mapId !== mapId ||
+      (excluded && ownerId === excluded) ||
+      nowMs >= cloud.expiresAtMs
+    ) {
+      continue;
+    }
+
+    rainClouds.push({
+      ownerId,
+      x: cloud.x,
+      y: cloud.y,
+      orbitCenterX: cloud.orbitCenterX,
+      orbitCenterY: cloud.orbitCenterY,
+      orbitAngle: cloud.orbitAngle,
+      orbitElapsed: cloud.orbitElapsed,
+      orbitRadius: cloud.orbitRadius,
+      totalLife: cloud.life,
+      remainingLife: Math.max(0, (cloud.expiresAtMs - nowMs) / 1000),
+      patchId: cloud.patchId
+    });
+  }
+
+  const hallucinations = [];
+  for (const [ownerId, clone] of activeServerHallucinations) {
+    if (
+      clone.mapId !== mapId ||
+      (excluded && ownerId === excluded) ||
+      nowMs >= clone.expiresAtMs
+    ) {
+      continue;
+    }
+
+    hallucinations.push({
+      ownerId,
+      cloneId: clone.cloneId,
+      x: clone.x,
+      y: clone.y,
+      remainingLife: Math.max(0, (clone.expiresAtMs - nowMs) / 1000),
+      hatIndex: clone.hatIndex,
+      shirtIndex: clone.shirtIndex,
+      pantsIndex: clone.pantsIndex
+    });
+  }
+
+  const rainFields = [];
+  settleServerRainFields(nowMs);
+  for (const field of activeServerRainFields.values()) {
+    if (field.mapId !== mapId || (excluded && field.ownerId === excluded) || nowMs >= field.expiresAtMs) continue;
+    const burnEnds = [];
+    for (let index = 0; index < RAIN_FIELD.CELL_COUNT; index += 1) if (serverRainFieldCellBurning(field,index,nowMs)) burnEnds.push([index,Math.max(0,(field.burnExpiresAtMs[index]-nowMs)/1000)]);
+    rainFields.push({ownerId:field.ownerId,patchId:field.patchId,centerX:field.centerX,centerY:field.centerY,age:Math.max(0,(nowMs-field.startedAtMs)/1000),burningMask:field.burningMask>>>0,burntMask:field.burntMask>>>0,burnEnds});
+  }
+
+  return { rainClouds, hallucinations, rainFields };
 }
 
 function sanitizeVisualEffectPayload(
@@ -6945,7 +11067,10 @@ function sanitizeVisualEffectPayload(
   if (effect === "fireballImpact") {
     return {
       x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y)
+      y: sanitizeVisualPoint(payload.y),
+      primaryEnemyId: typeof payload.primaryEnemyId === "string"
+        ? payload.primaryEnemyId.slice(0, 96)
+        : null
     };
   }
 
@@ -6980,7 +11105,9 @@ function sanitizeVisualEffectPayload(
         1,
         999,
         1
-      )
+      ),
+      x: sanitizeVisualPoint(payload.x),
+      y: sanitizeVisualPoint(payload.y)
     };
   }
 
@@ -7000,52 +11127,23 @@ function sanitizeVisualEffectPayload(
         4,
         24,
         12
+      ),
+      orbitAngle: clampNumber(
+        payload.orbitAngle,
+        -Math.PI * 4,
+        Math.PI * 4,
+        0
+      ),
+      patchId: clampInteger(
+        payload.patchId,
+        0,
+        1000000000,
+        0
       )
     };
   }
 
 
-  if (effect === "rainGrassSpawn") {
-    const grassId = typeof payload.grassId === "string"
-      ? payload.grassId.slice(0, 96)
-      : "";
-
-    if (!grassId) return null;
-
-    return {
-      grassId,
-      patchId: clampInteger(payload.patchId, 0, 1000000000, 0),
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y),
-      width: clampNumber(payload.width, 8, 18, 12),
-      phase: clampNumber(payload.phase, -20, 20, 0),
-      tempLife: clampNumber(payload.tempLife, 0.1, 40, 30),
-      burnDuration: clampNumber(payload.burnDuration, 0.1, 6, 3)
-    };
-  }
-
-  if (effect === "rainGrassState") {
-    const grassId = typeof payload.grassId === "string"
-      ? payload.grassId.slice(0, 96)
-      : "";
-    const grassOwnerId = typeof payload.grassOwnerId === "string"
-      ? payload.grassOwnerId.slice(0, 96)
-      : "";
-    const state = payload.state === "extinguished"
-      ? "extinguished"
-      : payload.state === "burning"
-        ? "burning"
-        : "";
-
-    if (!grassId || !grassOwnerId || !state) return null;
-
-    return {
-      grassOwnerId,
-      grassId,
-      state,
-      burnTime: clampNumber(payload.burnTime, 0, 6, 0)
-    };
-  }
 
   if (effect === "shadowSmoke") {
     return {
@@ -7074,27 +11172,42 @@ function sanitizeVisualEffectPayload(
       startY: sanitizeVisualPoint(payload.startY),
       endX: sanitizeVisualPoint(payload.endX),
       endY: sanitizeVisualPoint(payload.endY),
+      cloneId: typeof payload.cloneId === "string"
+        ? payload.cloneId.slice(0, 96)
+        : "",
 
       hatIndex: clampInteger(
         payload.hatIndex,
         -1,
-        7,
+        9,
         -1
       ),
 
       shirtIndex: clampInteger(
         payload.shirtIndex,
         -1,
-        4,
+        6,
         -1
       ),
 
       pantsIndex: clampInteger(
         payload.pantsIndex,
         -1,
-        4,
+        6,
         -1
       )
+    };
+  }
+
+  if (effect === "jesterReturn") {
+    return {
+      startX: sanitizeVisualPoint(payload.startX),
+      startY: sanitizeVisualPoint(payload.startY),
+      endX: sanitizeVisualPoint(payload.endX),
+      endY: sanitizeVisualPoint(payload.endY),
+      cloneId: typeof payload.cloneId === "string"
+        ? payload.cloneId.slice(0, 96)
+        : ""
     };
   }
 
@@ -7105,6 +11218,15 @@ function clearPlayerOwnedTransientWorldState(
   playerId,
   mapId = null
 ) {
+  removeServerRainCloudForOwner(playerId, mapId);
+  removeServerRainGrassForOwner(playerId, mapId);
+  removeServerHallucinationForOwner(playerId, mapId);
+
+  cancelHunterSnareSetup(
+    playerId,
+    "ownerCleanup"
+  );
+
   removeHunterSnaresForOwner(
     playerId,
     mapId,
@@ -7136,6 +11258,12 @@ function clearPlayerOwnedTransientWorldState(
       clearServerEnemyHurlState(enemy);
     }
   }
+
+  for (const rock of environmentEntitiesOnMap(mapId, "rock")) {
+    if (rock.carriedBy === playerId) {
+      clearServerRockHurlState(rock);
+    }
+  }
 }
 
 function broadcastOwnerTransientCleanup(
@@ -7145,7 +11273,8 @@ function broadcastOwnerTransientCleanup(
 ) {
   if (!mapId) return;
 
-  broadcast(
+  broadcastToMap(
+    mapId,
     {
       type: "visualEffect",
       senderId: playerId,
@@ -7176,10 +11305,9 @@ function handleVisualEffect(
     "fireballImpact",
     "levelUp",
     "rainCast",
-    "rainGrassSpawn",
-    "rainGrassState",
     "shadowSmoke",
-    "jesterBlink"
+    "jesterBlink",
+    "jesterReturn"
   ]);
 
   if (!allowedEffects.has(effect)) return;
@@ -7192,8 +11320,46 @@ function handleVisualEffect(
 
   if (!payload) return;
 
+  if (effect === "jesterBlink") {
+    startServerHallucination(playerId, playerState.mapId, payload);
+  }
+
+  if (effect === "jesterReturn") {
+    if (!completeServerHallucinationReturn(playerId, playerState.mapId, payload)) {
+      return;
+    }
+  }
+
+  if (effect === "fireballImpact") {
+    applyServerFireballSplashBurn(playerId, playerState.mapId, payload);
+  }
+
+  if (effect === "rainCast") {
+    if (payload.retarget) {
+      const activeCloud = activeServerRainClouds.get(playerId);
+      if (activeCloud && activeCloud.mapId === playerState.mapId) {
+        const resolved = resolveServerRainCloudTarget(
+          playerId,
+          playerState.mapId,
+          payload.targetX,
+          payload.targetY
+        );
+        activeCloud.orbitCenterX = resolved.x;
+        activeCloud.orbitCenterY = resolved.y;
+        payload.targetX = resolved.x;
+        payload.targetY = resolved.y;
+      }
+    } else {
+      const cloud = startServerRainCloud(playerId, playerState.mapId, payload);
+      payload.targetX = cloud.orbitCenterX;
+      payload.targetY = cloud.orbitCenterY;
+    }
+  }
+
+
   // The source client already rendered the local copy.
-  broadcast(
+  broadcastToMap(
+    playerState.mapId,
     {
       type: "visualEffect",
       senderId: playerId,
@@ -7221,20 +11387,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.mapId
       : requestedMapId;
 
-  const camouflageRequested =
-    !authoritativeDead &&
-    Boolean(source.camouflaged) &&
-    !playerIsTargetedByPveEnemy(id);
-
-  const camouflageReadyUntil =
-    camouflageRequested
-      // Long enough for a maximum-range committed arrow + ordinary latency
-      // to arrive after the client has already revealed itself on release.
-      ? Date.now() + 2500
-      : Math.max(
-          0,
-          Number(previous?.camouflageReadyUntil) || 0
-        );
 
   return {
     id,
@@ -7248,6 +11400,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     wood: previous && Number.isFinite(previous.wood)
       ? previous.wood
+      : 0,
+
+    stone: previous && Number.isFinite(previous.stone)
+      ? previous.stone
       : 0,
 
     flowers: previous && Number.isFinite(previous.flowers)
@@ -7358,10 +11514,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
             mapWorldDimensions(mapId).height / 2
           ),
 
-    hatIndex: clampInteger(source.hatIndex, -1, 8, -1),
-    shirtIndex: clampInteger(source.shirtIndex, -1, 5, -1),
-    pantsIndex: clampInteger(source.pantsIndex, -1, 5, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 10, -1),
+    hatIndex: clampInteger(source.hatIndex, -1, 9, -1),
+    shirtIndex: clampInteger(source.shirtIndex, -1, 6, -1),
+    pantsIndex: clampInteger(source.pantsIndex, -1, 6, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 11, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -7371,6 +11527,11 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       99,
       previous?.level || 1
     ),
+
+    classId:
+      ["might", "arcana", "precision", "guile"].includes(source.classId)
+        ? source.classId
+        : previous?.classId || null,
 
     stats: {
       strength: clampInteger(
@@ -7402,111 +11563,511 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       )
     },
 
+    // Combat-relevant learned skill levels. They are not broadcast to other
+    // players; the authoritative damage formula only needs them server-side.
+    abilities: {
+      wandMastery: clampInteger(
+        source.abilities?.wandMastery,
+        0,
+        COMBAT_BALANCE.abilityProfiles.wandMasteryMelee.maxLevel,
+        previous?.abilities?.wandMastery || 0
+      ),
+      fireball: clampInteger(
+        source.abilities?.fireball,
+        0,
+        COMBAT_BALANCE.abilityProfiles.fireball.maxLevel,
+        previous?.abilities?.fireball || 0
+      ),
+      rainCloud: clampInteger(
+        source.abilities?.rainCloud,
+        0,
+        1,
+        previous?.abilities?.rainCloud || 0
+      ),
+      camouflage: clampInteger(
+        source.abilities?.camouflage,
+        0,
+        1,
+        previous?.abilities?.camouflage || 0
+      )
+    },
+
     walkTime: clampNumber(source.walkTime, 0, 1000000, 0),
     firstRaisedLeg:
       source.firstRaisedLeg === "right" ? "right" : "left",
 
-    attackTime: clampNumber(source.attackTime, 0, 1, 0),
-    attackDuration: clampNumber(source.attackDuration, 0.05, 1, 0.30),
-    attackDirection:
-      ["left", "right", "up", "down"].includes(source.attackDirection)
-        ? source.attackDirection
-        : "left",
-    attackHand:
-      source.attackHand === "right" ? "right" : "left",
+    // Transient combat/presentation state is server-owned once a session exists.
+    // Compact playerAction/playerAim messages mutate it; the 30 Hz server tick
+    // advances clocks. Generic state patches and safety heartbeats cannot stream
+    // or overwrite presentation timers.
+    attackTime: previous ? Math.max(0, Number(previous.attackTime) || 0) : 0,
+    attackDuration: previous ? clampNumber(previous.attackDuration, 0.05, 1, 0.30) : clampNumber(source.attackDuration, 0.05, 1, 0.30),
+    attackDirection: previous ? (["left", "right", "up", "down"].includes(previous.attackDirection) ? previous.attackDirection : "left") : (["left", "right", "up", "down"].includes(source.attackDirection) ? source.attackDirection : "left"),
+    attackHand: previous ? (previous.attackHand === "right" ? "right" : "left") : (source.attackHand === "right" ? "right" : "left"),
+    attackAimAngle: previous ? clampNumber(previous.attackAimAngle, -Math.PI * 4, Math.PI * 4, 0) : clampNumber(source.attackAimAngle, -Math.PI * 4, Math.PI * 4, 0),
 
-    attackAimAngle:
-      clampNumber(
-        source.attackAimAngle,
-        -Math.PI * 4,
-        Math.PI * 4,
-        0
-      ),
+    bowDrawing: previous ? Boolean(previous.bowDrawing) : false,
+    bowDrawAmount: previous ? clampNumber(previous.bowDrawAmount, 0, 1, 0) : 0,
+    bowDrawDuration: previous ? clampNumber(previous.bowDrawDuration, 0.05, 3, 1.0) : clampNumber(source.bowDrawDuration, 0.05, 3, 1.0),
+    bowReleaseTime: previous ? clampNumber(previous.bowReleaseTime, 0, 0.5, 0) : 0,
+    bowReleaseDuration: previous ? clampNumber(previous.bowReleaseDuration, 0.03, 0.5, 0.12) : clampNumber(source.bowReleaseDuration, 0.03, 0.5, 0.12),
 
-    // Presentation-only bow prototype state.
-    bowDrawing:
-      Boolean(source.bowDrawing),
+    focusFireCasting: previous ? Boolean(previous.focusFireCasting) : false,
+    fireballAiming: previous ? Boolean(previous.fireballAiming) : false,
+    fireballAimTime: previous ? Math.max(0, Number(previous.fireballAimTime) || 0) : 0,
+    rainCloudCasting: previous ? Boolean(previous.rainCloudCasting) : false,
+    rainCloudCastTime: previous ? Math.max(0, Number(previous.rainCloudCastTime) || 0) : 0,
+    rainCloudCastDuration: previous ? clampNumber(previous.rainCloudCastDuration, 0.05, 1, 0.50) : clampNumber(source.rainCloudCastDuration, 0.05, 1, 0.50),
 
-    bowDrawAmount:
-      clampNumber(
-        source.bowDrawAmount,
-        0,
-        1,
-        0
-      ),
+    // Camouflage is server-owned. Ordinary client state packets cannot enter,
+    // extend, or leave it; dedicated server state tracks cover and opener use.
+    camouflaged: previous ? Boolean(previous.camouflaged) : false,
 
-    bowReleaseTime:
-      clampNumber(
-        source.bowReleaseTime,
-        0,
-        0.25,
-        0
-      ),
+    // Hunter's Snare setup is owned by hunterSnareSetups. Client state packets
+    // cannot start, accelerate, complete, or cancel the setup countdown.
+    shadowHidden: previous ? Boolean(previous.shadowHidden) : false,
+    shadowHideRevealTime: previous ? clampNumber(previous.shadowHideRevealTime, 0, 1, 0) : 0,
 
-    focusFireCasting:
-      Boolean(source.focusFireCasting),
-
-    fireballAiming:
-      Boolean(source.fireballAiming),
-    fireballAimTime:
-      clampNumber(source.fireballAimTime, 0, 1000000, 0),
-
-    rainCloudCasting:
-      Boolean(source.rainCloudCasting),
-    rainCloudCastTime:
-      clampNumber(source.rainCloudCastTime, 0, 1, 0),
-    rainCloudCastDuration:
-      clampNumber(source.rainCloudCastDuration, 0.05, 1, 0.50),
-
-    camouflaged: camouflageRequested,
-    camouflageReadyUntil,
-
-    hunterSnareSetting:
-      Boolean(source.hunterSnareSetting),
-    hunterSnareSetTime:
-      clampNumber(source.hunterSnareSetTime, 0, 3, 0),
-    hunterSnareSetDuration:
-      clampNumber(source.hunterSnareSetDuration, 0.5, 3, 2.5),
-
-    shadowHidden: Boolean(source.shadowHidden),
-    shadowHideRevealTime:
-      clampNumber(source.shadowHideRevealTime, 0, 1, 0),
-
-    wetTime: clampNumber(source.wetTime, 0, 10, 0),
-    burnTime: clampNumber(source.burnTime, 0, 10, 0),
+    wetTime: previous
+      ? Math.max(0, Number(previous.wetTime) || 0)
+      : 0,
+    // Burn is server-clocked in v253. A client's 10 Hz state stream may not
+    // shorten/extend the authoritative hazard timer.
+    burnTime: previous
+      ? Math.max(0, Number(previous.burnTime) || 0)
+      : 0,
+    burnTickTimer: previous
+      ? Math.max(0, Number(previous.burnTickTimer) || 0)
+      : 0,
+    burnDamageAccumulator: previous
+      ? Math.max(0, Number(previous.burnDamageAccumulator) || 0)
+      : 0,
+    burnSourcePlayerId:
+      previous && typeof previous.burnSourcePlayerId === "string"
+        ? previous.burnSourcePlayerId
+        : null,
 
     // Presentation-only Hurl whiff/reach state. These fields are sanitized
     // and rebroadcast so nearby players can see the failed-grab animation.
-    hurlReachTime:
-      clampNumber(source.hurlReachTime, 0, 0.5, 0),
-
-    hurlReachDuration:
-      clampNumber(source.hurlReachDuration, 0.05, 0.5, 0.18),
-
-    hurlReachDirX:
-      clampNumber(source.hurlReachDirX, -1, 1, 0),
-
-    hurlReachDirY:
-      clampNumber(source.hurlReachDirY, -1, 1, 0)
+    hurlReachTime: previous ? clampNumber(previous.hurlReachTime, 0, 0.5, 0) : 0,
+    hurlReachDuration: previous ? clampNumber(previous.hurlReachDuration, 0.05, 0.5, 0.18) : clampNumber(source.hurlReachDuration, 0.05, 0.5, 0.18),
+    hurlReachDirX: previous ? clampNumber(previous.hurlReachDirX, -1, 1, 0) : 0,
+    hurlReachDirY: previous ? clampNumber(previous.hurlReachDirY, -1, 1, 0) : 0
   };
 }
 
+function publicPlayerState(playerState) {
+  if (!playerState) return null;
+
+  // Only properties another browser can actually render/use belong on the
+  // outbound presence stream. Inventory, crafting progress, shop purchases,
+  // combat stats, server-only camouflage windows, etc. remain server-side.
+  return {
+    id: playerState.id,
+    mapId: playerState.mapId,
+    x: playerState.x,
+    y: playerState.y,
+    hp: playerState.hp,
+    maxHp: playerState.maxHp,
+    isDead: playerState.isDead,
+    pvpEnabled: playerState.pvpEnabled,
+    pvpCombatUntil: playerState.pvpCombatUntil,
+
+    hatIndex: playerState.hatIndex,
+    shirtIndex: playerState.shirtIndex,
+    pantsIndex: playerState.pantsIndex,
+    weaponIndex: playerState.weaponIndex,
+
+    walkTime: playerState.walkTime,
+    firstRaisedLeg: playerState.firstRaisedLeg,
+
+    attackTime: playerState.attackTime,
+    attackDuration: playerState.attackDuration,
+    attackDirection: playerState.attackDirection,
+    attackHand: playerState.attackHand,
+    attackAimAngle: playerState.attackAimAngle,
+
+    bowDrawing: playerState.bowDrawing,
+    bowDrawAmount: playerState.bowDrawAmount,
+    bowDrawDuration: playerState.bowDrawDuration,
+    bowReleaseTime: playerState.bowReleaseTime,
+    bowReleaseDuration: playerState.bowReleaseDuration,
+    focusFireCasting: playerState.focusFireCasting,
+    fireballAiming: playerState.fireballAiming,
+    fireballAimTime: playerState.fireballAimTime,
+    rainCloudCasting: playerState.rainCloudCasting,
+    rainCloudCastTime: playerState.rainCloudCastTime,
+    rainCloudCastDuration: playerState.rainCloudCastDuration,
+    camouflaged: playerState.camouflaged,
+
+    shadowHidden: playerState.shadowHidden,
+    shadowHideRevealTime: playerState.shadowHideRevealTime,
+    wetTime: playerState.wetTime,
+    burnTime: playerState.burnTime,
+
+    hurlReachTime: playerState.hurlReachTime,
+    hurlReachDuration: playerState.hurlReachDuration,
+    hurlReachDirX: playerState.hurlReachDirX,
+    hurlReachDirY: playerState.hurlReachDirY
+  };
+}
+
+function publicPlayerDelta(previousState, nextState) {
+  const before = publicPlayerState(previousState) || {};
+  const after = publicPlayerState(nextState) || {};
+  const delta = {
+    id: after.id,
+    mapId: after.mapId
+  };
+
+  for (const [key, value] of Object.entries(after)) {
+    if (key === "id" || key === "mapId") continue;
+
+    if (JSON.stringify(before[key]) !== JSON.stringify(value)) {
+      delta[key] = value;
+    }
+  }
+
+  return delta;
+}
+
+const PLAYER_MOVEMENT_DELTA_FIELDS = new Set(["x", "y", "walkTime", "firstRaisedLeg"]);
+
+const PLAYER_TRANSIENT_DELTA_FIELDS = new Set([
+  "attackTime", "attackDuration", "attackDirection", "attackHand", "attackAimAngle",
+  "bowDrawing", "bowDrawAmount", "bowDrawDuration", "bowReleaseTime", "bowReleaseDuration",
+  "focusFireCasting", "fireballAiming", "fireballAimTime",
+  "rainCloudCasting", "rainCloudCastTime", "rainCloudCastDuration",
+  "shadowHidden", "shadowHideRevealTime", "wetTime", "burnTime",
+  "hurlReachTime", "hurlReachDuration", "hurlReachDirX", "hurlReachDirY"
+]);
+
+function compactPlayerMovementPacket(delta) {
+  const hasMovement = [...PLAYER_MOVEMENT_DELTA_FIELDS]
+    .some(field => Object.prototype.hasOwnProperty.call(delta, field));
+  if (!hasMovement) return null;
+  return {
+    type: "playerMove",
+    id: delta.id,
+    p: [
+      Number.isFinite(delta.x) ? Number(delta.x.toFixed(2)) : null,
+      Number.isFinite(delta.y) ? Number(delta.y.toFixed(2)) : null,
+      Number.isFinite(delta.walkTime) ? Number(delta.walkTime.toFixed(3)) : null,
+      Object.prototype.hasOwnProperty.call(delta, "firstRaisedLeg")
+        ? (delta.firstRaisedLeg === "right" ? 1 : 0)
+        : null
+    ]
+  };
+}
+
+function playerStateDeltaWithoutMovement(delta) {
+  const stateDelta = { id: delta.id, mapId: delta.mapId };
+  for (const [key, value] of Object.entries(delta)) {
+    if (key === "id" || key === "mapId" || PLAYER_MOVEMENT_DELTA_FIELDS.has(key) || PLAYER_TRANSIENT_DELTA_FIELDS.has(key)) continue;
+    stateDelta[key] = value;
+  }
+  return stateDelta;
+}
+
+function mergedIncrementalPlayerSource(previousState, patch = {}) {
+  if (!previousState) return patch;
+
+  return {
+    ...previousState,
+    ...patch,
+    // Partial updates may contain only one progression stat. Preserve the rest
+    // instead of letting the sanitizer fall back to zero/default values.
+    stats: {
+      ...(previousState.stats || {}),
+      ...(patch.stats || {})
+    },
+    // Incremental updates are never allowed to move between maps. Portal/map
+    // transitions continue to use the full playerState path so destination
+    // scene sync remains atomic and authoritative.
+    mapId: previousState.mapId
+  };
+}
+
+function applyIncrementalPlayerUpdate(id, socket, patch) {
+  const previousState = players.get(id);
+  if (!previousState || !patch || typeof patch !== "object") return;
+
+  const cleanState = sanitizePlayerState(
+    id,
+    mergedIncrementalPlayerSource(previousState, patch),
+    previousState
+  );
+
+  players.set(id, cleanState);
+  noteServerCamouflagePlayerUpdate(previousState, cleanState);
+
+  broadcastPublicPlayerDelta(
+    previousState,
+    cleanState,
+    socket
+  );
+}
+
+function socketMapBucket(mapId, create = false) {
+  if (!mapId) return null;
+
+  let bucket = socketsByMap.get(mapId) || null;
+
+  if (!bucket && create) {
+    bucket = new Set();
+    socketsByMap.set(mapId, bucket);
+  }
+
+  return bucket;
+}
+
+function movePlayerSocketToMap(socket, mapId) {
+  if (!socket || !mapId) return;
+
+  const previousMapId = socket.replicationMapId || null;
+  if (previousMapId === mapId) {
+    socketMapBucket(mapId, true).add(socket);
+    return;
+  }
+
+  if (previousMapId) {
+    const previousBucket = socketMapBucket(previousMapId);
+    previousBucket?.delete(socket);
+    if (previousBucket?.size === 0) {
+      socketsByMap.delete(previousMapId);
+    }
+  }
+
+  socket.replicationMapId = mapId;
+  socketMapBucket(mapId, true).add(socket);
+}
+
+function registerPlayerSocket(socket, playerId, mapId) {
+  if (!socket || !playerId) return;
+
+  socket.playerId = playerId;
+  socketsByPlayerId.set(playerId, socket);
+  movePlayerSocketToMap(socket, mapId);
+}
+
+function unregisterPlayerSocket(socket) {
+  if (!socket) return;
+
+  const playerId = socket.playerId;
+  if (playerId && socketsByPlayerId.get(playerId) === socket) {
+    socketsByPlayerId.delete(playerId);
+  }
+
+  const mapId = socket.replicationMapId || null;
+  if (mapId) {
+    const bucket = socketMapBucket(mapId);
+    bucket?.delete(socket);
+    if (bucket?.size === 0) {
+      socketsByMap.delete(mapId);
+    }
+  }
+
+  socket.replicationMapId = null;
+}
+
+function sendEncoded(socket, encoded, type = null) {
+  if (socket.readyState !== WebSocket.OPEN) return false;
+  recordWsOutbound(socket, encoded, type);
+  socket.send(encoded);
+  return true;
+}
+
 function sendJson(socket, payload) {
-  if (socket.readyState !== WebSocket.OPEN) return;
-  socket.send(JSON.stringify(payload));
+  const encoded = JSON.stringify(payload);
+  const type = payload?.type || null;
+  if (sendEncoded(socket, encoded, type)) {
+    recordWsLogicalOutbound(encoded, type, 1);
+  }
 }
 
 function broadcast(payload, exceptSocket = null) {
   const encoded = JSON.stringify(payload);
+  const type = payload?.type || null;
+  let recipients = 0;
 
   for (const client of wss.clients) {
     if (
       client !== exceptSocket &&
       client.readyState === WebSocket.OPEN
     ) {
-      client.send(encoded);
+      if (sendEncoded(client, encoded, type)) {
+        recipients += 1;
+      }
     }
   }
+
+  recordWsLogicalOutbound(encoded, type, recipients);
+}
+
+function broadcastToMap(mapId, payload, exceptSocket = null) {
+  if (!mapId) return;
+
+  // Direct combat/lifecycle events already carry the authoritative HP result.
+  // Mark that value as replicated so the compact health scanner does not echo
+  // the same HP again on the next 8 Hz enemy-network tick.
+  noteEnemyHealthFromEvent(payload);
+
+  const encoded = JSON.stringify(payload);
+  const type = payload?.type || null;
+  const bucket = socketMapBucket(mapId);
+  let recipients = 0;
+
+  if (bucket) {
+    for (const client of bucket) {
+      if (
+        client === exceptSocket ||
+        client.readyState !== WebSocket.OPEN
+      ) {
+        continue;
+      }
+
+      if (sendEncoded(client, encoded, type)) {
+        recipients += 1;
+      }
+    }
+  }
+
+  recordWsLogicalOutbound(encoded, type, recipients);
+}
+
+function sendToPlayer(playerId, payload) {
+  if (!playerId) return;
+
+  const client = socketsByPlayerId.get(playerId);
+  if (client?.readyState === WebSocket.OPEN) {
+    sendJson(client, payload);
+  }
+}
+
+function playersSnapshotForMap(mapId, excludePlayerId = null) {
+  return [...players.values()]
+    .filter(playerState =>
+      playerState.mapId === mapId &&
+      playerState.id !== excludePlayerId
+    )
+    .map(publicPlayerState);
+}
+
+function broadcastPublicPlayerDelta(
+  previousState,
+  cleanState,
+  exceptSocket = null
+) {
+  if (!cleanState) return;
+
+  const delta = publicPlayerDelta(previousState, cleanState);
+  if (Object.keys(delta).length <= 2) return;
+
+  const movementPacket = compactPlayerMovementPacket(delta);
+  if (movementPacket) {
+    broadcastToMap(cleanState.mapId, movementPacket, exceptSocket);
+  }
+
+  const stateDelta = playerStateDeltaWithoutMovement(delta);
+  if (Object.keys(stateDelta).length > 2) {
+    broadcastToMap(
+      cleanState.mapId,
+      { type: "playerStateDelta", player: stateDelta },
+      exceptSocket
+    );
+  }
+}
+
+function sendMapSceneSync(
+  socket,
+  mapId,
+  excludePlayerId = null,
+  options = {}
+) {
+  const syncCompleteLast = Boolean(options.syncCompleteLast);
+
+  sendJson(socket, {
+    type: "snapshot",
+    mapId,
+    players: playersSnapshotForMap(mapId, excludePlayerId)
+  });
+
+  sendSharedEnemySnapshotsToSocket(
+    socket,
+    mapId,
+    false
+  );
+
+  // Map entry reveal should happen only after the browser has both the
+  // authoritative enemy positions and the current passive wander plans. That
+  // prevents the first post-entry plan packet from causing a visible little zip.
+  sendPassiveIntentSnapshotToSocket(socket, mapId);
+
+  if (!syncCompleteLast) {
+    sendJson(socket, {
+      type: "enemySnapshotSyncComplete",
+      mapId
+    });
+  }
+
+  sendJson(socket, {
+    type: "hunterSnareSnapshot",
+    mapId,
+    snares: hunterSnareSnapshot(mapId),
+    setups: hunterSnareSetupSnapshot(mapId)
+  });
+
+  sendJson(socket, {
+    type: "coinSnapshot",
+    mapId,
+    coins: sharedCoinSnapshot(mapId)
+  });
+
+  sendJson(socket, {
+    type: "environmentSnapshot",
+    mapId,
+    sparse: true,
+    entities: sharedEnvironmentChangesSnapshot(mapId)
+  });
+
+  sendJson(socket, {
+    type: "resourceSnapshot",
+    mapId,
+    resources: sharedResourceSnapshot(mapId)
+  });
+
+  sendJson(socket, {
+    type: "transientAbilitySnapshot",
+    mapId,
+    ...transientAbilitySnapshotForMap(mapId, excludePlayerId)
+  });
+
+  if (syncCompleteLast) {
+    sendJson(socket, {
+      type: "enemySnapshotSyncComplete",
+      mapId
+    });
+  }
+}
+
+function leavePlayerMap(
+  playerId,
+  mapId,
+  exceptSocket = null
+) {
+  if (!playerId || !mapId) return;
+
+  clearPlayerOwnedTransientWorldState(playerId, mapId);
+  broadcastOwnerTransientCleanup(
+    playerId,
+    mapId,
+    exceptSocket
+  );
+  broadcastToMap(
+    mapId,
+    { type: "playerLeft", id: playerId },
+    exceptSocket
+  );
 }
 
 function broadcastPresence() {
@@ -7530,6 +12091,95 @@ function contentTypeFor(filePath) {
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon"
   }[ext] || "application/octet-stream";
+}
+
+function staticContentEncoding(req, filePath, stat) {
+  if (!stat || stat.size < 1024) return null;
+  const ext = path.extname(filePath).toLowerCase();
+  if (![".html", ".js", ".css", ".json", ".svg"].includes(ext)) return null;
+  const accepted = String(req.headers["accept-encoding"] || "");
+  if (/\bbr\b/.test(accepted)) return "br";
+  if (/\bgzip\b/.test(accepted)) return "gzip";
+  return null;
+}
+
+function loopbackAddress(address) {
+  return address === "127.0.0.1" || address === "::1" ||
+    (typeof address === "string" && address.startsWith("::ffff:127."));
+}
+
+function localEditorWriteAllowed(req, requestUrl) {
+  const hostname = String(requestUrl.hostname || "").toLowerCase();
+  const localHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  return localHost && loopbackAddress(req.socket?.remoteAddress) && req.headers["x-slime-story-editor"] === "1";
+}
+
+function readJsonRequest(req, limit = 2 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let bytes = 0;
+    req.on("data", chunk => {
+      bytes += chunk.length;
+      if (bytes > limit) {
+        reject(new Error("Request body is too large."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      } catch (error) {
+        reject(new Error(`Invalid JSON: ${error.message}`));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+async function handleLocalMapDraftAdoption(req, res, requestUrl) {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  if (!localEditorWriteAllowed(req, requestUrl)) {
+    res.writeHead(403);
+    res.end(JSON.stringify({
+      ok: false,
+      error: "Applying drafts is restricted to the local Slime Story development server."
+    }));
+    return;
+  }
+
+  const origin = req.headers.origin;
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.host !== requestUrl.host) {
+        res.writeHead(403);
+        res.end(JSON.stringify({ ok: false, error: "Editor request origin was rejected." }));
+        return;
+      }
+    } catch {
+      res.writeHead(403);
+      res.end(JSON.stringify({ ok: false, error: "Editor request origin was invalid." }));
+      return;
+    }
+  }
+
+  try {
+    const payload = await readJsonRequest(req);
+    const { adoptDraftPayload } = require("./tools/map-draft-adoption.js");
+    const result = adoptDraftPayload(payload, { worldContent: WORLD_CONTENT });
+    res.writeHead(200);
+    res.end(JSON.stringify(result));
+  } catch (error) {
+    res.writeHead(error.validationErrors ? 400 : 500);
+    res.end(JSON.stringify({
+      ok: false,
+      error: error.message,
+      errors: error.validationErrors || undefined,
+      warnings: error.validationWarnings || undefined
+    }));
+  }
 }
 
 function safePublicPath(requestPath) {
@@ -7561,12 +12211,78 @@ const server = http.createServer((req, res) => {
     `http://${req.headers.host || "localhost"}`
   );
 
+  if (requestUrl.pathname === "/dev/map-editor/adopt" && req.method === "POST") {
+    handleLocalMapDraftAdoption(req, res, requestUrl);
+    return;
+  }
+
+  // v288: browsers no longer reconstruct canonical map content from a base
+  // source file plus a second adopted-map source. Serve the exact resolved
+  // WORLD_CONTENT object already used by this Node process instead. After an
+  // editor Apply, restarting Node refreshes this snapshot from the canonical
+  // adopted-map JSON and client/server cannot disagree about which map won.
+  if (requestUrl.pathname === "/shared/world-content-runtime.js" && (req.method === "GET" || req.method === "HEAD")) {
+    try {
+      const source = browserRuntimeWorldContentSource(WORLD_CONTENT);
+      const headers = {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "X-Slime-Story-Build-Version": BUILD_VERSION,
+        "X-Slime-Story-World-Content-Version": String(WORLD_CONTENT.version)
+      };
+      res.writeHead(200, headers);
+      if (req.method === "HEAD") {
+        res.end();
+      } else {
+        recordHttpOutbound(requestUrl.pathname, Buffer.byteLength(source));
+        res.end(source);
+      }
+    } catch (error) {
+      res.writeHead(500, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      res.end(`Could not load runtime world content: ${error.message}`);
+    }
+    return;
+  }
+
+  // The browser and Node now read the same canonical adopted-map JSON store.
+  // v286 wrote a generated JS mirror and then served that static file; this
+  // dynamic route removes that second source of truth and prevents a stale
+  // browser mirror from hiding a successfully applied editor change.
+  if (requestUrl.pathname === "/shared/adopted-map-overrides.js" && (req.method === "GET" || req.method === "HEAD")) {
+    try {
+      const { loadStore, browserModuleSource } = require("./tools/map-draft-adoption.js");
+      const store = loadStore(undefined, Number(WORLD_CONTENT.version) || 14);
+      const source = browserModuleSource(store);
+      const headers = {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Cache-Control": "no-store, max-age=0",
+        "X-Slime-Story-World-Content-Version": String(store.version || WORLD_CONTENT.version)
+      };
+      res.writeHead(200, headers);
+      if (req.method === "HEAD") {
+        res.end();
+      } else {
+        recordHttpOutbound(requestUrl.pathname, Buffer.byteLength(source));
+        res.end(source);
+      }
+    } catch (error) {
+      res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(`Could not load adopted map content: ${error.message}`);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/health") {
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8"
     });
 
-    res.end(JSON.stringify({
+    const healthBody = JSON.stringify({
       ok: true,
       buildVersion: BUILD_VERSION,
       players: players.size,
@@ -7580,7 +12296,9 @@ const server = http.createServer((req, res) => {
       worldContentVersion: WORLD_CONTENT.version,
       combatBalanceVersion:
         COMBAT_BALANCE.version
-    }));
+    });
+    recordHttpOutbound("/health", Buffer.byteLength(healthBody));
+    res.end(healthBody);
     return;
   }
 
@@ -7605,27 +12323,115 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    res.writeHead(200, {
+    // v289: HTML is rendered with a world-versioned runtime-content URL.
+    // A newly restarted server therefore serves (for example) ?world=21 instead
+    // of ?world=20, forcing the browser to request the new canonical map even
+    // when the tab or its script cache survived the restart.
+    if (path.extname(filePath).toLowerCase() === ".html") {
+      fs.readFile(filePath, "utf8", (readError, htmlSource) => {
+        if (readError) {
+          res.writeHead(500, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store"
+          });
+          res.end("Could not load page.");
+          return;
+        }
+
+        const source = injectRuntimeWorldContentUrl(
+          htmlSource,
+          BUILD_VERSION,
+          WORLD_CONTENT.version
+        );
+        const headers = {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          "Pragma": "no-cache",
+          "Expires": "0",
+          "X-Slime-Story-Build-Version": BUILD_VERSION,
+          "X-Slime-Story-World-Content-Version": String(WORLD_CONTENT.version)
+        };
+
+        res.writeHead(200, headers);
+        if (req.method === "HEAD") {
+          res.end();
+          return;
+        }
+
+        recordHttpOutbound(requestUrl.pathname, Buffer.byteLength(source));
+        res.end(source);
+      });
+      return;
+    }
+
+    const etag =
+      `W/"${stat.size}-${Math.floor(stat.mtimeMs)}"`;
+
+    const responseHeaders = {
       "Content-Type": contentTypeFor(filePath),
+      "Cache-Control": "no-cache",
+      "ETag": etag,
+      "Last-Modified": stat.mtime.toUTCString(),
+      "Vary": "Accept-Encoding"
+    };
 
-      // index.html and shared/world-content.js must always come from the same
-      // build. `no-cache` still permits browser storage; `no-store` avoids
-      // stale shared map/enemy registries across localhost / Render updates.
-      "Cache-Control": "no-store, max-age=0",
-      "Pragma": "no-cache",
-      "Expires": "0"
-    });
+    const contentEncoding = staticContentEncoding(req, filePath, stat);
+    if (contentEncoding) responseHeaders["Content-Encoding"] = contentEncoding;
 
+    if (req.headers["if-none-match"] === etag) {
+      res.writeHead(304, responseHeaders);
+      res.end();
+      return;
+    }
+
+    res.writeHead(200, responseHeaders);
     if (req.method === "HEAD") {
       res.end();
       return;
     }
 
-    fs.createReadStream(filePath).pipe(res);
+    const source = fs.createReadStream(filePath);
+    if (contentEncoding === "br") {
+      const compressor = zlib.createBrotliCompress({
+        params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 }
+      });
+      let sentBytes = 0;
+      compressor.on("data", chunk => { sentBytes += chunk.length; });
+      compressor.on("end", () =>
+        recordHttpOutbound(requestUrl.pathname, sentBytes)
+      );
+      source.pipe(compressor).pipe(res);
+      return;
+    }
+    if (contentEncoding === "gzip") {
+      const compressor = zlib.createGzip({ level: 6 });
+      let sentBytes = 0;
+      compressor.on("data", chunk => { sentBytes += chunk.length; });
+      compressor.on("end", () =>
+        recordHttpOutbound(requestUrl.pathname, sentBytes)
+      );
+      source.pipe(compressor).pipe(res);
+      return;
+    }
+    let sentBytes = 0;
+    source.on("data", chunk => { sentBytes += chunk.length; });
+    source.on("end", () =>
+      recordHttpOutbound(requestUrl.pathname, sentBytes)
+    );
+    source.pipe(res);
   });
 });
 
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({
+  noServer: true,
+  perMessageDeflate: {
+    threshold: 1024,
+    serverNoContextTakeover: true,
+    clientNoContextTakeover: true,
+    concurrencyLimit: 4,
+    zlibDeflateOptions: { level: 4 }
+  }
+});
 
 server.on("upgrade", (request, socket, head) => {
   const requestUrl = new URL(
@@ -7643,9 +12449,259 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
+function applyFullPlayerStateUpdate(
+  playerId,
+  socket,
+  source
+) {
+  const previousState = players.get(playerId);
+
+  const cleanState = sanitizePlayerState(
+    playerId,
+    source,
+    previousState
+  );
+
+  const mapChanged = Boolean(
+    previousState &&
+    previousState.mapId !== cleanState.mapId
+  );
+
+  if (mapChanged && previousState?.mapId) {
+    resetServerCamouflageState(previousState, "map", true);
+    resetServerPlayerPresentationState(cleanState);
+    cleanState.camouflaged = false;
+    leavePlayerMap(
+      playerId,
+      previousState.mapId,
+      socket
+    );
+  }
+
+  players.set(playerId, cleanState);
+  noteServerCamouflagePlayerUpdate(previousState, cleanState);
+
+  if (mapChanged) {
+    movePlayerSocketToMap(socket, cleanState.mapId);
+
+    // Send the whole destination-map scene while the client's existing
+    // transition is still covered. The sync-complete marker comes last so
+    // stale off-map coins/resources/environment cannot pop after reveal.
+    sendMapSceneSync(
+      socket,
+      cleanState.mapId,
+      playerId,
+      { syncCompleteLast: true }
+    );
+
+    broadcastToMap(
+      cleanState.mapId,
+      {
+        type: "playerState",
+        player: publicPlayerState(cleanState)
+      },
+      socket
+    );
+    return;
+  }
+
+  broadcastPublicPlayerDelta(
+    previousState,
+    cleanState,
+    socket
+  );
+}
+
+function handlePersistentStateRestore(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  if (!playerState || persistentStateRestoredPlayers.has(playerId)) return;
+
+  persistentStateRestoredPlayers.add(playerId);
+
+  const state = message?.state && typeof message.state === "object"
+    ? message.state
+    : {};
+  const resources = state.resources && typeof state.resources === "object"
+    ? state.resources
+    : {};
+
+  // Browser persistence is only a prototype convenience layer. Clamp every
+  // value before promoting it back into otherwise server-owned session state.
+  playerState.coins = clampInteger(resources.coins, 0, 999999, 0);
+  playerState.wood = clampInteger(resources.wood, 0, 999999, 0);
+  playerState.stone = clampInteger(resources.stone, 0, 999999, 0);
+  playerState.flowers = clampInteger(resources.flowers, 0, 999999, 0);
+  playerState.goldSlimeBubbles = clampInteger(resources.goldSlimeBubbles, 0, 999999, 0);
+  playerState.arrows = clampInteger(resources.arrows, 0, 999999, 0);
+
+  const story = state.story && typeof state.story === "object"
+    ? state.story
+    : {};
+  playerState.woodSwordCrafted = Boolean(story.woodSwordCrafted);
+  playerState.woodBowCrafted = Boolean(story.woodBowCrafted);
+  playerState.shepherdStaffCrafted = Boolean(story.shepherdStaffCrafted);
+  playerState.woodHelmCrafted = Boolean(story.woodHelmCrafted);
+  playerState.woodChestCrafted = Boolean(story.woodChestCrafted);
+  playerState.woodGreavesCrafted = Boolean(story.woodGreavesCrafted);
+
+  const purchases = Array.isArray(state.shopPurchases)
+    ? state.shopPurchases
+    : [];
+  playerState.shopPurchases = Array.from(new Set(
+    purchases
+      .filter(itemId => typeof itemId === "string" && SHOP_ITEM_IDS.has(itemId) && itemId !== "weapon_axe")
+      .slice(0, SHOP_ITEM_IDS.size)
+  ));
+
+  sendJson(socket, {
+    type: "persistentStateRestored",
+    coins: playerState.coins,
+    wood: playerState.wood,
+    stone: playerState.stone,
+    flowers: playerState.flowers,
+    goldSlimeBubbles: playerState.goldSlimeBubbles,
+    arrows: playerState.arrows
+  });
+}
+
+function handleClientMessage(playerId, socket, message) {
+  if (!message || typeof message !== "object") return;
+
+  switch (message.type) {
+    case "playerMotion": {
+      if (!Array.isArray(message.p)) return;
+      const previousState = players.get(playerId);
+      if (!previousState) return;
+
+      applyIncrementalPlayerUpdate(playerId, socket, {
+        x: message.p[0],
+        y: message.p[1],
+        walkTime: message.p[2],
+        firstRaisedLeg: message.p[3] === 1 ? "right" : "left"
+      });
+      return;
+    }
+
+    case "playerStatePatch":
+      if (message.player && typeof message.player === "object") {
+        applyIncrementalPlayerUpdate(playerId, socket, message.player);
+      }
+      return;
+
+    case "playerAction":
+      handlePlayerAction(playerId, message);
+      return;
+
+    case "playerAim":
+      handlePlayerAim(playerId, message);
+      return;
+
+    case "playerState":
+      if (message.player && typeof message.player === "object") {
+        applyFullPlayerStateUpdate(playerId, socket, message.player);
+      }
+      return;
+
+    case "enemyAction":
+      handleSharedEnemyAction(playerId, message);
+      return;
+
+    case "camouflageBreak":
+      handleCamouflageBreak(playerId);
+      return;
+
+    case "hunterSnareBegin":
+      handleHunterSnareBegin(playerId);
+      return;
+
+    case "hunterSnareCancel":
+      handleHunterSnareCancel(playerId);
+      return;
+
+    // v263 and older clients used a client-timed placement packet. Ignore it
+    // rather than letting an old browser bypass the authoritative setup.
+    case "hunterSnarePlace":
+      return;
+
+    case "playerDamageRequest":
+      handlePlayerDamageRequest(playerId, message);
+      return;
+
+    case "playerIgniteRequest":
+      handlePlayerIgniteRequest(playerId, message);
+      return;
+
+    case "pvpToggle":
+      handlePvpToggle(playerId, socket, message);
+      return;
+
+    case "pvpAttack":
+      handlePvpAttack(playerId, message);
+      return;
+
+    case "playerHealRequest":
+      handlePlayerHealRequest(playerId, message);
+      return;
+
+    case "playerRespawn":
+      handlePlayerRespawn(playerId, message);
+      return;
+
+    case "visualEffect":
+      handleVisualEffect(playerId, socket, message);
+      return;
+
+    case "environmentCatalog":
+      handleEnvironmentCatalog(playerId, message, socket);
+      return;
+
+    case "environmentAction":
+      handleEnvironmentAction(playerId, message);
+      return;
+
+    case "resourcePickup":
+      if (typeof message.resourceId === "string") {
+        handleResourcePickup(playerId, message.resourceId);
+      }
+      return;
+
+    case "persistentStateRestore":
+      handlePersistentStateRestore(playerId, socket, message);
+      return;
+
+    case "arrowUse":
+      handleArrowUse(playerId, socket);
+      return;
+
+    case "craftRequest":
+      handleCraftRequest(playerId, socket, message);
+      return;
+
+    case "shopPurchase":
+      handleShopPurchase(playerId, socket, message);
+      return;
+
+    case "debugGrantCoins":
+      handleDebugGrantCoins(playerId, socket);
+      return;
+
+    case "debugGrantArrows":
+      handleDebugGrantArrows(playerId, socket);
+      return;
+
+    case "coinPickup":
+      if (typeof message.coinId === "string") {
+        handleCoinPickup(playerId, message.coinId);
+      }
+      return;
+
+    default:
+      return;
+  }
+}
+
 wss.on("connection", socket => {
   const id = crypto.randomUUID();
-  socket.playerId = id;
 
   const initialState = sanitizePlayerState(id, {
     mapId: "spawn",
@@ -7655,6 +12711,7 @@ wss.on("connection", socket => {
   });
 
   players.set(id, initialState);
+  registerPlayerSocket(socket, id, initialState.mapId);
 
   sendJson(socket, {
     type: "welcome",
@@ -7662,6 +12719,7 @@ wss.on("connection", socket => {
     buildVersion: BUILD_VERSION,
     coins: initialState.coins,
     wood: initialState.wood,
+    stone: initialState.stone,
     flowers: initialState.flowers,
     goldSlimeBubbles: initialState.goldSlimeBubbles,
     arrows: initialState.arrows,
@@ -7676,41 +12734,21 @@ wss.on("connection", socket => {
       COMBAT_BALANCE.version
   });
 
-  sendJson(socket, {
-    type: "snapshot",
-    players: [...players.values()]
-  });
-
-  sendSharedEnemySnapshotsToSocket(
+  sendMapSceneSync(
     socket,
     initialState.mapId,
-    true
+    id,
+    { syncCompleteLast: false }
   );
 
-  sendJson(socket, {
-    type: "hunterSnareSnapshot",
-    snares: hunterSnareSnapshot()
-  });
-
-  sendJson(socket, {
-    type: "coinSnapshot",
-    coins: sharedCoinSnapshot()
-  });
-
-  sendJson(socket, {
-    type: "environmentSnapshot",
-    entities: sharedEnvironmentSnapshot()
-  });
-
-  sendJson(socket, {
-    type: "resourceSnapshot",
-    resources: sharedResourceSnapshot()
-  });
-
-  broadcast({
-    type: "playerState",
-    player: initialState
-  }, socket);
+  broadcastToMap(
+    initialState.mapId,
+    {
+      type: "playerState",
+      player: publicPlayerState(initialState)
+    },
+    socket
+  );
 
   broadcastPresence();
 
@@ -7722,190 +12760,30 @@ wss.on("connection", socket => {
     try {
       message = JSON.parse(raw.toString());
     } catch {
+      recordWsInbound(raw, "invalidJson");
       return;
     }
 
-    if (
-      message.type === "playerState" &&
-      message.player &&
-      typeof message.player === "object"
-    ) {
-      const previousState =
-        players.get(id);
+    recordWsInbound(
+      raw,
+      message?.type || "unknown",
+      message?.type === "enemyAction"
+        ? (message?.payload?.source || message?.action || "unknown")
+        : null
+    );
 
-      const cleanState = sanitizePlayerState(
-        id,
-        message.player,
-        previousState
-      );
-
-      const mapChanged =
-        Boolean(
-          previousState &&
-          previousState.mapId !==
-            cleanState.mapId
-        );
-
-      if (mapChanged) {
-        clearPlayerOwnedTransientWorldState(
-          id,
-          previousState.mapId
-        );
-
-        broadcastOwnerTransientCleanup(
-          id,
-          previousState.mapId,
-          socket
-        );
-      }
-
-      players.set(id, cleanState);
-
-      if (mapChanged) {
-        sendSharedEnemySnapshotsToSocket(
-          socket,
-          cleanState.mapId,
-          true
-        );
-      }
-
-      broadcast({
-        type: "playerState",
-        player: cleanState
-      }, socket);
-
-      return;
-    }
-
-    if (message.type === "enemyAction") {
-      handleSharedEnemyAction(id, message);
-      return;
-    }
-
-    if (message.type === "hunterSnarePlace") {
-      handleHunterSnarePlace(id, message);
-      return;
-    }
-
-    if (message.type === "playerDamageRequest") {
-      handlePlayerDamageRequest(id, message);
-      return;
-    }
-
-    if (message.type === "playerIgniteRequest") {
-      handlePlayerIgniteRequest(id, message);
-      return;
-    }
-
-    if (message.type === "pvpToggle") {
-      handlePvpToggle(id, socket, message);
-      return;
-    }
-
-    if (message.type === "pvpAttack") {
-      handlePvpAttack(id, message);
-      return;
-    }
-
-    if (message.type === "playerHealRequest") {
-      handlePlayerHealRequest(id, message);
-      return;
-    }
-
-    if (message.type === "playerRespawn") {
-      handlePlayerRespawn(id, message);
-      return;
-    }
-
-    if (message.type === "visualEffect") {
-      handleVisualEffect(id, socket, message);
-      return;
-    }
-
-    if (message.type === "environmentCatalog") {
-      handleEnvironmentCatalog(id, message);
-      return;
-    }
-
-    if (message.type === "environmentAction") {
-      handleEnvironmentAction(id, message);
-      return;
-    }
-
-    if (
-      message.type === "resourcePickup" &&
-      typeof message.resourceId === "string"
-    ) {
-      handleResourcePickup(
-        id,
-        message.resourceId
-      );
-      return;
-    }
-
-    if (message.type === "arrowUse") {
-      handleArrowUse(
-        id,
-        socket
-      );
-      return;
-    }
-
-    if (message.type === "craftRequest") {
-      handleCraftRequest(
-        id,
-        socket,
-        message
-      );
-      return;
-    }
-
-    if (message.type === "shopPurchase") {
-      handleShopPurchase(
-        id,
-        socket,
-        message
-      );
-      return;
-    }
-
-    if (message.type === "debugGrantCoins") {
-      handleDebugGrantCoins(
-        id,
-        socket
-      );
-      return;
-    }
-
-    if (message.type === "debugGrantArrows") {
-      handleDebugGrantArrows(
-        id,
-        socket
-      );
-      return;
-    }
-
-    if (
-      message.type === "coinPickup" &&
-      typeof message.coinId === "string"
-    ) {
-      handleCoinPickup(id, message.coinId);
-    }
+    handleClientMessage(id, socket, message);
   });
 
   socket.on("close", () => {
     focusFireDamageChains.delete(id);
+    persistentStateRestoredPlayers.delete(id);
 
     const previousState =
       players.get(id);
 
-    if (previousState) {
-      clearPlayerOwnedTransientWorldState(
-        id,
-        previousState.mapId
-      );
-
-      broadcastOwnerTransientCleanup(
+    if (previousState?.mapId) {
+      leavePlayerMap(
         id,
         previousState.mapId,
         socket
@@ -7913,6 +12791,7 @@ wss.on("connection", socket => {
     }
 
     players.delete(id);
+    serverCamouflageStates.delete(id);
 
     for (const key of [...pvpAttackRateLimits.keys()]) {
       if (key.startsWith(`${id}:`) || key.includes(`:${id}:`)) {
@@ -7920,15 +12799,15 @@ wss.on("connection", socket => {
       }
     }
 
-    broadcast({
-      type: "playerLeft",
-      id
-    });
-
+    unregisterPlayerSocket(socket);
     broadcastPresence();
   });
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Slime Story Online listening on port ${PORT}`);
+  console.log(`Slime Story Online ${BUILD_VERSION} listening on port ${PORT}`);
+  console.log(
+    `[NET] bandwidth diagnostics enabled every ${NETWORK_DIAGNOSTICS_INTERVAL_MS / 1000}s ` +
+    `(OUT is an estimated host-egress figure; HTTP is measured after compression).`
+  );
 });

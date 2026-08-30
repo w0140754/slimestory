@@ -1,0 +1,14 @@
+const fs = require("fs");
+const path = require("path");
+const root = path.join(__dirname, "..");
+const asset = path.join(root, "public", "assets", "scenery_grassy_rock_v2.png");
+const world = fs.readFileSync(path.join(root, "public", "client-world.js"), "utf8");
+const editor = fs.readFileSync(path.join(root, "public", "map-editor.js"), "utf8");
+if (!fs.existsSync(asset)) throw new Error("Missing scenery_grassy_rock_v2.png");
+const png = fs.readFileSync(asset);
+if (png.readUInt32BE(16) !== 16 || png.readUInt32BE(20) !== 18) throw new Error("Scenery rock must be native 16x18");
+if (!world.includes('loadImage("assets/scenery_grassy_rock_v2.png")')) throw new Error("Runtime does not use cache-safe scenery rock asset");
+if (!editor.includes('./assets/scenery_grassy_rock_v2.png')) throw new Error("Editor does not use cache-safe scenery rock asset");
+if (!world.includes('screenY - 18')) throw new Error("Runtime scenery rock is not bottom-anchored at 18px");
+if (!editor.includes('rock.y - 18')) throw new Error("Editor scenery rock is not bottom-anchored at 18px");
+console.log("Scenery rock asset check passed.");
