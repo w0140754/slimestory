@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slime Story Map Editor</title>
+  <link rel="stylesheet" href="/map-editor.css?v=300">
+</head>
+<body>
+  <div class="editor-shell">
+    <header class="editor-header">
+      <div>
+        <div class="eyebrow">SLIME STORY • DEV TOOL</div>
+        <h1>Map Editor <span>v300</span></h1>
+      </div>
+      <div class="header-actions">
+        <a class="button secondary" href="/">Play Game</a>
+        <button id="fitMapButton" class="button secondary" type="button">Fit Map</button>
+        <button id="importButton" class="button secondary" type="button">Import Draft JSON</button>
+        <input id="importFileInput" class="hidden" type="file" accept="application/json,.json">
+        <button id="exportButton" class="button secondary" type="button">Export Draft JSON</button>
+        <button id="applyButton" class="button" type="button">Apply Draft to Game</button>
+      </div>
+    </header>
+
+    <main class="editor-layout">
+      <aside class="panel tools-panel">
+        <section>
+          <label class="field-label" for="mapSelect">Map</label>
+          <select id="mapSelect"></select>
+        </section>
+
+        <section>
+          <div class="section-title">Editing mode</div>
+          <div class="mode-tools">
+            <button id="selectModeButton" type="button" class="mode-tool active">Select / Move <kbd>Q</kbd></button>
+            <button id="terrainModeButton" type="button" class="mode-tool">Paint Terrain <kbd>T</kbd></button>
+          </div>
+        </section>
+
+        <section id="terrainSection" class="mode-section hidden">
+          <div class="section-title">Terrain brush</div>
+          <div id="terrainTools" class="terrain-tools" role="radiogroup" aria-label="Terrain brush">
+            <button type="button" class="terrain-tool active" data-terrain="grass" title="Grass (1)">
+              <span class="swatch grass"></span><span>Grass</span><kbd>1</kbd>
+            </button>
+            <button type="button" class="terrain-tool" data-terrain="dirt" title="Dirt (2)">
+              <span class="swatch dirt"></span><span>Dirt</span><kbd>2</kbd>
+            </button>
+            <button type="button" class="terrain-tool" data-terrain="water" title="Water (3)">
+              <span class="swatch water"></span><span>Water</span><kbd>3</kbd>
+            </button>
+            <button type="button" class="terrain-tool" data-terrain="void" title="Void / erase (4)">
+              <span class="swatch void"></span><span>Void</span><kbd>4</kbd>
+            </button>
+          </div>
+          <label class="field-label spaced" for="brushSize">Brush size</label>
+          <select id="brushSize">
+            <option value="1">1 cell</option>
+            <option value="3">3 cells</option>
+            <option value="5">5 cells</option>
+          </select>
+          <div class="hint">Terrain cells are 8×8 world pixels.</div>
+        </section>
+
+        <section>
+          <div class="section-title">Place objects</div>
+          <div id="objectPalette" class="object-palette">
+            <button type="button" class="palette-tool" data-place="interactiveTree"><span class="palette-icon tree interactive"></span><span>Interactive tree</span></button>
+            <button type="button" class="palette-tool" data-place="decorativeTree"><span class="palette-icon tree decorative"></span><span>Decorative tree</span></button>
+            <button type="button" class="palette-tool" data-place="tallGrass"><span class="palette-icon grass-object">≋</span><span>Tall grass</span></button>
+            <button type="button" class="palette-tool" data-place="throwableRock"><span class="palette-icon rock-object">●</span><span>Throwable rock</span></button>
+            <button type="button" class="palette-tool" data-place="sceneryRock"><span class="palette-icon scenery-rock">■</span><span>Scenery rock</span></button>
+            <button type="button" class="palette-tool" data-place="harvestFlower"><span class="palette-icon flower-object">✿</span><span>Harvest flower</span></button>
+            <button type="button" class="palette-tool" data-place="house"><span class="palette-icon house-object">⌂</span><span>House</span></button>
+            <button type="button" class="palette-tool" data-place="enemySpawn"><span class="palette-icon enemy-object">E</span><span>Enemy spawn</span></button>
+            <button type="button" class="palette-tool" data-place="playerSpawn"><span class="palette-icon player-object">+</span><span>Player spawn</span></button>
+            <button type="button" class="palette-tool" data-place="portal"><span class="palette-icon portal-object">▯</span><span>Portal</span></button>
+          </div>
+          <div class="hint">Placement stays active so you can sprinkle several objects. Press Q or Escape to return to Select.</div>
+        </section>
+
+        <section>
+          <div class="section-title">History</div>
+          <div class="row-actions">
+            <button id="undoButton" class="button secondary compact" type="button">Undo</button>
+            <button id="redoButton" class="button secondary compact" type="button">Redo</button>
+          </div>
+          <button id="resetButton" class="button danger compact full" type="button">Reset Map Draft</button>
+        </section>
+
+        <section>
+          <div class="section-title">Layers</div>
+          <label class="check-row"><input id="layerTerrain" type="checkbox" checked> Terrain</label>
+          <label class="check-row"><input id="layerObjects" type="checkbox" checked> Environment objects</label>
+          <label class="check-row"><input id="layerEntities" type="checkbox" checked> Enemy + player spawns</label>
+          <label class="check-row"><input id="layerPortals" type="checkbox" checked> Portals</label>
+          <label class="check-row"><input id="layerGrid" type="checkbox"> Terrain grid</label>
+        </section>
+
+        <section class="help-box">
+          <div class="section-title">Controls</div>
+          <div><strong>Select / move:</strong> Q, then click + drag</div>
+          <div><strong>Paint:</strong> T, then left drag</div>
+          <div><strong>Pan:</strong> Space + drag or middle drag</div>
+          <div><strong>Zoom:</strong> mouse wheel</div>
+          <div><strong>Delete:</strong> Delete / Backspace</div>
+          <div><strong>Duplicate:</strong> Ctrl/Cmd + D</div>
+          <div><strong>Undo:</strong> Ctrl/Cmd + Z</div>
+          <div><strong>Redo:</strong> Ctrl/Cmd + Y / Shift + Z</div>
+        </section>
+      </aside>
+
+      <section class="viewport-column">
+        <div id="viewport" class="viewport" tabindex="0" aria-label="Map editing canvas">
+          <canvas id="mapCanvas"></canvas>
+          <div class="viewport-badge" id="modeBadge">SELECT / MOVE</div>
+        </div>
+        <footer class="status-bar">
+          <span id="statusMap">—</span>
+          <span id="statusPointer">x —, y —</span>
+          <span id="statusTerrain">terrain —</span>
+          <span id="statusZoom">zoom —</span>
+          <span id="statusDirty">source map</span>
+        </footer>
+        <div class="draft-note">
+          <strong>v300 keeps the current map-editor workflow unchanged while the gameplay build receives the PvP rebuild.</strong> Apply is intentionally local-development only; after a successful apply, restart the server and reload before testing.
+        </div>
+      </section>
+
+      <aside class="panel inspector-panel">
+        <div class="section-title">Selection / Properties</div>
+        <div id="inspectorEmpty" class="inspector-empty">
+          Select a tree, grass, rock, flower, house, spawn, or portal on the map. You can drag selected objects directly.
+        </div>
+        <div id="inspectorContent" class="inspector-content hidden">
+          <div class="selection-heading">
+            <div id="selectionType" class="selection-type">Object</div>
+            <div id="selectionId" class="selection-id">—</div>
+          </div>
+          <div id="propertyFields"></div>
+          <div class="inspector-actions">
+            <button id="duplicateButton" class="button secondary compact" type="button">Duplicate</button>
+            <button id="deleteButton" class="button danger compact" type="button">Delete</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+<script src="/shared/world-content-runtime.js?v=300"></script>
+  <script src="/shared/terrain-rules.js?v=300"></script>
+  <script src="/shared/terrain-presentation.js?v=300"></script>
+  <script src="/shared/map-draft-format.js?v=300"></script>
+  <script src="/map-editor.js?v=300"></script>
+</body>
+</html>

@@ -1,5 +1,12 @@
 (function (root, factory) {
-  const content = factory();
+  let adopted = null;
+  if (typeof module !== "undefined" && module.exports) {
+    try { adopted = require("../../content/adopted-map-overrides.json"); } catch {}
+  } else if (root) {
+    adopted = root.ADOPTED_MAP_OVERRIDES || null;
+  }
+
+  const content = factory(adopted);
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = content;
@@ -10,21 +17,390 @@
   }
 })(
   typeof globalThis !== "undefined" ? globalThis : this,
-  function () {
+  function (adoptedMapOverrides) {
     "use strict";
 
-    // Natural enemy placement is shared by the browser and Node server.
-    //
-    // Adding another slime to an existing map is only a new spawn object here.
-    // A brand-new map still needs its visual terrain/portals in index.html, but
-    // the enemy networking layer does not need another map-specific handler.
+    // -------------------------------------------------------------------------
+    // EDITOR-FRIENDLY MAP DATA
+    // -------------------------------------------------------------------------
+    // These helpers only construct plain JSON-safe map content. Runtime state
+    // (HP, burn timers, render interpolation, etc.) is created by the client or
+    // server after loading this shared definition. That separation is the core
+    // contract the visual map editor will write to.
+    function buildPrototypeEnvironment({
+      mapId,
+      westOpening = false,
+      phaseStart = 0.42,
+      mainX = 200,
+      mainY = 130,
+      mainWidth = 300,
+      mainHeight = 300,
+      interiorTrees = [],
+      tallGrass = [],
+      rocks = [],
+      sceneryRocks = []
+    }) {
+      const trees = [];
+      let phase = phaseStart;
+
+      function addTree(x, y, options = {}) {
+        const index = trees.length + 1;
+        trees.push({
+          id: `${mapId}:tree:${index}`,
+          x,
+          y,
+          phase,
+          fireImmune: options.fireImmune !== false,
+          nonInteractive: options.nonInteractive !== false,
+          ...(Number.isInteger(options.canopyVariant)
+            ? { canopyVariant: options.canopyVariant }
+            : {})
+        });
+        phase += 0.73;
+      }
+
+      const leftX = mainX + 10;
+      const rightX = mainX + mainWidth - 10;
+      const topOuterY = mainY + 20;
+      const topInnerBaseY = mainY + 47;
+      const bottomOuterY = mainY + mainHeight - 10;
+      const bottomInnerBaseY = mainY + mainHeight - 37;
+
+      for (let x = mainX + 22; x <= mainX + mainWidth - 14; x += 30) {
+        addTree(x, topOuterY + ((((x / 30) | 0) % 3) === 1 ? -2 : 0));
+        addTree(x, bottomOuterY + ((((x / 30) | 0) % 3) === 2 ? 2 : 0));
+      }
+
+      let innerIndex = 0;
+      for (let x = mainX + 36; x <= mainX + mainWidth - 20; x += 34) {
+        const wobble = [-4, 2, -1, 5, 0][innerIndex % 5];
+        const xWobble = [0, 3, -2, 2, -3][innerIndex % 5];
+        addTree(x + xWobble, topInnerBaseY + wobble);
+        addTree(x - xWobble, bottomInnerBaseY - wobble);
+        innerIndex += 1;
+      }
+
+      const gateTop = 248;
+      const gateBottom = 314;
+      for (let y = mainY + 46; y <= mainY + mainHeight - 20; y += 30) {
+        const inGate = y >= gateTop && y <= gateBottom;
+        if ((westOpening && !inGate) || !westOpening) {
+          addTree(leftX, y);
+        }
+        if (!inGate) {
+          addTree(rightX, y);
+        }
+      }
+
+      for (const [x, y] of interiorTrees) {
+        addTree(x, y, {
+          fireImmune: false,
+          nonInteractive: false,
+          canopyVariant: 0
+        });
+      }
+
+      return {
+        trees,
+        tallGrass: tallGrass.map((item, index) => ({
+          id: `${mapId}:grass:${index + 1}`,
+          x: item.x,
+          y: item.y,
+          phase: item.phase,
+          width: item.width ?? 13,
+          flowerType: item.flowerType ?? null
+        })),
+        rocks: rocks.map((item, index) => ({
+          id: `${mapId}:rock:${index + 1}`,
+          x: item.x,
+          y: item.y,
+          variant: item.variant || "plain"
+        })),
+        sceneryRocks: sceneryRocks.map((item, index) => ({
+          id: `${mapId}:sceneryRock:${index + 1}`,
+          x: item.x,
+          y: item.y,
+          collision: { width: 10, height: 6 }
+        })),
+        harvestFlowers: [],
+        houses: []
+      };
+    }
+
+    const prototypeIslandEnvironment = buildPrototypeEnvironment({
+      mapId: "prototypeIsland",
+      westOpening: true,
+      phaseStart: 0.42,
+      mainWidth: 300,
+      interiorTrees: [
+        [286, 245],
+        [412, 220],
+        [350, 355]
+      ],
+      tallGrass: [
+        { x: 266, y: 310, phase: 0.8, width: 13 },
+        { x: 430, y: 338, phase: 1.9, width: 12, flowerType: "yellow" },
+        { x: 338, y: 205, phase: 3.2, width: 14 }
+      ],
+      rocks: [
+        { x: 266, y: 188, variant: "plain" },
+        { x: 448, y: 305, variant: "grass" },
+        { x: 300, y: 392, variant: "plain" }
+      ],
+      sceneryRocks: [
+        { x: 244, y: 198 },
+        { x: 455, y: 378 }
+      ]
+    });
+
+    const prototypeIslandWestEnvironment = buildPrototypeEnvironment({
+      mapId: "prototypeIslandWest",
+      westOpening: false,
+      phaseStart: 1.17,
+      mainWidth: 600,
+      interiorTrees: [
+        [290, 225],
+        [455, 215],
+        [625, 240],
+        [738, 330],
+        [365, 365],
+        [560, 350]
+      ],
+      tallGrass: [
+        { x: 315, y: 275, phase: 0.7, width: 16 },
+        { x: 335, y: 292, phase: 1.4, width: 13 },
+        { x: 492, y: 315, phase: 2.1, width: 18 },
+        { x: 515, y: 296, phase: 2.8, width: 14, flowerType: "yellow" },
+        { x: 675, y: 270, phase: 3.6, width: 17 },
+        { x: 705, y: 292, phase: 4.2, width: 13 }
+      ],
+      rocks: [
+        { x: 265, y: 350, variant: "plain" },
+        { x: 405, y: 250, variant: "grass" },
+        { x: 575, y: 300, variant: "plain" },
+        { x: 715, y: 220, variant: "grass" },
+        { x: 650, y: 385, variant: "plain" }
+      ],
+      sceneryRocks: [
+        { x: 246, y: 195 },
+        { x: 530, y: 382 },
+        { x: 748, y: 194 }
+      ]
+    });
+
+    // Canonical shared world definitions. Prototype Island and Prototype West
+    // now exercise the editor-facing schema end to end; legacy maps are migrated
+    // gradually so gameplay does not change all at once.
     const maps = {
       spawn: {
+        name: "Spawn Clearing",
         dimensions: {
           width: 344,
           height: 224
         },
+        playerSpawns: [
+          { id: "westPrototype", x: 26, y: 100 }
+        ],
         enemySpawns: [],
+        collision: {
+          waterRects: []
+        }
+      },
+
+      prototypeIsland: {
+        name: "Prototype Island",
+        dimensions: {
+          width: 760,
+          height: 560
+        },
+        playerSpawns: [
+          { id: "center", x: 350, y: 280 },
+          { id: "eastBridge", x: 564, y: 280 },
+          { id: "westBridge", x: 136, y: 280 }
+        ],
+        portals: [
+          {
+            id: "prototypeIsland:portal:east",
+            x: 568, y: 254, width: 12, height: 52,
+            targetMapId: "spawn",
+            targetSpawnId: "westPrototype"
+          },
+          {
+            id: "prototypeIsland:portal:west",
+            x: 120, y: 254, width: 12, height: 52,
+            targetMapId: "prototypeIslandWest",
+            targetSpawnId: "eastBridge"
+          }
+        ],
+        environment: prototypeIslandEnvironment,
+        enemySpawns: [
+          {
+            id: "prototypeIsland:slime:1",
+            type: "slime",
+            level: 1,
+            x: 270,
+            y: 225,
+            phase: 0.4,
+            wanderRadiusX: 18,
+            wanderRadiusY: 13
+          },
+          {
+            id: "prototypeIsland:slime:2",
+            type: "slime",
+            level: 1,
+            x: 420,
+            y: 235,
+            phase: 1.8,
+            wanderRadiusX: 18,
+            wanderRadiusY: 13
+          },
+          {
+            id: "prototypeIsland:slime:3",
+            type: "slime",
+            level: 1,
+            x: 350,
+            y: 345,
+            phase: 3.1,
+            wanderRadiusX: 20,
+            wanderRadiusY: 14
+          }
+        ],
+        // First terrain-driven map. Regions are ordered paint operations: the
+        // grass island is laid down first, then dirt and water paint over it.
+        // This is deliberately data-only so the future map editor can write
+        // the same structure the server and client already consume.
+        terrain: {
+          cellSize: 8,
+          defaultType: "void",
+          regions: [
+            { type: "grass", x: 200, y: 130, width: 300, height: 300 },
+            { type: "grass", x: 122, y: 266, width: 78, height: 28 },
+            { type: "grass", x: 500, y: 266, width: 78, height: 28 },
+
+            // A restrained central trail demonstrates a real dirt material.
+            { type: "dirt", x: 122, y: 272, width: 456, height: 16 },
+
+            // Small stepped pond kept away from the main slime spawns. Water
+            // is non-walkable and cannot host Magic Grass.
+            { type: "water", x: 250, y: 334, width: 56, height: 32 },
+            { type: "water", x: 258, y: 326, width: 40, height: 48 }
+          ]
+        },
+        collision: {
+          waterRects: []
+        }
+      },
+
+      prototypeIslandWest: {
+        name: "Prototype Island West",
+        dimensions: {
+          width: 1060,
+          height: 560
+        },
+        playerSpawns: [
+          { id: "center", x: 500, y: 280 },
+          { id: "eastBridge", x: 864, y: 280 }
+        ],
+        portals: [
+          {
+            id: "prototypeIslandWest:portal:east",
+            x: 868, y: 254, width: 12, height: 52,
+            targetMapId: "prototypeIsland",
+            targetSpawnId: "westBridge"
+          }
+        ],
+        environment: prototypeIslandWestEnvironment,
+        enemySpawns: [
+          {
+            id: "prototypeIslandWest:slime:1",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 285,
+            y: 205,
+            phase: 0.2,
+            wanderRadiusX: 20,
+            wanderRadiusY: 15
+          },
+          {
+            id: "prototypeIslandWest:slime:2",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 420,
+            y: 190,
+            phase: 1.1,
+            wanderRadiusX: 22,
+            wanderRadiusY: 15
+          },
+          {
+            id: "prototypeIslandWest:slime:3",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 565,
+            y: 225,
+            phase: 2.0,
+            wanderRadiusX: 20,
+            wanderRadiusY: 15
+          },
+          {
+            id: "prototypeIslandWest:slime:4",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 700,
+            y: 205,
+            phase: 3.0,
+            wanderRadiusX: 23,
+            wanderRadiusY: 16
+          },
+          {
+            id: "prototypeIslandWest:slime:5",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 330,
+            y: 330,
+            phase: 4.0,
+            wanderRadiusX: 22,
+            wanderRadiusY: 16
+          },
+          {
+            id: "prototypeIslandWest:slime:6",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 520,
+            y: 350,
+            phase: 5.0,
+            wanderRadiusX: 19,
+            wanderRadiusY: 14
+          },
+          {
+            id: "prototypeIslandWest:slime:7",
+            type: "slime",
+            variant: "blue",
+            level: 2,
+            x: 720,
+            y: 355,
+            phase: 5.8,
+            wanderRadiusX: 24,
+            wanderRadiusY: 17
+          }
+        ],
+        terrain: {
+          cellSize: 8,
+          defaultType: "void",
+          regions: [
+            { type: "grass", x: 200, y: 130, width: 600, height: 300 },
+            { type: "grass", x: 800, y: 266, width: 78, height: 28 },
+
+            // West keeps more uninterrupted grass; the dirt route only guides
+            // the player from the east bridge into the broad clearing.
+            { type: "dirt", x: 620, y: 272, width: 258, height: 16 }
+          ]
+        },
         collision: {
           waterRects: []
         }
@@ -465,11 +841,22 @@
       }
     };
 
+    // Drafts explicitly adopted from the visual editor replace their matching
+    // canonical map definition here. The generated override remains plain
+    // JSON-safe content, so client and server consume the exact same map.
+    const adoptedMaps = adoptedMapOverrides?.maps;
+    if (adoptedMaps && typeof adoptedMaps === "object") {
+      for (const [mapId, adoptedMap] of Object.entries(adoptedMaps)) {
+        if (!adoptedMap || typeof adoptedMap !== "object") continue;
+        maps[mapId] = adoptedMap;
+      }
+    }
+
     return Object.freeze({
-      // Bump this whenever shared map/enemy placement changes. The browser
-      // loads this file with the matching version in its URL so an old cached
-      // registry cannot disagree with the running Node server.
-      version: 11,
+      // The adoption tool increments the shared content version whenever an
+      // editor draft becomes canonical.
+      version: Math.max(14, Number(adoptedMapOverrides?.version) || 14),
+      schemaVersion: 1,
       maps
     });
   }
