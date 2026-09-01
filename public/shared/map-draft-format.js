@@ -79,7 +79,7 @@
     }
 
     for (const [index, enemy] of (Array.isArray(map?.enemySpawns) ? map.enemySpawns : []).entries()) {
-      if (!["slime", "mushroom", "goblin", "ghost", "bigGoldSlime"].includes(enemy?.type)) {
+      if (!["slime", "mushroom", "crab", "goblin", "ghost", "bigGoldSlime"].includes(enemy?.type)) {
         fail(`enemySpawns[${index}] has unsupported type "${enemy?.type}".`);
       }
       if (enemy?.level != null && (!finite(enemy.level) || Number(enemy.level) < 1)) {

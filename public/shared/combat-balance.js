@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 25;
+    const VERSION = 26;
     const MIN_DAMAGE = 1;
     const ELEMENT_TYPES = Object.freeze(["neutral", "fire", "water", "air", "earth"]);
     const LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL = 0.05;
@@ -255,6 +255,12 @@
       mushroom: Object.freeze({
         level: 1,
         physicalDefense: 0,
+        magicResist: 0,
+        elementalResistances: Object.freeze({})
+      }),
+      crab: Object.freeze({
+        level: 2,
+        physicalDefense: 4,
         magicResist: 0,
         elementalResistances: Object.freeze({})
       }),

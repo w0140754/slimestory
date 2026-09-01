@@ -1,3 +1,11 @@
+## v6-11-337 — Crab enemy
+
+- Added the user-drawn 30×16 **Crab** as a new editor-placeable enemy species without adding it to any existing authored map.
+- Crab AI uses short pauses and mostly horizontal scuttling near its spawn; when provoked it chases with the same sideways-biased movement and ordinary contact damage.
+- Added lightweight code-driven crab presentation: low two-beat scuttle motion, subtle idle pincer/body twitch, facing flip, hurt/death/status/Hurl presentation, and normal multiplayer enemy replication.
+- Crab supports the existing combat/status systems including Burn, Wet, Snare, Hurl, Hallucination redirect, Focus Fire targeting, death/respawn, EXP, and coin drops.
+- Added Crab to the map-editor enemy species selector and draft validation. No current authored world/map data was changed.
+
 ## v6-11-336 — Sapgem rotation fix
 
 - Replaced the Sapgem Wand art with the user-supplied correctly rotated 16×16 sprite on a fresh `sapgem_wand_v3.png` asset path/cache key.

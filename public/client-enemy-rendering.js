@@ -72,6 +72,10 @@ function drawEnemyDeathEffect(effect, camX, camY) {
       slimeImage;
   } else if (effect.enemyType === "mushroom") {
     image = mushroomAwakeImage;
+  } else if (effect.enemyType === "crab") {
+    image = crabImage;
+    width = 30;
+    height = 16;
   } else if (effect.enemyType === "goblin") {
     image = goblinImage;
     height = 24;
@@ -304,6 +308,89 @@ function drawSlime(slime, camX, camY) {
       slime.wetDuration || GAME_CONFIG.status.enemyWetDuration
     );
   }
+}
+
+
+function drawCrab(crab, camX, camY) {
+  if (!crab.alive) return;
+
+  const carrier =
+    crab.carriedBy && typeof onlineClient !== "undefined"
+      ? onlineClient.playerForNetworkId(crab.carriedBy)
+      : null;
+  const worldX = carrier ? carrier.x : crab.x;
+  const worldY = carrier ? carrier.y : crab.y;
+  let screenX = Math.round(worldX - camX);
+  const screenY = Math.round(worldY - camY);
+
+  if (crab.shakeTime > 0) {
+    screenX += Math.sin(crab.shakeTime * 125) > 0 ? 1 : -1;
+  }
+
+  const moving =
+    Math.hypot(Number(crab.serverVelocityX) || 0, Number(crab.serverVelocityY) || 0) > 0.6 ||
+    Math.hypot(
+      (Number(crab.serverTargetX) || crab.x) - crab.x,
+      (Number(crab.serverTargetY) || crab.y) - crab.y
+    ) > 0.8;
+
+  let lift = 0;
+  if (carrier) {
+    const duration = Math.max(0.01, crab.pickupDuration || 0.18);
+    const progress = Math.max(0, Math.min(1, 1 - (Number(crab.pickupTime) || 0) / duration));
+    lift = Math.round(9 * (1 - Math.pow(1 - progress, 2)));
+  } else if ((Number(crab.hurlTime) || 0) > 0) {
+    const duration = Math.max(0.01, crab.hurlDuration || 0.58);
+    const progress = Math.max(0, Math.min(1, 1 - (Number(crab.hurlTime) || 0) / duration));
+    lift = Math.round(Math.sin(progress * Math.PI) * 12);
+  } else if (moving) {
+    // Two-beat sideways scuttle. The body stays low while alternating feet/claws
+    // read as a quick 1px lift/squash rather than a slime-like hop.
+    lift = Math.sin(worldTime * 15 + crab.phase) > 0 ? 1 : 0;
+  }
+
+  ctx.fillStyle = "rgba(35, 45, 32, .28)";
+  ctx.fillRect(screenX - 11, screenY, 22, 2);
+
+  const spawnScale = enemySpawnScale(crab);
+  const idlePinch = !moving && !carrier
+    ? (Math.sin(worldTime * 3.4 + crab.phase) > 0.82 ? 1 : 0)
+    : 0;
+  const scuttleSquash = moving
+    ? (Math.sin(worldTime * 15 + crab.phase) > 0 ? 1 : 0)
+    : 0;
+  const drawWidth = Math.max(1, Math.round((30 + idlePinch) * spawnScale.x));
+  const drawHeight = Math.max(1, Math.round((16 - scuttleSquash) * spawnScale.y));
+  const drawX = Math.round(screenX - drawWidth / 2);
+  const drawY = Math.round(screenY - drawHeight + 1 - lift);
+
+  const imageReady = Boolean(
+    crabImage && crabImage.complete && crabImage.naturalWidth > 0 && crabImage.naturalHeight > 0
+  );
+
+  ctx.save();
+  ctx.globalAlpha *= spawnScale.alpha;
+  if (crab.dir < 0) {
+    ctx.translate(screenX * 2, 0);
+    ctx.scale(-1, 1);
+  }
+
+  if (imageReady) {
+    ctx.drawImage(crabImage, drawX, drawY, drawWidth, drawHeight);
+  } else {
+    ctx.fillStyle = "#df6e45";
+    ctx.fillRect(drawX, drawY + 5, drawWidth, Math.max(2, drawHeight - 7));
+  }
+  ctx.restore();
+
+  drawEnemySpawnShimmer(crab, screenX, screenY - 8 - lift, spawnScale.alpha);
+  drawBurnEffect(crab, screenX, screenY - 7 - lift);
+  drawWetStatus(
+    screenX,
+    Math.round(screenY - 9 - lift),
+    crab.wetTime,
+    crab.wetDuration || GAME_CONFIG.status.enemyWetDuration
+  );
 }
 
 function mushroomIsAwakePresentation(mushroom) {

@@ -68,8 +68,8 @@ function buildClientEnemyFoundation() {
     return c.toDataURL("image/png");
   }
   const healingPotionImage = loadImage("assets/healing_potion_v2.png");
-  const attackPotionImage = new Image(); attackPotionImage.src = "assets/attack_potion_v2.png?v=336";
-  const magicPotionImage = new Image(); magicPotionImage.src = "assets/magic_potion_v2.png?v=336";
+  const attackPotionImage = new Image(); attackPotionImage.src = "assets/attack_potion_v2.png?v=337";
+  const magicPotionImage = new Image(); magicPotionImage.src = "assets/magic_potion_v2.png?v=337";
 
 
   // Inventory / equipment menu uses the exact same game sprites.
@@ -273,9 +273,9 @@ function buildClientEnemyFoundation() {
   // First mushroom-family enemy. It stays still/asleep while passive, wakes
   // into the annoyed sprite when combat/control motion begins, then returns to
   // its home point and falls asleep again after disengaging.
-  const mushroomSleepImage = loadImage("assets/mushroom_sleep_v1.png?v=336");
-  const mushroomAwakeImage = loadImage("assets/mushroom_awake_v1.png?v=336");
-  const mushroomFlashImage = loadImage("assets/mushroom_flash_v1.png?v=336");
+  const mushroomSleepImage = loadImage("assets/mushroom_sleep_v1.png?v=337");
+  const mushroomAwakeImage = loadImage("assets/mushroom_awake_v1.png?v=337");
+  const mushroomFlashImage = loadImage("assets/mushroom_flash_v1.png?v=337");
 
   function makeMushroom(
     x,
@@ -323,6 +323,50 @@ function buildClientEnemyFoundation() {
       tickTimer(mushroom, "shakeTime", dt);
       tickReplicatedEnemyCountdowns(mushroom, dt);
       updateReplicatedEnemyPosition(mushroom, dt, 14);
+    }
+  }
+
+  // -----------------------------------------------------------------------------
+  // CRAB
+  // -----------------------------------------------------------------------------
+  // User-drawn 30x16 crab. Server AI supplies horizontal-biased scuttling;
+  // the client adds only lightweight presentation motion.
+  const crabImage = loadImage("assets/crab_v1.png?v=337");
+
+  function makeCrab(x, y, phase = 0, level = 2) {
+    return {
+      level,
+      x,
+      y,
+      homeX: x,
+      homeY: y,
+      dir: 1,
+      phase,
+      speed: 15,
+      chaseSpeed: 24,
+      detectionRadius: 76,
+      maxHp: 58,
+      hp: 58,
+      alive: true,
+      respawnTime: 0,
+      hitFlash: 0,
+      shakeTime: 0,
+      knockbackX: 0,
+      knockbackY: 0,
+      burnTime: 0,
+      burnDuration: 3.0,
+      burnTickTimer: 0,
+      burnTickInterval: 0.5,
+      burnDamagePerTick: 2
+    };
+  }
+
+  function updateCrabs(dt) {
+    for (const crab of currentEnemyCollection("crab")) {
+      tickTimer(crab, "hitFlash", dt);
+      tickTimer(crab, "shakeTime", dt);
+      tickReplicatedEnemyCountdowns(crab, dt);
+      updateReplicatedEnemyPosition(crab, dt, 16);
     }
   }
 
@@ -1129,8 +1173,11 @@ function buildClientEnemyFoundation() {
     mushroomSleepImage,
     mushroomAwakeImage,
     mushroomFlashImage,
+    crabImage,
     makeMushroom,
     updateMushrooms,
+    makeCrab,
+    updateCrabs,
     bigGoldSlimeImage,
     bigGoldSlimeBubbleImage,
     bigGoldSlimeFlashImage,

@@ -189,7 +189,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
-const sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=336");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=337");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -1052,8 +1052,11 @@ const {
   mushroomSleepImage,
   mushroomAwakeImage,
   mushroomFlashImage,
+  crabImage,
   makeMushroom,
   updateMushrooms,
+  makeCrab,
+  updateCrabs,
   bigGoldSlimeImage,
   bigGoldSlimeBubbleImage,
   bigGoldSlimeFlashImage,
@@ -1129,6 +1132,7 @@ const sceneryRocks = [];
 const CLIENT_ENEMY_COLLECTIONS = {
   slime: "slimes",
   mushroom: "mushrooms",
+  crab: "crabs",
   goblin: "goblins",
   ghost: "ghosts",
   bigGoldSlime: "bigGoldSlimes"
@@ -1157,6 +1161,15 @@ const CLIENT_ENEMY_FACTORIES = {
       spawn.y,
       spawn.phase || 0,
       spawn.level ?? 1
+    );
+  },
+
+  crab(spawn) {
+    return makeCrab(
+      spawn.x,
+      spawn.y,
+      spawn.phase || 0,
+      spawn.level ?? 2
     );
   },
 
@@ -1298,6 +1311,41 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
         }
       }
 
+      return enemy.y;
+    },
+    canFocusFire(enemy) {
+      return !enemy.carriedBy;
+    }
+  }),
+
+  crab: Object.freeze({
+    bodyOffsetY: -6,
+    projectileHitRadius: 9,
+    lockRadiusX: 14,
+    lockRadiusY: 7,
+    meleeBodyRadius: 7,
+    horizontalMeleeBodyRadius: 12,
+    rainRadiusInset: 2,
+    rainEffect: "none",
+    burnSpreadChance: 0.42,
+    burnGlowOffsetY: -7,
+    burnGlowRadius: 11,
+    burnGlowAlpha: 0.12,
+    damageTextOffsetY: -24,
+    respawnSeconds: 32,
+    expAward: 2,
+    hurlable: true,
+    draw: drawCrab,
+    update: updateCrabs,
+    updatePriority: 27,
+    drawSortY(enemy) {
+      if (
+        enemy.carriedBy &&
+        typeof onlineClient !== "undefined"
+      ) {
+        const carrier = onlineClient.playerForNetworkId(enemy.carriedBy);
+        if (carrier) return carrier.y + 0.25;
+      }
       return enemy.y;
     },
     canFocusFire(enemy) {

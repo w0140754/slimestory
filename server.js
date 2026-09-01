@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-336";
+const BUILD_VERSION = "6-11-337";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -659,6 +659,23 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
       basic: 18,
       arrow: 22,
       fireball: 24
+    })
+  }),
+  crab: Object.freeze({
+    bodyOffsetY: -6,
+    meleeBodyRadius: 8,
+    fireSpreadChance: 0.42,
+    respawnSeconds: 32,
+    coinDropChance: 0.45,
+    hurlable: true,
+    snareable: true,
+    rainEffect: "none",
+    damageKnockback: Object.freeze({
+      melee: 30,
+      bowMelee: 12,
+      basic: 17,
+      arrow: 21,
+      fireball: 23
     })
   }),
   goblin: Object.freeze({
@@ -2861,7 +2878,7 @@ const SHOP_ITEM_IDS = new Set([
   "pants_arcanist"
 ]);
 
-// Fire/Rain Wands are retired from sale in v336, but old browser saves that
+// Fire/Rain Wands are retired from sale in v334, but old browser saves that
 // legitimately purchased them keep that purchase history/ownership.
 const SHOP_PURCHASE_HISTORY_ITEM_IDS = new Set([
   ...SHOP_ITEM_IDS,
@@ -4602,6 +4619,7 @@ function makeServerBigGoldSlime(spawn) {
 const SERVER_ENEMY_FACTORIES = Object.freeze({
   slime: makeServerSlime,
   mushroom: makeServerMushroom,
+  crab: makeServerCrab,
   goblin: makeServerGoblin,
   ghost: makeServerGhost,
   bigGoldSlime: makeServerBigGoldSlime
@@ -4638,6 +4656,9 @@ const sharedSlimes =
 
 const sharedMushrooms =
   worldEntitiesByType.get("mushroom") || [];
+
+const sharedCrabs =
+  worldEntitiesByType.get("crab") || [];
 
 const sharedGoblins =
   worldEntitiesByType.get("goblin") || [];
@@ -5210,6 +5231,7 @@ function enemyPassiveIntentDescriptor(enemyType, enemy, state, motionCache) {
   if (
     enemyType === "slime" ||
     enemyType === "mushroom" ||
+    enemyType === "crab" ||
     enemyType === "goblin" ||
     enemyType === "ghost"
   ) {
@@ -5959,6 +5981,8 @@ function chooseServerEnemyPassiveTarget(enemy) {
     enemy.wanderTargetX = enemy.homeX;
     enemy.wanderTargetY = enemy.homeY;
     enemy.wanderStuckTime = 0;
+  } else if (enemy.type === "crab") {
+    chooseServerCrabWanderTarget(enemy);
   } else if (enemy.type === "goblin") {
     chooseServerGoblinWanderTarget(enemy);
   } else if (enemy.type === "ghost") {
@@ -6045,7 +6069,7 @@ function tickEnemyReturningHome(enemy, dt) {
   const beforeX = enemy.x;
   const beforeY = enemy.y;
 
-  if (enemy.type === "slime" || enemy.type === "mushroom") {
+  if (enemy.type === "slime" || enemy.type === "mushroom" || enemy.type === "crab") {
     moveServerSlime(enemy, moveX, moveY, speed, dt);
   } else if (enemy.type === "goblin") {
     // Goblins phase through decorative trees during all movement states. They
@@ -9702,6 +9726,275 @@ function makeServerSlime(spawn) {
   };
 }
 
+
+function makeServerCrab(spawn) {
+  const {
+    id,
+    mapId,
+    x,
+    y,
+    phase = 0,
+    level = 2
+  } = spawn;
+
+  return {
+    id,
+    mapId,
+    type: "crab",
+    level,
+
+    x,
+    y,
+    homeX: x,
+    homeY: y,
+    dir: 1,
+    phase,
+
+    // Crabs prefer long horizontal legs and only make small vertical changes.
+    speed: 15,
+    chaseSpeed: 24,
+    detectionRadius: 76,
+    aggroMode: ENEMY_AGGRO_PROVOKED,
+
+    aggroTargetId: null,
+    aggroEngagementTime: 0,
+    confusionTime: 0,
+    confusionTargetId: null,
+    wasEngaged: false,
+    returningHome: false,
+    returnStuckTime: 0,
+
+    tauntTime: 0,
+    tauntX: x,
+    tauntY: y,
+    tauntOwnerId: null,
+
+    wanderTargetX: x,
+    wanderTargetY: y,
+    wanderDecisionTime: 0,
+    pauseTime: 0.45 + Math.random() * 0.55,
+    wanderStuckTime: 0,
+    wanderRadiusX: 38,
+    wanderRadiusY: 9,
+
+    maxHp: 58,
+    hp: 58,
+    alive: true,
+    respawnTime: 0,
+
+    burnTime: 0,
+    burnTickTimer: 0,
+    burnTickInterval: 0.5,
+
+    knockbackX: 0,
+    knockbackY: 0,
+
+    lastDamagePlayerId: null
+  };
+}
+
+function resetServerCrab(crab) {
+  crab.x = crab.homeX;
+  crab.y = crab.homeY;
+  crab.dir = 1;
+  crab.wanderTargetX = crab.homeX;
+  crab.wanderTargetY = crab.homeY;
+  crab.pauseTime = 0.45 + Math.random() * 0.55;
+  crab.wanderStuckTime = 0;
+  crab.aggroTargetId = null;
+  crab.aggroEngagementTime = 0;
+  crab.confusionTime = 0;
+  crab.confusionTargetId = null;
+  crab.wasEngaged = false;
+  crab.returningHome = false;
+  crab.returnStuckTime = 0;
+  crab.tauntTime = 0;
+  crab.tauntX = crab.homeX;
+  crab.tauntY = crab.homeY;
+  crab.tauntOwnerId = null;
+  crab.tauntCloneId = null;
+  crab.hp = crab.maxHp;
+  crab.alive = true;
+  crab.respawnTime = 0;
+  crab.burnTime = 0;
+  crab.burnTickTimer = 0;
+  crab.knockbackX = 0;
+  crab.knockbackY = 0;
+  clearEnemyAggroTarget(crab);
+  clearServerEnemyHurlState(crab);
+  clearServerEnemyStatuses(crab);
+  clearServerEnemySnareState(crab);
+  crab.lastDamagePlayerId = null;
+}
+
+function chooseServerCrabWanderTarget(crab) {
+  const candidates = [];
+  const dimensions = mapWorldDimensions(crab.mapId);
+  const maxX = Math.max(14, dimensions.width - 14);
+  const maxY = Math.max(18, dimensions.height - 8);
+
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    const direction = Math.random() < 0.5 ? -1 : 1;
+    const horizontal = (crab.wanderRadiusX || 38) * (0.62 + Math.random() * 0.38) * direction;
+    const vertical = (Math.random() - 0.5) * 2 * (crab.wanderRadiusY || 9);
+    const x = Math.max(14, Math.min(maxX, crab.homeX + horizontal));
+    const y = Math.max(18, Math.min(maxY, crab.homeY + vertical));
+    if (!slimePositionAllowed(crab, x, y)) continue;
+    candidates.push({ x, y, distance: Math.hypot(x - crab.x, y - crab.y) });
+  }
+
+  candidates.sort((a, b) => b.distance - a.distance);
+  const pool = candidates.slice(0, Math.min(4, candidates.length));
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  crab.wanderTargetX = chosen?.x ?? crab.homeX;
+  crab.wanderTargetY = chosen?.y ?? crab.homeY;
+  crab.wanderStuckTime = 0;
+}
+
+function crabMovementVector(dx, dy) {
+  // Preserve the recognizable sideways scuttle without preventing the crab
+  // from eventually reaching players above/below it.
+  const horizontal = dx;
+  const vertical = dy * 0.42;
+  const length = Math.hypot(horizontal, vertical) || 1;
+  return { x: horizontal / length, y: vertical / length };
+}
+
+function tryServerCrabContact(crab) {
+  if (!crab?.alive || crab.carriedBy || crab.hurlTime > 0) return;
+
+  const target = nearestVisiblePlayer(crab.mapId, crab.x, crab.y, 10);
+  if (!target || target.distance > 10 || !playerContactAvailable(target.player.id)) return;
+
+  let dx = target.player.x - crab.x;
+  let dy = (target.player.y - 3) - (crab.y - 4);
+  const distance = Math.hypot(dx, dy);
+  if (distance >= 8.2) return;
+
+  if (distance < 0.001) {
+    dx = -crab.dir;
+    dy = 0;
+  } else {
+    dx /= distance;
+    dy /= distance;
+  }
+
+  setPlayerContactCooldown(target.player.id, 0.48);
+  broadcastEnemyHitPlayer(
+    target.player,
+    crab,
+    5 + Math.floor(Math.random() * 4),
+    dx,
+    dy,
+    76,
+    0.48
+  );
+}
+
+function tickSharedCrabs(dt) {
+  for (const crab of sharedCrabs) {
+    if (!crab.alive) {
+      crab.respawnTime -= dt;
+      if (crab.respawnTime <= 0) resetServerCrab(crab);
+      continue;
+    }
+
+    if (crab.returningHome) {
+      tickEnemyReturningHome(crab, dt);
+      continue;
+    }
+
+    tickEnemyStatuses(crab, dt);
+    if (!crab.alive) continue;
+    if (tickServerEnemyHurl(crab, dt)) continue;
+
+    if (crab.tauntTime > 0) {
+      crab.tauntTime = Math.max(0, crab.tauntTime - dt);
+      if (crab.tauntTime <= 0) {
+        crab.tauntOwnerId = null;
+        crab.tauntCloneId = null;
+      } else {
+        crab.wasEngaged = true;
+        releaseEnemyTauntOnContact(crab);
+      }
+    }
+
+    const confused = tickEnemyConfusion(crab, dt);
+    if (!confused) tryServerCrabContact(crab);
+
+    if (Math.abs(crab.knockbackX) > 0.1 || Math.abs(crab.knockbackY) > 0.1) {
+      const nextX = crab.x + crab.knockbackX * dt;
+      const nextY = crab.y + crab.knockbackY * dt;
+      if (slimePositionAllowed(crab, nextX, crab.y)) crab.x = nextX;
+      if (slimePositionAllowed(crab, crab.x, nextY)) crab.y = nextY;
+      crab.knockbackX *= 0.82;
+      crab.knockbackY *= 0.82;
+    }
+
+    if (confused) continue;
+
+    if (crab.tauntTime > 0) {
+      const dx = crab.tauntX - crab.x;
+      const dy = crab.tauntY - crab.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1) {
+        const move = crabMovementVector(dx, dy);
+        moveServerSlime(crab, move.x, move.y, crab.chaseSpeed, dt);
+        if (Math.abs(move.x) > 0.05) crab.dir = move.x >= 0 ? 1 : -1;
+      }
+      continue;
+    }
+
+    const targetPlayer = resolveEnemyAggroTarget(crab, dt);
+    if (targetPlayer) {
+      const dx = targetPlayer.x - crab.x;
+      const dy = targetPlayer.y - crab.y;
+      if (Math.hypot(dx, dy) > 1) {
+        const move = crabMovementVector(dx, dy);
+        moveServerSlime(crab, move.x, move.y, crab.chaseSpeed, dt);
+        if (Math.abs(move.x) > 0.05) crab.dir = move.x >= 0 ? 1 : -1;
+      }
+      continue;
+    }
+
+    if (crab.wasEngaged && !crab.aggroTargetId) {
+      beginEnemyReturningHome(crab);
+      tickEnemyReturningHome(crab, dt);
+      continue;
+    }
+
+    if (crab.pauseTime > 0) {
+      crab.pauseTime = Math.max(0, crab.pauseTime - dt);
+      crab.wanderStuckTime = 0;
+      continue;
+    }
+
+    let dx = crab.wanderTargetX - crab.x;
+    let dy = crab.wanderTargetY - crab.y;
+    let distance = Math.hypot(dx, dy);
+    if (distance < 2) {
+      crab.pauseTime = 0.45 + Math.random() * 0.75;
+      chooseServerCrabWanderTarget(crab);
+      dx = crab.wanderTargetX - crab.x;
+      dy = crab.wanderTargetY - crab.y;
+      distance = Math.hypot(dx, dy);
+    }
+
+    if (distance > 0.001) {
+      const move = crabMovementVector(dx, dy);
+      const beforeX = crab.x;
+      const beforeY = crab.y;
+      moveServerSlime(crab, move.x, move.y, crab.speed, dt);
+      if (Math.abs(move.x) > 0.05) crab.dir = move.x >= 0 ? 1 : -1;
+      const progress = Math.hypot(crab.x - beforeX, crab.y - beforeY);
+      crab.wanderStuckTime = progress < 0.02 ? crab.wanderStuckTime + dt : 0;
+      if (crab.wanderStuckTime >= ENEMY_PASSIVE_STUCK_REPLAN_SECONDS) {
+        chooseServerCrabWanderTarget(crab);
+      }
+    }
+  }
+}
+
 function makeServerMushroom(spawn) {
   const {
     id,
@@ -10351,7 +10644,7 @@ function hurlObjectHitsTree(mapId, x, y, radius = 12) {
 }
 
 function serverEnemyPositionAllowedForHurl(enemy, x, y) {
-  if (enemy.type === "slime" || enemy.type === "mushroom") {
+  if (enemy.type === "slime" || enemy.type === "mushroom" || enemy.type === "crab") {
     return slimePositionAllowed(enemy, x, y);
   }
 
@@ -10380,7 +10673,7 @@ function finishServerEnemyHurl(
 
   if (landingDamage) {
     const landingDamageAmount =
-      (enemy.type === "slime" || enemy.type === "mushroom")
+      (enemy.type === "slime" || enemy.type === "mushroom" || enemy.type === "crab")
         ? 4 + Math.floor(Math.random() * 4)
         : 6 + Math.floor(Math.random() * 4);
 
@@ -10945,6 +11238,7 @@ setInterval(() => {
   tickServerRainGrassMembership();
   tickSharedSlimes(dt);
   tickSharedMushrooms(dt);
+  tickSharedCrabs(dt);
   tickSharedGoblins(dt);
   tickSharedGhosts(dt);
   tickSharedBigGoldSlimes(dt);

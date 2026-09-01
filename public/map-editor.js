@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "336";
+  const BUILD = "337";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -91,15 +91,15 @@
   const editorSceneryRockImage = new Image();
   editorSceneryRockImage.src = "./assets/scenery_grassy_rock_v2.png";
   const editorShopkeeperNpcImage = new Image();
-  editorShopkeeperNpcImage.src = "./assets/shopkeeper_npc_v1.png?v=336";
+  editorShopkeeperNpcImage.src = "./assets/shopkeeper_npc_v1.png?v=337";
   const editorHunterNpcImage = new Image();
-  editorHunterNpcImage.src = "./assets/hunter_npc_v1.png?v=336";
+  editorHunterNpcImage.src = "./assets/hunter_npc_v1.png?v=337";
   const editorJesterNpcImage = new Image();
-  editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=336";
+  editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=337";
   const editorWoodBenchImage = new Image();
-  editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=336";
+  editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=337";
   const editorClassResetCrystalImage = new Image();
-  editorClassResetCrystalImage.src = "./assets/class_reset_crystal.png?v=336";
+  editorClassResetCrystalImage.src = "./assets/class_reset_crystal.png?v=337";
 
   const HOUSE_WIDTH = 64;
   const HOUSE_HEIGHT = 64;
@@ -619,6 +619,8 @@
     const type = spawn.type || "slime";
     const marker = type === "mushroom"
       ? { fill: "#d86a46", text: "#fff0d1", label: "M" }
+      : type === "crab"
+        ? { fill: "#e9784f", text: "#35150d", label: "C" }
       : type === "goblin"
         ? { fill: "#7eb95c", text: "#102010", label: "G" }
         : type === "ghost"
@@ -1672,6 +1674,7 @@
         makePropertyRow("Species", selectControl(enemyType, [
           { value: "slime", label: "Slime" },
           { value: "mushroom", label: "Sleeping Mushroom" },
+          { value: "crab", label: "Crab" },
           { value: "goblin", label: "Goblin" },
           { value: "ghost", label: "Ghost" },
           { value: "bigGoldSlime", label: "Big Gold Slime" }
@@ -1717,6 +1720,11 @@
         const behaviorNote = document.createElement("div");
         behaviorNote.className = "property-readonly";
         behaviorNote.textContent = "Sleeps at its spawn until provoked, then wakes and chases.";
+        enemyFields.push(behaviorNote);
+      } else if (enemyType === "crab") {
+        const behaviorNote = document.createElement("div");
+        behaviorNote.className = "property-readonly";
+        behaviorNote.textContent = "Scuttles mostly sideways near its spawn and chases when provoked.";
         enemyFields.push(behaviorNote);
       }
 
