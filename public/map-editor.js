@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "300";
+  const BUILD = "336";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -90,12 +90,27 @@
   editorRockGrassImage.src = "./assets/rock_grass.png";
   const editorSceneryRockImage = new Image();
   editorSceneryRockImage.src = "./assets/scenery_grassy_rock_v2.png";
+  const editorShopkeeperNpcImage = new Image();
+  editorShopkeeperNpcImage.src = "./assets/shopkeeper_npc_v1.png?v=336";
+  const editorHunterNpcImage = new Image();
+  editorHunterNpcImage.src = "./assets/hunter_npc_v1.png?v=336";
+  const editorJesterNpcImage = new Image();
+  editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=336";
+  const editorWoodBenchImage = new Image();
+  editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=336";
+  const editorClassResetCrystalImage = new Image();
+  editorClassResetCrystalImage.src = "./assets/class_reset_crystal.png?v=336";
 
   const HOUSE_WIDTH = 64;
   const HOUSE_HEIGHT = 64;
   const HOUSE_COLLISION_WIDTH = 48;
   const HOUSE_COLLISION_HEIGHT = 30;
   editorRedHouseImage.addEventListener("load", () => requestRender());
+  editorShopkeeperNpcImage.addEventListener("load", () => requestRender());
+  editorHunterNpcImage.addEventListener("load", () => requestRender());
+  editorJesterNpcImage.addEventListener("load", () => requestRender());
+  editorWoodBenchImage.addEventListener("load", () => requestRender());
+  editorClassResetCrystalImage.addEventListener("load", () => requestRender());
 
   for (const id of editableMapIds) {
     const option = document.createElement("option");
@@ -114,6 +129,7 @@
     for (const key of ["trees", "tallGrass", "rocks", "sceneryRocks", "harvestFlowers", "houses"]) {
       if (!Array.isArray(map.environment[key])) map.environment[key] = [];
     }
+    if (!Array.isArray(map.npcs)) map.npcs = [];
     if (!Array.isArray(map.enemySpawns)) map.enemySpawns = [];
     if (!Array.isArray(map.playerSpawns)) map.playerSpawns = [];
     if (!Array.isArray(map.portals)) map.portals = [];
@@ -152,6 +168,15 @@
   function createDraft(id) {
     const source = clone(sourceMapDefinition(id));
     ensureMapCollections(source);
+
+    const configuredLoad = WORLD_CONTENT.defaultPlayerLoad;
+    if (
+      configuredLoad?.mapId === id &&
+      source.playerSpawns.some(spawn => spawn?.id === configuredLoad.spawnId)
+    ) {
+      source.defaultPlayerSpawnId = configuredLoad.spawnId;
+    }
+
     const terrain = terrainCellsFromMap(source);
     const sourceState = {
       cells: terrain.cells.slice(),
@@ -534,23 +559,100 @@
     ctx.fillRect(house.x - 5, house.y - 20, 10, 19);
   }
 
+  function npcImageForEditorType(type) {
+    if (type === "hunter") return editorHunterNpcImage;
+    if (type === "jester") return editorJesterNpcImage;
+    if (type === "craftingTable") return editorWoodBenchImage;
+    if (type === "classResetCrystal") return editorClassResetCrystalImage;
+    return editorShopkeeperNpcImage;
+  }
+
+  function npcDisplayConfig(type) {
+    switch (type) {
+      case "hunter":
+        return { label: "HUNTER", color: "#bfe2a8", fallback: "#6d8a62", width: 17, height: 20, shadow: true };
+      case "jester":
+        return { label: "JESTER", color: "#e3b6ef", fallback: "#8b6299", width: 16, height: 20, shadow: true };
+      case "craftingTable":
+        return { label: "CRAFT", color: "#ffd89b", fallback: "#9b6438", width: 18, height: 18, shadow: true };
+      case "classResetCrystal":
+        return { label: "CRYSTAL", color: "#9de6ef", fallback: "#5b9fb0", width: 32, height: 32, shadow: true };
+      default:
+        return { label: "SHOP", color: "#ffe06a", fallback: "#a77d50", width: 16, height: 16, shadow: true };
+    }
+  }
+
+  function drawNpc(npc) {
+    const allowed = ["shopkeeper", "hunter", "jester", "craftingTable", "classResetCrystal"];
+    const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
+    const image = npcImageForEditorType(type);
+    const config = npcDisplayConfig(type);
+    const naturalW = image.naturalWidth || config.width;
+    const naturalH = image.naturalHeight || config.height;
+
+    ctx.fillStyle = type === "classResetCrystal" ? "rgba(20,45,38,.24)" : "rgba(34,46,28,.28)";
+    const shadowW = type === "craftingTable" || type === "classResetCrystal" ? 14 : 10;
+    const shadowY = type === "shopkeeper" ? 0 : 1;
+    ctx.fillRect(npc.x - Math.floor(shadowW / 2), npc.y + shadowY, shadowW, type === "classResetCrystal" ? 3 : 2);
+
+    if (image.complete && image.naturalWidth > 0) {
+      if (type === "classResetCrystal") {
+        ctx.drawImage(image, Math.round(npc.x - 16), Math.round(npc.y - 31), 32, 32);
+      } else {
+        ctx.drawImage(image, Math.round(npc.x - naturalW / 2), Math.round(npc.y - naturalH));
+      }
+    } else {
+      ctx.fillStyle = config.fallback;
+      const fallbackH = type === "craftingTable" ? 10 : type === "classResetCrystal" ? 20 : 13;
+      ctx.fillRect(npc.x - 6, npc.y - fallbackH, 12, fallbackH);
+    }
+
+    ctx.fillStyle = config.color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.font = "bold 6px monospace";
+    const labelY = type === "classResetCrystal" ? npc.y - 34 : npc.y - naturalH - 2;
+    ctx.fillText(config.label, npc.x, labelY);
+  }
+
   function drawEnemySpawn(spawn) {
-    ctx.fillStyle = spawn.variant === "blue" ? "#64c7df" : "#9bdc81";
+    const type = spawn.type || "slime";
+    const marker = type === "mushroom"
+      ? { fill: "#d86a46", text: "#fff0d1", label: "M" }
+      : type === "goblin"
+        ? { fill: "#7eb95c", text: "#102010", label: "G" }
+        : type === "ghost"
+          ? { fill: "#c9d4dd", text: "#24313b", label: "H" }
+          : type === "bigGoldSlime"
+            ? { fill: "#e0bd43", text: "#2b2107", label: "B" }
+            : {
+                fill: spawn.variant === "blue" ? "#64c7df" : "#9bdc81",
+                text: "#102010",
+                label: "S"
+              };
+
+    ctx.fillStyle = marker.fill;
     ctx.strokeStyle = "#172217";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(spawn.x, spawn.y, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#102010";
+    ctx.fillStyle = marker.text;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "bold 7px monospace";
-    ctx.fillText("E", spawn.x, spawn.y + .5);
+    ctx.fillText(marker.label, spawn.x, spawn.y + .5);
   }
 
   function drawPlayerSpawn(spawn) {
-    ctx.strokeStyle = "#fff1a8";
+    const isDefaultLoad = draft.map.defaultPlayerSpawnId === spawn.id;
+    if (isDefaultLoad) {
+      ctx.strokeStyle = "#7fffd4";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(spawn.x - 8, spawn.y - 8, 16, 16);
+    }
+    ctx.strokeStyle = isDefaultLoad ? "#7fffd4" : "#fff1a8";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(spawn.x - 6, spawn.y);
@@ -558,11 +660,11 @@
     ctx.moveTo(spawn.x, spawn.y - 6);
     ctx.lineTo(spawn.x, spawn.y + 6);
     ctx.stroke();
-    ctx.fillStyle = "#fff1a8";
+    ctx.fillStyle = isDefaultLoad ? "#7fffd4" : "#fff1a8";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "bold 7px monospace";
-    ctx.fillText("P", spawn.x + 10, spawn.y - 7);
+    ctx.fillText(isDefaultLoad ? "LOAD" : "P", spawn.x + (isDefaultLoad ? 17 : 10), spawn.y - 7);
   }
 
   function drawPortal(portal) {
@@ -594,6 +696,7 @@
   function drawEntities() {
     if (!layers.entities.checked) return;
     ctx.save();
+    for (const npc of draft.map.npcs) drawNpc(npc);
     for (const spawn of draft.map.enemySpawns) drawEnemySpawn(spawn);
     for (const spawn of draft.map.playerSpawns) drawPlayerSpawn(spawn);
     ctx.restore();
@@ -613,6 +716,7 @@
     sceneryRock: { layer: "objects", label: "Scenery rock", get: map => map.environment.sceneryRocks },
     harvestFlower: { layer: "objects", label: "Harvest flower", get: map => map.environment.harvestFlowers },
     house: { layer: "objects", label: "House", get: map => map.environment.houses },
+    npc: { layer: "entities", label: "NPC", get: map => map.npcs },
     enemySpawn: { layer: "entities", label: "Enemy spawn", get: map => map.enemySpawns },
     playerSpawn: { layer: "entities", label: "Player spawn", get: map => map.playerSpawns },
     portal: { layer: "portals", label: "Portal", get: map => map.portals }
@@ -644,6 +748,12 @@
     if (kind === "sceneryRock") return { x: item.x - 6, y: item.y - 5, width: 12, height: 10 };
     if (kind === "harvestFlower") return { x: item.x - 8, y: item.y - 16, width: 16, height: 17 };
     if (kind === "house") return { x: item.x - HOUSE_WIDTH / 2, y: item.y - (HOUSE_HEIGHT - 1), width: HOUSE_WIDTH, height: HOUSE_HEIGHT + 18 };
+    if (kind === "npc") {
+      const type = item.type;
+      if (type === "classResetCrystal") return { x: item.x - 16, y: item.y - 31, width: 32, height: 35 };
+      if (type === "craftingTable") return { x: item.x - 10, y: item.y - 18, width: 20, height: 21 };
+      return { x: item.x - 10, y: item.y - 24, width: 20, height: 27 };
+    }
     return { x: item.x - 8, y: item.y - 8, width: 16, height: 16 };
   }
 
@@ -653,7 +763,7 @@
   }
 
   function hitTest(world) {
-    const order = ["portal", "playerSpawn", "enemySpawn", "house", "harvestFlower", "sceneryRock", "rock", "tallGrass", "tree"];
+    const order = ["portal", "playerSpawn", "enemySpawn", "npc", "house", "harvestFlower", "sceneryRock", "rock", "tallGrass", "tree"];
     const padding = Math.max(2, 5 / camera.zoom);
     let best = null;
     let bestDistance = Infinity;
@@ -738,6 +848,11 @@
     if (kind === "sceneryRock") return { kind: "sceneryRock", item: { x, y } };
     if (kind === "harvestFlower") return { kind: "harvestFlower", item: { x, y, type: "white" } };
     if (kind === "house") return { kind: "house", item: { x, y, variant: "default" } };
+    if (kind === "shopkeeperNpc") return { kind: "npc", item: { x, y, type: "shopkeeper", interactionRadius: 24 } };
+    if (kind === "hunterNpc") return { kind: "npc", item: { x, y, type: "hunter", interactionRadius: 24 } };
+    if (kind === "jesterNpc") return { kind: "npc", item: { x, y, type: "jester", interactionRadius: 24 } };
+    if (kind === "craftingTableNpc") return { kind: "npc", item: { x, y, type: "craftingTable", interactionRadius: 24 } };
+    if (kind === "classResetCrystalNpc") return { kind: "npc", item: { x, y, type: "classResetCrystal", interactionRadius: 28 } };
     if (kind === "enemySpawn") return { kind: "enemySpawn", item: { x, y } };
     if (kind === "playerSpawn") return { kind: "playerSpawn", item: { x, y } };
     if (kind === "portal") return { kind: "portal", item: { x: x - 6, y: y - 26, width: 12, height: 52, targetMapId: "?" } };
@@ -756,6 +871,7 @@
     if (preview.kind === "sceneryRock") drawSceneryRock(preview.item);
     if (preview.kind === "harvestFlower") drawHarvestFlower(preview.item);
     if (preview.kind === "house") drawHouse(preview.item);
+    if (preview.kind === "npc") drawNpc(preview.item);
     if (preview.kind === "enemySpawn") drawEnemySpawn(preview.item);
     if (preview.kind === "playerSpawn") drawPlayerSpawn(preview.item);
     if (preview.kind === "portal") drawPortal(preview.item);
@@ -997,6 +1113,28 @@
         collision: { width: HOUSE_COLLISION_WIDTH, height: HOUSE_COLLISION_HEIGHT }
       };
       draft.map.environment.houses.push(item);
+    } else if (
+      kind === "shopkeeperNpc" || kind === "hunterNpc" || kind === "jesterNpc" ||
+      kind === "craftingTableNpc" || kind === "classResetCrystalNpc"
+    ) {
+      selectionKind = "npc";
+      const type = kind === "hunterNpc"
+        ? "hunter"
+        : kind === "jesterNpc"
+          ? "jester"
+          : kind === "craftingTableNpc"
+            ? "craftingTable"
+            : kind === "classResetCrystalNpc"
+              ? "classResetCrystal"
+              : "shopkeeper";
+      item = {
+        id: nextId("npc"),
+        type,
+        x,
+        y,
+        interactionRadius: type === "classResetCrystal" ? 28 : 24
+      };
+      draft.map.npcs.push(item);
     } else if (kind === "enemySpawn") {
       selectionKind = "enemySpawn";
       item = {
@@ -1041,7 +1179,8 @@
     else if (descriptor.kind === "sceneryRock") copy.id = nextId("sceneryRock");
     else if (descriptor.kind === "harvestFlower") copy.id = nextId("flower");
     else if (descriptor.kind === "house") copy.id = nextId("house");
-    else if (descriptor.kind === "enemySpawn") copy.id = nextId("slime");
+    else if (descriptor.kind === "npc") copy.id = nextId("npc");
+    else if (descriptor.kind === "enemySpawn") copy.id = nextId(copy.type || "enemy");
     else if (descriptor.kind === "portal") copy.id = nextId("portal");
 
     copy.x = Number(copy.x) + 12;
@@ -1075,6 +1214,9 @@
       }
     }
     const before = captureState();
+    if (descriptor.kind === "playerSpawn" && draft.map.defaultPlayerSpawnId === descriptor.item.id) {
+      delete draft.map.defaultPlayerSpawnId;
+    }
     const index = descriptor.array.findIndex(item => item.id === descriptor.item.id);
     if (index < 0) return;
     descriptor.array.splice(index, 1);
@@ -1496,33 +1638,110 @@
       ]);
     }
 
-    if (descriptor.kind === "enemySpawn") {
-      addGroup("Enemy spawn", [
-        makePropertyRow("Variant", selectControl(descriptor.item.variant || "", [
-          { value: "", label: "Default slime" },
-          { value: "blue", label: "Blue slime" }
-        ], value => mutateSelected("Change enemy variant", item => {
-          if (value) item.variant = value;
-          else delete item.variant;
+    if (descriptor.kind === "npc") {
+      const roleNote = document.createElement("div");
+      roleNote.className = "property-readonly";
+      roleNote.textContent = descriptor.item.type === "jester"
+        ? "Jester is visual-only for now."
+        : descriptor.item.type === "hunter"
+          ? "Hunter uses the existing Hunter talk interaction."
+          : descriptor.item.type === "craftingTable"
+            ? "Crafting Table opens the existing crafting menu."
+            : descriptor.item.type === "classResetCrystal"
+              ? "Class Reset Crystal opens the class reset confirmation."
+              : "Shopkeeper uses the existing Axe tutorial/shop interaction.";
+      addGroup("NPC", [
+        makePropertyRow("Type", selectControl(descriptor.item.type || "shopkeeper", [
+          { value: "shopkeeper", label: "Shopkeeper" },
+          { value: "hunter", label: "Hunter" },
+          { value: "jester", label: "Jester" },
+          { value: "craftingTable", label: "Crafting Table" },
+          { value: "classResetCrystal", label: "Class Reset Crystal" }
+        ], value => mutateSelected("Change NPC type", item => {
+          item.type = value;
+          if (value === "classResetCrystal") item.interactionRadius = Math.max(8, Number(item.interactionRadius) || 28);
         }))),
-        makePropertyRow("Level", numberControl(descriptor.item.level ?? 1, value => mutateSelected("Change enemy level", item => { item.level = Math.max(1, Math.round(value)); }), { min: 1, max: 999 })),
-        (() => {
-          const grid = document.createElement("div");
-          grid.className = "property-grid";
-          grid.append(
-            makePropertyRow("Wander X", numberControl(descriptor.item.wanderRadiusX ?? 18, value => mutateSelected("Change wander radius X", item => { item.wanderRadiusX = Math.max(0, Math.round(value)); }), { min: 0, max: 500 })),
-            makePropertyRow("Wander Y", numberControl(descriptor.item.wanderRadiusY ?? 13, value => mutateSelected("Change wander radius Y", item => { item.wanderRadiusY = Math.max(0, Math.round(value)); }), { min: 0, max: 500 }))
-          );
-          return grid;
-        })()
+        makePropertyRow("Interact radius", numberControl(descriptor.item.interactionRadius ?? (descriptor.item.type === "classResetCrystal" ? 28 : 24), value => mutateSelected("Change NPC interaction radius", item => { item.interactionRadius = Math.max(8, Math.round(value)); }), { min: 8, max: 96 })),
+        roleNote
       ]);
+    }
+
+    if (descriptor.kind === "enemySpawn") {
+      const enemyType = descriptor.item.type || "slime";
+      const enemyFields = [
+        makePropertyRow("Species", selectControl(enemyType, [
+          { value: "slime", label: "Slime" },
+          { value: "mushroom", label: "Sleeping Mushroom" },
+          { value: "goblin", label: "Goblin" },
+          { value: "ghost", label: "Ghost" },
+          { value: "bigGoldSlime", label: "Big Gold Slime" }
+        ], value => mutateSelected("Change enemy species", item => {
+          item.type = value;
+
+          if (value === "slime") {
+            item.wanderRadiusX = Number.isFinite(Number(item.wanderRadiusX))
+              ? Number(item.wanderRadiusX)
+              : 18;
+            item.wanderRadiusY = Number.isFinite(Number(item.wanderRadiusY))
+              ? Number(item.wanderRadiusY)
+              : 13;
+          } else {
+            delete item.variant;
+            delete item.aggressiveOnSight;
+            delete item.wanderRadiusX;
+            delete item.wanderRadiusY;
+          }
+        }))),
+        makePropertyRow("Level", numberControl(descriptor.item.level ?? 1, value => mutateSelected("Change enemy level", item => { item.level = Math.max(1, Math.round(value)); }), { min: 1, max: 999 }))
+      ];
+
+      if (enemyType === "slime") {
+        enemyFields.splice(1, 0,
+          makePropertyRow("Variant", selectControl(descriptor.item.variant || "", [
+            { value: "", label: "Default slime" },
+            { value: "blue", label: "Blue slime" }
+          ], value => mutateSelected("Change enemy variant", item => {
+            if (value) item.variant = value;
+            else delete item.variant;
+          })))
+        );
+
+        const grid = document.createElement("div");
+        grid.className = "property-grid";
+        grid.append(
+          makePropertyRow("Wander X", numberControl(descriptor.item.wanderRadiusX ?? 18, value => mutateSelected("Change wander radius X", item => { item.wanderRadiusX = Math.max(0, Math.round(value)); }), { min: 0, max: 500 })),
+          makePropertyRow("Wander Y", numberControl(descriptor.item.wanderRadiusY ?? 13, value => mutateSelected("Change wander radius Y", item => { item.wanderRadiusY = Math.max(0, Math.round(value)); }), { min: 0, max: 500 }))
+        );
+        enemyFields.push(grid);
+      } else if (enemyType === "mushroom") {
+        const behaviorNote = document.createElement("div");
+        behaviorNote.className = "property-readonly";
+        behaviorNote.textContent = "Sleeps at its spawn until provoked, then wakes and chases.";
+        enemyFields.push(behaviorNote);
+      }
+
+      addGroup("Enemy spawn", enemyFields);
     }
 
     if (descriptor.kind === "playerSpawn") {
       const readonly = document.createElement("div");
       readonly.className = "property-readonly";
       readonly.textContent = descriptor.item.id;
-      addGroup("Player spawn", [makePropertyRow("Spawn ID", readonly)]);
+      const loadToggle = checkboxControl(
+        "Use as default loading position",
+        draft.map.defaultPlayerSpawnId === descriptor.item.id,
+        checked => {
+          const before = captureState();
+          if (checked) draft.map.defaultPlayerSpawnId = descriptor.item.id;
+          else if (draft.map.defaultPlayerSpawnId === descriptor.item.id) delete draft.map.defaultPlayerSpawnId;
+          pushHistory("Change default player load position", before);
+          updateInspector();
+        }
+      );
+      const note = document.createElement("div");
+      note.className = "property-readonly";
+      note.textContent = "This becomes the game's global loading position, including which map opens on a new/reloaded session. Portal targets and death respawn behavior remain separate.";
+      addGroup("Player spawn", [makePropertyRow("Spawn ID", readonly), loadToggle, note]);
     }
 
     if (descriptor.kind === "portal") {
@@ -1590,6 +1809,11 @@
         sceneryRock: "SCENERY ROCK",
         harvestFlower: "HARVEST FLOWER",
         house: "HOUSE",
+        shopkeeperNpc: "SHOPKEEPER NPC",
+        hunterNpc: "HUNTER NPC",
+        jesterNpc: "JESTER NPC",
+        craftingTableNpc: "CRAFTING TABLE",
+        classResetCrystalNpc: "CLASS RESET CRYSTAL",
         enemySpawn: "ENEMY SPAWN",
         playerSpawn: "PLAYER SPAWN",
         portal: "PORTAL"

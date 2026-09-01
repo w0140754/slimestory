@@ -96,6 +96,9 @@ const sprite = {
   arcanistRightLeg: loadImage("assets/arcanist_rightleg_v1.png")
 };
 
+const woodRingImage = loadImage("assets/wood_ring_v3.png");
+const emptyCharmImage = loadImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADElEQVR4nGNgYGAAAAAEAAGjChXjAAAAAElFTkSuQmCC");
+
 // Inventory/equipment previews combine the actual layered armor pieces so
 // shirts read as torso + both sleeves and pants show both legs.
 const armorPreviewImages = Object.freeze({
@@ -158,7 +161,7 @@ const AXE_PIVOT_Y = 7;
 
 // Temporary 16x16 pickaxe art so Mining is testable immediately. This is a
 // normal asset file and can be replaced later without changing any code.
-const pickaxeImage = loadImage("assets/pickaxe_v4.png");
+const pickaxeImage = loadImage("assets/pickaxe_v6.png");
 const PICKAXE_PIVOT_X = 2;
 const PICKAXE_PIVOT_Y = 7;
 const PICKAXE_HOLD_OFFSET_Y = 1;
@@ -169,6 +172,7 @@ tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCA
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
 const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
+const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
 
@@ -185,6 +189,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=336");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -198,17 +203,15 @@ const WAND_PIVOT_X = 2;
 const WAND_PIVOT_Y = 7;
 const WAND_HOLD_OFFSET_Y = 2;
 
-// Wand-only basic attack timing experiment. Keep the visible gesture deliberate
-// without making the tiny sprite crawl through interpolated rotations. The
-// strike itself lands when the animation snaps out of the short wind-up.
+// Shared non-bow basic-attack timing. Every sword/tool/wand now uses the same
+// wind-up -> impact -> follow-through lifecycle; bows intentionally keep their
+// separate draw/release + close-range bow-smack controls. Wands retain their
+// slightly longer deliberate gesture and exact historical impact timing.
 const DEFAULT_BASIC_ATTACK_DURATION = 0.30;
 const WAND_BASIC_ATTACK_DURATION = 0.42;
 const WAND_BASIC_ATTACK_FALLBACK_COOLDOWN = 0.83;
 const WAND_BASIC_ATTACK_IMPACT_DELAY = 0.09;
-// Plant the player for the full visible wand gesture. This gates voluntary
-// movement only; held keys and held primary attack remain live underneath.
-// Reference the animation duration directly so the lock cannot drift from it.
-const WAND_BASIC_ATTACK_MOVEMENT_LOCK = WAND_BASIC_ATTACK_DURATION;
+const MELEE_BASIC_ATTACK_IMPACT_PHASE = 0.34;
 
 // Feed the hotbar DOM with the same weapon art.
 
@@ -238,9 +241,9 @@ const remoteJesterClones = [];
 let mouseCanvasX = VIEW_W / 2;
 let mouseCanvasY = VIEW_H / 2;
 let primaryAttackHeld = false;
-let pendingWandBasicAttack = null;
-const JESTER_BLINK_RANGE = 34;
-const JESTER_CLONE_DURATION = 5.8;
+let pendingBasicAttack = null;
+const JESTER_BLINK_RANGE = 40;
+const JESTER_CLONE_DURATION = 2.0;
 const JESTER_CLONE_CONTACT_RADIUS = 8.5;
 const JESTER_RETURN_LOCKOUT_SECONDS = 0.35;
 
@@ -480,7 +483,7 @@ function removeClosestRemoteProjectile(
 
 
 
-const WAND_WEAPON_TYPES = Object.freeze(["wand", "rainWand", "shepherdStaff", "lostKeyWand", "sunflowerWand"]);
+const WAND_WEAPON_TYPES = Object.freeze(["wand", "rainWand", "shepherdStaff", "lostKeyWand", "sunflowerWand", "sapgemWand"]);
 
 
 
@@ -1040,8 +1043,17 @@ const {
   woodImage,
   makeFlowerIcon,
   flowerImage,
+  blueFlowerImage,
+  healingPotionImage,
+  attackPotionImage,
+  magicPotionImage,
   makeSlime,
   slimes,
+  mushroomSleepImage,
+  mushroomAwakeImage,
+  mushroomFlashImage,
+  makeMushroom,
+  updateMushrooms,
   bigGoldSlimeImage,
   bigGoldSlimeBubbleImage,
   bigGoldSlimeFlashImage,
@@ -1116,6 +1128,7 @@ const sceneryRocks = [];
 
 const CLIENT_ENEMY_COLLECTIONS = {
   slime: "slimes",
+  mushroom: "mushrooms",
   goblin: "goblins",
   ghost: "ghosts",
   bigGoldSlime: "bigGoldSlimes"
@@ -1135,6 +1148,15 @@ const CLIENT_ENEMY_FACTORIES = {
         aggressiveOnSight: Boolean(spawn.aggressiveOnSight),
         startsDormant: false
       }
+    );
+  },
+
+  mushroom(spawn) {
+    return makeMushroom(
+      spawn.x,
+      spawn.y,
+      spawn.phase || 0,
+      spawn.level ?? 1
     );
   },
 
@@ -1238,6 +1260,48 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
           state.aggressiveOnSight ??
           enemy.aggressiveOnSight
         );
+    }
+  }),
+
+  mushroom: Object.freeze({
+    bodyOffsetY: -7,
+    projectileHitRadius: 7,
+    lockRadiusX: 8,
+    lockRadiusY: 7,
+    meleeBodyRadius: 5,
+    horizontalMeleeBodyRadius: 6,
+    rainRadiusInset: 3,
+    rainEffect: "none",
+    burnSpreadChance: 0.42,
+    burnGlowOffsetY: -8,
+    burnGlowRadius: 9,
+    burnGlowAlpha: 0.12,
+    damageTextOffsetY: -25,
+    respawnSeconds: 30,
+    expAward: 1,
+    hurlable: true,
+    draw: drawMushroom,
+    update: updateMushrooms,
+    updatePriority: 25,
+    drawSortY(enemy) {
+      if (
+        enemy.carriedBy &&
+        typeof onlineClient !== "undefined"
+      ) {
+        const carrier =
+          onlineClient.playerForNetworkId(
+            enemy.carriedBy
+          );
+
+        if (carrier) {
+          return carrier.y + 0.25;
+        }
+      }
+
+      return enemy.y;
+    },
+    canFocusFire(enemy) {
+      return !enemy.carriedBy;
     }
   }),
 
@@ -2017,7 +2081,7 @@ function removeLocalCasterEffectsOnDeath() {
   endLocalRainCloud({ startCooldown: true });
 
   clearTemporaryRainGrass();
-  endLocalHallucination({ burst: false, startCooldown: true });
+  endLocalHallucination({ burst: false, startCooldown: false });
   player.bowDrawing = false;
   player.bowDrawAmount = 0;
   player.bowReleaseTime = 0;
@@ -2126,7 +2190,7 @@ function clearTransientWorldEffects() {
   }
   clearTemporaryRainGrass();
   shadowSmokeParticles.length = 0;
-  endLocalHallucination({ burst: false, startCooldown: true });
+  endLocalHallucination({ burst: false, startCooldown: false });
   remoteJesterClones.length = 0;
   jesterConfetti.length = 0;
   levelUpParticles.length = 0;
@@ -2143,6 +2207,7 @@ function clearTransientWorldEffects() {
 
   damageNumbers.length = 0;
   floatingTexts.length = 0;
+  potionUseEffects.length = 0;
 }
 
 let pendingMapEnemySyncId = null;
@@ -2233,6 +2298,35 @@ function sharedPlayerSpawnPoint(mapId, spawnId) {
   if (!Array.isArray(spawns)) return null;
 
   return spawns.find(spawn => spawn?.id === spawnId) || null;
+}
+
+function sharedDefaultPlayerSpawnId(mapId) {
+  const map = WORLD_CONTENT?.maps?.[mapId];
+  const spawnId = typeof map?.defaultPlayerSpawnId === "string" ? map.defaultPlayerSpawnId : "";
+  return sharedPlayerSpawnPoint(mapId, spawnId) ? spawnId : "center";
+}
+
+function sharedDefaultPlayerLoadTarget() {
+  const configured = WORLD_CONTENT?.defaultPlayerLoad;
+  if (
+    configured &&
+    typeof configured.mapId === "string" &&
+    typeof configured.spawnId === "string" &&
+    mapStates[configured.mapId] &&
+    sharedPlayerSpawnPoint(configured.mapId, configured.spawnId)
+  ) {
+    return { mapId: configured.mapId, spawnId: configured.spawnId };
+  }
+
+  // Compatibility with the short-lived v329 per-map marker shape.
+  for (const mapId of Object.keys(WORLD_CONTENT?.maps || {})) {
+    const spawnId = sharedDefaultPlayerSpawnId(mapId);
+    if (spawnId !== "center" && sharedPlayerSpawnPoint(mapId, spawnId)) {
+      return { mapId, spawnId };
+    }
+  }
+
+  return { mapId: "spawn", spawnId: "center" };
 }
 
 function requestMapTransition(mapId, entrySide) {
@@ -2958,6 +3052,125 @@ function showMenuFeedback(text, color = "#fff2b5", duration = 0.9) {
   }, Math.max(350, Number(duration) * 1000));
 }
 
+const potionUseEffects = [];
+
+const POTION_USE_EFFECT_STYLES = Object.freeze({
+  healingPotion: Object.freeze({
+    colors: Object.freeze(["#ffd8e7", "#ff8eb5"]),
+    sparkMode: "cross",
+    rise: 8
+  }),
+  attackPotion: Object.freeze({
+    colors: Object.freeze(["#ffe090", "#e87533"]),
+    sparkMode: "up",
+    rise: 10
+  }),
+  magicPotion: Object.freeze({
+    colors: Object.freeze(["#b9d7ff", "#9a7cff"]),
+    sparkMode: "arcane",
+    rise: 9
+  })
+});
+
+function spawnPotionUseEffect(itemId, x, y) {
+  const style = POTION_USE_EFFECT_STYLES[itemId];
+  if (!style) return;
+  potionUseEffects.push({
+    itemId,
+    x: Number(x) || 0,
+    y: Number(y) || 0,
+    life: 0.78,
+    duration: 0.78,
+    sparkSeeds: [
+      { x: -7, y: -2, delay: 0.03 },
+      { x: 7, y: 0, delay: 0.11 },
+      { x: -4, y: 6, delay: 0.20 },
+      { x: 5, y: 7, delay: 0.28 }
+    ]
+  });
+}
+
+function spawnHealingPotionEffect(x, y) {
+  spawnPotionUseEffect("healingPotion", x, y);
+}
+
+function triggerPotionFeedback(itemId, x = player.x, y = player.y) {
+  spawnPotionUseEffect(itemId, x, y);
+  if (itemId !== "healingPotion") return;
+  const wrap = document.getElementById("hpBarWrap");
+  if (!wrap) return;
+  wrap.classList.remove("healing-pulse");
+  void wrap.offsetWidth;
+  wrap.classList.add("healing-pulse");
+  window.setTimeout(() => wrap.classList.remove("healing-pulse"), 700);
+}
+
+function triggerHealingPotionFeedback(x = player.x, y = player.y) {
+  triggerPotionFeedback("healingPotion", x, y);
+}
+
+function updatePotionUseEffects(dt) {
+  for (let i = potionUseEffects.length - 1; i >= 0; i--) {
+    potionUseEffects[i].life -= dt;
+    if (potionUseEffects[i].life <= 0) potionUseEffects.splice(i, 1);
+  }
+}
+
+function drawPotionUseEffects(camX, camY) {
+  for (const effect of potionUseEffects) {
+    const style = POTION_USE_EFFECT_STYLES[effect.itemId] || POTION_USE_EFFECT_STYLES.healingPotion;
+    const potionImage = potionImageForItem(effect.itemId);
+    const progress = Math.max(0, Math.min(1, 1 - effect.life / effect.duration));
+    const fade = Math.max(0, Math.min(1, effect.life / 0.22));
+    const pop = 1 + Math.sin(Math.min(1, progress / 0.55) * Math.PI) * 0.24;
+    const bottleSize = Math.max(12, Math.round(14 * pop));
+    const bottleX = Math.round(effect.x - camX - bottleSize / 2);
+    const bottleY = Math.round(effect.y - camY - 31 - progress * style.rise - bottleSize / 2);
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = fade;
+    if (potionImage?.complete) {
+      ctx.drawImage(potionImage, bottleX, bottleY, bottleSize, bottleSize);
+    }
+
+    for (let i = 0; i < effect.sparkSeeds.length; i++) {
+      const seed = effect.sparkSeeds[i];
+      const local = Math.max(0, (progress - seed.delay) / Math.max(0.01, 1 - seed.delay));
+      if (local <= 0 || local >= 1) continue;
+      const alpha = Math.sin(local * Math.PI) * fade;
+      let sx = effect.x - camX + seed.x * (1 + local * 0.55);
+      let sy = effect.y - camY - 20 + seed.y - local * 14;
+
+      if (style.sparkMode === "up") {
+        sx = effect.x - camX + seed.x * (0.7 + local * 0.25);
+        sy = effect.y - camY - 18 + Math.abs(seed.x) * 0.25 - local * (17 + i * 2);
+      } else if (style.sparkMode === "arcane") {
+        const angle = (i / effect.sparkSeeds.length) * Math.PI * 2 + local * Math.PI * 1.35;
+        const radius = 7 + local * 7;
+        sx = effect.x - camX + Math.cos(angle) * radius;
+        sy = effect.y - camY - 21 + Math.sin(angle) * radius * 0.55 - local * 8;
+      }
+
+      sx = Math.round(sx);
+      sy = Math.round(sy);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = style.colors[i % style.colors.length];
+      if (style.sparkMode === "up") {
+        ctx.fillRect(sx, sy - 3, 2, 6);
+        ctx.fillRect(sx - 1, sy - 1, 4, 2);
+      } else if (style.sparkMode === "arcane") {
+        ctx.fillRect(sx - 1, sy - 1, 3, 3);
+        if (i % 2 === 0) ctx.fillRect(sx, sy - 3, 1, 7);
+      } else {
+        ctx.fillRect(sx - 2, sy, 5, 1);
+        ctx.fillRect(sx, sy - 2, 1, 5);
+      }
+    }
+    ctx.restore();
+  }
+}
+
 const floatingTexts = [];
 
 function spawnFloatingText(
@@ -3080,8 +3293,7 @@ function spawnCoin(x, y, options = {}) {
     shared: Boolean(options.shared),
     entityId: options.entityId || null,
     mapId: options.mapId || currentMapId,
-    pickupRequestCooldown: 0,
-    sparkleTime: options.sparkle === false ? 0 : 0.38
+    pickupRequestCooldown: 0
   };
 
   coins.push(coin);
@@ -3092,10 +3304,6 @@ function updateCoins(dt) {
   for (let i = coins.length - 1; i >= 0; i--) {
     const coin = coins[i];
 
-    coin.sparkleTime = Math.max(
-      0,
-      (Number(coin.sparkleTime) || 0) - dt
-    );
 
     if (coin.shared) {
       coin.pickupRequestCooldown = Math.max(
@@ -3146,37 +3354,6 @@ function collectCoins() {
     player.coins += 1;
     spawnLootPickupAnimation("coin", coin.x, coin.y);
     coins.splice(i, 1);
-  }
-}
-
-function drawCoinDropSparkles(coin, centerX, centerY) {
-  const t = Math.max(0, Math.min(0.38, Number(coin.sparkleTime) || 0));
-  if (t <= 0) return;
-
-  const age = 0.38 - t;
-  const phase = Math.floor(age * 18);
-
-  // Tiny glints that stay tight to the 16x16 coin instead of exploding outward.
-  const glints = phase % 2 === 0
-    ? [
-        { x: centerX + 4, y: centerY - 4, bright: true },
-        { x: centerX - 4, y: centerY + 3, bright: false }
-      ]
-    : [
-        { x: centerX - 3, y: centerY - 4, bright: true },
-        { x: centerX + 4, y: centerY + 2, bright: false }
-      ];
-
-  for (const glint of glints) {
-    ctx.fillStyle = glint.bright ? "#fff7bd" : "#ffd85e";
-    ctx.fillRect(glint.x, glint.y, 1, 1);
-
-    if (glint.bright) {
-      ctx.fillRect(glint.x - 1, glint.y, 1, 1);
-      ctx.fillRect(glint.x + 1, glint.y, 1, 1);
-      ctx.fillRect(glint.x, glint.y - 1, 1, 1);
-      ctx.fillRect(glint.x, glint.y + 1, 1, 1);
-    }
   }
 }
 
@@ -3418,12 +3595,13 @@ const player = {
   hatIndex: -1,   // -1 none/base, 0 Hat, 1 Blue Cap, 2 Wizard, 3 Jester, 4 Ninja, 5 Knight, 6 Bandana, 7 Ranger, 8 Wood Helm, 9 Arcanist Hat
   shirtIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger, 5 Wood Chest, 6 Arcanist Robe
   pantsIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger, 5 Wood Greaves, 6 Arcanist Skirt
+  charmIndex: -1, // -1 none, 0 Wood Ring
   walkTime: 0,
   wasMoving: false,
   firstRaisedLeg: "left",
 
   // Equipped tool / attack state.
-  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe
+  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe, 12 Sapgem Wand
 
   // Bow draw/release state, including close-range bow melee fallback.
   bowDrawing: false,
@@ -3485,11 +3663,11 @@ const player = {
     rainCloud: 0
   },
 
-  // Rain Cloud is a short committed cast. Its destination is snapshotted
-  // when the cast begins and cannot be retargeted during the half-second summon.
+  // Rain Cloud is a committed cast whose duration scales with skill level.
+  // Its destination is snapshotted when the cast begins and cannot be retargeted.
   rainCloudCasting: false,
   rainCloudCastTime: 0,
-  rainCloudCastDuration: 0.50,
+  rainCloudCastDuration: 2.00,
   rainCloudCastMapId: null,
   rainCloudCastTargetX: null,
   rainCloudCastTargetY: null,
@@ -3512,7 +3690,7 @@ const player = {
   attackTime: 0,
   attackDuration: DEFAULT_BASIC_ATTACK_DURATION,
   attackCooldown: 0,
-  wandMovementLockTime: 0,
+  basicAttackMovementLockTime: 0,
   attackCooldownDuration: 0.60,
   attackAimAngle: 0,
   attackDirection: "left",
@@ -3575,7 +3753,16 @@ const player = {
   coins: 0,
   wood: 0,
   stone: 0,
-  flowers: 0,
+  whiteFlowers: 0,
+  blueFlowers: 0,
+  healingPotions: 0,
+  attackPotions: 0,
+  magicPotions: 0,
+  consumableCooldownUntil: 0, // shared healing-potion-family cooldown
+  attackPotionCooldownUntil: 0,
+  magicPotionCooldownUntil: 0,
+  attackPotionUntil: 0,
+  magicPotionUntil: 0,
   goldSlimeBubbles: 0,
   arrows: 0,
 
@@ -3596,6 +3783,16 @@ const player = {
     null
   ],
 
+  // Player-arranged consumable/item hotkeys (physical keys 1-3).
+  // Slots intentionally start empty and are assigned by dragging consumables
+  // from Inventory into the contextual Items rail.
+  utilityHotbarAssignments: [
+    null,
+    null,
+    null
+  ],
+  utilityHotbarCustomized: false,
+
   // Tiny first-progression quest state. Persistent storage comes later;
   // for now these flags live for the current browser session.
   story: {
@@ -3605,7 +3802,8 @@ const player = {
     shepherdStaffCrafted: false,
     woodHelmCrafted: false,
     woodChestCrafted: false,
-    woodGreavesCrafted: false
+    woodGreavesCrafted: false,
+    woodRingCrafted: false
   },
 
   benchCraftPending: null,
@@ -3661,7 +3859,9 @@ const player = {
 };
 
 const HOTBAR_SLOT_COUNT = 5;
-const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe"];
+const UTILITY_HOTBAR_SLOT_COUNT = 3;
+const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
+const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist"];
@@ -3678,7 +3878,8 @@ const WEAPON_ITEM_IDS = [
   "weapon_shepherdStaff",
   "weapon_lostKey",
   "weapon_hugeSunflower",
-  "weapon_pickaxe"
+  "weapon_pickaxe",
+  "weapon_sapgemWand"
 ];
 
 const HAT_ITEM_IDS = [
@@ -3714,11 +3915,16 @@ const PANTS_ITEM_IDS = [
   "pants_arcanist"
 ];
 
+const CHARM_ITEM_IDS = [
+  "charm_woodRing"
+];
+
 const ALL_EQUIPMENT_ITEM_IDS = new Set([
   ...WEAPON_ITEM_IDS,
   ...HAT_ITEM_IDS,
   ...SHIRT_ITEM_IDS,
-  ...PANTS_ITEM_IDS
+  ...PANTS_ITEM_IDS,
+  ...CHARM_ITEM_IDS
 ]);
 
 const CRAFT_RECIPES = Object.freeze({
@@ -3776,20 +3982,105 @@ const CRAFT_RECIPES = Object.freeze({
     storyKey: "woodGreavesCrafted",
     repeatable: false
   }),
+  woodRing: Object.freeze({
+    name: "Wood Ring",
+    itemId: "charm_woodRing",
+    equipType: "charm",
+    equipIndex: 0,
+    cost: 2,
+    storyKey: "woodRingCrafted",
+    repeatable: false
+  }),
   arrows: Object.freeze({
-    name: "5 Arrows",
+    name: "20 Arrows",
     resourceKey: "arrows",
-    outputCount: 5,
-    cost: 1,
+    outputCount: 20,
+    ingredients: Object.freeze({ wood: 5, stone: 1 }),
+    repeatable: true
+  }),
+  healingPotion: Object.freeze({
+    name: "Healing Potion",
+    resourceKey: "healingPotions",
+    outputCount: 1,
+    ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }),
+    repeatable: true
+  }),
+  attackPotion: Object.freeze({
+    name: "Attack Potion",
+    resourceKey: "attackPotions",
+    outputCount: 1,
+    ingredients: Object.freeze({ whiteFlowers: 2 }),
+    repeatable: true
+  }),
+  magicPotion: Object.freeze({
+    name: "Magic Potion",
+    resourceKey: "magicPotions",
+    outputCount: 1,
+    ingredients: Object.freeze({ blueFlowers: 2 }),
     repeatable: true
   })
 });
 
+function potionImageForItem(itemId) {
+  if (itemId === "healingPotion") return healingPotionImage;
+  if (itemId === "attackPotion") return attackPotionImage;
+  if (itemId === "magicPotion") return magicPotionImage;
+  return null;
+}
+
+function consumableCount(itemId) {
+  const key = { healingPotion: "healingPotions", attackPotion: "attackPotions", magicPotion: "magicPotions" }[itemId];
+  return key ? Math.max(0, Math.floor(Number(player[key]) || 0)) : 0;
+}
+
+const HEALING_POTION_COOLDOWN_MS = 15000;
+const BUFF_POTION_COOLDOWN_MS = 1000;
+const POTION_BUFF_MS = 300000;
+
+function consumableCooldownDurationMs(itemId) {
+  return itemId === "healingPotion" ? HEALING_POTION_COOLDOWN_MS : BUFF_POTION_COOLDOWN_MS;
+}
+
+function consumableCooldownUntil(itemId) {
+  if (itemId === "healingPotion") return Number(player.consumableCooldownUntil) || 0;
+  if (itemId === "attackPotion") return Number(player.attackPotionCooldownUntil) || 0;
+  if (itemId === "magicPotion") return Number(player.magicPotionCooldownUntil) || 0;
+  return 0;
+}
+
+function setLocalConsumableCooldown(itemId, now) {
+  if (itemId === "healingPotion") player.consumableCooldownUntil = now + HEALING_POTION_COOLDOWN_MS;
+  if (itemId === "attackPotion") player.attackPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
+  if (itemId === "magicPotion") player.magicPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
+}
+
+function useConsumable(itemId) {
+  if (!UTILITY_SLOT_ITEMS.includes(itemId)) return false;
+  if (Date.now() < consumableCooldownUntil(itemId)) return false;
+  if (consumableCount(itemId) <= 0) return false;
+  if (itemId === "healingPotion" && player.hp >= player.maxHp) {
+    spawnFloatingText(player.x, player.y - 42, "HP FULL", "#f6c8df", 0.8);
+    return false;
+  }
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+    return onlineClient.requestConsumableUse(itemId);
+  }
+  const key = { healingPotion: "healingPotions", attackPotion: "attackPotions", magicPotion: "magicPotions" }[itemId];
+  player[key] -= 1;
+  const now = Date.now();
+  setLocalConsumableCooldown(itemId, now);
+  if (itemId === "healingPotion") player.hp = Math.min(player.maxHp, player.hp + 20);
+  if (itemId === "attackPotion") player.attackPotionUntil = now + POTION_BUFF_MS;
+  if (itemId === "magicPotion") player.magicPotionUntil = now + POTION_BUFF_MS;
+  triggerPotionFeedback(itemId, player.x, player.y);
+  updateInventoryUi();
+  updateHotbar();
+  return true;
+}
+
 const SHOP_ITEMS = [
   { id: "weapon_sword", name: "Wood Sword" },
   { id: "weapon_axe", name: "Axe" },
-  { id: "weapon_wand", name: "Fire Wand" },
-  { id: "weapon_rainWand", name: "Rain Wand" },
   { id: "weapon_katana", name: "Katana" },
   { id: "weapon_oldSword", name: "Sword" },
   { id: "weapon_bow", name: "Wood Bow" },
@@ -3797,6 +4088,7 @@ const SHOP_ITEMS = [
   { id: "weapon_shepherdStaff", name: "Shepherd Staff" },
   { id: "weapon_lostKey", name: "Tournesol" },
   { id: "weapon_hugeSunflower", name: "Tabatha's Key" },
+  { id: "weapon_sapgemWand", name: "Sapgem Wand" },
   { id: "weapon_pickaxe", name: "Pickaxe" },
 
   { id: "hat_original", name: "Hat" },
@@ -3864,6 +4156,15 @@ function shopImageForItemId(itemId) {
     );
   }
 
+  const charmIndex =
+    CHARM_ITEM_IDS.indexOf(itemId);
+
+  if (charmIndex >= 0) {
+    return charmImageForIndex(
+      charmIndex
+    );
+  }
+
   return null;
 }
 
@@ -3912,6 +4213,14 @@ function playerOwnsPantsIndex(index) {
   );
 }
 
+function playerOwnsCharmIndex(index) {
+  return (
+    index >= 0 &&
+    index < CHARM_ITEM_IDS.length &&
+    playerOwnsItem(CHARM_ITEM_IDS[index])
+  );
+}
+
 function weaponIndexForItemId(itemId) {
   return WEAPON_ITEM_IDS.indexOf(itemId);
 }
@@ -3923,6 +4232,90 @@ function weaponItemIdForIndex(index) {
   )
     ? WEAPON_ITEM_IDS[index]
     : null;
+}
+
+function isUtilityHotbarAssignableItem(itemId) {
+  return UTILITY_SLOT_ITEMS.includes(itemId);
+}
+
+function utilityHotbarItemCanBeAssigned(itemId) {
+  return Boolean(itemId && isUtilityHotbarAssignableItem(itemId));
+}
+
+function utilityHotbarSlotForItem(itemId) {
+  return Array.isArray(player.utilityHotbarAssignments)
+    ? player.utilityHotbarAssignments.indexOf(itemId)
+    : -1;
+}
+
+function sanitizeUtilityHotbarAssignments() {
+  const source = Array.isArray(player.utilityHotbarAssignments)
+    ? player.utilityHotbarAssignments
+    : [];
+  const seen = new Set();
+
+  player.utilityHotbarAssignments = Array.from(
+    { length: UTILITY_HOTBAR_SLOT_COUNT },
+    (_, index) => {
+      const itemId = source[index];
+      if (!isUtilityHotbarAssignableItem(itemId) || seen.has(itemId)) return null;
+      seen.add(itemId);
+      return itemId;
+    }
+  );
+}
+
+function assignUtilityItemToHotbar(itemId, slotIndex) {
+  if (
+    !utilityHotbarItemCanBeAssigned(itemId) ||
+    slotIndex < 0 ||
+    slotIndex >= UTILITY_HOTBAR_SLOT_COUNT
+  ) {
+    return false;
+  }
+
+  sanitizeUtilityHotbarAssignments();
+  const currentSlot = utilityHotbarSlotForItem(itemId);
+  if (currentSlot === slotIndex) return true;
+
+  const displacedItem = player.utilityHotbarAssignments[slotIndex] || null;
+  if (currentSlot >= 0) {
+    player.utilityHotbarAssignments[currentSlot] = displacedItem;
+  }
+  player.utilityHotbarAssignments[slotIndex] = itemId;
+  player.utilityHotbarCustomized = true;
+
+  updateHotbar();
+  updateInventoryUi();
+  return true;
+}
+
+function clearUtilityItemFromHotbar(itemId) {
+  sanitizeUtilityHotbarAssignments();
+  let changed = false;
+  for (let index = 0; index < UTILITY_HOTBAR_SLOT_COUNT; index++) {
+    if (player.utilityHotbarAssignments[index] === itemId) {
+      player.utilityHotbarAssignments[index] = null;
+      changed = true;
+    }
+  }
+  if (changed) {
+    player.utilityHotbarCustomized = true;
+    updateHotbar();
+    updateInventoryUi();
+  }
+  return changed;
+}
+
+function utilityItemDisplayName(itemId) {
+  if (itemId === "healingPotion") return "Healing Potion";
+  if (itemId === "attackPotion") return "Attack Potion";
+  if (itemId === "magicPotion") return "Magic Potion";
+  return itemId || "Item";
+}
+
+function hotkeyImageForItemId(itemId) {
+  return potionImageForItem(itemId) || shopImageForItemId(itemId);
 }
 
 function isHotbarAssignableItem(itemId) {
@@ -4142,6 +4535,15 @@ function distanceToPlayer(x, y) {
   );
 }
 
+function placedNpcDefinitionsForMap(mapId = currentMapId) {
+  const list =
+    typeof WORLD_CONTENT !== "undefined"
+      ? WORLD_CONTENT.maps?.[mapId]?.npcs
+      : null;
+
+  return Array.isArray(list) ? list : [];
+}
+
 function nearbySpawnInteraction() {
   const candidates = [];
 
@@ -4178,6 +4580,19 @@ function nearbySpawnInteraction() {
       y: hunterNpc.y,
       radius:
         hunterNpc.interactionRadius
+    });
+  }
+
+  for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
+    const type = npc?.type;
+    if (!["shopkeeper", "hunter", "craftingTable", "classResetCrystal"].includes(type)) continue;
+    candidates.push({
+      kind: "placedNpc",
+      npcType: type,
+      npc,
+      x: Number(npc.x) || 0,
+      y: Number(npc.y) || 0,
+      radius: Math.max(8, Number(npc.interactionRadius) || (type === "classResetCrystal" ? 28 : 24))
     });
   }
 
@@ -4260,7 +4675,8 @@ function showRewardToast(title, detail, imageObject) {
   }, 2800);
 }
 
-function interactWithTutorialNpc() {
+function interactWithTutorialNpc(npc = tutorialNpc) {
+  const sourceNpc = npc || tutorialNpc;
   if (!player.story.axeReceived) {
     player.story.axeReceived = true;
 
@@ -4278,8 +4694,8 @@ function interactWithTutorialNpc() {
     );
 
     spawnFloatingText(
-      tutorialNpc.x,
-      tutorialNpc.y - 34,
+      sourceNpc.x,
+      sourceNpc.y - 34,
       "BRING ME 5 WOOD",
       "#fff1b0",
       1.35
@@ -4295,7 +4711,8 @@ function interactWithTutorialNpc() {
   setShopOpen(true);
 }
 
-function interactWithHunterNpc() {
+function interactWithHunterNpc(npc = hunterNpc) {
+  const sourceNpc = npc || hunterNpc;
   showRewardToast(
     "Hunter",
     "Come talk to me when you're ready to become a real hunter.",
@@ -4303,8 +4720,8 @@ function interactWithHunterNpc() {
   );
 
   spawnFloatingText(
-    hunterNpc.x,
-    hunterNpc.y - 26,
+    sourceNpc.x,
+    sourceNpc.y - 26,
     "REAL HUNTER?",
     "#fff1b0",
     1.0
@@ -4322,6 +4739,8 @@ function equipCraftedRecipe(recipe) {
     player.shirtIndex = recipe.equipIndex;
   } else if (recipe.equipType === "pants") {
     player.pantsIndex = recipe.equipIndex;
+  } else if (recipe.equipType === "charm") {
+    player.charmIndex = recipe.equipIndex;
   }
 }
 
@@ -4349,7 +4768,11 @@ function craftRecipeOffline(recipeId) {
     return;
   }
 
-  if (player.wood < recipe.cost) {
+  const ingredients = recipe.ingredients || { wood: recipe.cost };
+  const hasIngredients = Object.entries(ingredients).every(
+    ([key, amount]) => (Number(player[key]) || 0) >= amount
+  );
+  if (!hasIngredients) {
     spawnFloatingText(
       woodCraftBench.x,
       woodCraftBench.y - 24,
@@ -4360,7 +4783,9 @@ function craftRecipeOffline(recipeId) {
     return;
   }
 
-  player.wood -= recipe.cost;
+  for (const [key, amount] of Object.entries(ingredients)) {
+    player[key] = Math.max(0, (Number(player[key]) || 0) - amount);
+  }
 
   if (recipe.resourceKey) {
     player[recipe.resourceKey] =
@@ -4409,7 +4834,11 @@ function tryCraftRecipe(recipeId) {
     return;
   }
 
-  if (player.wood < recipe.cost) {
+  const ingredients = recipe.ingredients || { wood: recipe.cost };
+  const hasIngredients = Object.entries(ingredients).every(
+    ([resourceKey, amount]) => (Number(player[resourceKey]) || 0) >= amount
+  );
+  if (!hasIngredients) {
     spawnFloatingText(
       woodCraftBench.x,
       woodCraftBench.y - 24,
@@ -4461,8 +4890,10 @@ function updateCraftingUi() {
     const anyPending =
       Boolean(player.benchCraftPending);
 
-    const hasIngredients =
-      player.wood >= recipe.cost;
+    const ingredients = recipe.ingredients || { wood: recipe.cost };
+    const hasIngredients = Object.entries(ingredients).every(
+      ([resourceKey, amount]) => (Number(player[resourceKey]) || 0) >= amount
+    );
 
     button.disabled =
       owned || anyPending || !hasIngredients;
@@ -4470,9 +4901,10 @@ function updateCraftingUi() {
     const image =
       button.querySelector("img");
 
-    const itemImage =
-      recipe.resourceKey === "arrows"
-        ? arrowResourceImage
+    const itemImage = recipe.resourceKey === "arrows"
+      ? arrowResourceImage
+      : recipe.resourceKey
+        ? potionImageForItem(recipeId)
         : shopImageForItemId(recipe.itemId);
 
     if (image && itemImage) {
@@ -4485,33 +4917,19 @@ function updateCraftingUi() {
       );
 
     if (cost) {
-      const value =
-        cost.querySelector(
-          ".craft-cost-value"
-        );
-
-      const check =
-        cost.querySelector(
-          ".craft-ingredient-check"
-        );
-
-      if (value) {
-        value.textContent =
-          `${recipe.cost}`;
-      }
-
-      if (check) {
-        check.textContent =
-          hasIngredients ? "✓" : "✕";
-        check.classList.toggle(
-          "have",
-          hasIngredients
-        );
-        check.classList.toggle(
-          "missing",
-          !hasIngredients
-        );
-      }
+      cost.querySelectorAll("[data-craft-ingredient]").forEach(row => {
+        const resourceKey = row.dataset.craftIngredient;
+        const amount = Number(ingredients[resourceKey]) || 0;
+        const enough = (Number(player[resourceKey]) || 0) >= amount;
+        const value = row.querySelector(".craft-cost-value");
+        const check = row.querySelector(".craft-ingredient-check");
+        if (value) value.textContent = `${amount}`;
+        if (check) {
+          check.textContent = enough ? "✓" : "✕";
+          check.classList.toggle("have", enough);
+          check.classList.toggle("missing", !enough);
+        }
+      });
     }
 
     const status =
@@ -4626,6 +5044,25 @@ function interactWithNearbyObject() {
     return true;
   }
 
+  if (interaction.kind === "placedNpc") {
+    if (interaction.npcType === "shopkeeper") {
+      interactWithTutorialNpc(interaction.npc);
+      return true;
+    }
+    if (interaction.npcType === "hunter") {
+      interactWithHunterNpc(interaction.npc);
+      return true;
+    }
+    if (interaction.npcType === "craftingTable") {
+      interactWithWoodBench();
+      return true;
+    }
+    if (interaction.npcType === "classResetCrystal") {
+      interactWithClassResetCrystal();
+      return true;
+    }
+  }
+
   if (interaction.kind === "bench") {
     interactWithWoodBench();
     return true;
@@ -4653,13 +5090,18 @@ const ACTIVE_SKILLS = {
     noEnhancements: true
   },
   jesterBlink: {
-    name: "Hallucination",
+    name: "Mirage",
     classId: "arcana",
-    maxLevel: 1,
-    noEnhancements: true
+    maxLevel: 20,
+    noEnhancements: true,
+    progressionMilestones: [
+      { level: 1, name: "30px Blink", effectText: "2.0s return window · 20.0s cooldown from cast." },
+      { level: 10, name: "44px Blink", effectText: "3.4s return window · 17.6s cooldown from cast." },
+      { level: 20, name: "60px Blink", effectText: "5.0s return window · 15.0s cooldown from cast." }
+    ]
   },
   wandMastery: {
-    name: "Wand Mastery",
+    name: "Spellshred",
     classId: "arcana",
     maxLevel: 20,
     passive: true,
@@ -4671,7 +5113,7 @@ const ACTIVE_SKILLS = {
     ]
   },
   fireball: {
-    name: "Fireball",
+    name: "Ignite",
     classId: "arcana",
     maxLevel: 20,
     cooldown: 3.5,
@@ -4737,16 +5179,15 @@ const ACTIVE_SKILLS = {
     ]
   },
   rainCloud: {
-    name: "Rain Cloud",
+    name: "Rainbloom",
     classId: "arcana",
-    maxLevel: 1,
-    cooldown: 15.0,
+    maxLevel: 20,
+    cooldown: 30.0,
     noEnhancements: true,
-    levelProgression: [
-      {
-        name: "Rain Cloud",
-        effectText: "Requires a wand-type weapon. Commit to a 0.5-second summon. Creates a growing Magic Grass field: enemies in the grass are slowed by 30%, players move through it freely, and the grass is highly flammable. Rain makes living enemies Wet (25% slow), damages ghosts, and extinguishes fire. After cloud expiry, 15-second cooldown."
-      }
+    progressionMilestones: [
+      { level: 1, name: "10% Grass Slow", effectText: "2.0s cast · Magic Grass lasts 30s per tuft · 30.0s cooldown after cloud expiry." },
+      { level: 10, name: "19% Grass Slow", effectText: "1.3s cast · Magic Grass lasts 30s per tuft · 25.3s cooldown after cloud expiry." },
+      { level: 20, name: "30% Grass Slow", effectText: "0.5s cast · Magic Grass lasts 30s per tuft · 20.0s cooldown after cloud expiry." }
     ]
   }
 };
@@ -4871,6 +5312,7 @@ const WEAPON_CLASS_REQUIREMENTS = Object.freeze({
   weapon_rainWand: "arcana",
   weapon_lostKey: "arcana",
   weapon_hugeSunflower: "arcana",
+  weapon_sapgemWand: "arcana",
   weapon_dreamcatcher: "precision",
   weapon_katana: "guile"
 });
@@ -4942,7 +5384,7 @@ function shopCategoryForItem(item) {
 
 function weaponTypeForShopItem(itemId) {
   if (["weapon_bow", "weapon_dreamcatcher"].includes(itemId)) return "Bow";
-  if (["weapon_wand", "weapon_rainWand", "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower"].includes(itemId)) return "Wand";
+  if (["weapon_wand", "weapon_rainWand", "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand"].includes(itemId)) return "Wand";
   if (itemId === "weapon_axe") return "Axe";
   if (itemId === "weapon_pickaxe") return "Pickaxe";
   if (itemId === "weapon_katana") return "Katana";
@@ -4961,6 +5403,9 @@ function armorValueForItemId(itemId, valueKey = "armorDefense") {
 
   const pantsIndex = PANTS_ITEM_IDS.indexOf(itemId);
   if (pantsIndex >= 0) return Number(COMBAT_BALANCE[valueKey]?.pants?.[pantsIndex]) || 0;
+
+  const charmIndex = CHARM_ITEM_IDS.indexOf(itemId);
+  if (charmIndex >= 0) return Number(COMBAT_BALANCE[valueKey]?.charms?.[charmIndex]) || 0;
 
   return 0;
 }
@@ -4985,12 +5430,16 @@ function armorSlotNameForItemId(itemId) {
   if (HAT_ITEM_IDS.includes(itemId)) return "Head Armor";
   if (SHIRT_ITEM_IDS.includes(itemId)) return "Torso Armor";
   if (PANTS_ITEM_IDS.includes(itemId)) return "Leg Armor";
+  if (CHARM_ITEM_IDS.includes(itemId)) return "Charm";
   return null;
 }
 
 function itemDisplayNameForId(itemId) {
+  if (itemId === "charm_woodRing") return "Wood Ring";
   const shopItem = SHOP_ITEMS.find(item => item.id === itemId);
   if (shopItem?.name) return shopItem.name;
+  const craftRecipe = Object.values(CRAFT_RECIPES).find(recipe => recipe?.itemId === itemId);
+  if (craftRecipe?.name) return craftRecipe.name;
   const profile = weaponCombatProfileForItemId(itemId);
   return profile?.name || itemId;
 }
@@ -5016,10 +5465,16 @@ function itemDetailData(itemId) {
     if ((Number(weaponProfile.magicPower) || 0) > 0) {
       rows.push(["Magic Power", `${weaponProfile.magicPower}`]);
     }
-    if (COMBAT_BALANCE.isWandWeaponIndex?.(WEAPON_ITEM_IDS.indexOf(itemId))) {
-      const speedLabel = typeof COMBAT_BALANCE.wandAttackSpeedLabel === "function"
-        ? COMBAT_BALANCE.wandAttackSpeedLabel(WEAPON_ITEM_IDS.indexOf(itemId))
-        : "Slow";
+    const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
+    const isBowWeapon = typeof COMBAT_BALANCE.isBowWeaponIndex === "function"
+      ? COMBAT_BALANCE.isBowWeaponIndex(weaponIndex)
+      : weaponIndex === 6 || weaponIndex === 7;
+    if (!isBowWeapon) {
+      const speedLabel = typeof COMBAT_BALANCE.weaponAttackSpeedLabel === "function"
+        ? COMBAT_BALANCE.weaponAttackSpeedLabel(weaponIndex)
+        : typeof COMBAT_BALANCE.wandAttackSpeedLabel === "function" && COMBAT_BALANCE.isWandWeaponIndex?.(weaponIndex)
+          ? COMBAT_BALANCE.wandAttackSpeedLabel(weaponIndex)
+          : "Normal";
       rows.push(["Attack Speed", speedLabel]);
     }
     rows.push(["Class", classLabel]);
@@ -5354,6 +5809,10 @@ function upgradeAbility(skillId) {
 
   updateInventoryUi();
 
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+    onlineClient.sendLocalState(true);
+  }
+
   // Spending a point while the card is already hovered should update the
   // visible tooltip immediately. Previously the tooltip contents were only
   // rebuilt on mouse-enter, so the player had to move off the card and back.
@@ -5661,7 +6120,24 @@ function skillLevelEffectText(skillId, level) {
   ) {
     const power = COMBAT_BALANCE.abilityPowerAtLevel(skillId, cleanLevel);
     const cooldown = fireballCooldownAtLevel(cleanLevel);
-    return `${power} Power. Burn: 20 Power/sec for 3s (2 ticks/sec). ${cooldown.toFixed(1)}s cooldown.`;
+    return `${power} Power · Fire element. Burn: 20 Power/sec for 3s (2 ticks/sec). ${cooldown.toFixed(1)}s cooldown.`;
+  }
+
+  if (skillId === "rainCloud" && typeof ABILITY_SCALING !== "undefined") {
+    const slowPercent = ABILITY_SCALING.rainCloudGrassSlowPercentAtLevel(cleanLevel);
+    const cooldown = ABILITY_SCALING.rainCloudCooldownAtLevel(cleanLevel);
+    const castTime = typeof ABILITY_SCALING.rainCloudCastTimeAtLevel === "function"
+      ? ABILITY_SCALING.rainCloudCastTimeAtLevel(cleanLevel)
+      : 0.5;
+    const grassLifetime = typeof RAIN_FIELD !== "undefined" ? RAIN_FIELD.CELL_LIFETIME : 30;
+    return `${Math.round(slowPercent)}% Magic Grass slow. ${castTime.toFixed(1)}s cast. ${grassLifetime.toFixed(0)}s grass duration per tuft. ${cooldown.toFixed(1)}s cooldown after cloud expiry.`;
+  }
+
+  if (skillId === "jesterBlink" && typeof ABILITY_SCALING !== "undefined") {
+    const blinkRange = ABILITY_SCALING.hallucinationBlinkRangeAtLevel(cleanLevel);
+    const decoyDuration = ABILITY_SCALING.hallucinationDecoyDurationAtLevel(cleanLevel);
+    const cooldown = ABILITY_SCALING.hallucinationCooldownAtLevel(cleanLevel);
+    return `${Math.round(blinkRange)}px blink. ${decoyDuration.toFixed(1)}s return window. ${cooldown.toFixed(1)}s cooldown from cast.`;
   }
 
   if (
@@ -6083,6 +6559,85 @@ function updateAbilityTreeUi() {
   });
 }
 
+function updateAbilityCooldownHud() {
+  const slotIds = {
+    shift: { hud: "abilitySlotShift" },
+    space: { hud: "abilitySlotSpace" },
+    e: { hud: "abilitySlotE" },
+    r: { hud: "abilitySlotR" }
+  };
+
+  for (const [key, targets] of Object.entries(slotIds)) {
+    const boundSkill = skillBindings[key];
+    const validSkill =
+      boundSkill && isAbilityUnlocked(boundSkill)
+        ? boundSkill
+        : null;
+    const hudSlot = document.getElementById(targets.hud);
+    if (!hudSlot) continue;
+
+    const cooldownRemaining = validSkill
+      ? skillCooldownRemaining(validSkill)
+      : 0;
+    const cooldownDuration = validSkill
+      ? skillCooldownDuration(validSkill)
+      : 0;
+
+    // Hallucination has two simultaneous clocks after the first blink:
+    // the short clone-return window and the longer cooldown that already began
+    // on cast. While the clone exists, surface the return window in the hotbar.
+    // As soon as it is consumed/expires, reveal the already-elapsed cooldown.
+    let displayRemaining = cooldownRemaining;
+    let displayDuration = cooldownDuration;
+    let displayKind = "cooldown";
+    if (validSkill === "jesterBlink" && jesterClone?.mapId === currentMapId) {
+      const cloneDuration = Math.max(0, Number(jesterClone.duration) || 0);
+      const cloneRemaining = Number.isFinite(Number(jesterClone.expiresAtMs))
+        ? Math.max(0, (Number(jesterClone.expiresAtMs) - Date.now()) / 1000)
+        : Math.max(0, Number(jesterClone.life) || 0);
+      if (cloneRemaining > 0 && cloneDuration > 0) {
+        displayRemaining = cloneRemaining;
+        displayDuration = cloneDuration;
+        displayKind = "return";
+      }
+    }
+
+    const showingTimer = displayRemaining > 0 && displayDuration > 0;
+    const coolingDown = displayKind === "cooldown" && showingTimer;
+    const returnWindow = displayKind === "return" && showingTimer;
+    const cooldownMask = hudSlot.querySelector(".ability-cooldown-mask");
+    const cooldownText = hudSlot.querySelector(".ability-cooldown-text");
+
+    hudSlot.classList.toggle("cooling-down", coolingDown);
+    hudSlot.classList.toggle("return-window", returnWindow);
+
+    if (cooldownMask) {
+      const fraction = showingTimer
+        ? Math.max(0, Math.min(1, displayRemaining / displayDuration))
+        : 0;
+      cooldownMask.style.height = `${Math.round(fraction * 100)}%`;
+    }
+
+    if (cooldownText) {
+      cooldownText.style.display = showingTimer ? "flex" : "none";
+      cooldownText.textContent = showingTimer
+        ? (displayRemaining >= 10
+            ? String(Math.ceil(displayRemaining))
+            : displayRemaining.toFixed(1))
+        : "";
+    }
+
+    const label = hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase();
+    hudSlot.title = validSkill
+      ? `${label}: ${skillDisplayName(validSkill)}${returnWindow
+          ? ` · ${displayRemaining.toFixed(1)}s return window`
+          : coolingDown
+            ? ` · ${displayRemaining.toFixed(1)}s cooldown`
+            : ""}`
+      : `${label}: Empty`;
+  }
+}
+
 function updateSkillBindingUi() {
   const slotIds = {
     shift: { text: "skillSlotShift", icon: "skillSlotShiftIcon", hud: "abilitySlotShift" },
@@ -6162,40 +6717,10 @@ function updateSkillBindingUi() {
         }
       }
 
-      const cooldownRemaining = validSkill
-        ? skillCooldownRemaining(validSkill)
-        : 0;
-      const cooldownDuration = validSkill
-        ? skillCooldownDuration(validSkill)
-        : 0;
-      const coolingDown = cooldownRemaining > 0 && cooldownDuration > 0;
-      const cooldownMask = hudSlot.querySelector(".ability-cooldown-mask");
-      const cooldownText = hudSlot.querySelector(".ability-cooldown-text");
-
-      hudSlot.classList.toggle("cooling-down", coolingDown);
-
-      if (cooldownMask) {
-        const fraction = coolingDown
-          ? Math.max(0, Math.min(1, cooldownRemaining / cooldownDuration))
-          : 0;
-        cooldownMask.style.height = `${Math.round(fraction * 100)}%`;
-      }
-
-      if (cooldownText) {
-        cooldownText.style.display = coolingDown ? "flex" : "none";
-        cooldownText.textContent = coolingDown
-          ? (cooldownRemaining >= 10
-              ? String(Math.ceil(cooldownRemaining))
-              : cooldownRemaining.toFixed(1))
-          : "";
-      }
-
-      hudSlot.title = validSkill
-        ? `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: ${skillDisplayName(validSkill)}${coolingDown ? ` · ${cooldownRemaining.toFixed(1)}s cooldown` : ""}`
-        : `${hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase()}: Empty`;
     }
   }
 
+  updateAbilityCooldownHud();
   updateHunterSnareChargeUi();
 
   document.querySelectorAll(".skill-bind-button").forEach(button => {
@@ -6291,7 +6816,7 @@ function awardExp(amount) {
     player.exp -= player.expToNext;
     player.level += 1;
     player.skillPoints += 5;
-    player.abilityPoints += 1;
+    player.abilityPoints += 3;
     player.expToNext = expNeededForLevel(player.level);
     levelsGained += 1;
   }
@@ -6554,7 +7079,7 @@ function updateMenuItemHotkeyRail() {
         image.alt = SHOP_ITEMS.find(item => item.id === itemId)?.name || itemId;
       }
       if (name) name.textContent = SHOP_ITEMS.find(item => item.id === itemId)?.name || itemId;
-      slot.title = `${name?.textContent || itemId} · drag to move/swap · right-click to clear`;
+      slot.title = `${name?.textContent || itemId} · key ${slotIndex + 4} · drag to move/swap · right-click to clear`;
     } else {
       if (image) {
         image.removeAttribute("src");
@@ -6562,6 +7087,39 @@ function updateMenuItemHotkeyRail() {
       }
       if (name) name.textContent = "Empty";
       slot.title = "Drop an inventory item here";
+    }
+  });
+}
+
+function updateMenuUtilityHotkeyRail() {
+  sanitizeUtilityHotbarAssignments();
+
+  document.querySelectorAll("[data-menu-utility-slot]").forEach(slot => {
+    const slotIndex = Number(slot.dataset.menuUtilitySlot);
+    const itemId = player.utilityHotbarAssignments?.[slotIndex] || null;
+    const valid = Boolean(itemId && utilityHotbarItemCanBeAssigned(itemId));
+    const image = slot.querySelector("img");
+    const name = slot.querySelector(".menu-hotkey-item-name");
+
+    slot.classList.toggle("empty", !valid);
+    slot.classList.toggle("active", valid && consumableCount(itemId) > 0);
+    slot.draggable = valid;
+
+    if (valid) {
+      const itemImage = potionImageForItem(itemId);
+      if (image && itemImage) {
+        image.src = itemImage.src;
+        image.alt = utilityItemDisplayName(itemId);
+      }
+      if (name) name.textContent = utilityItemDisplayName(itemId);
+      slot.title = `${utilityItemDisplayName(itemId)} · key ${slotIndex + 1} · drag to move/swap · right-click to clear`;
+    } else {
+      if (image) {
+        image.removeAttribute("src");
+        image.alt = "";
+      }
+      if (name) name.textContent = "Empty";
+      slot.title = "Drop a consumable here";
     }
   });
 }
@@ -6581,7 +7139,7 @@ function updateHotbar() {
   ) {
     const slot =
       document.getElementById(
-        `slot${slotIndex + 1}`
+        `slot${slotIndex + 4}`
       );
 
     if (!slot) continue;
@@ -6626,11 +7184,14 @@ function updateHotbar() {
 
         image.style.visibility =
           "visible";
+
+        slot.title = `${shopItem?.name || itemId} · key ${slotIndex + 4} · click to equip`;
       } else {
         image.removeAttribute("src");
         image.alt = "";
         image.style.visibility =
           "hidden";
+        slot.title = `Empty equipment hotkey ${slotIndex + 4}`;
       }
     }
 
@@ -6638,7 +7199,50 @@ function updateHotbar() {
       valid ? "1" : "0.48";
   }
 
+  sanitizeUtilityHotbarAssignments();
+  for (let index = 0; index < UTILITY_HOTBAR_SLOT_COUNT; index++) {
+    const itemId = player.utilityHotbarAssignments[index] || null;
+    const slot = document.getElementById(`slot${index + 1}`);
+    if (!slot) continue;
+    const assigned = utilityHotbarItemCanBeAssigned(itemId);
+    const count = assigned ? consumableCount(itemId) : 0;
+    const image = slot.querySelector(".hotbar-item-img");
+    const countElement = slot.querySelector(".utility-count");
+    const cooldownMask = slot.querySelector(".utility-cooldown-mask");
+    const cooldownText = slot.querySelector(".utility-cooldown-text");
+    const itemImage = assigned ? potionImageForItem(itemId) : null;
+
+    if (image) {
+      if (assigned && itemImage) {
+        image.src = itemImage.src;
+        image.alt = utilityItemDisplayName(itemId);
+        image.style.visibility = "visible";
+      } else {
+        image.removeAttribute("src");
+        image.alt = "";
+        image.style.visibility = "hidden";
+      }
+    }
+    if (countElement) countElement.textContent = assigned ? `${count}` : "";
+
+    const cooldownRemaining = assigned ? Math.max(0, consumableCooldownUntil(itemId) - Date.now()) : 0;
+    const cooldownDuration = assigned ? consumableCooldownDurationMs(itemId) : 1;
+    const cooling = assigned && cooldownRemaining > 0;
+    const buffActive = itemId === "attackPotion"
+      ? Date.now() < (Number(player.attackPotionUntil) || 0)
+      : itemId === "magicPotion"
+        ? Date.now() < (Number(player.magicPotionUntil) || 0)
+        : false;
+    slot.classList.toggle("cooling-down", cooling);
+    slot.classList.toggle("buff-active", buffActive);
+    slot.style.opacity = assigned && count > 0 ? "1" : "0.48";
+    slot.title = assigned ? `${utilityItemDisplayName(itemId)} · key ${index + 1} · click to use` : `Empty item hotkey ${index + 1}`;
+    if (cooldownMask) cooldownMask.style.height = cooling ? `${Math.min(100, cooldownRemaining / cooldownDuration * 100)}%` : "0%";
+    if (cooldownText) cooldownText.textContent = cooling ? (cooldownRemaining / 1000).toFixed(1) : "";
+  }
+
   updateMenuItemHotkeyRail();
+  updateMenuUtilityHotkeyRail();
 }
 
 let inventoryOpen = false;
@@ -6693,6 +7297,7 @@ function weaponDisplayName(style) {
   if (style === "shepherdStaff") return "Shepherd Staff";
   if (style === "lostKeyWand") return "Tournesol";
   if (style === "sunflowerWand") return "Tabatha's Key";
+  if (style === "sapgemWand") return "Sapgem Wand";
   if (style === "katana") return "Katana";
   if (style === "oldSword") return "Sword";
   if (style === "bow") return "Wood Bow";
@@ -6721,6 +7326,10 @@ function shirtImageForIndex(index) {
 function pantsImageForIndex(index) {
   if (index < 0) return armorPreviewImages.pants[0];
   return armorPreviewImages.pants[Math.min(armorPreviewImages.pants.length - 1, index + 1)] || armorPreviewImages.pants[1];
+}
+
+function charmImageForIndex(index) {
+  return index === 0 ? woodRingImage : emptyCharmImage;
 }
 
 function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
@@ -6846,6 +7455,7 @@ function weaponImageForIndex(index) {
   if (index === 9) return lostKeyWandImage;
   if (index === 10) return hugeSunflowerWandImage;
   if (index === 11) return pickaxeImage;
+  if (index === 12) return sapgemWandImage;
   return swordImage;
 }
 
@@ -6860,11 +7470,9 @@ function updateHotbarAssignmentUi() {
   const itemId =
     selectedHotbarInventoryItemId;
 
-  const validSelection =
-    Boolean(
-      itemId &&
-      hotbarItemCanBeAssigned(itemId)
-    );
+  const equipmentSelection = Boolean(itemId && hotbarItemCanBeAssigned(itemId));
+  const utilitySelection = Boolean(itemId && utilityHotbarItemCanBeAssigned(itemId));
+  const validSelection = equipmentSelection || utilitySelection;
 
   const image =
     document.getElementById(
@@ -6876,13 +7484,24 @@ function updateHotbarAssignmentUi() {
       "hotbarAssignName"
     );
 
+  const equipmentButtons = document.getElementById("equipmentHotbarAssignButtons");
+  const utilityButtons = document.getElementById("utilityHotbarAssignButtons");
+  const assignHelp = document.getElementById("hotbarAssignHelp");
+
+  if (equipmentButtons) equipmentButtons.style.display = equipmentSelection ? "flex" : "none";
+  if (utilityButtons) utilityButtons.style.display = utilitySelection ? "flex" : "none";
+  if (assignHelp) {
+    assignHelp.textContent = utilitySelection
+      ? "Choose an item hotkey (1–3)"
+      : "Choose an equipment hotkey (4–8)";
+  }
+
   document
     .querySelectorAll(
-      "[data-hotbar-assign-slot], #hotbarAssignClear"
+      "[data-hotbar-assign-slot], [data-utility-assign-slot], #hotbarAssignClear"
     )
     .forEach(button => {
-      button.disabled =
-        !validSelection;
+      button.disabled = !validSelection;
     });
 
   if (!validSelection) {
@@ -6902,19 +7521,19 @@ function updateHotbarAssignmentUi() {
 
     document
       .querySelectorAll(
-        "[data-hotbar-assign-slot]"
+        "[data-hotbar-assign-slot], [data-utility-assign-slot]"
       )
       .forEach(button => {
-        button.classList.remove(
-          "active"
-        );
+        button.classList.remove("active");
       });
 
+    if (equipmentButtons) equipmentButtons.style.display = "none";
+    if (utilityButtons) utilityButtons.style.display = "none";
+    if (assignHelp) assignHelp.textContent = "Select a usable item";
     return;
   }
 
-  const itemImage =
-    shopImageForItemId(itemId);
+  const itemImage = hotkeyImageForItemId(itemId);
 
   if (image && itemImage) {
     image.src = itemImage.src;
@@ -6922,56 +7541,39 @@ function updateHotbarAssignmentUi() {
       "visible";
   }
 
-  const shopItem =
-    SHOP_ITEMS.find(
-      item => item.id === itemId
-    );
+  const shopItem = SHOP_ITEMS.find(item => item.id === itemId);
 
   if (name) {
-    const weaponIndex =
-      WEAPON_ITEM_IDS.indexOf(itemId);
-
-    const combatProfile =
-      typeof COMBAT_BALANCE !== "undefined"
-        ? COMBAT_BALANCE.weaponProfiles[
-            weaponIndex
-          ]
-        : null;
-
-    const itemDisplayName =
-      shopItem?.name ||
-      combatProfile?.name ||
-      (itemId === "weapon_bow" ? "Wood Bow" : itemId);
-
-    if (combatProfile) {
-      const powerBits = [];
-      if ((Number(combatProfile.attackPower) || 0) > 0) {
-        powerBits.push(`ATK ${combatProfile.attackPower}`);
-      }
-      if ((Number(combatProfile.magicPower) || 0) > 0) {
-        powerBits.push(`MAG ${combatProfile.magicPower}`);
-      }
-      name.textContent = `${itemDisplayName} · ${powerBits.join(" / ")}`;
+    if (utilitySelection) {
+      name.textContent = `${utilityItemDisplayName(itemId)} · ${consumableCount(itemId)} owned`;
     } else {
-      name.textContent = itemDisplayName;
+      const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
+      const combatProfile = typeof COMBAT_BALANCE !== "undefined"
+        ? COMBAT_BALANCE.weaponProfiles[weaponIndex]
+        : null;
+      const itemDisplayName = shopItem?.name || combatProfile?.name || (itemId === "weapon_bow" ? "Wood Bow" : itemId);
+
+      if (combatProfile) {
+        const powerBits = [];
+        if ((Number(combatProfile.attackPower) || 0) > 0) powerBits.push(`ATK ${combatProfile.attackPower}`);
+        if ((Number(combatProfile.magicPower) || 0) > 0) powerBits.push(`MAG ${combatProfile.magicPower}`);
+        name.textContent = `${itemDisplayName} · ${powerBits.join(" / ")}`;
+      } else {
+        name.textContent = itemDisplayName;
+      }
     }
   }
 
-  const assignedSlot =
-    hotbarSlotForItem(itemId);
+  const assignedSlot = utilitySelection
+    ? utilityHotbarSlotForItem(itemId)
+    : hotbarSlotForItem(itemId);
 
-  document
-    .querySelectorAll(
-      "[data-hotbar-assign-slot]"
-    )
-    .forEach(button => {
-      button.classList.toggle(
-        "active",
-        Number(
-          button.dataset.hotbarAssignSlot
-        ) === assignedSlot
-      );
-    });
+  document.querySelectorAll("[data-hotbar-assign-slot]").forEach(button => {
+    button.classList.toggle("active", equipmentSelection && Number(button.dataset.hotbarAssignSlot) === assignedSlot);
+  });
+document.querySelectorAll("[data-utility-assign-slot]").forEach(button => {
+    button.classList.toggle("active", utilitySelection && Number(button.dataset.utilityAssignSlot) === assignedSlot);
+  });
 }
 
 function updatePvpUi() {
@@ -7038,7 +7640,11 @@ function updateInventoryUi() {
   const coinCount = document.getElementById("inventoryCoinCount");
   const woodCount = document.getElementById("inventoryWoodCount");
   const stoneCount = document.getElementById("inventoryStoneCount");
-  const flowerCount = document.getElementById("inventoryFlowerCount");
+  const whiteFlowerCount = document.getElementById("inventoryWhiteFlowerCount");
+  const blueFlowerCount = document.getElementById("inventoryBlueFlowerCount");
+  const healingPotionCount = document.getElementById("inventoryHealingPotionCount");
+  const attackPotionCount = document.getElementById("inventoryAttackPotionCount");
+  const magicPotionCount = document.getElementById("inventoryMagicPotionCount");
   const goldSlimeBubbleCount = document.getElementById("inventoryGoldSlimeBubbleCount");
   const arrowCount = document.getElementById("inventoryArrowCount");
   const arrowHud = document.getElementById("arrowHud");
@@ -7047,7 +7653,11 @@ function updateInventoryUi() {
   if (coinCount) coinCount.textContent = `${player.coins}`;
   if (woodCount) woodCount.textContent = `${player.wood}`;
   if (stoneCount) stoneCount.textContent = `${player.stone}`;
-  if (flowerCount) flowerCount.textContent = `${player.flowers}`;
+  if (whiteFlowerCount) whiteFlowerCount.textContent = `${player.whiteFlowers}`;
+  if (blueFlowerCount) blueFlowerCount.textContent = `${player.blueFlowers}`;
+  if (healingPotionCount) healingPotionCount.textContent = `${player.healingPotions}`;
+  if (attackPotionCount) attackPotionCount.textContent = `${player.attackPotions}`;
+  if (magicPotionCount) magicPotionCount.textContent = `${player.magicPotions}`;
   if (goldSlimeBubbleCount) goldSlimeBubbleCount.textContent = `${player.goldSlimeBubbles}`;
   if (arrowCount) arrowCount.textContent = `${player.arrows}`;
   if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
@@ -7055,75 +7665,59 @@ function updateInventoryUi() {
     arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
   }
 
-  let visibleResources = 0;
+  function updateInventoryResourceGroup(gridId, emptyId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
 
-  document
-    .querySelectorAll(
-      "[data-resource-key]"
-    )
-    .forEach(element => {
-      const key =
-        element.dataset.resourceKey;
+    let visibleEntries = 0;
 
-      const count = Math.max(
-        0,
-        Number(player[key]) || 0
-      );
+    grid.querySelectorAll("[data-resource-key]").forEach(element => {
+      const key = element.dataset.resourceKey;
+      const count = Math.max(0, Number(player[key]) || 0);
+      const visible = count > 0;
 
-      const visible =
-        count > 0;
-
-      element.style.display =
-        visible ? "" : "none";
-
-      if (visible) {
-        visibleResources += 1;
-      }
+      element.style.display = visible ? "" : "none";
+      if (visible) visibleEntries += 1;
     });
 
-  const resourcesEmpty =
-    document.getElementById(
-      "inventoryResourcesEmpty"
-    );
-
-  if (resourcesEmpty) {
-    resourcesEmpty.style.display =
-      visibleResources === 0
-        ? "block"
-        : "none";
+    const empty = document.getElementById(emptyId);
+    if (empty) {
+      empty.style.display = visibleEntries === 0 ? "block" : "none";
+    }
   }
 
-  let visibleInventoryItems = 0;
+  updateInventoryResourceGroup("inventoryResourcesGrid", "inventoryResourcesEmpty");
+  updateInventoryResourceGroup("inventoryConsumablesGrid", "inventoryConsumablesEmpty");
 
-  document
-    .querySelectorAll(
-      "#inventoryPage [data-owned-item]"
-    )
-    .forEach(element => {
-      const visible =
-        playerOwnsItem(
-          element.dataset.ownedItem
-        );
+  document.querySelectorAll('#inventoryPage [data-utility-hotbar-assignable="true"]').forEach(element => {
+    const itemId = element.dataset.utilityItem;
+    const eligible = utilityHotbarItemCanBeAssigned(itemId) && consumableCount(itemId) > 0;
+    element.classList.toggle("hotbar-selected", false);
+    element.classList.toggle("hotbar-ineligible", !eligible);
+    element.draggable = eligible;
+    if (eligible) {
+      element.title = `${utilityItemDisplayName(itemId)} · drag to Items 1–3`;
+    }
+  });
 
-      element.style.display =
-        visible ? "" : "none";
+  function updateOwnedInventoryGroup(gridId, emptyId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
 
-      if (visible) {
-        visibleInventoryItems += 1;
-      }
+    let visibleEntries = 0;
+    grid.querySelectorAll("[data-owned-item]").forEach(element => {
+      const visible = playerOwnsItem(element.dataset.ownedItem);
+      element.style.display = visible ? "" : "none";
+      if (visible) visibleEntries += 1;
     });
 
-  const gearEmpty =
-    document.getElementById(
-      "inventoryGearEmpty"
-    );
-
-  if (gearEmpty) {
-    gearEmpty.style.display =
-      visibleInventoryItems === 0
-        ? "block"
-        : "none";
+    const empty = document.getElementById(emptyId);
+    if (empty) empty.style.display = visibleEntries === 0 ? "block" : "none";
   }
+
+  updateOwnedInventoryGroup("inventoryWeaponsGrid", "inventoryWeaponsEmpty");
+  updateOwnedInventoryGroup("inventoryArmorGrid", "inventoryArmorEmpty");
+  updateOwnedInventoryGroup("inventoryAccessoriesGrid", "inventoryAccessoriesEmpty");
 
   document
     .querySelectorAll(
@@ -7153,7 +7747,7 @@ function updateInventoryUi() {
 
       if (slotIndex >= 0) {
         element.dataset.hotbarSlotLabel =
-          `${slotIndex + 1}`;
+          `${slotIndex + 4}`;
       } else {
         delete element.dataset.hotbarSlotLabel;
       }
@@ -7222,6 +7816,8 @@ function updateInventoryUi() {
   const equippedShirtName = document.getElementById("equippedShirtName");
   const equippedPantsImg = document.getElementById("equippedPantsImg");
   const equippedPantsName = document.getElementById("equippedPantsName");
+  const equippedCharmImg = document.getElementById("equippedCharmImg");
+  const equippedCharmName = document.getElementById("equippedCharmName");
   const equippedWeaponImg = document.getElementById("equippedWeaponImg");
   const equippedWeaponName = document.getElementById("equippedWeaponName");
 
@@ -7231,6 +7827,16 @@ function updateInventoryUi() {
   if (equippedShirtName) equippedShirtName.textContent = shirtDisplayName(shirtStyle);
   if (equippedPantsImg) equippedPantsImg.src = pantsImageForIndex(player.pantsIndex).src;
   if (equippedPantsName) equippedPantsName.textContent = pantsDisplayName(pantsStyle);
+  if (equippedCharmImg) {
+    if (player.charmIndex >= 0) {
+      equippedCharmImg.src = charmImageForIndex(player.charmIndex).src;
+      equippedCharmImg.style.visibility = "visible";
+    } else {
+      equippedCharmImg.removeAttribute("src");
+      equippedCharmImg.style.visibility = "hidden";
+    }
+  }
+  if (equippedCharmName) equippedCharmName.textContent = player.charmIndex >= 0 ? itemDisplayNameForId(CHARM_ITEM_IDS[player.charmIndex]) : "Empty";
 
   const equippedBoxes = document.querySelectorAll(".equipped-box[data-gear-panel]");
   if (equippedBoxes[0]) {
@@ -7247,6 +7853,11 @@ function updateInventoryUi() {
     const itemId = player.pantsIndex >= 0 ? PANTS_ITEM_IDS[player.pantsIndex] : null;
     if (itemId) equippedBoxes[2].dataset.itemDetailId = itemId;
     else delete equippedBoxes[2].dataset.itemDetailId;
+  }
+  if (equippedBoxes[3]) {
+    const itemId = player.charmIndex >= 0 ? CHARM_ITEM_IDS[player.charmIndex] : null;
+    if (itemId) equippedBoxes[3].dataset.itemDetailId = itemId;
+    else delete equippedBoxes[3].dataset.itemDetailId;
   }
 
   if (equippedWeaponImg) {
@@ -7296,6 +7907,13 @@ function updateInventoryUi() {
     );
   });
 
+  document.querySelectorAll(".charm-choice").forEach(button => {
+    button.classList.toggle(
+      "active",
+      Number(button.dataset.charmIndex) === player.charmIndex
+    );
+  });
+
   const skillPointText = document.getElementById("skillPointText");
   const statStrength = document.getElementById("statStrength");
   const statDex = document.getElementById("statDex");
@@ -7323,7 +7941,8 @@ function updateInventoryUi() {
     const equippedProtection = {
       hatIndex: player.hatIndex,
       shirtIndex: player.shirtIndex,
-      pantsIndex: player.pantsIndex
+      pantsIndex: player.pantsIndex,
+      charmIndex: player.charmIndex
     };
     if (statArmor) {
       statArmor.textContent = `${COMBAT_BALANCE.playerArmorFromGear(equippedProtection)}`;
@@ -7425,7 +8044,8 @@ function buildLocalCharacterSave() {
     "shepherdStaffCrafted",
     "woodHelmCrafted",
     "woodChestCrafted",
-    "woodGreavesCrafted"
+    "woodGreavesCrafted",
+    "woodRingCrafted"
   ]) {
     story[key] = Boolean(player.story?.[key]);
   }
@@ -7478,7 +8098,11 @@ function buildLocalCharacterSave() {
       coins: Math.max(0, Math.floor(Number(player.coins) || 0)),
       wood: Math.max(0, Math.floor(Number(player.wood) || 0)),
       stone: Math.max(0, Math.floor(Number(player.stone) || 0)),
-      flowers: Math.max(0, Math.floor(Number(player.flowers) || 0)),
+      whiteFlowers: Math.max(0, Math.floor(Number(player.whiteFlowers) || 0)),
+      blueFlowers: Math.max(0, Math.floor(Number(player.blueFlowers) || 0)),
+      healingPotions: Math.max(0, Math.floor(Number(player.healingPotions) || 0)),
+      attackPotions: Math.max(0, Math.floor(Number(player.attackPotions) || 0)),
+      magicPotions: Math.max(0, Math.floor(Number(player.magicPotions) || 0)),
       goldSlimeBubbles: Math.max(0, Math.floor(Number(player.goldSlimeBubbles) || 0)),
       arrows: Math.max(0, Math.floor(Number(player.arrows) || 0))
     },
@@ -7493,6 +8117,7 @@ function buildLocalCharacterSave() {
       hatIndex: clampLocalSaveInteger(player.hatIndex, -1, HAT_ITEM_IDS.length - 1, -1),
       shirtIndex: clampLocalSaveInteger(player.shirtIndex, -1, SHIRT_ITEM_IDS.length - 1, -1),
       pantsIndex: clampLocalSaveInteger(player.pantsIndex, -1, PANTS_ITEM_IDS.length - 1, -1),
+      charmIndex: clampLocalSaveInteger(player.charmIndex, -1, CHARM_ITEM_IDS.length - 1, -1),
       weaponIndex: clampLocalSaveInteger(player.weaponIndex, -1, WEAPON_ITEM_IDS.length - 1, -1)
     },
 
@@ -7500,7 +8125,19 @@ function buildLocalCharacterSave() {
       { length: HOTBAR_SLOT_COUNT },
       (_, index) => player.hotbarAssignments?.[index] || null
     ),
+    utilityHotbarAssignments: Array.from(
+      { length: UTILITY_HOTBAR_SLOT_COUNT },
+      (_, index) => player.utilityHotbarAssignments?.[index] || null
+    ),
+    utilityHotbarCustomized: Boolean(player.utilityHotbarCustomized),
 
+    buffs: {
+      attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
+      magicRemainingMs: Math.max(0, (Number(player.magicPotionUntil) || 0) - Date.now()),
+      healingPotionCooldownRemainingMs: Math.max(0, (Number(player.consumableCooldownUntil) || 0) - Date.now()),
+      attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
+      magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
+    },
     story
   };
 }
@@ -7559,7 +8196,22 @@ function applyLocalCharacterSave(save) {
   player.coins = clampLocalSaveInteger(save.resources?.coins, 0, 999999, 0);
   player.wood = clampLocalSaveInteger(save.resources?.wood, 0, 999999, 0);
   player.stone = clampLocalSaveInteger(save.resources?.stone, 0, 999999, 0);
-  player.flowers = clampLocalSaveInteger(save.resources?.flowers, 0, 999999, 0);
+  player.whiteFlowers = clampLocalSaveInteger(save.resources?.whiteFlowers ?? save.resources?.flowers, 0, 999999, 0);
+  player.blueFlowers = clampLocalSaveInteger(save.resources?.blueFlowers, 0, 999999, 0);
+  player.healingPotions = clampLocalSaveInteger(save.resources?.healingPotions, 0, 999999, 0);
+  player.attackPotions = clampLocalSaveInteger(save.resources?.attackPotions, 0, 999999, 0);
+  player.magicPotions = clampLocalSaveInteger(save.resources?.magicPotions, 0, 999999, 0);
+  const saveNow = Date.now();
+  player.attackPotionUntil = saveNow + Math.min(POTION_BUFF_MS, clampLocalSaveInteger(save.buffs?.attackRemainingMs, 0, POTION_BUFF_MS, 0));
+  player.magicPotionUntil = saveNow + Math.min(POTION_BUFF_MS, clampLocalSaveInteger(save.buffs?.magicRemainingMs, 0, POTION_BUFF_MS, 0));
+  player.consumableCooldownUntil = saveNow + Math.min(HEALING_POTION_COOLDOWN_MS, clampLocalSaveInteger(
+    save.buffs?.healingPotionCooldownRemainingMs ?? save.buffs?.consumableCooldownRemainingMs,
+    0,
+    HEALING_POTION_COOLDOWN_MS,
+    0
+  ));
+  player.attackPotionCooldownUntil = saveNow + Math.min(BUFF_POTION_COOLDOWN_MS, clampLocalSaveInteger(save.buffs?.attackPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
+  player.magicPotionCooldownUntil = saveNow + Math.min(BUFF_POTION_COOLDOWN_MS, clampLocalSaveInteger(save.buffs?.magicPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   player.goldSlimeBubbles = clampLocalSaveInteger(save.resources?.goldSlimeBubbles, 0, 999999, 0);
   player.arrows = clampLocalSaveInteger(save.resources?.arrows, 0, 999999, 0);
 
@@ -7584,6 +8236,7 @@ function applyLocalCharacterSave(save) {
   player.hatIndex = clampLocalSaveInteger(save.equipment?.hatIndex, -1, HAT_ITEM_IDS.length - 1, -1);
   player.shirtIndex = clampLocalSaveInteger(save.equipment?.shirtIndex, -1, SHIRT_ITEM_IDS.length - 1, -1);
   player.pantsIndex = clampLocalSaveInteger(save.equipment?.pantsIndex, -1, PANTS_ITEM_IDS.length - 1, -1);
+  player.charmIndex = clampLocalSaveInteger(save.equipment?.charmIndex, -1, CHARM_ITEM_IDS.length - 1, -1);
   player.weaponIndex = clampLocalSaveInteger(save.equipment?.weaponIndex, -1, WEAPON_ITEM_IDS.length - 1, -1);
 
   if (!playerOwnsHatIndex(player.hatIndex) || !equipmentItemCanBeEquipped(HAT_ITEM_IDS[player.hatIndex])) {
@@ -7594,6 +8247,9 @@ function applyLocalCharacterSave(save) {
   }
   if (!playerOwnsPantsIndex(player.pantsIndex) || !equipmentItemCanBeEquipped(PANTS_ITEM_IDS[player.pantsIndex])) {
     player.pantsIndex = -1;
+  }
+  if (!playerOwnsCharmIndex(player.charmIndex) || !equipmentItemCanBeEquipped(CHARM_ITEM_IDS[player.charmIndex])) {
+    player.charmIndex = -1;
   }
   if (!playerOwnsWeaponIndex(player.weaponIndex) || !equipmentItemCanBeEquipped(WEAPON_ITEM_IDS[player.weaponIndex])) {
     player.weaponIndex = -1;
@@ -7609,6 +8265,13 @@ function applyLocalCharacterSave(save) {
     }
   );
   sanitizeHotbarAssignments();
+
+  const savedUtilityAssignments = save.utilityHotbarAssignments;
+  player.utilityHotbarCustomized = save.utilityHotbarCustomized === true;
+  player.utilityHotbarAssignments = player.utilityHotbarCustomized && Array.isArray(savedUtilityAssignments)
+    ? Array.from({ length: UTILITY_HOTBAR_SLOT_COUNT }, (_, index) => savedUtilityAssignments[index] || null)
+    : Array.from({ length: UTILITY_HOTBAR_SLOT_COUNT }, () => null);
+  sanitizeUtilityHotbarAssignments();
 
   for (const key of Object.keys(skillBindings)) {
     const skillId = save.skillBindings?.[key];
@@ -7681,9 +8344,20 @@ function persistentServerBootstrapPayload() {
       coins: player.coins,
       wood: player.wood,
       stone: player.stone,
-      flowers: player.flowers,
+      whiteFlowers: player.whiteFlowers,
+      blueFlowers: player.blueFlowers,
+      healingPotions: player.healingPotions,
+      attackPotions: player.attackPotions,
+      magicPotions: player.magicPotions,
       goldSlimeBubbles: player.goldSlimeBubbles,
       arrows: player.arrows
+    },
+    buffs: {
+      attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
+      magicRemainingMs: Math.max(0, (Number(player.magicPotionUntil) || 0) - Date.now()),
+      healingPotionCooldownRemainingMs: Math.max(0, (Number(player.consumableCooldownUntil) || 0) - Date.now()),
+      attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
+      magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
     },
     story: {
       woodSwordCrafted: Boolean(player.story.woodSwordCrafted),
@@ -7691,7 +8365,8 @@ function persistentServerBootstrapPayload() {
       shepherdStaffCrafted: Boolean(player.story.shepherdStaffCrafted),
       woodHelmCrafted: Boolean(player.story.woodHelmCrafted),
       woodChestCrafted: Boolean(player.story.woodChestCrafted),
-      woodGreavesCrafted: Boolean(player.story.woodGreavesCrafted)
+      woodGreavesCrafted: Boolean(player.story.woodGreavesCrafted),
+      woodRingCrafted: Boolean(player.story.woodRingCrafted)
     },
     shopPurchases: Array.isArray(player.shopPurchases)
       ? player.shopPurchases.slice(0, 64)
@@ -7997,6 +8672,17 @@ function setInventoryOpen(open) {
   if (open) inputController.clearCommands();
 
   updateInventoryUi();
+  if (open) {
+    updateMenuHotkeyRailVisibility(document.querySelector(".inventory-page.active")?.id || "inventoryPage");
+  }
+}
+
+function updateMenuHotkeyRailVisibility(pageId) {
+  const inventoryContext = pageId === "inventoryPage";
+  const skillsContext = pageId === "skillsPage";
+  document.getElementById("menuItemHotkeyRail")?.classList.toggle("context-hidden", !inventoryContext);
+  document.getElementById("menuUtilityHotkeyRail")?.classList.toggle("context-hidden", !inventoryContext);
+  document.getElementById("menuSkillHotkeyRail")?.classList.toggle("context-hidden", !skillsContext);
 }
 
 function showInventoryPage(pageId) {
@@ -8016,6 +8702,8 @@ function showInventoryPage(pageId) {
   document.querySelectorAll(".inventory-tab").forEach(tab => {
     tab.classList.toggle("active", tab.dataset.page === pageId);
   });
+
+  updateMenuHotkeyRailVisibility(pageId);
 }
 
 document.querySelectorAll(".inventory-tab").forEach(tab => {
@@ -8040,6 +8728,32 @@ window.addEventListener("wheel", event => {
 
   event.preventDefault();
 }, { passive: false });
+
+const topHotbar = document.getElementById("hotbar");
+topHotbar?.addEventListener("click", event => {
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) {
+    return;
+  }
+
+  const slot = event.target.closest(".hotbar-slot");
+  if (!slot || !topHotbar.contains(slot)) return;
+
+  const slotNumber = Number(String(slot.id || "").replace("slot", ""));
+  if (!Number.isInteger(slotNumber)) return;
+
+  if (slotNumber >= 1 && slotNumber <= 3) {
+    sanitizeUtilityHotbarAssignments();
+    const itemId = player.utilityHotbarAssignments?.[slotNumber - 1] || null;
+    if (itemId) useConsumable(itemId);
+    return;
+  }
+
+  if (slotNumber >= 4 && slotNumber <= 8) {
+    inputController.queueCommand("equipWeapon", {
+      index: slotNumber - 4
+    });
+  }
+});
 
 function showSkillCategory(categoryId) {
   if (
@@ -8124,6 +8838,7 @@ document.querySelectorAll(".equipped-box[data-gear-panel]").forEach(button => {
 });
 
 setupSkillTreeUi();
+updateMenuHotkeyRailVisibility(document.querySelector(".inventory-page.active")?.id || "inventoryPage");
 
 document.querySelectorAll(".skill-bind-button").forEach(button => {
   button.addEventListener("click", () => {
@@ -8230,6 +8945,8 @@ document.getElementById("craftGrid").addEventListener("click", event => {
 });
 
 document.getElementById("inventoryPage").addEventListener("click", event => {
+  if (event.target.closest('[data-utility-hotbar-assignable="true"]')) return;
+
   const itemElement =
     event.target.closest(
       '[data-hotbar-assignable="true"]'
@@ -8259,6 +8976,21 @@ document.getElementById("inventoryPage").addEventListener("click", event => {
 });
 
 document.getElementById("inventoryPage").addEventListener("dragstart", event => {
+  const utilityElement = event.target.closest('[data-utility-hotbar-assignable="true"]');
+  if (utilityElement) {
+    const itemId = utilityElement.dataset.utilityItem;
+    if (!utilityHotbarItemCanBeAssigned(itemId) || consumableCount(itemId) <= 0) {
+      event.preventDefault();
+      return;
+    }
+    selectedHotbarInventoryItemId = null;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-slime-utility-item", itemId);
+    event.dataTransfer.setData("text/plain", itemId);
+    utilityElement.classList.add("dragging");
+    return;
+  }
+
   const itemElement = event.target.closest('[data-hotbar-assignable="true"]');
   if (!itemElement) return;
 
@@ -8279,7 +9011,8 @@ document.getElementById("inventoryPage").addEventListener("dragstart", event => 
 
 document.getElementById("inventoryPage").addEventListener("dragend", event => {
   event.target.closest('[data-hotbar-assignable="true"]')?.classList.remove("dragging");
-  document.querySelectorAll("[data-menu-hotbar-slot].drag-over")
+  event.target.closest('[data-utility-hotbar-assignable="true"]')?.classList.remove("dragging");
+  document.querySelectorAll("[data-menu-hotbar-slot].drag-over, [data-menu-utility-slot].drag-over")
     .forEach(slot => slot.classList.remove("drag-over"));
 });
 
@@ -8347,6 +9080,69 @@ menuItemHotkeyRail?.addEventListener("contextmenu", event => {
   if (itemId) clearItemFromHotbar(itemId);
 });
 
+const menuUtilityHotkeyRail = document.getElementById("menuUtilityHotkeyRail");
+menuUtilityHotkeyRail?.addEventListener("dragstart", event => {
+  const slot = event.target.closest("[data-menu-utility-slot]");
+  if (!slot) return;
+  const slotIndex = Number(slot.dataset.menuUtilitySlot);
+  const itemId = player.utilityHotbarAssignments?.[slotIndex] || null;
+  if (!utilityHotbarItemCanBeAssigned(itemId)) {
+    event.preventDefault();
+    return;
+  }
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("application/x-slime-utility-item", itemId);
+  event.dataTransfer.setData("application/x-slime-utility-source", String(slotIndex));
+  event.dataTransfer.setData("text/plain", itemId);
+  slot.classList.add("dragging");
+});
+
+menuUtilityHotkeyRail?.addEventListener("dragend", event => {
+  event.target.closest("[data-menu-utility-slot]")?.classList.remove("dragging");
+  menuUtilityHotkeyRail.querySelectorAll("[data-menu-utility-slot].drag-over")
+    .forEach(slot => slot.classList.remove("drag-over"));
+});
+
+menuUtilityHotkeyRail?.addEventListener("dragover", event => {
+  const slot = event.target.closest("[data-menu-utility-slot]");
+  if (!slot) return;
+  const itemId = event.dataTransfer.getData("application/x-slime-utility-item");
+  if (!utilityHotbarItemCanBeAssigned(itemId)) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  slot.classList.add("drag-over");
+});
+
+menuUtilityHotkeyRail?.addEventListener("dragleave", event => {
+  event.target.closest("[data-menu-utility-slot]")?.classList.remove("drag-over");
+});
+
+menuUtilityHotkeyRail?.addEventListener("drop", event => {
+  const slot = event.target.closest("[data-menu-utility-slot]");
+  if (!slot) return;
+  event.preventDefault();
+  slot.classList.remove("drag-over");
+  const itemId = event.dataTransfer.getData("application/x-slime-utility-item");
+  if (!utilityHotbarItemCanBeAssigned(itemId)) return;
+  assignUtilityItemToHotbar(itemId, Number(slot.dataset.menuUtilitySlot));
+});
+
+menuUtilityHotkeyRail?.addEventListener("contextmenu", event => {
+  const slot = event.target.closest("[data-menu-utility-slot]");
+  if (!slot) return;
+  event.preventDefault();
+  const slotIndex = Number(slot.dataset.menuUtilitySlot);
+  const itemId = player.utilityHotbarAssignments?.[slotIndex] || null;
+  if (itemId) clearUtilityItemFromHotbar(itemId);
+});
+
+document.querySelectorAll("[data-utility-assign-slot]").forEach(button => {
+  button.addEventListener("click", () => {
+    if (!selectedHotbarInventoryItemId || !utilityHotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) return;
+    assignUtilityItemToHotbar(selectedHotbarInventoryItemId, Number(button.dataset.utilityAssignSlot));
+  });
+});
+
 document.querySelectorAll("[data-hotbar-assign-slot]").forEach(button => {
   button.addEventListener("click", () => {
     if (!selectedHotbarInventoryItemId) {
@@ -8362,14 +9158,13 @@ document.querySelectorAll("[data-hotbar-assign-slot]").forEach(button => {
   });
 });
 
-document.getElementById("hotbarAssignClear").addEventListener("click", () => {
-  if (!selectedHotbarInventoryItemId) {
+document.getElementById("hotbarAssignClear")?.addEventListener("click", () => {
+  if (!selectedHotbarInventoryItemId) return;
+  if (utilityHotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) {
+    clearUtilityItemFromHotbar(selectedHotbarInventoryItemId);
     return;
   }
-
-  clearItemFromHotbar(
-    selectedHotbarInventoryItemId
-  );
+  clearItemFromHotbar(selectedHotbarInventoryItemId);
 });
 
 document.querySelectorAll(".hat-choice").forEach(button => {
@@ -8471,6 +9266,33 @@ document.querySelectorAll(".pants-choice").forEach(button => {
     }
 
     player.pantsIndex = index;
+    updateInventoryUi();
+  });
+});
+
+document.querySelectorAll(".charm-choice").forEach(button => {
+  button.addEventListener("click", () => {
+    const index =
+      Number(
+        button.dataset.charmIndex
+      );
+
+    if (
+      index >= 0 &&
+      !playerOwnsCharmIndex(index)
+    ) {
+      return;
+    }
+
+    if (index >= 0) {
+      const itemId = CHARM_ITEM_IDS[index];
+      if (!armorItemCanBeEquipped(itemId)) {
+        showArmorClassRestriction(itemId);
+        return;
+      }
+    }
+
+    player.charmIndex = index;
     updateInventoryUi();
   });
 });
@@ -10180,6 +11002,8 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
                 ? lostKeyWandImage
                 : currentWeapon === "sunflowerWand"
                   ? hugeSunflowerWandImage
+                  : currentWeapon === "sapgemWand"
+                    ? sapgemWandImage
                   : currentWeapon === "katana"
                     ? katanaImage
                     : currentWeapon === "oldSword"
@@ -10343,49 +11167,56 @@ function drawHouse(house, camX, camY) {
 }
 
 
+function drawBubbleMarker(screenX, anchorY, drawIcon) {
+  // Compact 18x18 bubble: a one-pixel frame around the native 16x16 icon.
+  const bubbleWidth = 18;
+  const bubbleHeight = 18;
+  const tailY = anchorY + bubbleHeight;
+  const left = screenX - Math.floor(bubbleWidth / 2);
+
+  ctx.fillStyle = "#233323";
+  ctx.fillRect(left + 1, anchorY, bubbleWidth - 2, bubbleHeight);
+  ctx.fillRect(left, anchorY + 1, bubbleWidth, bubbleHeight - 2);
+  ctx.fillRect(screenX - 1, tailY, 2, 2);
+  ctx.fillRect(screenX, tailY + 2, 1, 1);
+
+  // Let some of the world show through the speech bubble without dimming the icon.
+  ctx.fillStyle = "rgba(248, 244, 221, 0.78)";
+  ctx.fillRect(left + 1, anchorY + 1, 16, 16);
+  ctx.fillRect(screenX - 1, tailY + 1, 2, 1);
+  ctx.fillRect(screenX, tailY + 2, 1, 1);
+
+  if (typeof drawIcon === "function") {
+    // Native 16x16 art: no scaling and no icon shadow pass.
+    drawIcon(left + 1, anchorY + 1);
+  }
+}
+
 function drawNpcRoleMarker(screenX, screenY) {
-  const centerY = screenY - 27;
+  // Raised enough that the bubble tail clears the NPC sprite instead of hugging it.
+  const bubbleY = screenY - 42;
 
   if (!player.story.axeReceived) {
-    // Simpler quest marker: just a clean floating exclamation with a tiny shadow.
-    ctx.fillStyle = "rgba(34, 46, 28, .28)";
-    ctx.fillRect(screenX - 1, centerY - 3, 3, 6);
-    ctx.fillRect(screenX - 1, centerY + 4, 3, 2);
-
-    ctx.fillStyle = "#ffe06a";
-    ctx.fillRect(screenX - 1, centerY - 4, 3, 6);
-    ctx.fillRect(screenX - 1, centerY + 3, 3, 2);
+    drawBubbleMarker(screenX, bubbleY, (left, top) => {
+      const midX = left + 8;
+      ctx.fillStyle = "#ffe06a";
+      ctx.fillRect(midX - 1, top + 2, 3, 8);
+      ctx.fillRect(midX - 1, top + 12, 3, 3);
+    });
     return;
   }
 
-  // Shop cue uses the new coin at its native 16x16 size.
-  ctx.fillStyle = "rgba(34, 46, 28, .22)";
-  ctx.fillRect(screenX - 5, centerY + 6, 10, 2);
-  ctx.drawImage(
-    coinImage,
-    screenX - 8,
-    centerY - 8
-  );
+  drawBubbleMarker(screenX, bubbleY, (left, top) => {
+    ctx.drawImage(coinImage, left, top);
+  });
 }
 
 function drawCraftRoleMarker(screenX, screenY) {
-  const centerY = screenY - 27;
-
-  // Simpler floating hammer with a tiny drop shadow.
-  ctx.fillStyle = "rgba(34, 46, 28, .28)";
-  ctx.fillRect(screenX - 4, centerY - 3, 7, 3);
-  ctx.fillRect(screenX, centerY - 1, 2, 2);
-  ctx.fillRect(screenX - 1, centerY + 1, 1, 2);
-  ctx.fillRect(screenX - 2, centerY + 3, 1, 1);
-
-  ctx.fillStyle = "#c8d0c4";
-  ctx.fillRect(screenX - 4, centerY - 4, 7, 3);
-  ctx.fillRect(screenX, centerY - 2, 2, 2);
-
-  ctx.fillStyle = "#9b6438";
-  ctx.fillRect(screenX - 1, centerY, 1, 2);
-  ctx.fillRect(screenX - 2, centerY + 2, 1, 2);
-  ctx.fillRect(screenX - 3, centerY + 4, 1, 1);
+  // Same height and native-scale presentation as the shop bubble.
+  const bubbleY = screenY - 42;
+  drawBubbleMarker(screenX, bubbleY, (left, top) => {
+    ctx.drawImage(craftRoleAxeImage, left, top);
+  });
 }
 
 function drawTutorialNpc(camX, camY) {
@@ -10470,6 +11301,49 @@ function drawJesterNpc(camX, camY) {
     screenX - 8 + swayOffset,
     screenY - 19
   );
+}
+
+function drawPlacedNpc(npc, camX, camY) {
+  if (!npc) return;
+  const allowed = ["shopkeeper", "hunter", "jester", "craftingTable", "classResetCrystal"];
+  const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
+  const screenX = Math.round((Number(npc.x) || 0) - camX);
+  const screenY = Math.round((Number(npc.y) || 0) - camY);
+  const phase = Array.from(String(npc.id || type)).reduce((sum, char) => sum + char.charCodeAt(0), 0) * 0.07;
+
+  if (type === "craftingTable") {
+    ctx.fillStyle = "rgba(34, 46, 28, .26)";
+    ctx.fillRect(screenX - 7, screenY, 14, 2);
+    const benchWidth = woodBenchImage.width || 18;
+    const benchHeight = woodBenchImage.height || 18;
+    ctx.drawImage(woodBenchImage, screenX - Math.round(benchWidth / 2), screenY - (benchHeight - 1));
+    drawCraftRoleMarker(screenX, screenY);
+    return;
+  }
+
+  if (type === "classResetCrystal") {
+    const bob = Math.round(Math.sin(worldTime * 1.65 + phase) * 1);
+    ctx.fillStyle = "rgba(20, 45, 38, .30)";
+    ctx.fillRect(screenX - 7, screenY + 1, 14, 3);
+    ctx.drawImage(classResetCrystalImage, screenX - 16, screenY - 31 + bob, 32, 32);
+    return;
+  }
+
+  const swaySpeed = type === "shopkeeper" ? 1.0 : type === "hunter" ? 0.95 : 1.08;
+  const swayOffset = Math.round(Math.sin(worldTime * swaySpeed + phase) * 1);
+  const image = type === "hunter" ? hunterNpcImage : type === "jester" ? jesterNpcImage : tutorialNpcImage;
+  const height = type === "shopkeeper" ? 16 : 20;
+  const width = type === "hunter" ? 17 : 16;
+
+  ctx.fillStyle = type === "shopkeeper"
+    ? "rgba(34, 46, 28, .32)"
+    : type === "hunter"
+      ? "rgba(34, 46, 28, .28)"
+      : "rgba(34, 46, 28, .24)";
+  ctx.fillRect(screenX - 5, screenY + (type === "shopkeeper" ? 0 : 1), 10, 2);
+  ctx.drawImage(image, screenX - Math.floor(width / 2) + swayOffset, screenY - height);
+
+  if (type === "shopkeeper") drawNpcRoleMarker(screenX, screenY);
 }
 
 function drawWoodCraftBench(camX, camY) {
@@ -10644,17 +11518,18 @@ function drawInteractionPrompt(
       interaction.y - camY
     );
 
+  const placedKind = interaction.kind === "placedNpc" ? interaction.npcType : null;
   const promptText =
-    interaction.kind === "bench"
+    interaction.kind === "bench" || placedKind === "craftingTable"
       ? "F CRAFT"
-      : interaction.kind === "classResetCrystal"
+      : interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
         ? "F RESET"
         : "F TALK";
 
   drawStaticPixelText(
     promptText,
     screenX,
-    screenY - (interaction.kind === "classResetCrystal" ? 40 : 24),
+    screenY - ((interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal") ? 40 : 24),
     "#fff3b0",
     1
   );
@@ -10909,7 +11784,6 @@ function drawRemotePlayerReflection(
   camX,
   camY
 ) {
-  // Match the exact same shoreline rules as the local reflection.
   if (
     remote.shadowHidden &&
     (Number(remote.shadowHideRevealTime) || 0) <= 0
@@ -10917,6 +11791,33 @@ function drawRemotePlayerReflection(
     return;
   }
 
+  const terrainDefinition = WORLD_CONTENT?.maps?.[currentMapId] || null;
+  const usesAuthoredTerrain = Boolean(TERRAIN_RULES.terrainDefinition(terrainDefinition));
+
+  if (usesAuthoredTerrain && typeof terrainWaterReflectionInfo === "function") {
+    const reflection = terrainWaterReflectionInfo(remote.x, remote.y, currentMapId, 16);
+    if (!reflection) return;
+
+    const mirrorScreenY = Math.round(reflection.mirrorWorldY - camY);
+
+    ctx.save();
+    if (
+      typeof terrainWaterClipPath !== "function" ||
+      !terrainWaterClipPath(currentMapId, camX, camY)
+    ) {
+      ctx.restore();
+      return;
+    }
+    ctx.clip();
+    ctx.translate(0, mirrorScreenY * 2);
+    ctx.scale(1, -1);
+    ctx.globalAlpha = 0.18 * reflection.fade;
+    drawRemotePlayer(remote, camX, camY, true);
+    ctx.restore();
+    return;
+  }
+
+  // Legacy pond reflection path.
   const withinX =
     remote.x > pond.x - 8 &&
     remote.x < pond.x + pond.width + 8;
@@ -10927,62 +11828,24 @@ function drawRemotePlayerReflection(
   let distanceToShore = 999;
 
   if (remote.y <= pond.y) {
-    distanceToShore =
-      pond.y - remote.y;
-
-    if (distanceToShore <= 16) {
-      mirrorWorldY = pond.y;
-    }
-  } else if (
-    remote.y >= pond.y + pond.height
-  ) {
-    distanceToShore =
-      remote.y -
-      (pond.y + pond.height);
-
-    if (distanceToShore <= 16) {
-      mirrorWorldY =
-        pond.y + pond.height;
-    }
+    distanceToShore = pond.y - remote.y;
+    if (distanceToShore <= 16) mirrorWorldY = pond.y;
+  } else if (remote.y >= pond.y + pond.height) {
+    distanceToShore = remote.y - (pond.y + pond.height);
+    if (distanceToShore <= 16) mirrorWorldY = pond.y + pond.height;
   }
 
   if (mirrorWorldY === null) return;
 
-  const fade = Math.max(
-    0,
-    1 - distanceToShore / 16
-  );
-
-  const mirrorScreenY =
-    Math.round(
-      mirrorWorldY - camY
-    );
+  const fade = Math.max(0, 1 - distanceToShore / 16);
+  const mirrorScreenY = Math.round(mirrorWorldY - camY);
 
   ctx.save();
-
-  pondPath(
-    camX,
-    camY,
-    2
-  );
-
+  pondPath(camX, camY, 2);
   ctx.clip();
-
-  ctx.translate(
-    0,
-    mirrorScreenY * 2
-  );
-
+  ctx.translate(0, mirrorScreenY * 2);
   ctx.scale(1, -1);
   ctx.globalAlpha = 0.18 * fade;
-
-  drawRemotePlayer(
-    remote,
-    camX,
-    camY,
-    true
-  );
-
+  drawRemotePlayer(remote, camX, camY, true);
   ctx.restore();
 }
-

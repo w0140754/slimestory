@@ -46,11 +46,15 @@ function skillCooldownRemaining(skillId) {
 
 function skillCooldownDuration(skillId) {
   if (skillId === "jesterBlink") {
-    return Math.max(0, Number(player.jesterBlinkCooldownDuration) || 0);
+    return hallucinationCooldownAtLevel(abilityLevel("jesterBlink"));
   }
 
   if (skillId === "fireball") {
     return fireballCooldownAtLevel(abilityLevel("fireball"));
+  }
+
+  if (skillId === "rainCloud") {
+    return rainCloudCooldownAtLevel(abilityLevel("rainCloud"));
   }
 
   return Math.max(
@@ -202,3 +206,4 @@ function handleActiveSkillKeyDown(event, activeSkillKey) {
 
   return true;
 }
+

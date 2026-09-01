@@ -4,11 +4,11 @@
   if (root) root.RAIN_FIELD = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = 1;
+  const VERSION = 2;
   const CELL_COUNT = 20;
   const FIRST_GROW_DELAY = 0.65;
   const GROW_INTERVAL = 0.38;
-  const CELL_LIFETIME = 24.0;
+  const CELL_LIFETIME = 30.0;
   const BURN_DURATION = 3.0;
   const SPEED_MULTIPLIER = 0.70;
   const FIELD_RADIUS_X = 44;
@@ -91,3 +91,4 @@
   }
   return Object.freeze({ VERSION, CELL_COUNT, FIRST_GROW_DELAY, GROW_INTERVAL, CELL_LIFETIME, BURN_DURATION, SPEED_MULTIPLIER, FIELD_RADIUS_X, FIELD_RADIUS_Y, CELL_MIN_SPACING, CELL_HIT_RADIUS_SCALE, FIRE_CHAIN_RADIUS, FIRE_CHAIN_CHANCE, FIRE_CHAIN_MAX_IGNITIONS, fieldSeed, cellBit, generateCells, cellIsGrown, cellIsNaturallyAlive, fieldExpiresAtMs, combinedHitRadius });
 });
+

@@ -1,4 +1,245 @@
+## v6-11-336 — Sapgem rotation fix
+
+- Replaced the Sapgem Wand art with the user-supplied correctly rotated 16×16 sprite on a fresh `sapgem_wand_v3.png` asset path/cache key.
+- Wand stats remain unchanged from v335: Shepherd Staff 10 MAG, Sapgem Wand 15 MAG, Tournesol 20 MAG, Tabatha's Key 25 MAG; Sapgem remains Normal attack speed.
+- Fire Wand and Rain Wand remain retired from the shop while staying fully defined for legacy compatibility.
+- No authored world/map data or unrelated gameplay changed.
+
+## v6-11-335 — Wand power rescale + Sapgem redraw
+
+- Replaced the Sapgem Wand art with the user-supplied redrawn 16×16 sprite on a fresh `sapgem_wand_v2.png` asset path/cache key.
+- Rescaled accessible wand **Magic Power** to a clean four-step progression: **Shepherd Staff 10 → Sapgem Wand 15 → Tournesol 20 → Tabatha's Key 25**. Existing ATK values remain 5 → 6 → 7 → 8.
+- Preserved attack-speed identities: Shepherd Slow, Sapgem Normal, Tournesol Normal, Tabatha's Key Quick.
+- Fire Wand and Rain Wand remain fully defined for legacy compatibility but retired from both client and server shop catalogs.
+- Preserves v334 weapon indices/save mappings and current authored world/map data.
+
+## v6-11-334 — Sapgem Wand + wand progression cleanup
+
+- Added the user-supplied **Sapgem Wand** as a new 16×16 wand weapon at appended weapon index 12, preserving every existing weapon index/save mapping. Sapgem uses **Normal** attack speed.
+- Accessible wand progression is now **Shepherd Staff 5 ATK / 9 MAG → Sapgem Wand 6 ATK / 10 MAG → Tournesol 7 ATK / 11 MAG → Tabatha's Key 8 ATK / 12 MAG**. Their existing attack-speed identities remain Shepherd Slow, Sapgem Normal, Tournesol Normal, and Tabatha's Key Quick.
+- Removed **Fire Wand** and **Rain Wand** from the client/server shop catalogs so they can no longer be newly purchased. Their weapon profiles, sprites, indices, combat behavior, and legacy ownership remain supported for compatibility.
+- Existing saves that previously purchased Fire/Rain Wand retain that purchase history instead of losing the retired items on server restore.
+- Preserves v333 universal attack-speed tiers, v332 universal basic attacks, and current authored world/map data.
+
+## v6-11-333 — Universal attack-speed tiers
+
+- Extended the existing **Slow / Normal / Quick** attack-speed system from wands to every non-bow weapon and tool. Bows and Dreamcatcher remain governed by draw/charge time instead of the basic-attack tier table.
+- Assigned current non-bow equipment tiers: **Quick** — Katana, Tabatha's Key; **Normal** — Wood Sword, Sword, Tournesol; **Slow** — Axe, Pickaxe, Fire Wand, Rain Wand, Shepherd Staff.
+- Basic-attack repeat cooldowns now come from the shared combat-balance tier for all non-bow equipment, and the server enforces the same tier cadence for enemy hits, PvP melee, Wand Mastery melee, and wand basic projectiles.
+- Inventory/shop weapon details now show **Attack Speed** for all non-bow weapons/tools, not only wands. Existing attack power, scaling, reach, attack animation timing, environment interactions, and bow behavior are otherwise unchanged.
+- Preserves v332 universal basic-attack lifecycle, v331 wide-map skill bounds/clickable hotbar, v330 potion art/start-map fix, and current authored world/map data.
+
+## v6-11-332 — Universal non-bow basic attacks
+
+- Generalized the deliberate basic-attack lifecycle that was previously wand-specific to **all non-bow weapons and tools**: swords, Katana, Axe, Pickaxe, and all wand/staff variants now use a shared wind-up -> impact -> follow-through path.
+- Non-wand melee/tool hits now land on the active animation frame instead of instantly on mouse-down, and voluntary movement is locked only for the visible attack gesture. Held movement input resumes automatically afterward.
+- Preserved every weapon's existing repeat cooldown, damage source/scaling, reach, environment interaction (cutting/chopping/mining), Wand Mastery behavior, Camouflage opener handling, PvP validation, and held-left-click repeat behavior.
+- **Bows and Dreamcatcher are intentionally excluded** and retain their existing draw/release, Focus Fire, arrow, and close-range bow-melee behavior.
+- Refactored the former wand-only pending-impact/movement-lock state to generic basic-attack state so future non-bow weapons can plug into one attack foundation instead of adding parallel input/combat paths.
+- Preserves v331 wide-map skill bounds, clickable hotbar, potion art, map-aware loading, authored world/map data, inventory, crafting, NPCs, and unrelated gameplay.
+
+## v6-11-331 — Wide-map skill bounds + clickable top hotbar
+
+- Fixed remaining skill/effect coordinate sanitization that still used the legacy 640px map width. Fireball/focus-fire/rain/blink visual targets and server-side Hallucination positions now sanitize against the active authored map dimensions, so skills continue correctly across wide maps such as Prototype Island West.
+- The top HUD hotbar is now clickable. Clicking item slots **1–3** immediately uses the assigned consumable; clicking equipment slots **4–8** selects/equips that slot exactly like the matching number key, without triggering an attack. Existing number-key and mouse-wheel controls are unchanged.
+- PvP behavior audit: **Magic Grass itself does not slow players**. It continues to slow monsters only. Rain Cloud Wet still slows another player only when both players are mutually PvP-enabled. No PvP balance change was made in this build.
+- Preserves v330 potion art, map-aware loading, authored world/map data, combat values, cooldowns, inventory, crafting, NPCs, and unrelated gameplay.
+
+## v6-11-330 — Potion art + map-aware player loading fix
+
+- Replaced the generated **Attack Potion** and **Magic Potion** icons with the newly supplied 16×16 orange and purple pixel sprites. Inventory, crafting, hotbar, active-buff HUD, and potion-use world presentation all use the same new assets; potion values/cooldowns/behavior are unchanged.
+- Fixed the v329 loading-position implementation so the editor-authored default controls **both the starting map and the exact player spawn**, instead of only looking for a position on the hard-coded Spawn Clearing map.
+- The default loading target is now stored as one global world-content pointer (`mapId` + `spawnId`). Applying it does not rewrite unrelated authored data on other maps. Existing v329 per-map markers remain readable as a compatibility fallback.
+- Death respawn remains the existing safe Spawn Clearing behavior, and portal target spawns remain independent. Pickup-name text remains suppressed from v329.
+- Preserves the current authored map override data from world-content version 39; the latest editor-authored loading marker is preserved. The existing v329 marker on Prototype Island is recognized automatically by the v330 compatibility path; no re-placement is required.
+
+## v6-11-329 — Player loading position + loot text cleanup
+
+- Player Spawn markers in the map editor can now be designated as the map's **default loading position**. On the Spawn Clearing, that authored point is used for new/reloaded sessions; maps without one keep the historical center fallback. Portal targets continue using their explicit Spawn IDs.
+- The selected default loading spawn is visually marked in the editor and draft validation prevents dangling references. Deleting that spawn clears the default reference.
+- Picking up Stone, Flowers, and Gold Slime Bubbles no longer prints the item name above the player. Existing pickup animation, inventory credit, networking, and loot behavior are unchanged.
+- No existing authored map data is modified by this build; the new spawn field appears only when explicitly set and applied through the editor.
+
+## v6-11-328 — Mushroom asset-load render guard
+
+- Fixed a Firefox `CanvasRenderingContext2D.drawImage` DOMException that could stop the entire client render loop when a new Mushroom sprite had not decoded yet or its initial asset request failed.
+- Mushroom rendering now verifies `complete`, `naturalWidth`, and `naturalHeight` before drawing; a tiny pixel fallback is used only while the real image is unavailable, so world rendering never crashes.
+- Mushroom sprite requests use the v328 cache key, forcing a clean retry after the v327 asset-sync failure.
+- No enemy balance, AI, combat, editor spawn data, authored maps, inventory, crafting, HUD, NPC, terrain, or other gameplay behavior changed.
+
+## v6-11-327 — Sleeping Mushroom enemy + map-editor spawn support
+
+- Added the first **Sleeping Mushroom** enemy species to the shared client/server enemy registries, networking, combat/status, death/respawn, loot, and targeting pipelines.
+- Sleeping Mushrooms stay planted and harmless while asleep, wake into an annoyed chase/contact state only when provoked or redirected, then return to their authored home point and fall asleep again after disengaging.
+- Added dedicated 16×16 sleeping/awake/flash pixel sprites and a Mushroom-aware renderer while preserving Hurl, Snare, Burn/Wet, Focus Fire, damage text, and generic enemy presentation behavior.
+- The map editor can now select **Sleeping Mushroom** as an enemy-spawn species (alongside existing registered species); mushroom spawns are editor-authored only and this patch does **not** add or modify any existing map spawn data.
+- Preserves all unrelated gameplay, HUD, potion, crafting, NPC, terrain, and authored world behavior from v326.
+
+## v6-11-326 — Placed interaction range + 5-minute buffs + bubble polish
+
+- ATK and Magic Potion buffs now last 5 minutes; their 1-second anti-spam use cooldowns are unchanged.
+- Editor-placed Crafting Tables are server-authorized from their actual map coordinates and saved interaction radius, fixing craft requests that previously checked only the original Spawn Clearing bench.
+- Editor-placed Shopkeepers remain coordinate-authorized and now share the same placed-interaction helper/regression coverage.
+- Shop/crafting bubbles are slightly smaller (18x18), keep native 16x16 icons, and use a semi-transparent light interior.
+- Preserves current map-editor-authored world data and all unrelated gameplay/UI behavior.
+
+## v6-11-325 — ProtoWest enemy bounds + NPC bubble tuning
+
+- Replaced legacy 640×400 passive enemy wander clamps with each map's real dimensions for slimes, goblins, and ghosts. This fixes ProtoWest enemies beyond x=628 being pulled/squeezed left.
+- Ghost movement clamping now also follows the active map dimensions instead of the old 640×400 limits.
+- Raised shop/crafting role bubbles so they clear the NPC/table sprite again.
+- Enlarged the simple bubbles to fit the existing 16×16 coin/axe art at native size; marker icons are no longer downscaled and have no icon shadow pass.
+- No authored map/world content changes.
+
+## v6-11-324 — Map-editor NPC placement + Wood Ring art refresh
+
+- Added placeable **Shopkeeper**, **Hunter**, and **Jester** NPCs to the terrain-map editor. NPCs can be selected, dragged, duplicated, deleted, and changed between the three existing NPC roles in the inspector.
+- NPC placement is stored as optional `map.npcs` world data and survives editor draft export/import/adoption without modifying any existing authored maps unless the user explicitly applies an edited draft.
+- Placed Shopkeepers use the existing Axe tutorial/shop interaction, and the server now accepts shop purchases near a placed Shopkeeper on an authored map. Placed Hunters use the existing Hunter talk interaction; Jesters are visual-only for now.
+- Updated the Wood Ring to the newly supplied replacement sprite via fresh `wood_ring_v3.png` asset path.
+- Existing legacy-map NPC placement/behavior remains unchanged.
+
+## v6-11-322 — Top hotbar scale + custom Wood Ring art
+
+- Increased the top HUD hotbar (item slots 1–3 and weapon slots 4–8) by about **30%** while preserving the current split, viewport anchoring, and existing hotbar behavior.
+- Updated the Wood Ring to the newly supplied custom sprite and moved it to a fresh **`wood_ring_v2.png`** asset path to prevent stale browser image caching.
+- Inventory categories, equipment behavior, consumable behavior, combat, crafting, and authored world/map data are unchanged.
+
+## v6-11-321 — Pickaxe art + inventory category split
+
+- Replaced the Pickaxe with the newly supplied 16×16 sprite and moved it to a fresh **`pickaxe_v6.png`** path so browsers cannot reuse the prior cached image.
+- Inventory gear is now separated into **Weapons**, **Armor**, and **Accessories** beneath the existing Resources and Consumables groups.
+- The existing Wood Ring now appears in **Accessories** when owned; its Charms equipment slot and +1 Armor behavior are unchanged.
+- Weapon hotbar assignment, item hotbar assignment, equipment restrictions, combat, crafting, potion behavior, and authored map/world data are unchanged.
+
+## v6-11-320 — Pickaxe asset cache fix
+
+- The supplied replacement pickaxe artwork now loads from a new **`pickaxe_v5.png`** asset path instead of reusing the old `pickaxe_v4.png` URL, preventing browsers/static caches from continuing to display the previous sprite.
+- No potion, shop, hotbar, combat, mining behavior, or authored map/world data changed from v319.
+
+## v6-11-319 — Potion feedback, cooldown groups, shop scale, and pickaxe art
+
+- Attack and Magic Potions now use distinct world-space potion animations matching the Healing Potion feedback style; same-map remote players see them too.
+- Healing Potion cooldown is now **15 seconds** and uses the existing shared healing-family cooldown field so future stronger HP potions can share it. Attack and Magic Potions each use a **1-second** anti-spam cooldown while retaining their existing 30-second buffs.
+- The shop panel, tabs, item cards, icons, labels, prices, and footer are substantially larger on desktop while remaining viewport-bounded on small screens.
+- Replaced the Pickaxe sprite with the newly supplied 16×16 asset.
+- Increased only the visual separation between hotbar keys **3** and **4** to reinforce Items 1–3 versus Equipment 4–8.
+- Existing inventory categories, potion assignment, combat values, maps, authored world data, and other HUD anchors are unchanged.
+
+## v6-11-318 — Consumables inventory + authored-water reflections
+
+- Added a dedicated **Consumables** category to Inventory between Resources and Equipment. Healing, Attack, and Magic Potions plus Arrows now live there; Resources retains coins, wood, stone, flowers, and Gold Slime Bubbles.
+- Preserved the v316/v317 item drag-and-drop flow: potion entries remain draggable into Items 1–3, with no preset assignments.
+- Fixed player reflections on map-editor/prototype authored water. Local and remote players now use terrain-defined water shorelines and are clipped to authored water cells, while legacy-map pond reflections remain unchanged.
+- Added a subtle authored-water surface veil after reflections so the reflected sprite reads as submerged rather than painted over the water.
+- Authored map/world data itself is unchanged.
+
+## v6-11-317 — Escape menu centering fix
+
+- Keeps the main Escape/inventory panel vertically centered when the contextual Equipment + Items rails are visible.
+- Explicitly places the Equipment, Items, Skills, and main menu panel on the same overlay grid row so CSS auto-placement cannot push the main menu into a second row.
+- Left and right contextual rails remain independently vertically centered alongside the main panel.
+- Item 1–3 drag/drop, Equipment 4–8 drag/drop, skill bindings, potion behavior, HUD layout, and authored world/map data are unchanged.
+
+## v6-11-316 — Contextual drag-and-drop item hotkeys
+
+- Item hotkeys **1–3 now start empty** instead of being prefilled with Healing / Attack / Magic Potion. Existing v315 saves without an explicit customization marker migrate to empty item slots while preserving all other progression.
+- Added a dedicated **Items** hotkey rail on the right side of the Inventory tab. Consumables are assigned by dragging them from Inventory into slots 1–3; assigned items can be dragged between slots to swap and right-clicked to clear.
+- The Escape-menu shortcut rails are now contextual: **Inventory** shows Equipment 4–8 on the left and Items 1–3 on the right; **Class/Skills** shows only the skill-binding rail; other tabs hide all shortcut rails.
+- Equipment 4–8 drag/drop, skill drag/drop, potion behavior, potion feedback/status HUD, and world/map data are unchanged.
+
 # Slime Story
+
+## v6-11-316 — Assignable item hotkeys
+
+- Keys **1–3 are now generic consumable/item hotkeys** instead of being hard-wired to Healing / Attack / Magic Potion.
+- Potion/resource entries in the Escape inventory can be selected and assigned to **1, 2, or 3** using the same assignment panel pattern as equipment hotkeys 4–8.
+- Item assignments can be moved, swapped, or cleared and persist in the browser-local character save. Existing saves without item-hotkey data migrate to the former Healing / Attack / Magic layout so current controls are not lost.
+- Potion healing, buffs, shared cooldown, HP-potion feedback animation, ATK/MAG status HUD, arrow HUD, equipment hotkeys, and authored world data are unchanged.
+
+## v6-11-314 — Potion feedback and status HUD
+
+- Healing Potions now give immediate visual feedback: the potion sprite pops above the player with a short pixel-cross burst and the enlarged HP bar pulses when the local authoritative heal succeeds. Remote players on the same map see the world-space healing animation too.
+- Active **Attack Potion** and **Magic Potion** buffs now appear as timed status icons on the left side of the bottom-center HP/EXP HUD.
+- The bow-only **arrow counter** moved from beneath the top hotbar to the opposite (right) side of the HP/EXP HUD, keeping the top hotbar clean.
+- Potion values, heal amount, buff duration, consumable cooldown, combat math, and inventory behavior are unchanged.
+- Authored map/world content is unchanged.
+
+## v6-11-312 — Menu and hotbar layout
+
+- Reassigned the top hotbar so **1–3 are fixed item/consumable hotkeys** (Healing, Attack, Magic Potion) and **4–8 are the five equipment/weapon hotkeys**. Existing five-slot weapon assignments keep their saved order; only their physical keys move.
+- Updated the Escape-menu equipment hotkey rail and assignment buttons to show **4–8**.
+- Raised the Escape inventory/class/equipment overlay above all viewport HUD elements so the top hotbar, HP/EXP bar, and skill column never cover it.
+- Enlarged the desktop Escape workspace, inventory/equipment tiles, hotkey rails, and both item/skill hover-detail cards substantially for readability. Compact-window breakpoints remain intact.
+- Gameplay, combat, cooldowns, crafting logic, map/world content, coin presentation, and flower loot-icon behavior are unchanged from v311.
+
+## v6-11-311 — HUD reposition and loot polish
+
+- Moved the 1–8 equipment/item hotbar to the **top-center** of the rendered game viewport.
+- Moved HP/EXP to the **bottom-center** and vertically centered the Shift/Space/E/R skill column along the **right side** of the rendered viewport. All anchors remain relative to the game viewport rather than browser gutters.
+- Removed the short coin-drop shimmer/glint animation; coin drop and pickup behavior is unchanged.
+- Inventory White/Blue Flower icons now use the exact bordered flower loot sprites shown on the ground after cutting a flower. Living world flowers and crafting ingredient icons are unchanged.
+- Authored map/world data and unrelated gameplay systems are unchanged.
+
+## v6-11-310 — Magus renames, new loot art, and charm slot
+
+- Renamed the Arcana kit across the skills page, descriptions, and bound hotbars: **Spellshred**, **Ignite**, **Rainbloom**, and **Mirage**. Gameplay, cooldowns, scaling, and behavior are otherwise unchanged.
+- Wired the user-drawn replacement **coin** art into mob loot drops and the new **HP potion** art into inventory/crafting/hotbar usage.
+- Added a new **Charms** equipment slot with a craftable **Wood Ring** that costs **2 Wood**, auto-equips on craft, and grants **+1 Armor**.
+- Charm ownership now persists through local/browser restore and participates in the same gear-based armor calculation on both client and server.
+- Existing combat, crafting, inventory, cooldown, hotbar, and world content systems are unchanged outside the requested updates.
+
+## v6-11-308 — Ability active-state scaling
+
+- Hallucination blink range is retuned to **30px→50px** from LV1→LV20; its 2s→5s return window and 20s→15s cast-start cooldown remain unchanged.
+- While the Hallucination clone exists, the skill hotbar now displays the remaining clone-return window. Consuming or expiring the clone immediately switches the same slot to the actual cooldown time already elapsed since the first blink.
+- Rain Cloud now gains cast-time scaling from **2.0s at LV1 → 0.5s at LV20**. Its 10%→30% Magic Grass slow, 30s grass lifetime, and 30s→20s post-cloud cooldown remain unchanged.
+- Remote Rain Cloud casting accepts the longer 2-second LV1 animation duration so multiplayer presentation matches the local committed cast.
+- Authored map/world data and unrelated gameplay systems are unchanged.
+
+## v6-11-307 — Hallucination cooldown visibility fix
+
+- Hallucination still uses the v306 balance values: 40px→80px blink range, 2s→5s decoy duration, and 20s→15s cooldown.
+- The cooldown deadline continues to begin on the first successful cast, but the activation gate now reads that wall-clock deadline directly instead of relying on a mirrored frame value.
+- The skill hotbar cooldown mask/text now refreshes every frame, so Hallucination visibly enters cooldown on the cast frame and counts down while the decoy is still alive.
+- Returning to the active decoy remains available during cooldown because it is the second half of the same cast; it does not restart or extend the cooldown.
+- Rain Cloud scaling, 3 AP per level, elemental damage, Fireball Fire element, gameplay systems, and authored map/world data are unchanged from v306.
+
+## v6-11-305 — Ability scaling + elemental damage foundation
+
+- Level-ups now award **3 Ability Points** instead of 1; the F9 progression test grant mirrors the same +3 AP reward.
+- Added a shared elemental layer on top of physical/magic damage. Fireball impact and On-Fire ticks are now explicitly **Fire** element; current monsters have neutral elemental resistances, so this adds no hidden damage rebalance yet.
+- Rain Cloud now scales from LV1-LV20: Magic Grass slow increases from 30% to 50%, and post-cloud cooldown falls from 15.0s to 10.0s. Magic Grass base lifetime increases from 24s to 36s per tuft. Casting a new Rain Cloud replaces that caster's prior Magic Grass field.
+- Hallucination now scales from LV1-LV20: blink range grows from 34px to 60px, decoy duration from 5.8s to 8.0s, and post-decoy cooldown falls from 15.0s to 10.0s. Server-clocked decoy lifetime and late-join snapshots use the learned level.
+
+## v6-11-304 — Viewport HUD anchoring
+
+- Starts from `6-11-303 HUDAnchoringFix`.
+- Adds a rendered `#gameViewport` container that exactly follows the 16:9 game canvas footprint.
+- Anchors HP/EXP to the game viewport upper-left, the 1–8 item hotbar to game viewport bottom-center, and the vertical Shift / Space / E / R skill column to game viewport lower-right.
+- Black browser gutters / letterboxing no longer become HUD positioning space.
+- Preserves HUD contents, cooldown overlays/text, item hotbar behavior, skill behavior, gameplay, map-editor workflow, and authored world data.
+
+## v6-11-303 — HUD anchoring fix
+
+- HP/EXP, the 1–8 item hotbar, and the skill hotbar are now separate viewport-level HUD siblings with independent fixed anchors.
+- HP/EXP stays upper-left, the item hotbar stays bottom-center, and the skills occupy a compact bottom-right four-slot Shift / Space / E / R column.
+- Extra compact-width rules keep all three HUD groups visible and non-overlapping without changing hotbar, cooldown, inventory, or gameplay behavior.
+
+## v6-11-302 — HUD layout fix
+
+- Skill icons now occupy a dedicated compact lower-right 2×2 grid above the item bar, eliminating overlap with utility slots 6–8.
+- The complete 1–8 item hotbar remains bottom-center with a distinct gap between weapon/tool slot 5 and utility slot 6.
+- HP/EXP remain anchored upper-left.
+- Compact viewport rules reduce slot sizes while preserving counts, key labels, and cooldown overlays.
+
+## v6-11-301 — Crafting and consumables
+
+- White and Blue harvest flowers now persist as separate inventory resources without changing their world/editor placement or visuals.
+- Added Healing, Attack, and Magic potions with server-authoritative crafting, shared consumable cooldown, healing validation, and refresh-only 30-second damage buffs.
+- Arrow crafting now costs 5 Wood + 1 Stone and produces 20 arrows.
+- Weapon slots 1–5 remain unchanged; utility slots 6–8 show potion stacks and cooldowns. HP moved upper-left and skills moved to a compact lower-right grid.
+- Browser persistence restores potion inventory and remaining buff/cooldown durations with server clamping.
 
 ## v6-11-300 — Large-map coordinate authority fix
 

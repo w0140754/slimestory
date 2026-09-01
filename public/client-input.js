@@ -113,11 +113,11 @@ function handleCanvasMouseMove(event) {
 canvas.addEventListener("mousemove", handleCanvasMouseMove);
 
 const HOTBAR_KEY_TO_INDEX = Object.freeze({
-  "1": 0,
-  "2": 1,
-  "3": 2,
-  "4": 3,
-  "5": 4
+  "4": 0,
+  "5": 1,
+  "6": 2,
+  "7": 3,
+  "8": 4
 });
 
 const DEBUG_ARROW_GRANT = 99;
@@ -183,7 +183,7 @@ const DEBUG_COIN_GRANT = 10;
 
 function grantDebugProgressionPoints() {
   player.skillPoints += 5;
-  player.abilityPoints += 1;
+  player.abilityPoints += 3;
 
   spawnFloatingText(
     player.x,
@@ -196,7 +196,7 @@ function grantDebugProgressionPoints() {
   spawnFloatingText(
     player.x,
     player.y - 48,
-    "+1 AP",
+    "+3 AP",
     "#e5b8ff",
     1.0
   );
@@ -270,6 +270,12 @@ function handleMenuKeyDown(key) {
 
 
 function handleWeaponHotkey(key) {
+  if (key === "1" || key === "2" || key === "3") {
+    sanitizeUtilityHotbarAssignments();
+    const itemId = player.utilityHotbarAssignments?.[Number(key) - 1] || null;
+    if (itemId) useConsumable(itemId);
+    return true;
+  }
   if (Object.prototype.hasOwnProperty.call(HOTBAR_KEY_TO_INDEX, key)) {
     inputController.queueCommand("equipWeapon", {
       index: HOTBAR_KEY_TO_INDEX[key]
@@ -411,7 +417,7 @@ function resetInputAfterFocusLoss() {
   inputController.clearKeys();
   inputController.clearCommands();
   primaryAttackHeld = false;
-  pendingWandBasicAttack = null;
+  pendingBasicAttack = null;
 
   if (player.bowDrawing) {
     player.bowDrawing = false;

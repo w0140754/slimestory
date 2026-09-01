@@ -439,14 +439,16 @@ function spawnWandMasteryHitParticles(x, y, angle, startDelay = 0, reverseTravel
     const life = 0.31;
     const colorIndex = claw + 1;
 
-    // Keep the existing finishing point exactly where it is, but extend the
-    // beginning of the scratch backward by 4px so Wand Mastery's first contact
-    // reads more clearly. Shifting the longer mark by half the extension keeps
-    // the travel endpoint fixed for both normal and reversed claw travel.
-    const slashStartExtension = 4;
-    const slashLength = 10 + slashStartExtension;
+    // Keep the existing three-rake shape and timing, but let the sweep travel
+    // farther across the target: it begins clearly before contact and finishes
+    // just beyond the old endpoint. The center shift preserves that asymmetric
+    // lead/trail extension for both normal and reversed claw travel.
+    const slashStartExtension = 8;
+    const slashEndExtension = 2;
+    const slashLength = 10 + slashStartExtension + slashEndExtension;
     const slashCenterShift =
-      (reverseTravel ? 1 : -1) * slashStartExtension / 2;
+      (reverseTravel ? -1 : 1) *
+      (slashEndExtension - slashStartExtension) / 2;
 
     wandSweepParticles.push({
       x: x + normalX * offset + dirX * slashCenterShift,
@@ -855,12 +857,19 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
 }
 
 function attackCooldownForWeapon(weapon) {
+  // Bows never reach the universal primary-attack path; their charge/release
+  // cadence remains independent. Every other equipped weapon/tool now reads
+  // the shared Slow / Normal / Quick tier from combat-balance.
+  if (typeof COMBAT_BALANCE?.weaponAttackCooldown === "function") {
+    return COMBAT_BALANCE.weaponAttackCooldown(player.weaponIndex);
+  }
+
+  // Compatibility fallback if an older cached combat-balance file is present.
   if (isWandTypeWeapon(weapon)) {
     return typeof COMBAT_BALANCE?.wandAttackCooldown === "function"
       ? COMBAT_BALANCE.wandAttackCooldown(player.weaponIndex)
       : WAND_BASIC_ATTACK_FALLBACK_COOLDOWN;
   }
-  if (weapon === "katana") return 0.42;
   return player.attackCooldownDuration;
 }
 
@@ -870,23 +879,38 @@ function attackDurationForWeapon(weapon) {
     : DEFAULT_BASIC_ATTACK_DURATION;
 }
 
-function queueWandBasicAttackImpact(weapon, shadowCritAttack) {
-  pendingWandBasicAttack = {
+function attackImpactDelayForWeapon(weapon) {
+  if (isWandTypeWeapon(weapon)) {
+    return WAND_BASIC_ATTACK_IMPACT_DELAY;
+  }
+
+  // Non-wand attack frame 1 begins at 34% of the existing 3-pose swing.
+  // Landing the hit at that exact visual transition gives swords/tools the
+  // same readable anticipation that wands already had without changing their
+  // existing total animation duration or repeat cooldown.
+  return Math.max(
+    0.01,
+    attackDurationForWeapon(weapon) * MELEE_BASIC_ATTACK_IMPACT_PHASE
+  );
+}
+
+function queueBasicAttackImpact(weapon, shadowCritAttack) {
+  pendingBasicAttack = {
     weapon,
     mapId: currentMapId,
-    time: WAND_BASIC_ATTACK_IMPACT_DELAY,
+    time: attackImpactDelayForWeapon(weapon),
     shadowCritAttack: Boolean(shadowCritAttack)
   };
 }
 
-function updatePendingWandBasicAttack(dt) {
-  if (!pendingWandBasicAttack) return;
+function updatePendingBasicAttack(dt) {
+  if (!pendingBasicAttack) return;
 
-  pendingWandBasicAttack.time -= dt;
-  if (pendingWandBasicAttack.time > 0) return;
+  pendingBasicAttack.time -= dt;
+  if (pendingBasicAttack.time > 0) return;
 
-  const pending = pendingWandBasicAttack;
-  pendingWandBasicAttack = null;
+  const pending = pendingBasicAttack;
+  pendingBasicAttack = null;
 
   // A death, map transition, or weapon swap during the tiny wind-up cancels
   // the queued impact rather than allowing a stale hit on the old map.
@@ -903,7 +927,7 @@ function updatePendingWandBasicAttack(dt) {
   player.shadowCritAttack =
     pending.shadowCritAttack;
 
-  // The slash/claw sweep begins on the visual snap, not on mouse-down.
+  // The slash/claw sweep begins on the active visual frame, not on mouse-down.
   player.slashTime =
     player.slashDuration;
 
@@ -1068,25 +1092,19 @@ function executePrimaryAttackCommand(payload) {
     onlineClient.syncLocalTransientReplication(true);
   }
 
-  if (isWandTypeWeapon(currentWeapon)) {
-    // Plant only voluntary movement for the opening snap. Do not clear or
-    // consume movement input: a held key resumes automatically when this
-    // timer expires, just as held primary attack continues through recovery.
-    player.wandMovementLockTime =
-      WAND_BASIC_ATTACK_MOVEMENT_LOCK;
-    // Wands now have a real anticipation beat. Damage is queued until the
-    // crisp 45-degree snap rather than happening invisibly at mouse-down.
-    player.slashTime = 0;
-    queueWandBasicAttackImpact(
-      currentWeapon,
-      player.shadowCritAttack
-    );
-  } else {
-    player.slashTime =
-      player.slashDuration;
+  // Every non-bow basic attack now uses the same committed gesture that was
+  // previously wand-only: voluntary movement is planted for the visible
+  // attack, and damage/tool interaction lands on the active animation frame
+  // rather than invisibly at mouse-down. Held movement input is not consumed,
+  // so it resumes automatically as soon as the gesture ends.
+  player.basicAttackMovementLockTime =
+    player.attackDuration;
 
-    executeWeaponAttack(currentWeapon);
-  }
+  player.slashTime = 0;
+  queueBasicAttackImpact(
+    currentWeapon,
+    player.shadowCritAttack
+  );
 
   player.shadowCritAttack = false;
 }

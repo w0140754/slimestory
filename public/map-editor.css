@@ -123,6 +123,7 @@ input[type="number"].property-input { appearance: textfield; }
 }
 .palette-tool.active { border-color: #d7bc78; background: #433b29; outline: 1px solid #9f8452; }
 .palette-icon { width: 20px; height: 20px; display: grid; place-items: center; font-size: 12px; }
+.palette-sprite { width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated; image-rendering: crisp-edges; justify-self: center; }
 .palette-icon.tree { border-radius: 50%; position: relative; }
 .palette-icon.tree::after { content: ""; position: absolute; width: 4px; height: 8px; background: #7b5437; left: 8px; top: 12px; }
 .palette-icon.tree.interactive { background: #4d873f; border: 1px solid #b0cf73; }
@@ -230,3 +231,4 @@ input[type="number"].property-input { appearance: textfield; }
   .editor-layout { grid-template-columns: 180px minmax(0, 1fr); }
   .inspector-panel { grid-column: 1 / -1; border-left: 0; border-top: 2px solid #3b4538; max-height: 260px; }
 }
+

@@ -852,12 +852,53 @@
       }
     }
 
+    const configuredDefaultLoad = adoptedMapOverrides?.defaultPlayerLoad;
+    let defaultPlayerLoad = null;
+
+    if (
+      configuredDefaultLoad &&
+      typeof configuredDefaultLoad.mapId === "string" &&
+      typeof configuredDefaultLoad.spawnId === "string"
+    ) {
+      const targetMap = maps[configuredDefaultLoad.mapId];
+      const targetSpawn = Array.isArray(targetMap?.playerSpawns)
+        ? targetMap.playerSpawns.find(spawn => spawn?.id === configuredDefaultLoad.spawnId)
+        : null;
+      if (targetSpawn) {
+        defaultPlayerLoad = Object.freeze({
+          mapId: configuredDefaultLoad.mapId,
+          spawnId: configuredDefaultLoad.spawnId
+        });
+      }
+    }
+
+    // v329 briefly stored the load marker on an individual map. Accept that
+    // shape as a compatibility fallback, but v330 keeps the one global loading
+    // target outside map data so choosing a new starting map never rewrites the
+    // rest of another authored map.
+    if (!defaultPlayerLoad) {
+      for (const [mapId, map] of Object.entries(maps)) {
+        const spawnId = typeof map?.defaultPlayerSpawnId === "string"
+          ? map.defaultPlayerSpawnId
+          : "";
+        if (!spawnId) continue;
+        const targetSpawn = Array.isArray(map?.playerSpawns)
+          ? map.playerSpawns.find(spawn => spawn?.id === spawnId)
+          : null;
+        if (!targetSpawn) continue;
+        defaultPlayerLoad = Object.freeze({ mapId, spawnId });
+        break;
+      }
+    }
+
     return Object.freeze({
       // The adoption tool increments the shared content version whenever an
       // editor draft becomes canonical.
       version: Math.max(14, Number(adoptedMapOverrides?.version) || 14),
       schemaVersion: 1,
+      defaultPlayerLoad,
       maps
     });
   }
 );
+

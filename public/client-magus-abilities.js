@@ -458,6 +458,7 @@ function beginRainCloudCast() {
 
   player.rainCloudCasting = true;
   player.rainCloudCastTime = 0;
+  player.rainCloudCastDuration = rainCloudCastTimeAtLevel();
   player.rainCloudCastMapId = currentMapId;
   player.rainCloudCastTargetX = target.x;
   player.rainCloudCastTargetY = target.y;
@@ -1562,6 +1563,43 @@ function drawRainCloud(cloud, camX, camY) {
   ctx.restore();
 }
 
+function rainCloudCooldownAtLevel(level = abilityLevel("rainCloud")) {
+  return typeof ABILITY_SCALING !== "undefined"
+    ? ABILITY_SCALING.rainCloudCooldownAtLevel(level)
+    : 30.0;
+}
+
+function rainCloudGrassSlowPercentAtLevel(level = abilityLevel("rainCloud")) {
+  return typeof ABILITY_SCALING !== "undefined"
+    ? ABILITY_SCALING.rainCloudGrassSlowPercentAtLevel(level)
+    : 10;
+}
+
+function rainCloudCastTimeAtLevel(level = abilityLevel("rainCloud")) {
+  return typeof ABILITY_SCALING !== "undefined" &&
+    typeof ABILITY_SCALING.rainCloudCastTimeAtLevel === "function"
+    ? ABILITY_SCALING.rainCloudCastTimeAtLevel(level)
+    : 0.50;
+}
+
+function hallucinationBlinkRangeAtLevel(level = abilityLevel("jesterBlink")) {
+  return typeof ABILITY_SCALING !== "undefined"
+    ? ABILITY_SCALING.hallucinationBlinkRangeAtLevel(level)
+    : JESTER_BLINK_RANGE;
+}
+
+function hallucinationCooldownAtLevel(level = abilityLevel("jesterBlink")) {
+  return typeof ABILITY_SCALING !== "undefined"
+    ? ABILITY_SCALING.hallucinationCooldownAtLevel(level)
+    : 20.0;
+}
+
+function hallucinationDecoyDurationAtLevel(level = abilityLevel("jesterBlink")) {
+  return typeof ABILITY_SCALING !== "undefined"
+    ? ABILITY_SCALING.hallucinationDecoyDurationAtLevel(level)
+    : JESTER_CLONE_DURATION;
+}
+
 function fireballCooldownAtLevel(level = abilityLevel("fireball")) {
   const cleanLevel = Math.max(1, Math.min(20, Math.floor(Number(level) || 1)));
   const t = (cleanLevel - 1) / 19;
@@ -1586,16 +1624,17 @@ function spawnJesterClone(x, y) {
     `hallucination:${currentMapId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
 
   const startedAtMs = Date.now();
+  const decoyDuration = hallucinationDecoyDurationAtLevel();
 
   jesterClone = {
     cloneId,
     x,
     y,
-    life: JESTER_CLONE_DURATION,
+    life: decoyDuration,
     startedAtMs,
     returnReadyAtMs: startedAtMs + JESTER_RETURN_LOCKOUT_SECONDS * 1000,
-    expiresAtMs: startedAtMs + JESTER_CLONE_DURATION * 1000,
-    duration: JESTER_CLONE_DURATION,
+    expiresAtMs: startedAtMs + decoyDuration * 1000,
+    duration: decoyDuration,
     phase: Math.random() * Math.PI * 2,
     releasedEnemyIds: new Set(),
     hatIndex: player.hatIndex,
@@ -1642,12 +1681,16 @@ function spawnRemoteJesterBlinkVisual(
 
   const startedAtMs = Date.now();
   const isSnapshot = Boolean(payload.snapshot);
+  const totalDuration = Math.max(
+    0.05,
+    Number(payload.duration) || JESTER_CLONE_DURATION
+  );
   const remainingLife = isSnapshot
     ? Math.max(0.05, Math.min(
-        JESTER_CLONE_DURATION,
-        Number(payload.remainingLife) || JESTER_CLONE_DURATION
+        totalDuration,
+        Number(payload.remainingLife) || totalDuration
       ))
-    : JESTER_CLONE_DURATION;
+    : totalDuration;
 
   if (isSnapshot) {
     removeRemoteJesterForOwner(ownerId);
@@ -1659,9 +1702,9 @@ function spawnRemoteJesterBlinkVisual(
     x: startX,
     y: startY,
     life: remainingLife,
-    startedAtMs: startedAtMs - (JESTER_CLONE_DURATION - remainingLife) * 1000,
+    startedAtMs: startedAtMs - (totalDuration - remainingLife) * 1000,
     expiresAtMs: startedAtMs + remainingLife * 1000,
-    duration: JESTER_CLONE_DURATION,
+    duration: totalDuration,
     phase: Math.random() * Math.PI * 2,
 
     hatIndex: appearance.hatIndex,
@@ -1726,6 +1769,7 @@ function applyTransientAbilitySnapshot(message) {
         endY: clone.y,
         cloneId: clone.cloneId,
         remainingLife: clone.remainingLife,
+        duration: clone.duration,
         hatIndex: clone.hatIndex,
         shirtIndex: clone.shirtIndex,
         pantsIndex: clone.pantsIndex
@@ -1800,7 +1844,7 @@ function returnToJesterClone(clone) {
   player.slashTime = 0;
   player.jesterBlinkFadeTime = player.jesterBlinkFadeDuration;
 
-  endLocalHallucination({ burst: false, startCooldown: true });
+  endLocalHallucination({ burst: false, startCooldown: false });
 
   if (typeof onlineClient !== "undefined") {
     onlineClient.sendLocalState(true);
@@ -1817,12 +1861,15 @@ function tryCastJesterBlink() {
     return returnToJesterClone(activeClone);
   }
 
-  if (player.jesterBlinkCooldown > 0) {
-    const remaining = Math.max(0, Number(player.jesterBlinkCooldown) || 0);
+  const cooldownRemaining = skillCooldownRemaining("jesterBlink");
+  if (cooldownRemaining > 0) {
+    // Read the wall-clock deadline directly instead of the mirrored frame value.
+    // The active clone branch above is intentionally exempt because returning to
+    // the decoy is the second half of the same cast, not a new Hallucination.
     spawnFloatingText(
       player.x,
       player.y - 26,
-      `${remaining.toFixed(1)}s`,
+      `${cooldownRemaining.toFixed(1)}s`,
       "#e7a2ff",
       0.7
     );
@@ -1851,8 +1898,9 @@ function tryCastJesterBlink() {
   }
 
   let destination = null;
+  const blinkRange = hallucinationBlinkRangeAtLevel();
 
-  for (let step = JESTER_BLINK_RANGE; step >= 10; step -= 4) {
+  for (let step = blinkRange; step >= 10; step -= 4) {
     const testX = startX + dx * step;
     const testY = startY + dy * step;
 
@@ -1868,6 +1916,15 @@ function tryCastJesterBlink() {
   }
 
   spawnJesterClone(startX, startY);
+  // Hallucination cooldown begins on the first successful cast. The decoy
+  // lifetime runs inside this timer; returning to or expiring the clone does
+  // not restart or extend the cooldown.
+  startHallucinationCooldown(Date.now());
+  // Make the cast-frame cooldown visible immediately; the per-frame HUD updater
+  // keeps the mask/text counting down from here.
+  if (typeof updateAbilityCooldownHud === "function") {
+    updateAbilityCooldownHud();
+  }
 
   spawnJesterAfterimageTrail(
     startX,
@@ -1935,7 +1992,7 @@ function drawRainCloudCastIndicator(camX, camY) {
 }
 
 function startHallucinationCooldown(startedAtMs = Date.now()) {
-  const duration = Number(player.jesterBlinkCooldownDuration) || 15;
+  const duration = hallucinationCooldownAtLevel();
   const startMs = Number.isFinite(Number(startedAtMs))
     ? Number(startedAtMs)
     : Date.now();
@@ -1948,7 +2005,7 @@ function startHallucinationCooldown(startedAtMs = Date.now()) {
   player.jesterBlinkCooldown = skillCooldownRemaining("jesterBlink");
 }
 
-function endLocalHallucination({ burst = false, startCooldown = true, cooldownStartedAtMs = Date.now() } = {}) {
+function endLocalHallucination({ burst = false, startCooldown = false, cooldownStartedAtMs = Date.now() } = {}) {
   if (!jesterClone) return false;
 
   if (burst) {
@@ -2013,15 +2070,11 @@ function updateJesterRuntime(dt) {
     }
 
     if (jesterClone.life <= 0) {
-      endLocalHallucination({
-        burst: true,
-        startCooldown: true,
-        cooldownStartedAtMs: Number(jesterClone.expiresAtMs) || Date.now()
-      });
+      endLocalHallucination({ burst: true, startCooldown: false });
     } else if (
       jesterClone.mapId !== currentMapId
     ) {
-      endLocalHallucination({ burst: false, startCooldown: true });
+      endLocalHallucination({ burst: false, startCooldown: false });
     }
   }
 
@@ -2127,3 +2180,4 @@ function drawJesterClone(camX, camY) {
     camY
   );
 }
+

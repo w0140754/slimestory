@@ -291,9 +291,16 @@ class OnlineClient {
           player.stone = message.stone;
         }
 
-        if (Number.isFinite(message.flowers)) {
-          player.flowers = message.flowers;
-        }
+        if (Number.isFinite(message.whiteFlowers)) player.whiteFlowers = message.whiteFlowers;
+        if (Number.isFinite(message.blueFlowers)) player.blueFlowers = message.blueFlowers;
+        if (Number.isFinite(message.healingPotions)) player.healingPotions = message.healingPotions;
+        if (Number.isFinite(message.attackPotions)) player.attackPotions = message.attackPotions;
+        if (Number.isFinite(message.magicPotions)) player.magicPotions = message.magicPotions;
+        if (Number.isFinite(message.consumableCooldownUntil)) player.consumableCooldownUntil = message.consumableCooldownUntil;
+        if (Number.isFinite(message.attackPotionCooldownUntil)) player.attackPotionCooldownUntil = message.attackPotionCooldownUntil;
+        if (Number.isFinite(message.magicPotionCooldownUntil)) player.magicPotionCooldownUntil = message.magicPotionCooldownUntil;
+        if (Number.isFinite(message.attackPotionUntil)) player.attackPotionUntil = message.attackPotionUntil;
+        if (Number.isFinite(message.magicPotionUntil)) player.magicPotionUntil = message.magicPotionUntil;
 
         if (Number.isFinite(message.goldSlimeBubbles)) {
           player.goldSlimeBubbles = message.goldSlimeBubbles;
@@ -347,6 +354,26 @@ class OnlineClient {
       return;
     }
 
+    if (message.type === "consumableUseResult") {
+      const successfulPotion = message.success && UTILITY_SLOT_ITEMS.includes(message.item);
+      if (Number.isFinite(message.hp)) player.hp = message.hp;
+      if (Number.isFinite(message.maxHp)) player.maxHp = message.maxHp;
+      if (Number.isFinite(message.totalHealingPotions)) player.healingPotions = message.totalHealingPotions;
+      if (Number.isFinite(message.totalAttackPotions)) player.attackPotions = message.totalAttackPotions;
+      if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
+      if (Number.isFinite(message.consumableCooldownUntil)) player.consumableCooldownUntil = message.consumableCooldownUntil;
+      if (Number.isFinite(message.attackPotionCooldownUntil)) player.attackPotionCooldownUntil = message.attackPotionCooldownUntil;
+      if (Number.isFinite(message.magicPotionCooldownUntil)) player.magicPotionCooldownUntil = message.magicPotionCooldownUntil;
+      if (Number.isFinite(message.attackPotionUntil)) player.attackPotionUntil = message.attackPotionUntil;
+      if (Number.isFinite(message.magicPotionUntil)) player.magicPotionUntil = message.magicPotionUntil;
+      if (!message.success && message.reason === "fullHp") spawnFloatingText(player.x, player.y - 42, "HP FULL", "#f6c8df", 0.8);
+      if (successfulPotion) triggerPotionFeedback(message.item, player.x, player.y);
+      updateInventoryUi();
+      updateHotbar();
+      saveLocalCharacterState(true);
+      return;
+    }
+
     if (message.type === "shopPurchaseResult") {
       this.handleShopPurchaseResult(
         message
@@ -393,7 +420,16 @@ class OnlineClient {
       if (Number.isFinite(message.coins)) player.coins = Math.max(0, Math.floor(message.coins));
       if (Number.isFinite(message.wood)) player.wood = Math.max(0, Math.floor(message.wood));
       if (Number.isFinite(message.stone)) player.stone = Math.max(0, Math.floor(message.stone));
-      if (Number.isFinite(message.flowers)) player.flowers = Math.max(0, Math.floor(message.flowers));
+      if (Number.isFinite(message.whiteFlowers)) player.whiteFlowers = Math.max(0, Math.floor(message.whiteFlowers));
+      if (Number.isFinite(message.blueFlowers)) player.blueFlowers = Math.max(0, Math.floor(message.blueFlowers));
+      if (Number.isFinite(message.healingPotions)) player.healingPotions = Math.max(0, Math.floor(message.healingPotions));
+      if (Number.isFinite(message.attackPotions)) player.attackPotions = Math.max(0, Math.floor(message.attackPotions));
+      if (Number.isFinite(message.magicPotions)) player.magicPotions = Math.max(0, Math.floor(message.magicPotions));
+      if (Number.isFinite(message.consumableCooldownUntil)) player.consumableCooldownUntil = message.consumableCooldownUntil;
+      if (Number.isFinite(message.attackPotionCooldownUntil)) player.attackPotionCooldownUntil = message.attackPotionCooldownUntil;
+      if (Number.isFinite(message.magicPotionCooldownUntil)) player.magicPotionCooldownUntil = message.magicPotionCooldownUntil;
+      if (Number.isFinite(message.attackPotionUntil)) player.attackPotionUntil = message.attackPotionUntil;
+      if (Number.isFinite(message.magicPotionUntil)) player.magicPotionUntil = message.magicPotionUntil;
       if (Number.isFinite(message.goldSlimeBubbles)) {
         player.goldSlimeBubbles = Math.max(0, Math.floor(message.goldSlimeBubbles));
       }
@@ -473,6 +509,16 @@ class OnlineClient {
     if (message.type === "playerWetState") {
       const remote = message.id === this.localPlayerId ? player : this.remotePlayers.get(message.id);
       if (remote) remote.wetTime = Math.max(0, Number(message.wetTime) || 0);
+      return;
+    }
+
+    if (message.type === "playerConsumableEffect") {
+      if (message.playerId !== this.localPlayerId && UTILITY_SLOT_ITEMS.includes(message.item)) {
+        const remote = this.remotePlayers.get(message.playerId);
+        if (remote && remote.mapId === currentMapId) {
+          spawnPotionUseEffect(message.item, remote.x, remote.y);
+        }
+      }
       return;
     }
 
@@ -885,7 +931,7 @@ class OnlineClient {
     }
 
     if (message.type === "coinSpawn") {
-      this.receiveSharedCoin(message.coin, true);
+      this.receiveSharedCoin(message.coin);
       return;
     }
 
@@ -1867,6 +1913,12 @@ class OnlineClient {
     return true;
   }
 
+  requestConsumableUse(item) {
+    if (!item || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "consumableUse", item }));
+    return true;
+  }
+
   requestDebugCoins() {
     if (
       !this.connected ||
@@ -2013,6 +2065,12 @@ class OnlineClient {
     if (Number.isFinite(message.totalWood)) {
       player.wood = message.totalWood;
     }
+    if (Number.isFinite(message.totalStone)) player.stone = message.totalStone;
+    if (Number.isFinite(message.totalWhiteFlowers)) player.whiteFlowers = message.totalWhiteFlowers;
+    if (Number.isFinite(message.totalBlueFlowers)) player.blueFlowers = message.totalBlueFlowers;
+    if (Number.isFinite(message.totalHealingPotions)) player.healingPotions = message.totalHealingPotions;
+    if (Number.isFinite(message.totalAttackPotions)) player.attackPotions = message.totalAttackPotions;
+    if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
 
     if (Number.isFinite(message.totalArrows)) {
       player.arrows = Math.max(0, Math.floor(message.totalArrows));
@@ -2020,7 +2078,13 @@ class OnlineClient {
 
     if (message.success) {
       if (recipe.resourceKey) {
-        if (!Number.isFinite(message.totalArrows)) {
+        const totalField = {
+          arrows: "totalArrows",
+          healingPotions: "totalHealingPotions",
+          attackPotions: "totalAttackPotions",
+          magicPotions: "totalMagicPotions"
+        }[recipe.resourceKey];
+        if (!totalField || !Number.isFinite(message[totalField])) {
           player[recipe.resourceKey] =
             Math.max(0, Number(player[recipe.resourceKey]) || 0) +
             Math.max(1, Number(recipe.outputCount) || 1);
@@ -2052,11 +2116,11 @@ class OnlineClient {
       return;
     }
 
-    if (message.reason === "needWood") {
+    if (message.reason === "missingIngredients" || message.reason === "needWood") {
       spawnFloatingText(
         woodCraftBench.x,
         woodCraftBench.y - 24,
-        `NEED ${recipe.cost} WOOD`,
+        "MISSING INGREDIENTS",
         "#ffe38b",
         0.9
       );
@@ -2152,44 +2216,14 @@ class OnlineClient {
       player.stone = message.totalStone;
     }
 
-    if (
-      Number.isFinite(
-        message.totalFlowers
-      )
-    ) {
-      player.flowers =
-        message.totalFlowers;
-    }
+    if (Number.isFinite(message.totalWhiteFlowers)) player.whiteFlowers = message.totalWhiteFlowers;
+    if (Number.isFinite(message.totalBlueFlowers)) player.blueFlowers = message.totalBlueFlowers;
 
     if (Number.isFinite(message.totalGoldSlimeBubbles)) {
       player.goldSlimeBubbles = message.totalGoldSlimeBubbles;
     }
 
-    if (message.resourceKind === "stone") {
-      spawnFloatingText(
-        player.x,
-        player.y - 47,
-        "+1 STONE",
-        "#d5cfca",
-        1.0
-      );
-    } else if (message.resourceKind === "flower") {
-      spawnFloatingText(
-        player.x,
-        player.y - 47,
-        "+1 FLW",
-        "#f6c8df",
-        1.0
-      );
-    } else if (message.resourceKind === "goldSlimeBubble") {
-      spawnFloatingText(
-        player.x,
-        player.y - 47,
-        "+1 GOLD BUBBLE",
-        "#ffe36f",
-        1.15
-      );
-    }
+
 
     updateInventoryUi();
   }
@@ -2442,7 +2476,7 @@ class OnlineClient {
     }
   }
 
-  receiveSharedCoin(serverCoin, sparkle = false) {
+  receiveSharedCoin(serverCoin) {
     if (!serverCoin || !serverCoin.id) return;
 
     this.sharedCoins.set(serverCoin.id, {
@@ -2450,8 +2484,7 @@ class OnlineClient {
       mapId: serverCoin.mapId,
       x: Number(serverCoin.x) || 0,
       y: Number(serverCoin.y) || 0,
-      life: Math.max(0, Number(serverCoin.life) || 0),
-      sparkle: Boolean(sparkle)
+      life: Math.max(0, Number(serverCoin.life) || 0)
     });
 
     this.syncSharedCoinVisuals();
@@ -2463,7 +2496,7 @@ class OnlineClient {
     for (const serverCoin of serverCoins || []) {
       if (!serverCoin || !serverCoin.id) continue;
       incomingIds.add(serverCoin.id);
-      this.receiveSharedCoin(serverCoin, false);
+      this.receiveSharedCoin(serverCoin);
     }
 
     for (const coinId of [...this.sharedCoins.keys()]) {
@@ -2530,11 +2563,9 @@ class OnlineClient {
             shared: true,
             entityId: serverCoin.id,
             mapId: serverCoin.mapId,
-            life: serverCoin.life,
-            sparkle: Boolean(serverCoin.sparkle)
+            life: serverCoin.life
           }
         );
-        serverCoin.sparkle = false;
       } else {
         coin.x = serverCoin.x;
         coin.y = serverCoin.y;
@@ -3222,6 +3253,7 @@ class OnlineClient {
       hatIndex: player.hatIndex,
       shirtIndex: player.shirtIndex,
       pantsIndex: player.pantsIndex,
+      charmIndex: player.charmIndex,
       weaponIndex: player.weaponIndex,
 
       // Progression is still client-owned in this prototype, but combat damage
@@ -3241,6 +3273,7 @@ class OnlineClient {
         wandMastery: abilityLevel("wandMastery"),
         fireball: abilityLevel("fireball"),
         rainCloud: abilityLevel("rainCloud"),
+        jesterBlink: abilityLevel("jesterBlink"),
         camouflage: abilityLevel("camouflage")
       },
 

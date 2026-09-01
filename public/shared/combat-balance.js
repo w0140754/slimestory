@@ -13,8 +13,9 @@
   function () {
     "use strict";
 
-    const VERSION = 20;
+    const VERSION = 25;
     const MIN_DAMAGE = 1;
+    const ELEMENT_TYPES = Object.freeze(["neutral", "fire", "water", "air", "earth"]);
     const LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL = 0.05;
     const PLAYER_ARMOR_RATING_PER_POINT = 3;
     const PLAYER_RESIST_RATING_PER_POINT = 3;
@@ -26,11 +27,15 @@
       guile: 0.25
     });
 
-    const WAND_ATTACK_SPEEDS = Object.freeze({
+    const ATTACK_SPEED_TIERS = Object.freeze({
       slow: Object.freeze({ label: "Slow", cooldown: 0.83 }),
       normal: Object.freeze({ label: "Normal", cooldown: 0.75 }),
       quick: Object.freeze({ label: "Quick", cooldown: 0.65 })
     });
+
+    // Backward-compatible alias for older call sites/tests while the shared
+    // tier system is now universal for every non-bow weapon/tool.
+    const WAND_ATTACK_SPEEDS = ATTACK_SPEED_TIERS;
 
     // Weapon profiles are deliberately small/readable. Physical attacks use
     // their own stat weights. Wand-type melee attacks are INT-weighted even
@@ -41,6 +46,7 @@
         id: "weapon_sword",
         name: "Wood Sword",
         damageType: "physical",
+        attackSpeed: "normal",
         attackPower: 8,
         magicPower: 0,
         strengthScale: 0.85,
@@ -52,6 +58,7 @@
         id: "weapon_axe",
         name: "Axe",
         damageType: "physical",
+        attackSpeed: "slow",
         attackPower: 10,
         magicPower: 0,
         strengthScale: 1.05,
@@ -87,6 +94,7 @@
         id: "weapon_katana",
         name: "Katana",
         damageType: "physical",
+        attackSpeed: "quick",
         attackPower: 12,
         magicPower: 0,
         strengthScale: 0.45,
@@ -98,6 +106,7 @@
         id: "weapon_oldSword",
         name: "Sword",
         damageType: "physical",
+        attackSpeed: "normal",
         attackPower: 10,
         magicPower: 0,
         strengthScale: 0.90,
@@ -133,7 +142,7 @@
         damageType: "magic",
         attackSpeed: "slow",
         attackPower: 5,
-        magicPower: 9,
+        magicPower: 10,
         strengthScale: 0.05,
         dexScale: 0.10,
         luckScale: 0.05,
@@ -144,8 +153,8 @@
         name: "Tournesol",
         damageType: "magic",
         attackSpeed: "normal",
-        attackPower: 5,
-        magicPower: 11,
+        attackPower: 7,
+        magicPower: 20,
         strengthScale: 0.05,
         dexScale: 0.10,
         luckScale: 0.05,
@@ -156,8 +165,8 @@
         name: "Tabatha's Key",
         damageType: "magic",
         attackSpeed: "quick",
-        attackPower: 5,
-        magicPower: 12,
+        attackPower: 8,
+        magicPower: 25,
         strengthScale: 0.05,
         dexScale: 0.10,
         luckScale: 0.05,
@@ -167,19 +176,33 @@
         id: "weapon_pickaxe",
         name: "Pickaxe",
         damageType: "physical",
+        attackSpeed: "slow",
         attackPower: 8,
         magicPower: 0,
         strengthScale: 0.85,
         dexScale: 0.15,
         luckScale: 0.05,
         intScale: 0
+      }),
+      Object.freeze({
+        id: "weapon_sapgemWand",
+        name: "Sapgem Wand",
+        damageType: "magic",
+        attackSpeed: "normal",
+        attackPower: 6,
+        magicPower: 15,
+        strengthScale: 0.05,
+        dexScale: 0.10,
+        luckScale: 0.05,
+        intScale: 0.45
       })
     ]);
 
     const ABILITY_PROFILES = Object.freeze({
       fireball: Object.freeze({
-        name: "Fireball",
+        name: "Ignite",
         damageType: "magic",
+        element: "fire",
         maxLevel: 20,
         powerAnchors: Object.freeze([
           Object.freeze({ level: 1, power: 100 }),
@@ -190,6 +213,7 @@
       fireballBurnTick: Object.freeze({
         name: "On-Fire Tick",
         damageType: "magic",
+        element: "fire",
         maxLevel: 1,
         powerAnchors: Object.freeze([
           // Fireball Burn is 20 Power/sec at two ticks/sec. Each authoritative
@@ -198,16 +222,18 @@
         ])
       }),
       rain: Object.freeze({
-        name: "Rain Cloud",
+        name: "Rainbloom",
         damageType: "magic",
-        maxLevel: 1,
+        element: "neutral",
+        maxLevel: 20,
         powerAnchors: Object.freeze([
           Object.freeze({ level: 1, power: 35 })
         ])
       }),
       wandMasteryMelee: Object.freeze({
-        name: "Wand Mastery",
+        name: "Spellshred",
         damageType: "magic",
+        element: "neutral",
         maxLevel: 20,
         powerAnchors: Object.freeze([
           Object.freeze({ level: 1, power: 55 }),
@@ -223,22 +249,32 @@
       slime: Object.freeze({
         level: 1,
         physicalDefense: 0,
-        magicResist: 0
+        magicResist: 0,
+        elementalResistances: Object.freeze({})
+      }),
+      mushroom: Object.freeze({
+        level: 1,
+        physicalDefense: 0,
+        magicResist: 0,
+        elementalResistances: Object.freeze({})
       }),
       goblin: Object.freeze({
         level: 3,
         physicalDefense: 8,
-        magicResist: 6
+        magicResist: 6,
+        elementalResistances: Object.freeze({})
       }),
       ghost: Object.freeze({
         level: 5,
         physicalDefense: 450,
-        magicResist: -12
+        magicResist: -12,
+        elementalResistances: Object.freeze({})
       }),
       bigGoldSlime: Object.freeze({
         level: 4,
         physicalDefense: 20,
-        magicResist: 18
+        magicResist: 18,
+        elementalResistances: Object.freeze({})
       })
     });
 
@@ -246,12 +282,14 @@
       armor: Object.freeze({
         hats: Object.freeze([1, 1, 2, 2, 2, 4, 1, 2, 3, 2]),
         shirts: Object.freeze([2, 3, 3, 6, 3, 5, 3]),
-        pants: Object.freeze([1, 2, 2, 5, 2, 4, 2])
+        pants: Object.freeze([1, 2, 2, 5, 2, 4, 2]),
+        charms: Object.freeze([1])
       }),
       resist: Object.freeze({
         hats: Object.freeze([0, 0, 2, 2, 1, 1, 0, 1, 1, 2]),
         shirts: Object.freeze([0, 3, 2, 1, 2, 1, 3]),
-        pants: Object.freeze([0, 2, 1, 1, 1, 1, 2])
+        pants: Object.freeze([0, 2, 1, 1, 1, 1, 2]),
+        charms: Object.freeze([0])
       })
     });
 
@@ -278,22 +316,41 @@
     }
 
     function isWandWeaponIndex(weaponIndex) {
-      return [2, 3, 8, 9, 10].includes(Math.floor(Number(weaponIndex)));
+      return [2, 3, 8, 9, 10, 12].includes(Math.floor(Number(weaponIndex)));
     }
 
-    function wandAttackSpeedProfile(weaponIndex) {
-      if (!isWandWeaponIndex(weaponIndex)) return null;
+    function isBowWeaponIndex(weaponIndex) {
+      return [6, 7].includes(Math.floor(Number(weaponIndex)));
+    }
+
+    function weaponAttackSpeedProfile(weaponIndex) {
+      if (isBowWeaponIndex(weaponIndex)) return null;
       const weapon = weaponProfile(weaponIndex);
-      const tier = String(weapon?.attackSpeed || "slow");
-      return WAND_ATTACK_SPEEDS[tier] || WAND_ATTACK_SPEEDS.slow;
+      if (!weapon) return null;
+      const tier = String(weapon.attackSpeed || "normal");
+      return ATTACK_SPEED_TIERS[tier] || ATTACK_SPEED_TIERS.normal;
+    }
+
+    function weaponAttackCooldown(weaponIndex) {
+      return weaponAttackSpeedProfile(weaponIndex)?.cooldown || ATTACK_SPEED_TIERS.normal.cooldown;
+    }
+
+    function weaponAttackSpeedLabel(weaponIndex) {
+      return weaponAttackSpeedProfile(weaponIndex)?.label || ATTACK_SPEED_TIERS.normal.label;
+    }
+
+    // Compatibility aliases: wand attack speed now delegates to the same
+    // universal non-bow weapon tier table.
+    function wandAttackSpeedProfile(weaponIndex) {
+      return isWandWeaponIndex(weaponIndex) ? weaponAttackSpeedProfile(weaponIndex) : null;
     }
 
     function wandAttackCooldown(weaponIndex) {
-      return wandAttackSpeedProfile(weaponIndex)?.cooldown || WAND_ATTACK_SPEEDS.slow.cooldown;
+      return wandAttackSpeedProfile(weaponIndex)?.cooldown || ATTACK_SPEED_TIERS.slow.cooldown;
     }
 
     function wandAttackSpeedLabel(weaponIndex) {
-      return wandAttackSpeedProfile(weaponIndex)?.label || WAND_ATTACK_SPEEDS.slow.label;
+      return wandAttackSpeedProfile(weaponIndex)?.label || ATTACK_SPEED_TIERS.slow.label;
     }
 
     function calculateMagicPower(weaponIndex, stats = {}) {
@@ -423,6 +480,27 @@
       return resistanceMultiplier(monsterResistance(monsterType, damageType));
     }
 
+    function normalizeElement(element) {
+      const clean = String(element || "neutral").toLowerCase();
+      return ELEMENT_TYPES.includes(clean) ? clean : "neutral";
+    }
+
+    function elementForAttack(source, weaponIndex = -1) {
+      const profile = profileForAttack(source, weaponIndex);
+      return normalizeElement(profile?.element);
+    }
+
+    function monsterElementResistance(monsterType, element) {
+      const cleanElement = normalizeElement(element);
+      if (cleanElement === "neutral") return 0;
+      const monster = MONSTER_DEFAULTS[monsterType] || MONSTER_DEFAULTS.slime;
+      return Number(monster.elementalResistances?.[cleanElement] || 0);
+    }
+
+    function monsterElementMultiplier(monsterType, element) {
+      return resistanceMultiplier(monsterElementResistance(monsterType, element));
+    }
+
     function profileForAttack(source, weaponIndex) {
       const weapon = weaponProfile(weaponIndex);
       const ability = ABILITY_PROFILES[source] || null;
@@ -455,7 +533,8 @@
         // adds its larger magical sweep/power/target scaling above.
         return {
           ...weapon,
-          damageType: "physical"
+          damageType: "physical",
+          element: "neutral"
         };
       }
 
@@ -525,7 +604,8 @@
       // reliability without increasing maximum damage.
       let maximumDamage =
         base *
-        monsterDamageMultiplier(monsterType, profile.damageType);
+        monsterDamageMultiplier(monsterType, profile.damageType) *
+        monsterElementMultiplier(monsterType, profile.element);
 
       if (critical) {
         maximumDamage *= 1.75;
@@ -555,12 +635,14 @@
     function gearValueFromSlots(values, {
       hatIndex = -1,
       shirtIndex = -1,
-      pantsIndex = -1
+      pantsIndex = -1,
+      charmIndex = -1
     } = {}) {
       return (
         armorSlotValue(values.hats, hatIndex) +
         armorSlotValue(values.shirts, shirtIndex) +
-        armorSlotValue(values.pants, pantsIndex)
+        armorSlotValue(values.pants, pantsIndex) +
+        armorSlotValue(values.charms, charmIndex)
       );
     }
 
@@ -605,12 +687,14 @@
     return Object.freeze({
       version: VERSION,
       minimumDamage: MIN_DAMAGE,
+      elementTypes: ELEMENT_TYPES,
       levelGapDamagePenaltyPerLevel: LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL,
       playerArmorRatingPerPoint: PLAYER_ARMOR_RATING_PER_POINT,
       playerResistRatingPerPoint: PLAYER_RESIST_RATING_PER_POINT,
       baseMagicMastery: DEFAULT_MASTERY,
       defaultMastery: DEFAULT_MASTERY,
       classBaseMastery: CLASS_BASE_MASTERY,
+      attackSpeedTiers: ATTACK_SPEED_TIERS,
       wandAttackSpeeds: WAND_ATTACK_SPEEDS,
       weaponProfiles: WEAPON_PROFILES,
       abilityProfiles: ABILITY_PROFILES,
@@ -620,6 +704,10 @@
       armorResist: ARMOR_VALUES.resist,
       normalizeStats,
       isWandWeaponIndex,
+      isBowWeaponIndex,
+      weaponAttackSpeedProfile,
+      weaponAttackCooldown,
+      weaponAttackSpeedLabel,
       wandAttackSpeedProfile,
       wandAttackCooldown,
       wandAttackSpeedLabel,
@@ -634,6 +722,10 @@
       resistanceMultiplier,
       monsterResistance,
       monsterDamageMultiplier,
+      normalizeElement,
+      elementForAttack,
+      monsterElementResistance,
+      monsterElementMultiplier,
       profileForAttack,
       calculateDamage,
       playerArmorFromGear,
@@ -644,3 +736,4 @@
     });
   }
 );
+

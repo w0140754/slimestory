@@ -54,7 +54,7 @@
 
     const env = plainObject(map?.environment) ? map.environment : {};
     const groups = [
-      ["playerSpawns", map?.playerSpawns], ["portals", map?.portals], ["enemySpawns", map?.enemySpawns],
+      ["playerSpawns", map?.playerSpawns], ["portals", map?.portals], ["enemySpawns", map?.enemySpawns], ["npcs", map?.npcs],
       ["trees", env.trees], ["tallGrass", env.tallGrass], ["rocks", env.rocks], ["sceneryRocks", env.sceneryRocks],
       ["harvestFlowers", env.harvestFlowers], ["houses", env.houses]
     ];
@@ -67,6 +67,32 @@
         else if (ids.has(item.id)) fail(`Duplicate object id \"${item.id}\".`);
         else ids.add(item.id);
         if (!finite(item.x) || !finite(item.y)) fail(`${name}[${index}] must have finite x/y coordinates.`);
+      }
+    }
+
+    if (map?.defaultPlayerSpawnId != null) {
+      if (typeof map.defaultPlayerSpawnId !== "string" || !map.defaultPlayerSpawnId) {
+        fail("defaultPlayerSpawnId must be a non-empty string when provided.");
+      } else if (!(Array.isArray(map?.playerSpawns) ? map.playerSpawns : []).some(spawn => spawn?.id === map.defaultPlayerSpawnId)) {
+        fail(`defaultPlayerSpawnId "${map.defaultPlayerSpawnId}" does not match a player spawn on this map.`);
+      }
+    }
+
+    for (const [index, enemy] of (Array.isArray(map?.enemySpawns) ? map.enemySpawns : []).entries()) {
+      if (!["slime", "mushroom", "goblin", "ghost", "bigGoldSlime"].includes(enemy?.type)) {
+        fail(`enemySpawns[${index}] has unsupported type "${enemy?.type}".`);
+      }
+      if (enemy?.level != null && (!finite(enemy.level) || Number(enemy.level) < 1)) {
+        fail(`enemySpawns[${index}].level must be at least 1 when provided.`);
+      }
+    }
+
+    for (const [index, npc] of (Array.isArray(map?.npcs) ? map.npcs : []).entries()) {
+      if (!["shopkeeper", "hunter", "jester", "craftingTable", "classResetCrystal"].includes(npc?.type)) {
+        fail(`npcs[${index}] has unsupported type "${npc?.type}".`);
+      }
+      if (npc?.interactionRadius != null && (!finite(npc.interactionRadius) || Number(npc.interactionRadius) < 8)) {
+        fail(`npcs[${index}].interactionRadius must be at least 8 when provided.`);
       }
     }
 
@@ -107,3 +133,4 @@
 
   return Object.freeze({ validate });
 });
+

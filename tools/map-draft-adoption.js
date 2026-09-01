@@ -68,6 +68,7 @@ function adoptDraftPayload(payload, options = {}) {
   const validationWorldContent = {
     ...worldContent,
     version: Math.max(Number(worldContent.version) || 0, Number(store.version) || 0, 14),
+    defaultPlayerLoad: store.defaultPlayerLoad || worldContent.defaultPlayerLoad || null,
     maps: {
       ...(worldContent.maps || {}),
       ...(store.maps || {})
@@ -84,11 +85,35 @@ function adoptDraftPayload(payload, options = {}) {
 
   const mapId = result.mapId;
   const nextMap = clone(result.map);
+
+  // The editor carries defaultPlayerSpawnId inside the one-map draft because
+  // that is the most natural UI location. Canonically, however, there can be
+  // only one game loading target, so persist it as top-level store metadata.
+  // This avoids touching any unrelated authored data on other maps.
+  const requestedDefaultSpawnId =
+    typeof nextMap.defaultPlayerSpawnId === "string"
+      ? nextMap.defaultPlayerSpawnId
+      : "";
+  delete nextMap.defaultPlayerSpawnId;
+
+  const previousDefaultLoad = store.defaultPlayerLoad || null;
+  let nextDefaultLoad = previousDefaultLoad;
+  if (requestedDefaultSpawnId) {
+    nextDefaultLoad = { mapId, spawnId: requestedDefaultSpawnId };
+  } else if (previousDefaultLoad?.mapId === mapId) {
+    nextDefaultLoad = null;
+  }
+
   const currentMap = store.maps[mapId];
-  const changed = JSON.stringify(currentMap || null) !== JSON.stringify(nextMap);
+  const mapChanged = JSON.stringify(currentMap || null) !== JSON.stringify(nextMap);
+  const defaultLoadChanged =
+    JSON.stringify(previousDefaultLoad) !== JSON.stringify(nextDefaultLoad);
+  const changed = mapChanged || defaultLoadChanged;
 
   if (changed) {
-    store.maps[mapId] = nextMap;
+    if (mapChanged) store.maps[mapId] = nextMap;
+    if (nextDefaultLoad) store.defaultPlayerLoad = nextDefaultLoad;
+    else delete store.defaultPlayerLoad;
     const currentVersion = Math.max(Number(store.version) || 0, Number(worldContent.version) || 0, 14);
     store.version = currentVersion + 1;
     writeStore(store, dataPath, browserPath);
@@ -100,6 +125,7 @@ function adoptDraftPayload(payload, options = {}) {
     mapId,
     version: Number(store.version) || Number(worldContent.version) || 14,
     signature: mapSignature(store.maps[mapId] || nextMap),
+    defaultPlayerLoad: store.defaultPlayerLoad || null,
     warnings: result.warnings.slice()
   };
 }
@@ -112,3 +138,4 @@ module.exports = {
   mapSignature,
   adoptDraftPayload
 };
+

@@ -1128,6 +1128,23 @@ function removeTemporaryRainGrassField(ownerId, patchId) {
   }
 }
 
+function removeTemporaryRainGrassFieldsForOwner(ownerId) {
+  const normalizedOwnerId = String(ownerId || "local");
+
+  for (const [key, field] of temporaryRainGrassFields) {
+    if (String(field?.ownerId || "local") === normalizedOwnerId) {
+      temporaryRainGrassFields.delete(key);
+    }
+  }
+
+  for (let i = tallGrass.length - 1; i >= 0; i--) {
+    const clump = tallGrass[i];
+    if (!isTemporaryRainGrass(clump)) continue;
+    if (temporaryRainGrassOwnerId(clump) !== normalizedOwnerId) continue;
+    tallGrass.splice(i, 1);
+  }
+}
+
 // Retired in v260. One Rain Cloud cast defines the deterministic field; there
 // are no per-cell spawn/state messages anymore. These remain as no-op shims so
 // stale compatibility paths cannot accidentally recreate the old traffic loop.
@@ -1164,7 +1181,7 @@ function spawnTemporaryRainGrassField(
     }
   }
 
-  removeTemporaryRainGrassField(ownerId, normalizedPatchId);
+  removeTemporaryRainGrassFieldsForOwner(ownerId);
 
   const cells = RAIN_FIELD.generateCells({
     ownerId,
@@ -1932,7 +1949,8 @@ function collectFlowerDrops() {
         continue;
       }
 
-      player.flowers += 1;
+      if (flower.type === "blue") player.blueFlowers += 1;
+      else player.whiteFlowers += 1;
       spawnLootPickupAnimation(
         "flower",
         flower.x,
@@ -1940,14 +1958,6 @@ function collectFlowerDrops() {
         { flowerType: flower.type }
       );
       flowerDrops.splice(i, 1);
-
-      spawnFloatingText(
-        player.x,
-        player.y - 47,
-        "+1 FLW",
-        "#f6c8df",
-        1.0
-      );
     }
   }
 }
@@ -2185,9 +2195,33 @@ function drawPlayerReflection(camX, camY) {
   // A fully hidden ninja casts no reflection.
   if (player.shadowHidden && player.shadowHideRevealTime <= 0) return;
 
-  // Reflection is visible from the north or south shoreline.
-  // Because the pond is just south of spawn, the north shore is the easiest
-  // place to test it immediately.
+  const terrainDefinition = WORLD_CONTENT?.maps?.[currentMapId] || null;
+  const usesAuthoredTerrain = Boolean(TERRAIN_RULES.terrainDefinition(terrainDefinition));
+
+  if (usesAuthoredTerrain && typeof terrainWaterReflectionInfo === "function") {
+    const reflection = terrainWaterReflectionInfo(player.x, player.y, currentMapId, 16);
+    if (!reflection) return;
+
+    const mirrorScreenY = Math.round(reflection.mirrorWorldY - camY);
+
+    ctx.save();
+    if (
+      typeof terrainWaterClipPath !== "function" ||
+      !terrainWaterClipPath(currentMapId, camX, camY)
+    ) {
+      ctx.restore();
+      return;
+    }
+    ctx.clip();
+    ctx.translate(0, mirrorScreenY * 2);
+    ctx.scale(1, -1);
+    ctx.globalAlpha = 0.18 * reflection.fade;
+    drawPlayer(camX, camY, true);
+    ctx.restore();
+    return;
+  }
+
+  // Legacy pond reflection path.
   const withinX =
     player.x > pond.x - 8 &&
     player.x < pond.x + pond.width + 8;
@@ -2211,17 +2245,11 @@ function drawPlayerReflection(camX, camY) {
   const mirrorScreenY = Math.round(mirrorWorldY - camY);
 
   ctx.save();
-
-  // Never let the reflected sprite spill outside the water.
   pondPath(camX, camY, 2);
   ctx.clip();
-
-  // Mirror the exact current player pose, including walking and sword swings.
   ctx.translate(0, mirrorScreenY * 2);
   ctx.scale(1, -1);
   ctx.globalAlpha = 0.18 * fade;
-
   drawPlayer(camX, camY, true);
-
   ctx.restore();
 }

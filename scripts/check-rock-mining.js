@@ -22,7 +22,7 @@ for (const rel of [
   "public/assets/rock_crack_1.png",
   "public/assets/rock_crack_2.png",
   "public/assets/rock_lootable.png",
-  "public/assets/pickaxe_v4.png"
+  "public/assets/pickaxe_v6.png"
 ]) {
   assert.deepStrictEqual(pngSize(rel), { width: 16, height: 16 }, `${rel} must stay native 16x16`);
 }
@@ -61,3 +61,4 @@ assert.match(server, /const RESOURCE_REGROW_CLEAR_RADIUS = 96;/);
 assert.match(server, /function livingPlayerNearRockHome\(entity, radius = RESOURCE_REGROW_CLEAR_RADIUS\)/);
 assert.match(server, /if \(!livingPlayerNearRockHome\(entity\)\) \{\s*resetRockToFresh\(entity\);/);
 console.log("Rock mining OK: 3-hit cracks, Stone loot, Hurl wear, respawn, Pickaxe, and 18px scenery rock are wired.");
+

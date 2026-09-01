@@ -19,9 +19,16 @@
     place-items: center;
   }
 
-  canvas {
+  #gameViewport {
+    position: relative;
     width: min(100vw, 177.777vh);
     height: min(56.25vw, 100vh);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     background: #6f9f52;
@@ -29,7 +36,8 @@
 
   #onlineStatus {
     position: fixed;
-    left: 8px;
+    left: auto;
+    right: 8px;
     top: 8px;
     padding: 4px 6px;
     color: #dfe9c7;
@@ -42,35 +50,34 @@
   }
 
   #bottomUi {
-    position: fixed;
+    position: absolute;
     left: 50%;
-    bottom: 12px;
+    top: 18px;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
     pointer-events: none;
-  }
-
-  #toolbarRow {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    pointer-events: none;
+    z-index: 12;
   }
 
   #hpBarWrap {
-    width: 160px;
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: 320px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    z-index: 14;
   }
 
   #hpBar {
-    width: 160px;
-    height: 14px;
+    width: 320px;
+    height: 28px;
     position: relative;
     background: rgba(20, 24, 20, 0.90);
     border: 2px solid #8a7d55;
@@ -94,14 +101,14 @@
     align-items: center;
     justify-content: center;
     color: #fff6d4;
-    font: 10px/1 monospace;
+    font: 16px/1 monospace;
     text-shadow: 1px 1px 0 rgba(0,0,0,.6);
     letter-spacing: 0.2px;
   }
 
   #xpBar {
-    width: 160px;
-    height: 7px;
+    width: 320px;
+    height: 14px;
     position: relative;
     background: rgba(20, 24, 20, 0.90);
     border: 2px solid #685f44;
@@ -125,20 +132,27 @@
     align-items: center;
     justify-content: center;
     color: #fff8dc;
-    font: 7px/1 monospace;
+    font: 12px/1 monospace;
     text-shadow: 1px 1px 0 rgba(0,0,0,.75);
     white-space: nowrap;
   }
 
   #abilityBar {
-    display: flex;
-    gap: 6px;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: 63px;
+    grid-template-rows: repeat(4, 63px);
+    gap: 9px;
     pointer-events: none;
+    z-index: 13;
   }
 
   .ability-slot {
-    width: 42px;
-    height: 42px;
+    width: 63px;
+    height: 63px;
     position: relative;
     background: rgba(20, 24, 20, 0.88);
     border: 2px solid #6e6282;
@@ -151,8 +165,8 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 30px;
-    height: 30px;
+    width: 45px;
+    height: 45px;
     transform: translate(-50%, -50%);
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -176,7 +190,7 @@
     align-items: center;
     justify-content: center;
     color: #fff8dc;
-    font: 9px/1 monospace;
+    font: 13px/1 monospace;
     text-shadow: 1px 1px 0 #000;
     pointer-events: none;
     z-index: 3;
@@ -184,6 +198,14 @@
 
   .ability-slot.cooling-down .ability-slot-img {
     opacity: .52;
+  }
+
+  .ability-slot.return-window .ability-slot-img {
+    opacity: .78;
+  }
+
+  .ability-slot.return-window .ability-cooldown-mask {
+    background: rgba(38, 44, 48, .58);
   }
 
   .ability-slot.empty {
@@ -198,24 +220,30 @@
   }
 
   .ability-slot .hotbar-label {
-    bottom: -14px;
-    font: 9px/1 monospace;
+    left: 2px;
+    top: 2px;
+    bottom: auto;
+    transform: none;
+    padding: 1px 2px;
+    background: rgba(10, 12, 14, .78);
+    font: 10px/1 monospace;
+    z-index: 5;
   }
 
   .ability-slot .ability-charge {
     position: absolute;
     right: 2px;
     bottom: 2px;
-    min-width: 10px;
-    height: 10px;
-    padding: 0 2px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
     display: none;
     align-items: center;
     justify-content: center;
     background: rgba(15, 18, 15, .92);
     border: 1px solid #d8c98c;
     color: #fff2b3;
-    font: 8px/9px monospace;
+    font: 11px/14px monospace;
     text-shadow: 1px 1px 0 #000;
     box-sizing: border-box;
     z-index: 4;
@@ -223,13 +251,99 @@
 
   #hotbar {
     display: flex;
-    gap: 8px;
+    gap: 9px;
+    pointer-events: auto;
+  }
+
+  #hudBuffs {
+    position: absolute;
+    right: calc(100% + 12px);
+    top: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 6px;
     pointer-events: none;
   }
 
+  .hud-buff {
+    width: 48px;
+    height: 48px;
+    position: relative;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: rgba(20, 24, 20, 0.90);
+    border: 2px solid #8a7d55;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.35);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .hud-buff.active {
+    display: flex;
+  }
+
+  .hud-buff img {
+    width: 30px;
+    height: 30px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .hud-buff-label {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    padding: 1px 2px;
+    background: rgba(10, 12, 14, .82);
+    color: #fff6d4;
+    font: 8px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .hud-buff-time {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    min-width: 23px;
+    padding: 1px 2px;
+    box-sizing: border-box;
+    background: rgba(10, 12, 14, .86);
+    color: #fff6d4;
+    font: 8px/1 monospace;
+    text-align: center;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  #attackBuffHud {
+    border-color: #b8753b;
+  }
+
+  #magicBuffHud {
+    border-color: #7565b7;
+  }
+
+  #hpBarWrap.healing-pulse #hpBar {
+    animation: hpPotionPulse 0.62s steps(3, end);
+  }
+
+  @keyframes hpPotionPulse {
+    0%, 100% { border-color: #8a7d55; filter: none; }
+    22% { border-color: #ffd3e5; filter: brightness(1.45); }
+    48% { border-color: #f08caf; filter: brightness(1.20); }
+    72% { border-color: #ffd3e5; filter: brightness(1.32); }
+  }
+
   #arrowHud {
-    height: 44px;
-    min-width: 48px;
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 0;
+    bottom: auto;
+    transform: none;
+    height: 48px;
+    min-width: 52px;
     padding: 0 7px;
     box-sizing: border-box;
     display: none;
@@ -247,26 +361,28 @@
   }
 
   #arrowHud img {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
 
   #arrowHudCount {
-    min-width: 12px;
+    min-width: 14px;
     text-align: left;
   }
 
   .hotbar-slot {
-    width: 44px;
-    height: 44px;
+    width: 58px;
+    height: 58px;
     position: relative;
     background: rgba(20, 24, 20, 0.86);
     border: 2px solid #8a7d55;
     box-shadow: 3px 3px 0 rgba(0,0,0,.35);
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    cursor: pointer;
+    touch-action: manipulation;
   }
 
   .hotbar-slot.active {
@@ -279,21 +395,69 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     transform: translate(-50%, -50%) rotate(-90deg);
     transform-origin: center;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
 
+  #slot4 {
+    margin-left: 24px;
+  }
+
+  .utility-slot img {
+    transform: translate(-50%, -50%);
+    width: 39px;
+    height: 39px;
+  }
+
+  .utility-count {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    color: #fff6d4;
+    font: 11px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    z-index: 4;
+  }
+
+  .utility-slot.buff-active {
+    border-color: #d9b9ff;
+    box-shadow: 0 0 0 1px #fff2b3 inset, 3px 3px 0 rgba(0,0,0,.35);
+  }
+
+  .utility-cooldown-mask {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    height: 0;
+    background: rgba(10, 12, 14, .74);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .utility-cooldown-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff8dc;
+    font: 11px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    z-index: 3;
+  }
+
   .hotbar-label {
     position: absolute;
     left: 50%;
-    bottom: -14px;
+    bottom: -17px;
     transform: translateX(-50%);
     color: #fff6d4;
-    font: 10px/1 monospace;
+    font: 12px/1 monospace;
     text-shadow: 1px 1px 0 rgba(0,0,0,.6);
     white-space: nowrap;
   }
@@ -301,10 +465,10 @@
   #hotbarHint {
     position: fixed;
     left: 50%;
-    bottom: 66px;
+    bottom: 82px;
     transform: translateX(-50%);
     color: #fff6d4;
-    font: 10px/1 monospace;
+    font: 12px/1 monospace;
     text-shadow: 1px 1px 0 rgba(0,0,0,.6);
     pointer-events: none;
   }
@@ -318,12 +482,375 @@
     font: 16px/1 monospace;
   }
 
+  /* v322: the enlarged top hotbar steps down earlier on narrower rendered
+     layouts so it stays clear of the independent right-side skill column. */
+  @media (max-width: 760px) {
+    #hotbar {
+      gap: 5px;
+    }
+
+    .hotbar-slot {
+      width: 49px;
+      height: 49px;
+    }
+
+    .hotbar-slot img {
+      width: 38px;
+      height: 38px;
+    }
+
+    .utility-slot img {
+      width: 34px;
+      height: 34px;
+    }
+
+    #slot4 {
+      margin-left: 16px;
+    }
+  }
+
+  /* v314: all three HUD groups remain independent siblings anchored to the
+     rendered 16:9 game viewport: item/equipment hotbar top-center, HP/EXP
+     bottom-center, and the skill column centered vertically on the right. */
+  @media (max-width: 560px), (max-height: 480px) {
+    #bottomUi {
+      top: 16px;
+    }
+
+    #hotbar {
+      gap: 4px;
+    }
+
+    .hotbar-slot {
+      width: 38px;
+      height: 38px;
+    }
+
+    .hotbar-slot img {
+      width: 29px;
+      height: 29px;
+    }
+
+    .utility-slot img {
+      width: 26px;
+      height: 26px;
+    }
+
+    #slot4 {
+      margin-left: 12px;
+    }
+
+    #abilityBar {
+      right: 8px;
+      top: 50%;
+      grid-template-columns: 54px;
+      grid-template-rows: repeat(4, 54px);
+      gap: 6px;
+    }
+
+    .ability-slot {
+      width: 54px;
+      height: 54px;
+    }
+
+    .ability-slot img {
+      width: 39px;
+      height: 39px;
+    }
+
+    .ability-slot .hotbar-label {
+      font-size: 9px;
+    }
+
+    .ability-slot .ability-cooldown-text {
+      font-size: 11px;
+    }
+
+    #hudBuffs {
+      right: calc(100% + 8px);
+      gap: 4px;
+    }
+
+    .hud-buff {
+      width: 40px;
+      height: 40px;
+    }
+
+    .hud-buff img {
+      width: 25px;
+      height: 25px;
+    }
+
+    #arrowHud {
+      left: calc(100% + 8px);
+      height: 40px;
+      min-width: 44px;
+      padding: 0 5px;
+    }
+
+    #arrowHud img {
+      width: 22px;
+      height: 22px;
+    }
+
+    #hpBarWrap {
+      left: 50%;
+      bottom: 8px;
+      width: 288px;
+      gap: 5px;
+    }
+
+    #hpBar,
+    #xpBar {
+      width: 288px;
+    }
+
+    #hpBar {
+      height: 24px;
+    }
+
+    #hpBarText {
+      font-size: 14px;
+    }
+
+    #xpBar {
+      height: 12px;
+    }
+
+    #xpBarText {
+      font-size: 9px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    #bottomUi {
+      top: 15px;
+    }
+
+    #hotbar {
+      gap: 2px;
+    }
+
+    .hotbar-slot {
+      width: 34px;
+      height: 34px;
+    }
+
+    .hotbar-slot img {
+      width: 26px;
+      height: 26px;
+    }
+
+    .utility-slot img {
+      width: 23px;
+      height: 23px;
+    }
+
+    #slot4 {
+      margin-left: 9px;
+    }
+
+    #abilityBar {
+      right: 6px;
+      top: 50%;
+      grid-template-columns: 38px;
+      grid-template-rows: repeat(4, 38px);
+      gap: 4px;
+    }
+
+    .ability-slot {
+      width: 38px;
+      height: 38px;
+    }
+
+    .ability-slot img {
+      width: 28px;
+      height: 28px;
+    }
+
+    #hudBuffs {
+      right: calc(100% + 6px);
+      top: -9px;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hud-buff {
+      width: 32px;
+      height: 28px;
+    }
+
+    .hud-buff img {
+      width: 21px;
+      height: 21px;
+    }
+
+    .hud-buff-label {
+      font-size: 6px;
+    }
+
+    .hud-buff-time {
+      min-width: 18px;
+      font-size: 6px;
+    }
+
+    #arrowHud {
+      left: auto;
+      right: calc(100% + 6px);
+      top: -44px;
+      height: 34px;
+      min-width: 38px;
+      padding: 0 4px;
+      font-size: 8px;
+    }
+
+    #arrowHud img {
+      width: 18px;
+      height: 18px;
+    }
+
+    #hpBarWrap,
+    #hpBar,
+    #xpBar {
+      width: 272px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    #bottomUi {
+      top: 14px;
+    }
+
+    #hotbar {
+      gap: 1px;
+    }
+
+    .hotbar-slot {
+      width: 25px;
+      height: 25px;
+    }
+
+    .hotbar-slot img {
+      width: 19px;
+      height: 19px;
+    }
+
+    .utility-slot img {
+      width: 18px;
+      height: 18px;
+    }
+
+    #slot4 {
+      margin-left: 6px;
+    }
+
+    #abilityBar {
+      right: 4px;
+      top: 50%;
+      grid-template-columns: 30px;
+      grid-template-rows: repeat(4, 30px);
+      gap: 3px;
+    }
+
+    .ability-slot {
+      width: 30px;
+      height: 30px;
+    }
+
+    .ability-slot img {
+      width: 22px;
+      height: 22px;
+    }
+
+    .ability-slot .hotbar-label {
+      left: 1px;
+      top: 1px;
+      font-size: 6px;
+    }
+
+    .ability-slot .ability-cooldown-text {
+      font-size: 8px;
+    }
+
+    #hudBuffs {
+      right: calc(100% + 4px);
+      top: -8px;
+    }
+
+    .hud-buff {
+      width: 28px;
+      height: 24px;
+    }
+
+    .hud-buff img {
+      width: 18px;
+      height: 18px;
+    }
+
+    .hud-buff-label {
+      display: none;
+    }
+
+    .hud-buff-time {
+      right: 1px;
+      bottom: 1px;
+      min-width: 15px;
+      padding: 1px;
+      font-size: 5px;
+    }
+
+    #arrowHud {
+      left: auto;
+      right: calc(100% + 4px);
+      top: -38px;
+      height: 30px;
+      min-width: 32px;
+      padding: 0 3px;
+      gap: 2px;
+      font-size: 7px;
+    }
+
+    #arrowHud img {
+      width: 15px;
+      height: 15px;
+    }
+
+    #hpBarWrap {
+      left: 50%;
+      bottom: 6px;
+      gap: 4px;
+    }
+
+    #hpBarWrap,
+    #hpBar,
+    #xpBar {
+      width: 240px;
+    }
+
+    #hpBar {
+      height: 20px;
+    }
+
+    #hpBarText {
+      font-size: 12px;
+    }
+
+    #xpBar {
+      height: 10px;
+    }
+
+    #xpBarText {
+      font-size: 8px;
+    }
+  }
+
 
   #inventoryOverlay {
     position: fixed;
     inset: 0;
     display: none;
     grid-template-columns: minmax(82px, 1fr) minmax(0, 640px) minmax(82px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     align-items: center;
     justify-items: stretch;
     column-gap: 14px;
@@ -353,9 +880,9 @@
   }
 
   #shopPanel {
-    width: min(500px, calc(100vw - 36px));
-    height: min(540px, calc(100vh - 160px));
-    max-height: min(540px, calc(100vh - 160px));
+    width: min(760px, calc(100vw - 56px));
+    height: min(680px, calc(100vh - 80px));
+    max-height: min(680px, calc(100vh - 80px));
     min-height: 0;
     background: #202820;
     border: 3px solid #9a8756;
@@ -373,40 +900,40 @@
   #shopTop {
     display: flex;
     align-items: center;
-    min-height: 38px;
+    min-height: 52px;
     border-bottom: 2px solid #5f573d;
     background: #293329;
   }
 
   #shopTitle {
-    padding: 0 12px;
+    padding: 0 18px;
     color: #fff2b5;
-    font: 13px/1 monospace;
+    font: 17px/1 monospace;
   }
 
   #shopCoinCount {
     margin-left: auto;
-    padding: 0 12px;
+    padding: 0 18px;
     color: #ffd76a;
-    font: 11px/1 monospace;
+    font: 14px/1 monospace;
   }
 
   #shopClose {
     appearance: none;
-    width: 38px;
+    width: 52px;
     align-self: stretch;
     border: 0;
     border-left: 2px solid #5f573d;
     background: #293329;
     color: #d9cfaa;
-    font: 15px/1 monospace;
+    font: 20px/1 monospace;
     cursor: pointer;
   }
 
   #shopTabs {
     display: flex;
-    gap: 4px;
-    padding: 7px 8px;
+    gap: 6px;
+    padding: 10px 12px;
     border-bottom: 2px solid #5f573d;
     background: #242e24;
     overflow-x: auto;
@@ -415,11 +942,11 @@
   .shop-tab {
     appearance: none;
     flex: 0 0 auto;
-    padding: 5px 7px;
+    padding: 8px 10px;
     border: 1px solid #5f573d;
     background: #293329;
     color: #a9a184;
-    font: 8px/1 monospace;
+    font: 11px/1 monospace;
     cursor: pointer;
   }
 
@@ -434,36 +961,36 @@
   }
 
   #shopGrid {
-    padding: 12px;
+    padding: 16px;
     overflow-y: auto;
     flex: 1 1 auto;
     min-height: 0;
     align-content: start;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 12px;
   }
 
   .shop-item {
     appearance: none;
-    min-height: 78px;
-    padding: 6px;
+    min-height: 108px;
+    padding: 10px;
     border: 2px solid #5f573d;
     background: #293329;
     color: #fff6d4;
     font-family: monospace;
     cursor: pointer;
     display: grid;
-    grid-template-columns: 28px 1fr;
+    grid-template-columns: 42px 1fr;
     grid-template-rows: auto auto auto;
-    column-gap: 7px;
+    column-gap: 10px;
     align-items: center;
     text-align: left;
   }
 
   .shop-item img {
-    width: 28px;
-    height: 28px;
+    width: 42px;
+    height: 42px;
     grid-row: 1 / span 3;
     object-fit: contain;
     image-rendering: pixelated;
@@ -471,19 +998,19 @@
   }
 
   .shop-item-name {
-    font-size: 9px;
+    font-size: 12px;
     line-height: 1.15;
   }
 
   .shop-item-meta {
     color: #b8b197;
-    font-size: 7px;
+    font-size: 9px;
     line-height: 1.15;
   }
 
   .shop-item-price {
     color: #ffd76a;
-    font-size: 8px;
+    font-size: 10px;
     line-height: 1;
   }
 
@@ -501,10 +1028,10 @@
   }
 
   #shopFooter {
-    padding: 8px 12px;
+    padding: 11px 16px;
     border-top: 2px solid #5f573d;
     color: #9f9878;
-    font: 8px/1 monospace;
+    font: 10px/1 monospace;
     text-align: center;
   }
 
@@ -550,7 +1077,22 @@
   }
 
   #menuItemHotkeyRail { grid-column: 1; }
+  #menuUtilityHotkeyRail,
   #menuSkillHotkeyRail { grid-column: 3; }
+
+  /* v317: every Escape workspace child shares one grid row. Explicit row placement
+     prevents contextual rails from pushing the centered main menu onto an implicit
+     second row when multiple rails are visible. */
+  #menuItemHotkeyRail,
+  #menuUtilityHotkeyRail,
+  #menuSkillHotkeyRail,
+  #inventoryPanel {
+    grid-row: 1;
+  }
+
+  .menu-hotkey-rail.context-hidden {
+    display: none;
+  }
 
   .menu-hotkey-rail-title {
     margin: 1px 0 8px;
@@ -1099,19 +1641,22 @@
     image-rendering: crisp-edges;
   }
 
-  .menu-item[data-hotbar-assignable="true"] {
+  .menu-item[data-hotbar-assignable="true"],
+  .menu-item[data-utility-hotbar-assignable="true"] {
     position: relative;
     cursor: pointer;
   }
 
-  .menu-item[data-hotbar-assignable="true"].hotbar-selected {
+  .menu-item[data-hotbar-assignable="true"].hotbar-selected,
+  .menu-item[data-utility-hotbar-assignable="true"].hotbar-selected {
     border-color: #e1c86e;
     background: #3b4733;
     box-shadow: 0 0 0 1px #fff0ad inset;
   }
 
 
-  .menu-item[data-hotbar-assignable="true"].hotbar-ineligible {
+  .menu-item[data-hotbar-assignable="true"].hotbar-ineligible,
+  .menu-item[data-utility-hotbar-assignable="true"].hotbar-ineligible {
     opacity: .48;
     cursor: not-allowed;
     filter: grayscale(.45);
@@ -2214,10 +2759,10 @@
     }
 
     #shopPanel {
-      width: min(500px, calc(100vw - 18px));
-      height: min(500px, calc(100vh - 150px));
+      width: calc(100vw - 18px);
+      height: min(600px, calc(100vh - 36px));
       min-height: 0;
-      max-height: min(500px, calc(100vh - 150px));
+      max-height: min(600px, calc(100vh - 36px));
     }
 
     .inventory-tab {
@@ -3282,14 +3827,298 @@
     }
   }
 
+
+
+  /* v314: ESC workspace remains a foreground layer and deliberately larger on desktop. */
+  #inventoryOverlay {
+    z-index: 220;
+    background: rgba(10, 14, 10, 0.58);
+  }
+
+  .item-detail-tooltip {
+    z-index: 270;
+  }
+
+  .skill-detail-tooltip {
+    z-index: 275;
+  }
+
+  #menuFeedbackToast {
+    z-index: 280;
+  }
+
+  @media (min-width: 981px) and (min-height: 650px) {
+    #inventoryOverlay {
+      grid-template-columns: minmax(170px, 1fr) minmax(0, 1120px) minmax(170px, 1fr);
+      column-gap: 24px;
+      padding: 14px 20px;
+    }
+
+    #inventoryPanel {
+      height: min(920px, calc(100vh - 28px));
+      max-height: min(920px, calc(100vh - 28px));
+    }
+
+    .inventory-tab {
+      padding: 15px 18px;
+      font-size: 16px;
+    }
+
+    #inventoryClose {
+      width: 52px;
+      font-size: 22px;
+    }
+
+    .inventory-page,
+    #inventoryScroll {
+      padding: 22px;
+    }
+
+    #inventoryPage.active {
+      padding: 0;
+    }
+
+    #inventoryScroll {
+      padding-bottom: 0;
+    }
+
+    .menu-section-title {
+      margin-bottom: 14px;
+      font-size: 15px;
+    }
+
+    .inventory-grid {
+      grid-template-columns: repeat(5, minmax(104px, 1fr));
+      gap: 13px;
+      margin-bottom: 22px;
+    }
+
+    .menu-item,
+    .equip-choice {
+      min-height: 116px;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .menu-item img,
+    .equip-choice img {
+      width: 54px;
+      height: 54px;
+    }
+
+    .resource-menu-item {
+      min-height: 82px;
+      gap: 14px;
+      padding: 12px 16px;
+    }
+
+    .resource-menu-item img {
+      width: 40px;
+      height: 40px;
+    }
+
+    .resource-menu-count {
+      font-size: 18px;
+    }
+
+    .equipment-layout {
+      grid-template-columns: 170px 1fr;
+      gap: 22px;
+    }
+
+    .equipped-box {
+      min-height: 130px;
+      gap: 9px;
+      font-size: 13px;
+    }
+
+    .equipped-box img {
+      width: 60px;
+      height: 60px;
+    }
+
+    .equipped-slot-label,
+    .gear-subtab {
+      font-size: 13px;
+    }
+
+    .gear-subtab {
+      min-height: 42px;
+    }
+
+    .equip-options {
+      grid-template-columns: repeat(3, minmax(104px, 1fr));
+      gap: 13px;
+    }
+
+    #skillsPage.class-selected .skill-node {
+      min-height: 92px;
+      padding: 13px 16px;
+      gap: 14px;
+    }
+
+    #skillsPage.class-selected .skill-node-icon {
+      width: 52px;
+      height: 52px;
+    }
+
+    #skillsPage.class-selected .skill-node-name {
+      font-size: 14px;
+    }
+
+    .menu-hotkey-rail {
+      width: min(190px, 100%);
+      padding: 14px;
+    }
+
+    .menu-hotkey-rail-title {
+      margin-bottom: 13px;
+      font-size: 13px;
+    }
+
+    .menu-hotkey-stack,
+    #menuSkillHotkeyRail .skill-key-strip {
+      gap: 11px;
+    }
+
+    .menu-item-hotkey-slot,
+    #menuSkillHotkeyRail .skill-key-slot {
+      min-height: 80px;
+      padding: 10px 8px 10px 42px;
+    }
+
+    .menu-item-hotkey-slot .menu-hotkey-key,
+    #menuSkillHotkeyRail .skill-key-name {
+      left: 8px;
+      top: 8px;
+      width: 27px;
+      height: 27px;
+      font-size: 12px;
+    }
+
+    .menu-item-hotkey-slot img,
+    #menuSkillHotkeyRail .skill-key-icon {
+      width: 42px;
+      height: 42px;
+      margin-bottom: 6px;
+    }
+
+    .menu-item-hotkey-slot .menu-hotkey-item-name,
+    #menuSkillHotkeyRail .skill-key-skill {
+      font-size: 10px;
+    }
+
+    .menu-hotkey-rail-help {
+      margin-top: 12px;
+      font-size: 10px;
+    }
+
+    /* Hover detail cards are intentionally large enough to read without zoom. */
+    .item-detail-tooltip {
+      width: 440px;
+      padding: 20px;
+      border-width: 3px;
+      font: 14px/1.45 monospace;
+      box-shadow: 6px 6px 0 rgba(0,0,0,.42);
+    }
+
+    .item-detail-top {
+      grid-template-columns: 104px 1fr;
+      gap: 18px;
+      padding-bottom: 14px;
+    }
+
+    .item-detail-image-wrap {
+      width: 104px;
+      height: 104px;
+    }
+
+    .item-detail-image-wrap img {
+      width: 80px;
+      height: 80px;
+    }
+
+    .item-detail-name {
+      font-size: 19px;
+    }
+
+    .item-detail-type {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .item-detail-stats {
+      gap: 9px;
+      padding-top: 14px;
+    }
+
+    .skill-detail-tooltip {
+      width: 460px;
+      padding: 20px;
+      border-width: 3px;
+      font: 13px/1.5 monospace;
+      box-shadow: 6px 6px 0 rgba(0,0,0,.42);
+    }
+
+    .skill-tooltip-top {
+      grid-template-columns: 104px minmax(0, 1fr);
+      gap: 18px;
+      padding-bottom: 14px;
+    }
+
+    .skill-tooltip-image-wrap {
+      width: 104px;
+      height: 104px;
+    }
+
+    .skill-tooltip-image {
+      width: 76px;
+      height: 76px;
+    }
+
+    .skill-tooltip-name {
+      font-size: 19px;
+    }
+
+    .skill-tooltip-meta {
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .skill-tooltip-description {
+      padding: 13px 0;
+    }
+
+    .skill-tooltip-level-block {
+      padding-top: 11px;
+    }
+
+    .skill-tooltip-level-title {
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+  }
+
 </style>
 </head>
 <body>
 <div id="onlineStatus">CONNECTING…</div>
+<div id="gameViewport">
 <canvas id="game" width="320" height="180"></canvas>
 <button id="respawnButton" type="button">Respawn</button>
-<div id="bottomUi">
-  <div id="hpBarWrap">
+<div id="hpBarWrap">
+    <div id="hudBuffs" aria-label="Potion buffs">
+      <div id="attackBuffHud" class="hud-buff" title="Attack Up">
+        <img id="attackBuffHudImg" alt="Attack Up" />
+        <span class="hud-buff-label">ATK↑</span>
+        <span id="attackBuffHudTime" class="hud-buff-time"></span>
+      </div>
+      <div id="magicBuffHud" class="hud-buff" title="Magic Up">
+        <img id="magicBuffHudImg" alt="Magic Up" />
+        <span class="hud-buff-label">MAG↑</span>
+        <span id="magicBuffHudTime" class="hud-buff-time"></span>
+      </div>
+    </div>
     <div id="hpBar">
       <div id="hpFill"></div>
       <div id="hpBarText">HP 50 / 50</div>
@@ -3298,10 +4127,13 @@
       <div id="xpFill"></div>
       <div id="xpBarText">LV 1 · 0 / 5 EXP</div>
     </div>
-  </div>
+    <div id="arrowHud" title="Arrows">
+      <img id="arrowHudImg" alt="Arrows" />
+      <span id="arrowHudCount">0</span>
+    </div>
+</div>
 
-  <div id="toolbarRow">
-    <div id="abilityBar">
+<div id="abilityBar">
       <div class="ability-slot empty" id="abilitySlotShift">
         <img class="ability-slot-img" alt="" />
         <div class="ability-cooldown-mask"></div>
@@ -3330,19 +4162,23 @@
         <div class="ability-charge"></div>
         <div class="hotbar-label">R</div>
       </div>
-    </div>
+</div>
 
+<div id="bottomUi">
     <div id="hotbar">
-      <div class="hotbar-slot" id="slot1">
+      <div class="hotbar-slot utility-slot" id="slot1">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div><div class="utility-count"></div>
         <div class="hotbar-label">1</div>
       </div>
-      <div class="hotbar-slot" id="slot2">
+      <div class="hotbar-slot utility-slot" id="slot2">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div><div class="utility-count"></div>
         <div class="hotbar-label">2</div>
       </div>
-      <div class="hotbar-slot" id="slot3">
+      <div class="hotbar-slot utility-slot" id="slot3">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div><div class="utility-count"></div>
         <div class="hotbar-label">3</div>
       </div>
       <div class="hotbar-slot" id="slot4">
@@ -3353,27 +4189,43 @@
         <img class="hotbar-item-img" alt="" />
         <div class="hotbar-label">5</div>
       </div>
+      <div class="hotbar-slot" id="slot6">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">6</div>
+      </div>
+      <div class="hotbar-slot" id="slot7">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">7</div>
+      </div>
+      <div class="hotbar-slot" id="slot8">
+        <img class="hotbar-item-img" alt="" />
+        <div class="hotbar-label">8</div>
+      </div>
     </div>
 
-    <div id="arrowHud" title="Arrows">
-      <img id="arrowHudImg" alt="Arrows" />
-      <span id="arrowHudCount">0</span>
-    </div>
-  </div>
-
+</div>
 </div>
 
 <div id="inventoryOverlay" aria-hidden="true">
-  <div id="menuItemHotkeyRail" class="menu-hotkey-rail" aria-label="Item hotkeys">
+  <div id="menuItemHotkeyRail" class="menu-hotkey-rail" aria-label="Equipment hotkeys">
+    <div class="menu-hotkey-rail-title">Equipment</div>
+    <div class="menu-hotkey-stack">
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="0" tabindex="0"><span class="menu-hotkey-key">4</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="1" tabindex="0"><span class="menu-hotkey-key">5</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="2" tabindex="0"><span class="menu-hotkey-key">6</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="3" tabindex="0"><span class="menu-hotkey-key">7</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="4" tabindex="0"><span class="menu-hotkey-key">8</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+    </div>
+    <div class="menu-hotkey-rail-help">Drag weapons · right-click to clear</div>
+  </div>
+  <div id="menuUtilityHotkeyRail" class="menu-hotkey-rail" aria-label="Item hotkeys">
     <div class="menu-hotkey-rail-title">Items</div>
     <div class="menu-hotkey-stack">
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="0" tabindex="0"><span class="menu-hotkey-key">1</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="1" tabindex="0"><span class="menu-hotkey-key">2</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="2" tabindex="0"><span class="menu-hotkey-key">3</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="3" tabindex="0"><span class="menu-hotkey-key">4</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="4" tabindex="0"><span class="menu-hotkey-key">5</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="0" tabindex="0"><span class="menu-hotkey-key">1</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="1" tabindex="0"><span class="menu-hotkey-key">2</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="2" tabindex="0"><span class="menu-hotkey-key">3</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
     </div>
-    <div class="menu-hotkey-rail-help">Drag inventory items · right-click to clear</div>
+    <div class="menu-hotkey-rail-help">Drag consumables · right-click to clear</div>
   </div>
   <div id="inventoryPanel">
     <div id="inventoryTop">
@@ -3389,7 +4241,7 @@
     <div id="inventoryPage" class="inventory-page active">
       <div id="inventoryScroll">
       <div class="menu-section-title">Resources</div>
-      <div class="inventory-grid">
+      <div id="inventoryResourcesGrid" class="inventory-grid">
         <div class="menu-item resource-menu-item" data-resource-key="coins">
           <img id="inventoryCoinImg" alt="Coin" />
           <span class="resource-menu-count" id="inventoryCoinCount">0</span>
@@ -3402,13 +4254,13 @@
           <img id="inventoryStoneImg" alt="Stone" />
           <span class="resource-menu-count" id="inventoryStoneCount">0</span>
         </div>
-        <div class="menu-item resource-menu-item" data-resource-key="flowers">
-          <img id="inventoryFlowerImg" alt="Flower" />
-          <span class="resource-menu-count" id="inventoryFlowerCount">0</span>
+        <div class="menu-item resource-menu-item" data-resource-key="whiteFlowers" title="White Flower">
+          <img id="inventoryWhiteFlowerImg" alt="White Flower" />
+          <span class="resource-menu-count" id="inventoryWhiteFlowerCount">0</span>
         </div>
-        <div class="menu-item resource-menu-item" data-resource-key="arrows">
-          <img id="inventoryArrowImg" alt="Arrows" />
-          <span class="resource-menu-count" id="inventoryArrowCount">0</span>
+        <div class="menu-item resource-menu-item" data-resource-key="blueFlowers" title="Blue Flower">
+          <img id="inventoryBlueFlowerImg" alt="Blue Flower" />
+          <span class="resource-menu-count" id="inventoryBlueFlowerCount">0</span>
         </div>
         <div class="menu-item resource-menu-item" data-resource-key="goldSlimeBubbles" title="Gold Slime Bubble">
           <img id="inventoryGoldSlimeBubbleImg" alt="Gold Slime Bubble" />
@@ -3417,8 +4269,29 @@
       </div>
       <div id="inventoryResourcesEmpty" class="inventory-empty">No resources</div>
 
-      <div class="menu-section-title">Equipment</div>
-      <div class="inventory-grid">
+      <div class="menu-section-title">Consumables</div>
+      <div id="inventoryConsumablesGrid" class="inventory-grid">
+        <div class="menu-item resource-menu-item" data-resource-key="healingPotions" data-utility-hotbar-assignable="true" data-utility-item="healingPotion" title="Healing Potion · restores 20 HP · drag to Items 1–3">
+          <img id="inventoryHealingPotionImg" alt="Healing Potion" />
+          <span class="resource-menu-count" id="inventoryHealingPotionCount">0</span>
+        </div>
+        <div class="menu-item resource-menu-item" data-resource-key="attackPotions" data-utility-hotbar-assignable="true" data-utility-item="attackPotion" title="Attack Potion · +15% physical damage for 5 min · drag to Items 1–3">
+          <img id="inventoryAttackPotionImg" alt="Attack Potion" />
+          <span class="resource-menu-count" id="inventoryAttackPotionCount">0</span>
+        </div>
+        <div class="menu-item resource-menu-item" data-resource-key="magicPotions" data-utility-hotbar-assignable="true" data-utility-item="magicPotion" title="Magic Potion · +15% magic damage for 5 min · drag to Items 1–3">
+          <img id="inventoryMagicPotionImg" alt="Magic Potion" />
+          <span class="resource-menu-count" id="inventoryMagicPotionCount">0</span>
+        </div>
+        <div class="menu-item resource-menu-item" data-resource-key="arrows" title="Arrows">
+          <img id="inventoryArrowImg" alt="Arrows" />
+          <span class="resource-menu-count" id="inventoryArrowCount">0</span>
+        </div>
+      </div>
+      <div id="inventoryConsumablesEmpty" class="inventory-empty">No consumables</div>
+
+      <div class="menu-section-title">Weapons</div>
+      <div id="inventoryWeaponsGrid" class="inventory-grid">
         <div class="menu-item" data-owned-item="weapon_sword" data-hotbar-assignable="true"><img id="inventorySwordImg" alt="Wood Sword" /><span>Wood Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_oldSword" data-hotbar-assignable="true"><img id="inventoryOldSwordImg" alt="Sword" /><span>Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_bow" data-hotbar-assignable="true"><img id="inventoryBowImg" alt="Wood Bow" /><span>Wood Bow</span></div>
@@ -3431,6 +4304,12 @@
         <div class="menu-item" data-owned-item="weapon_shepherdStaff" data-hotbar-assignable="true"><img id="inventoryShepherdStaffImg" alt="Shepherd Staff" /><span>Shepherd Staff</span></div>
         <div class="menu-item" data-owned-item="weapon_lostKey" data-hotbar-assignable="true"><img id="inventoryLostKeyImg" alt="Tournesol" /><span>Tournesol</span></div>
         <div class="menu-item" data-owned-item="weapon_hugeSunflower" data-hotbar-assignable="true"><img id="inventoryHugeSunflowerImg" alt="Tabatha's Key" /><span>Tabatha's Key</span></div>
+        <div class="menu-item" data-owned-item="weapon_sapgemWand" data-hotbar-assignable="true"><img id="inventorySapgemWandImg" alt="Sapgem Wand" /><span>Sapgem Wand</span></div>
+      </div>
+      <div id="inventoryWeaponsEmpty" class="inventory-empty">No weapons</div>
+
+      <div class="menu-section-title">Armor</div>
+      <div id="inventoryArmorGrid" class="inventory-grid">
         <div class="menu-item" data-owned-item="hat_original"><img id="inventoryHatImg" alt="Hat" /><span>Hat</span></div>
         <div class="menu-item" data-owned-item="hat_blueCap"><img id="inventoryCapImg" alt="Blue Cap" /><span>Blue Cap</span></div>
         <div class="menu-item" data-owned-item="hat_wizard"><img id="inventoryWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span></div>
@@ -3456,26 +4335,15 @@
         <div class="menu-item" data-owned-item="shirt_wood"><img id="inventoryWoodShirtImg" alt="Wood Chest" /><span>Wood Chest</span></div>
         <div class="menu-item" data-owned-item="pants_wood"><img id="inventoryWoodPantsImg" alt="Wood Greaves" /><span>Wood Greaves</span></div>
       </div>
-      <div id="inventoryGearEmpty" class="inventory-empty">No gear or items</div>
+      <div id="inventoryArmorEmpty" class="inventory-empty">No armor</div>
+
+      <div class="menu-section-title">Accessories</div>
+      <div id="inventoryAccessoriesGrid" class="inventory-grid">
+        <div class="menu-item" data-owned-item="charm_woodRing"><img id="inventoryWoodRingImg" alt="Wood Ring" /><span>Wood Ring</span></div>
+      </div>
+      <div id="inventoryAccessoriesEmpty" class="inventory-empty">No accessories</div>
       </div>
 
-      <div id="hotbarAssignPanel" class="hotbar-assign-panel">
-        <div class="hotbar-assign-header">
-          <img id="hotbarAssignImg" alt="" />
-          <div>
-            <div id="hotbarAssignName" class="hotbar-assign-name">Select a usable item</div>
-            <div class="hotbar-assign-help">Choose a hotbar slot</div>
-          </div>
-        </div>
-        <div class="hotbar-assign-buttons">
-          <button type="button" data-hotbar-assign-slot="0">1</button>
-          <button type="button" data-hotbar-assign-slot="1">2</button>
-          <button type="button" data-hotbar-assign-slot="2">3</button>
-          <button type="button" data-hotbar-assign-slot="3">4</button>
-          <button type="button" data-hotbar-assign-slot="4">5</button>
-          <button type="button" id="hotbarAssignClear">Clear</button>
-        </div>
-      </div>
     </div>
 
     <div id="equipmentPage" class="inventory-page">
@@ -3495,6 +4363,11 @@
             <div class="equipped-slot-label">Pants</div>
             <img id="equippedPantsImg" alt="Equipped pants" />
             <span id="equippedPantsName">Traveler</span>
+          </button>
+          <button type="button" class="equipped-box" data-gear-panel="gearCharmPanel">
+            <div class="equipped-slot-label">Charms</div>
+            <img id="equippedCharmImg" alt="Equipped charm" />
+            <span id="equippedCharmName">Empty</span>
           </button>
         </div>
 
@@ -3597,6 +4470,18 @@
               </button>
             </div>
           </div>
+
+          <div id="gearCharmPanel" class="gear-panel">
+            <div class="menu-section-title">Charms</div>
+            <div class="equip-options">
+              <button class="equip-choice charm-choice" data-charm-index="-1">
+                <img id="equipBaseCharmImg" alt="No charm" /><span>Unequip</span>
+              </button>
+              <button class="equip-choice charm-choice" data-charm-index="0" data-owned-item="charm_woodRing">
+                <img id="equipWoodRingImg" alt="Wood Ring" /><span>Wood Ring</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -3614,7 +4499,7 @@
           </button>
           <button type="button" class="class-selection-button" data-class-choice="arcana">
             <strong>Magus</strong>
-            <span>Wand mastery, Hallucination, Fireball, and Rain Cloud.</span>
+            <span>Spellshred, Mirage, Ignite, and Rainbloom.</span>
           </button>
           <button type="button" class="class-selection-button" data-class-choice="precision">
             <strong>Ranger</strong>
@@ -3677,13 +4562,13 @@
 <div class="skill-node locked" data-skill-node="wandMastery">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="wandMastery" alt="Wand Mastery" />
-                <span class="skill-node-name">Wand Mastery</span>
+                <img class="skill-node-icon" data-skill-icon="wandMastery" alt="Spellshred" />
+                <span class="skill-node-name">Spellshred</span>
               </div>
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Empowers basic attacks when holding a Wand type weapon. Empowered attacks scale with Magic Power, have enhanced range, and can target additional foes.
+              Requires a wand-type weapon. Empower your basic wand strikes with tearing magic. Spellshred scales with Magic Power, gains enhanced reach, and can cleave through additional foes as it levels.
             </div>
             <div class="skill-level-row">
               <span class="skill-level-text">LV 0 / 20</span>
@@ -3693,13 +4578,13 @@
 <div class="skill-node locked" data-skill-node="fireball">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="fireball" alt="Fireball" />
-                <span class="skill-node-name">Fireball</span>
+                <img class="skill-node-icon" data-skill-icon="fireball" alt="Ignite" />
+                <span class="skill-node-name">Ignite</span>
               </div>
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Volley concentrated fire energy at a target. The primary target takes the full impact and On-Fire. Up to 4 additional enemies near the impact receive On-Fire only. On-Fire lasts 3 seconds and deals 20 Power per second at two ticks per second.
+              Hurl concentrated Fire-element energy at a target point. The primary target takes the full impact and On-Fire. Up to 4 additional enemies near the impact receive On-Fire only. On-Fire lasts 3 seconds and deals 20 Power per second at two ticks per second.
             </div>
             <div class="skill-level-row">
               <span class="skill-level-text">LV 0 / 20</span>
@@ -3717,16 +4602,16 @@
 <div class="skill-node locked" data-skill-node="rainCloud">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="rainCloud" alt="Rain Cloud" />
-                <span class="skill-node-name">Rain Cloud</span>
+                <img class="skill-node-icon" data-skill-icon="rainCloud" alt="Rainbloom" />
+                <span class="skill-node-name">Rainbloom</span>
               </div>
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Requires a wand-type weapon. Commit to a 0.5-second summon at the point under your cursor when casting begins. You cannot move, attack, swap weapons, or use other abilities during the summon. The cloud then drifts on its own, grows slowing flammable magic grass, makes living enemies Wet, hurts ghosts, and puts out fire. After it expires, Rain Cloud has a 15-second cooldown.
+              Requires a wand-type weapon. Commit to a bloom point under your cursor when casting begins. You cannot move, attack, swap weapons, or use other abilities during the summon. Rainbloom then drifts on its own, grows slowing flammable magic grass, makes living enemies Wet, hurts ghosts, and puts out fire. Skill levels shorten the cast from 2.0s to 0.5s, strengthen the Magic Grass slow, and reduce the cooldown after the cloud expires. Casting a new Rainbloom replaces your previous Magic Grass field.
             </div>
             <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 1</span>
+              <span class="skill-level-text">LV 0 / 20</span>
               <button class="ability-upgrade-button" data-ability-id="rainCloud">Unlock</button>
             </div>
             <div class="skill-bind-label">Bind key</div>
@@ -3741,16 +4626,16 @@
 <div class="skill-node locked" data-skill-node="jesterBlink">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="jesterBlink" alt="Hallucination" />
-                <span class="skill-node-name">Hallucination</span>
+                <img class="skill-node-icon" data-skill-icon="jesterBlink" alt="Mirage" />
+                <span class="skill-node-name">Mirage</span>
               </div>
               <span class="skill-status">Locked</span>
             </div>
             <div class="skill-description">
-              Blink toward the cursor and leave a Hallucination behind. Nearby enemies already targeting you are redirected to the illusion once; passive enemies and enemies targeting someone else are unaffected. After 0.35 seconds, press the skill again to blink back to the Hallucination and consume it. Each redirected monster is released once it reaches the clone. After the Hallucination ends or is consumed, the skill has a 15-second cooldown.
+              Blink toward the cursor and leave a Mirage behind. Nearby enemies already targeting you are redirected to the illusion once; passive enemies and enemies targeting someone else are unaffected. After 0.35 seconds, press the skill again to blink back to the Mirage and consume it. Each redirected monster is released once it reaches the clone. Skill levels increase blink distance and the return window while reducing a cooldown that begins immediately on the first cast. While the clone is active, the hotbar counts down the return window; once it is consumed or expires, the hotbar reveals the already-running cooldown.
             </div>
             <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 1</span>
+              <span class="skill-level-text">LV 0 / 20</span>
               <button class="ability-upgrade-button" data-ability-id="jesterBlink">Unlock</button>
             </div>
             <div class="skill-bind-label">Bind key</div>
@@ -3999,7 +4884,7 @@
     <div id="inventoryFooter">Esc to close</div>
   </div>
 
-  <div id="menuSkillHotkeyRail" class="menu-hotkey-rail" aria-label="Skill hotkeys">
+  <div id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden" aria-label="Skill hotkeys">
     <div class="menu-hotkey-rail-title">Skills</div>
     <div class="skill-key-strip">
       <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotShiftIcon" alt="" /><span class="skill-key-name">Shift</span><span class="skill-key-skill" id="skillSlotShift">Empty</span></div>
@@ -4084,8 +4969,29 @@
       </button>
       <button class="craft-recipe" type="button" data-craft-recipe="arrows">
         <img id="craftArrowsImg" alt="Arrows" />
-        <span class="craft-recipe-name">Arrows ×5</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
+        <span class="craft-recipe-name">Arrows ×20</span>
+        <span class="craft-recipe-cost">
+          <span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span>
+          <span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span>
+        </span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
+      <button class="craft-recipe" type="button" data-craft-recipe="healingPotion">
+        <img id="craftHealingPotionImg" alt="Healing Potion" />
+        <span class="craft-recipe-name">Healing Potion</span>
+        <span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftHealingWhiteIcon" alt="White Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftHealingBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
+      <button class="craft-recipe" type="button" data-craft-recipe="attackPotion">
+        <img id="craftAttackPotionImg" alt="Attack Potion" />
+        <span class="craft-recipe-name">Attack Potion</span>
+        <span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftAttackWhiteIcon" alt="White Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
+      <button class="craft-recipe" type="button" data-craft-recipe="magicPotion">
+        <img id="craftMagicPotionImg" alt="Magic Potion" />
+        <span class="craft-recipe-name">Magic Potion</span>
+        <span class="craft-recipe-cost"><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftMagicBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span>
         <span class="craft-recipe-status">CRAFT</span>
       </button>
       <button class="craft-recipe" type="button" data-craft-recipe="shepherdStaff">
@@ -4112,6 +5018,12 @@
         <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftGreavesWoodIcon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
         <span class="craft-recipe-status">CRAFT</span>
       </button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodRing">
+        <img id="craftWoodRingImg" alt="Wood Ring" />
+        <span class="craft-recipe-name">Wood Ring</span>
+        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftRingWoodIcon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
+        <span class="craft-recipe-status">CRAFT</span>
+      </button>
     </div>
     <div id="craftFooter">Choose a recipe · Esc to close</div>
   </div>
@@ -4136,32 +5048,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=300"></script>
-<script src="/shared/terrain-rules.js?v=300"></script>
-<script src="/shared/terrain-presentation.js?v=300"></script>
-<script src="/shared/combat-balance.js?v=17"></script>
-<script src="/shared/rain-field.js?v=300"></script>
-<script src="/shared/camouflage-rules.js?v=300"></script>
-<script src="/shared/enemy-net-protocol.js?v=300"></script>
-<script src="/shared/player-net-protocol.js?v=300"></script>
-<script src="/client-config.js?v=300"></script>
-<script src="/client-utils.js?v=300"></script>
-<script src="/client-world.js?v=300"></script>
-<script src="/client-maps.js?v=300"></script>
-<script src="/client-enemies.js?v=300"></script>
-<script src="/client-enemy-runtime.js?v=300"></script>
-<script src="/client-enemy-rendering.js?v=300"></script>
-<script src="/client-combat.js?v=300"></script>
-<script src="/client-abilities.js?v=300"></script>
-<script src="/client-magus-abilities.js?v=300"></script>
-<script src="/client-class-abilities.js?v=300"></script>
-<script src="/client-status.js?v=300"></script>
-<script src="/client-fire-environment.js?v=300"></script>
-<script src="/client-network.js?v=300"></script>
-<script src="/client-simulation-foundation.js?v=300"></script>
-<script src="/game.js?v=300"></script>
-<script src="/client-terrain.js?v=300"></script>
-<script src="/client-input.js?v=300"></script>
-<script src="/client-app.js?v=300"></script>
+<script src="/shared/world-content-runtime.js?v=336"></script>
+<script src="/shared/terrain-rules.js?v=336"></script>
+<script src="/shared/terrain-presentation.js?v=336"></script>
+<script src="/shared/combat-balance.js?v=25"></script>
+<script src="/shared/ability-scaling.js?v=336"></script>
+<script src="/shared/rain-field.js?v=336"></script>
+<script src="/shared/camouflage-rules.js?v=336"></script>
+<script src="/shared/enemy-net-protocol.js?v=336"></script>
+<script src="/shared/player-net-protocol.js?v=336"></script>
+<script src="/client-config.js?v=336"></script>
+<script src="/client-utils.js?v=336"></script>
+<script src="/client-world.js?v=336"></script>
+<script src="/client-maps.js?v=336"></script>
+<script src="/client-enemies.js?v=336"></script>
+<script src="/client-enemy-runtime.js?v=336"></script>
+<script src="/client-enemy-rendering.js?v=336"></script>
+<script src="/client-combat.js?v=336"></script>
+<script src="/client-abilities.js?v=336"></script>
+<script src="/client-magus-abilities.js?v=336"></script>
+<script src="/client-class-abilities.js?v=336"></script>
+<script src="/client-status.js?v=336"></script>
+<script src="/client-fire-environment.js?v=336"></script>
+<script src="/client-network.js?v=336"></script>
+<script src="/client-simulation-foundation.js?v=336"></script>
+<script src="/game.js?v=336"></script>
+<script src="/client-terrain.js?v=336"></script>
+<script src="/client-input.js?v=336"></script>
+<script src="/client-app.js?v=336"></script>
 </body>
 </html>

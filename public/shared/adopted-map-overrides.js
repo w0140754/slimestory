@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   return Object.freeze({
-    "version": 21,
+    "version": 39,
     "maps": {
       "prototypeIsland": {
         "name": "Prototype Island",
@@ -16,8 +16,8 @@
         "playerSpawns": [
           {
             "id": "center",
-            "x": 377,
-            "y": 257
+            "x": 363,
+            "y": 259
           },
           {
             "id": "eastBridge",
@@ -133,14 +133,6 @@
               "nonInteractive": true
             },
             {
-              "id": "prototypeIsland:tree:12",
-              "x": 429,
-              "y": 418,
-              "phase": 8.450000000000003,
-              "fireImmune": true,
-              "nonInteractive": true
-            },
-            {
               "id": "prototypeIsland:tree:13",
               "x": 376,
               "y": 137,
@@ -150,8 +142,8 @@
             },
             {
               "id": "prototypeIsland:tree:14",
-              "x": 449,
-              "y": 424,
+              "x": 452,
+              "y": 421,
               "phase": 9.910000000000004,
               "fireImmune": true,
               "nonInteractive": true
@@ -165,17 +157,9 @@
               "nonInteractive": true
             },
             {
-              "id": "prototypeIsland:tree:16",
-              "x": 467,
-              "y": 419,
-              "phase": 11.370000000000005,
-              "fireImmune": true,
-              "nonInteractive": true
-            },
-            {
               "id": "prototypeIsland:tree:17",
-              "x": 442,
-              "y": 136,
+              "x": 464,
+              "y": 154,
               "phase": 12.100000000000005,
               "fireImmune": true,
               "nonInteractive": true
@@ -262,8 +246,8 @@
             },
             {
               "id": "prototypeIsland:tree:28",
-              "x": 373,
-              "y": 425,
+              "x": 377,
+              "y": 424,
               "phase": 20.13000000000001,
               "fireImmune": true,
               "nonInteractive": true
@@ -278,8 +262,8 @@
             },
             {
               "id": "prototypeIsland:tree:30",
-              "x": 487,
-              "y": 327,
+              "x": 481,
+              "y": 323,
               "phase": 21.59000000000001,
               "fireImmune": true,
               "nonInteractive": true
@@ -302,8 +286,8 @@
             },
             {
               "id": "prototypeIsland:tree:34",
-              "x": 411,
-              "y": 424,
+              "x": 414,
+              "y": 428,
               "phase": 24.510000000000012,
               "fireImmune": true,
               "nonInteractive": true
@@ -350,16 +334,16 @@
             },
             {
               "id": "prototypeIsland:tree:40",
-              "x": 483,
-              "y": 204,
+              "x": 466,
+              "y": 216,
               "phase": 28.890000000000015,
               "fireImmune": true,
               "nonInteractive": true
             },
             {
               "id": "prototypeIsland:tree:42",
-              "x": 484,
-              "y": 376,
+              "x": 487,
+              "y": 382,
               "phase": 30.350000000000016,
               "fireImmune": true,
               "nonInteractive": true
@@ -374,8 +358,8 @@
             },
             {
               "id": "prototypeIsland:tree:44",
-              "x": 488,
-              "y": 402,
+              "x": 477,
+              "y": 403,
               "phase": 31.810000000000016,
               "fireImmune": true,
               "nonInteractive": true
@@ -390,8 +374,8 @@
             },
             {
               "id": "prototypeIsland:tree:46",
-              "x": 391,
-              "y": 418,
+              "x": 392,
+              "y": 410,
               "phase": 33.27000000000001,
               "fireImmune": true,
               "nonInteractive": true
@@ -446,8 +430,8 @@
             },
             {
               "id": "prototypeIsland:tree:58",
-              "x": 433,
-              "y": 153,
+              "x": 440,
+              "y": 139,
               "phase": 42.03,
               "fireImmune": true,
               "nonInteractive": true
@@ -470,8 +454,8 @@
             },
             {
               "id": "prototypeIsland:tree:11",
-              "x": 405,
-              "y": 317,
+              "x": 400,
+              "y": 320,
               "phase": 42.03,
               "fireImmune": false,
               "nonInteractive": false,
@@ -479,8 +463,8 @@
             },
             {
               "id": "prototypeIsland:tree:54",
-              "x": 423,
-              "y": 396,
+              "x": 428,
+              "y": 403,
               "phase": 42.76,
               "fireImmune": false,
               "nonInteractive": false,
@@ -488,8 +472,8 @@
             },
             {
               "id": "prototypeIsland:tree:47",
-              "x": 484,
-              "y": 351,
+              "x": 483,
+              "y": 355,
               "phase": 41.3,
               "fireImmune": true,
               "nonInteractive": true
@@ -546,18 +530,9 @@
             },
             {
               "id": "prototypeIsland:tree:64",
-              "x": 366,
-              "y": 208,
+              "x": 368,
+              "y": 207,
               "phase": 46.41,
-              "fireImmune": false,
-              "nonInteractive": false,
-              "canopyVariant": 0
-            },
-            {
-              "id": "prototypeIsland:tree:65",
-              "x": 432,
-              "y": 195,
-              "phase": 47.14,
               "fireImmune": false,
               "nonInteractive": false,
               "canopyVariant": 0
@@ -599,19 +574,19 @@
               "canopyVariant": 0
             },
             {
-              "id": "prototypeIsland:tree:70",
-              "x": 449,
+              "id": "prototypeIsland:tree:71",
+              "x": 250,
               "y": 230,
-              "phase": 50.79,
+              "phase": 51.52,
               "fireImmune": false,
               "nonInteractive": false,
               "canopyVariant": 0
             },
             {
-              "id": "prototypeIsland:tree:71",
-              "x": 250,
-              "y": 230,
-              "phase": 51.52,
+              "id": "prototypeIsland:tree:32",
+              "x": 457,
+              "y": 315,
+              "phase": 49.33,
               "fireImmune": false,
               "nonInteractive": false,
               "canopyVariant": 0
@@ -653,7 +628,7 @@
             {
               "id": "prototypeIsland:grass:5",
               "x": 380,
-              "y": 203,
+              "y": 204,
               "phase": 3.6,
               "width": 13,
               "flowerType": null
@@ -668,8 +643,8 @@
             },
             {
               "id": "prototypeIsland:grass:7",
-              "x": 386,
-              "y": 176,
+              "x": 385,
+              "y": 178,
               "phase": 5.2,
               "width": 13,
               "flowerType": null
@@ -732,8 +707,8 @@
             },
             {
               "id": "prototypeIsland:grass:15",
-              "x": 380,
-              "y": 357,
+              "x": 392,
+              "y": 361,
               "phase": 11.6,
               "width": 13,
               "flowerType": null
@@ -772,41 +747,25 @@
             },
             {
               "id": "prototypeIsland:grass:20",
-              "x": 432,
-              "y": 403,
+              "x": 391,
+              "y": 425,
               "phase": 15.6,
               "width": 13,
               "flowerType": null
             },
             {
-              "id": "prototypeIsland:grass:21",
-              "x": 415,
-              "y": 210,
-              "phase": 16.4,
-              "width": 13,
-              "flowerType": null
-            },
-            {
               "id": "prototypeIsland:grass:22",
-              "x": 433,
-              "y": 204,
+              "x": 455,
+              "y": 230,
               "phase": 17.2,
               "width": 13,
               "flowerType": null
             },
             {
               "id": "prototypeIsland:grass:23",
-              "x": 456,
-              "y": 240,
+              "x": 469,
+              "y": 244,
               "phase": 18,
-              "width": 13,
-              "flowerType": null
-            },
-            {
-              "id": "prototypeIsland:grass:24",
-              "x": 435,
-              "y": 238,
-              "phase": 18.8,
               "width": 13,
               "flowerType": null
             },
@@ -857,6 +816,30 @@
               "phase": 23.6,
               "width": 13,
               "flowerType": null
+            },
+            {
+              "id": "prototypeIsland:grass:21",
+              "x": 425,
+              "y": 426,
+              "phase": 22.8,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIsland:grass:24",
+              "x": 437,
+              "y": 426,
+              "phase": 23.6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIsland:grass:31",
+              "x": 468,
+              "y": 425,
+              "phase": 24.4,
+              "width": 13,
+              "flowerType": null
             }
           ],
           "rocks": [
@@ -864,18 +847,6 @@
               "id": "prototypeIsland:rock:1",
               "x": 299,
               "y": 176,
-              "variant": "plain"
-            },
-            {
-              "id": "prototypeIsland:rock:2",
-              "x": 383,
-              "y": 193,
-              "variant": "plain"
-            },
-            {
-              "id": "prototypeIsland:rock:3",
-              "x": 403,
-              "y": 173,
               "variant": "plain"
             },
             {
@@ -898,8 +869,8 @@
             },
             {
               "id": "prototypeIsland:rock:7",
-              "x": 465,
-              "y": 320,
+              "x": 456,
+              "y": 384,
               "variant": "plain"
             },
             {
@@ -921,8 +892,8 @@
             },
             {
               "id": "prototypeIsland:sceneryRock:2",
-              "x": 474,
-              "y": 343,
+              "x": 462,
+              "y": 346,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -930,8 +901,8 @@
             },
             {
               "id": "prototypeIsland:sceneryRock:3",
-              "x": 446,
-              "y": 151,
+              "x": 387,
+              "y": 170,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -948,8 +919,8 @@
             },
             {
               "id": "prototypeIsland:sceneryRock:5",
-              "x": 456,
-              "y": 414,
+              "x": 468,
+              "y": 431,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -999,13 +970,6 @@
               "type": "white"
             },
             {
-              "id": "prototypeIsland:flower:3",
-              "x": 411,
-              "y": 207,
-              "phase": 2,
-              "type": "white"
-            },
-            {
               "id": "prototypeIsland:flower:4",
               "x": 317,
               "y": 221,
@@ -1014,46 +978,26 @@
             },
             {
               "id": "prototypeIsland:flower:5",
-              "x": 470,
-              "y": 358,
+              "x": 392,
+              "y": 362,
               "phase": 3.6,
               "type": "blue"
             }
           ],
-          "houses": []
+          "houses": [
+            {
+              "id": "prototypeIsland:house:1",
+              "x": 436,
+              "y": 196,
+              "variant": "default",
+              "collision": {
+                "width": 48,
+                "height": 30
+              }
+            }
+          ]
         },
-        "enemySpawns": [
-          {
-            "id": "prototypeIsland:slime:1",
-            "type": "slime",
-            "level": 1,
-            "x": 250,
-            "y": 359,
-            "phase": 0.4,
-            "wanderRadiusX": 18,
-            "wanderRadiusY": 13
-          },
-          {
-            "id": "prototypeIsland:slime:2",
-            "type": "slime",
-            "level": 1,
-            "x": 417,
-            "y": 355,
-            "phase": 1.8,
-            "wanderRadiusX": 18,
-            "wanderRadiusY": 13
-          },
-          {
-            "id": "prototypeIsland:slime:3",
-            "type": "slime",
-            "level": 1,
-            "x": 260,
-            "y": 184,
-            "phase": 3.1,
-            "wanderRadiusX": 20,
-            "wanderRadiusY": 14
-          }
-        ],
+        "enemySpawns": [],
         "terrain": {
           "cellSize": 8,
           "defaultType": "void",
@@ -1489,7 +1433,1797 @@
         },
         "collision": {
           "waterRects": []
-        }
+        },
+        "npcs": [
+          {
+            "id": "prototypeIsland:npc:1",
+            "type": "shopkeeper",
+            "x": 422,
+            "y": 207,
+            "interactionRadius": 24
+          },
+          {
+            "id": "prototypeIsland:npc:2",
+            "type": "classResetCrystal",
+            "x": 426,
+            "y": 348,
+            "interactionRadius": 28
+          },
+          {
+            "id": "prototypeIsland:npc:3",
+            "type": "craftingTable",
+            "x": 395,
+            "y": 221,
+            "interactionRadius": 24
+          }
+        ],
+        "defaultPlayerSpawnId": "center"
+      },
+      "prototypeIslandWest": {
+        "name": "Prototype Island West",
+        "dimensions": {
+          "width": 1060,
+          "height": 560
+        },
+        "playerSpawns": [
+          {
+            "id": "center",
+            "x": 500,
+            "y": 280
+          },
+          {
+            "id": "eastBridge",
+            "x": 864,
+            "y": 280
+          }
+        ],
+        "portals": [
+          {
+            "id": "prototypeIslandWest:portal:east",
+            "x": 868,
+            "y": 254,
+            "width": 12,
+            "height": 52,
+            "targetMapId": "prototypeIsland",
+            "targetSpawnId": "westBridge"
+          }
+        ],
+        "environment": {
+          "trees": [
+            {
+              "id": "prototypeIslandWest:tree:1",
+              "x": 211,
+              "y": 139,
+              "phase": 1.17,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:2",
+              "x": 213,
+              "y": 417,
+              "phase": 1.9,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:3",
+              "x": 234,
+              "y": 145,
+              "phase": 2.63,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:4",
+              "x": 236,
+              "y": 420,
+              "phase": 3.36,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:5",
+              "x": 256,
+              "y": 138,
+              "phase": 4.09,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:6",
+              "x": 277,
+              "y": 420,
+              "phase": 4.82,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:7",
+              "x": 281,
+              "y": 145,
+              "phase": 5.550000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:8",
+              "x": 302,
+              "y": 419,
+              "phase": 6.280000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:9",
+              "x": 305,
+              "y": 140,
+              "phase": 7.010000000000002,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:10",
+              "x": 325,
+              "y": 422,
+              "phase": 7.740000000000002,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:11",
+              "x": 332,
+              "y": 146,
+              "phase": 8.470000000000002,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:12",
+              "x": 372,
+              "y": 420,
+              "phase": 9.200000000000003,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:13",
+              "x": 358,
+              "y": 139,
+              "phase": 9.930000000000003,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:14",
+              "x": 415,
+              "y": 421,
+              "phase": 10.660000000000004,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:15",
+              "x": 383,
+              "y": 145,
+              "phase": 11.390000000000004,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:16",
+              "x": 439,
+              "y": 422,
+              "phase": 12.120000000000005,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:17",
+              "x": 411,
+              "y": 141,
+              "phase": 12.850000000000005,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:18",
+              "x": 459,
+              "y": 416,
+              "phase": 13.580000000000005,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:19",
+              "x": 432,
+              "y": 149,
+              "phase": 14.310000000000006,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:20",
+              "x": 500,
+              "y": 412,
+              "phase": 15.040000000000006,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:21",
+              "x": 366,
+              "y": 241,
+              "phase": 15.770000000000007,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:22",
+              "x": 469,
+              "y": 358,
+              "phase": 16.500000000000007,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:24",
+              "x": 484,
+              "y": 381,
+              "phase": 17.960000000000008,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:25",
+              "x": 658,
+              "y": 193,
+              "phase": 18.69000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:26",
+              "x": 496,
+              "y": 357,
+              "phase": 19.42000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:27",
+              "x": 605,
+              "y": 211,
+              "phase": 20.15000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:28",
+              "x": 622,
+              "y": 421,
+              "phase": 20.88000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:29",
+              "x": 642,
+              "y": 150,
+              "phase": 21.61000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:30",
+              "x": 697,
+              "y": 422,
+              "phase": 22.34000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:31",
+              "x": 672,
+              "y": 148,
+              "phase": 23.07000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:33",
+              "x": 702,
+              "y": 150,
+              "phase": 24.530000000000012,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:34",
+              "x": 718,
+              "y": 417,
+              "phase": 25.260000000000012,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:35",
+              "x": 732,
+              "y": 150,
+              "phase": 25.990000000000013,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:37",
+              "x": 762,
+              "y": 148,
+              "phase": 27.450000000000014,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:38",
+              "x": 790,
+              "y": 418,
+              "phase": 28.180000000000014,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:39",
+              "x": 236,
+              "y": 173,
+              "phase": 28.910000000000014,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:40",
+              "x": 259,
+              "y": 413,
+              "phase": 29.640000000000015,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:41",
+              "x": 268,
+              "y": 170,
+              "phase": 30.370000000000015,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:42",
+              "x": 231,
+              "y": 394,
+              "phase": 31.100000000000016,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:43",
+              "x": 316,
+              "y": 165,
+              "phase": 31.830000000000016,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:44",
+              "x": 316,
+              "y": 393,
+              "phase": 32.56000000000002,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:45",
+              "x": 358,
+              "y": 165,
+              "phase": 33.29000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:46",
+              "x": 350,
+              "y": 414,
+              "phase": 34.02000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:47",
+              "x": 390,
+              "y": 173,
+              "phase": 34.75000000000001,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:48",
+              "x": 375,
+              "y": 393,
+              "phase": 35.480000000000004,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:49",
+              "x": 417,
+              "y": 169,
+              "phase": 36.21,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:50",
+              "x": 392,
+              "y": 421,
+              "phase": 36.94,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:51",
+              "x": 448,
+              "y": 169,
+              "phase": 37.669999999999995,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:52",
+              "x": 437,
+              "y": 391,
+              "phase": 38.39999999999999,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:53",
+              "x": 434,
+              "y": 189,
+              "phase": 39.12999999999999,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:54",
+              "x": 480,
+              "y": 421,
+              "phase": 39.859999999999985,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:55",
+              "x": 493,
+              "y": 140,
+              "phase": 40.58999999999998,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:56",
+              "x": 515,
+              "y": 389,
+              "phase": 41.31999999999998,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:57",
+              "x": 523,
+              "y": 219,
+              "phase": 42.049999999999976,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:58",
+              "x": 621,
+              "y": 334,
+              "phase": 42.77999999999997,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:59",
+              "x": 506,
+              "y": 169,
+              "phase": 43.50999999999997,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:60",
+              "x": 642,
+              "y": 366,
+              "phase": 44.23999999999997,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:61",
+              "x": 613,
+              "y": 179,
+              "phase": 44.96999999999996,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:62",
+              "x": 620,
+              "y": 384,
+              "phase": 45.69999999999996,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:63",
+              "x": 642,
+              "y": 176,
+              "phase": 46.42999999999996,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:64",
+              "x": 666,
+              "y": 414,
+              "phase": 47.159999999999954,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:65",
+              "x": 680,
+              "y": 182,
+              "phase": 47.88999999999995,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:66",
+              "x": 646,
+              "y": 418,
+              "phase": 48.61999999999995,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:67",
+              "x": 709,
+              "y": 177,
+              "phase": 49.349999999999945,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:68",
+              "x": 743,
+              "y": 414,
+              "phase": 50.07999999999994,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:69",
+              "x": 748,
+              "y": 173,
+              "phase": 50.80999999999994,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:70",
+              "x": 766,
+              "y": 421,
+              "phase": 51.539999999999935,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:71",
+              "x": 783,
+              "y": 179,
+              "phase": 52.26999999999993,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:72",
+              "x": 785,
+              "y": 392,
+              "phase": 52.99999999999993,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:73",
+              "x": 210,
+              "y": 176,
+              "phase": 53.729999999999926,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:74",
+              "x": 785,
+              "y": 147,
+              "phase": 54.45999999999992,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:75",
+              "x": 208,
+              "y": 217,
+              "phase": 55.18999999999992,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:76",
+              "x": 790,
+              "y": 206,
+              "phase": 55.919999999999916,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:78",
+              "x": 790,
+              "y": 236,
+              "phase": 57.37999999999991,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:80",
+              "x": 210,
+              "y": 296,
+              "phase": 58.839999999999904,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:81",
+              "x": 210,
+              "y": 326,
+              "phase": 59.5699999999999,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:82",
+              "x": 791,
+              "y": 314,
+              "phase": 60.2999999999999,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:83",
+              "x": 210,
+              "y": 356,
+              "phase": 61.029999999999895,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:84",
+              "x": 788,
+              "y": 340,
+              "phase": 61.75999999999989,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:85",
+              "x": 210,
+              "y": 386,
+              "phase": 62.48999999999989,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:86",
+              "x": 791,
+              "y": 369,
+              "phase": 63.219999999999885,
+              "fireImmune": true,
+              "nonInteractive": true
+            },
+            {
+              "id": "prototypeIslandWest:tree:87",
+              "x": 232,
+              "y": 204,
+              "phase": 63.94999999999988,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:88",
+              "x": 341,
+              "y": 185,
+              "phase": 64.67999999999988,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:89",
+              "x": 625,
+              "y": 240,
+              "phase": 65.40999999999988,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:90",
+              "x": 738,
+              "y": 330,
+              "phase": 66.13999999999989,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:91",
+              "x": 345,
+              "y": 385,
+              "phase": 66.86999999999989,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:92",
+              "x": 612,
+              "y": 305,
+              "phase": 67.5999999999999,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:93",
+              "x": 679,
+              "y": 302,
+              "phase": 67.58,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:94",
+              "x": 347,
+              "y": 255,
+              "phase": 68.31,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:95",
+              "x": 259,
+              "y": 312,
+              "phase": 69.04,
+              "fireImmune": false,
+              "nonInteractive": false,
+              "canopyVariant": 0
+            }
+          ],
+          "tallGrass": [
+            {
+              "id": "prototypeIslandWest:grass:1",
+              "x": 315,
+              "y": 275,
+              "phase": 0.7,
+              "width": 16,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:2",
+              "x": 335,
+              "y": 292,
+              "phase": 1.4,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:3",
+              "x": 492,
+              "y": 315,
+              "phase": 2.1,
+              "width": 18,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:4",
+              "x": 515,
+              "y": 296,
+              "phase": 2.8,
+              "width": 14,
+              "flowerType": "yellow"
+            },
+            {
+              "id": "prototypeIslandWest:grass:5",
+              "x": 675,
+              "y": 270,
+              "phase": 3.6,
+              "width": 17,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:6",
+              "x": 705,
+              "y": 292,
+              "phase": 4.2,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:7",
+              "x": 404,
+              "y": 196,
+              "phase": 5.2,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:8",
+              "x": 359,
+              "y": 187,
+              "phase": 6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:9",
+              "x": 482,
+              "y": 163,
+              "phase": 6.8,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:10",
+              "x": 512,
+              "y": 190,
+              "phase": 7.6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:11",
+              "x": 540,
+              "y": 229,
+              "phase": 8.4,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:12",
+              "x": 575,
+              "y": 231,
+              "phase": 9.2,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:13",
+              "x": 546,
+              "y": 277,
+              "phase": 10,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:14",
+              "x": 572,
+              "y": 278,
+              "phase": 10.8,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:15",
+              "x": 501,
+              "y": 329,
+              "phase": 11.6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:16",
+              "x": 623,
+              "y": 197,
+              "phase": 12.4,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:17",
+              "x": 771,
+              "y": 253,
+              "phase": 13.2,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:18",
+              "x": 760,
+              "y": 211,
+              "phase": 14,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:19",
+              "x": 225,
+              "y": 346,
+              "phase": 14.8,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:20",
+              "x": 234,
+              "y": 363,
+              "phase": 15.6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:21",
+              "x": 247,
+              "y": 380,
+              "phase": 16.4,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:22",
+              "x": 243,
+              "y": 349,
+              "phase": 17.2,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:23",
+              "x": 255,
+              "y": 362,
+              "phase": 18,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:24",
+              "x": 265,
+              "y": 383,
+              "phase": 18.8,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:25",
+              "x": 247,
+              "y": 322,
+              "phase": 19.6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "prototypeIslandWest:grass:26",
+              "x": 274,
+              "y": 319,
+              "phase": 20.4,
+              "width": 13,
+              "flowerType": null
+            }
+          ],
+          "rocks": [
+            {
+              "id": "prototypeIslandWest:rock:1",
+              "x": 265,
+              "y": 350,
+              "variant": "plain"
+            },
+            {
+              "id": "prototypeIslandWest:rock:2",
+              "x": 405,
+              "y": 250,
+              "variant": "grass"
+            },
+            {
+              "id": "prototypeIslandWest:rock:3",
+              "x": 667,
+              "y": 339,
+              "variant": "plain"
+            },
+            {
+              "id": "prototypeIslandWest:rock:4",
+              "x": 723,
+              "y": 208,
+              "variant": "grass"
+            },
+            {
+              "id": "prototypeIslandWest:rock:5",
+              "x": 645,
+              "y": 394,
+              "variant": "plain"
+            }
+          ],
+          "sceneryRocks": [
+            {
+              "id": "prototypeIslandWest:sceneryRock:1",
+              "x": 295,
+              "y": 171,
+              "collision": {
+                "width": 10,
+                "height": 6
+              }
+            },
+            {
+              "id": "prototypeIslandWest:sceneryRock:2",
+              "x": 499,
+              "y": 399,
+              "collision": {
+                "width": 10,
+                "height": 6
+              }
+            },
+            {
+              "id": "prototypeIslandWest:sceneryRock:3",
+              "x": 762,
+              "y": 194,
+              "collision": {
+                "width": 10,
+                "height": 6
+              }
+            }
+          ],
+          "harvestFlowers": [
+            {
+              "id": "prototypeIslandWest:flower:1",
+              "x": 500,
+              "y": 327,
+              "phase": 0.4,
+              "type": "white"
+            },
+            {
+              "id": "prototypeIslandWest:flower:2",
+              "x": 358,
+              "y": 182,
+              "phase": 1.2,
+              "type": "blue"
+            },
+            {
+              "id": "prototypeIslandWest:flower:3",
+              "x": 619,
+              "y": 197,
+              "phase": 2,
+              "type": "white"
+            },
+            {
+              "id": "prototypeIslandWest:flower:4",
+              "x": 760,
+              "y": 209,
+              "phase": 2.8,
+              "type": "blue"
+            },
+            {
+              "id": "prototypeIslandWest:flower:5",
+              "x": 236,
+              "y": 361,
+              "phase": 3.6,
+              "type": "white"
+            },
+            {
+              "id": "prototypeIslandWest:flower:6",
+              "x": 246,
+              "y": 377,
+              "phase": 4.4,
+              "type": "blue"
+            }
+          ],
+          "houses": []
+        },
+        "enemySpawns": [
+          {
+            "id": "prototypeIslandWest:slime:1",
+            "type": "slime",
+            "level": 1,
+            "x": 683,
+            "y": 213,
+            "phase": 0.3,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:2",
+            "type": "slime",
+            "level": 1,
+            "x": 698,
+            "y": 376,
+            "phase": 1.2,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:3",
+            "type": "slime",
+            "level": 1,
+            "x": 753,
+            "y": 367,
+            "phase": 2.1,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:4",
+            "type": "slime",
+            "level": 1,
+            "x": 283,
+            "y": 204,
+            "phase": 3,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:5",
+            "type": "slime",
+            "level": 1,
+            "x": 339,
+            "y": 222,
+            "phase": 3.9,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:6",
+            "type": "slime",
+            "level": 1,
+            "x": 469,
+            "y": 203,
+            "phase": 4.8,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:7",
+            "type": "slime",
+            "level": 1,
+            "x": 273,
+            "y": 372,
+            "phase": 5.7,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          },
+          {
+            "id": "prototypeIslandWest:slime:8",
+            "type": "slime",
+            "level": 1,
+            "x": 410,
+            "y": 375,
+            "phase": 6.6,
+            "wanderRadiusX": 18,
+            "wanderRadiusY": 13
+          }
+        ],
+        "terrain": {
+          "cellSize": 8,
+          "defaultType": "void",
+          "regions": [
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 128,
+              "width": 296,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 496,
+              "y": 128,
+              "width": 136,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 632,
+              "y": 128,
+              "width": 168,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 136,
+              "width": 312,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 512,
+              "y": 136,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 624,
+              "y": 136,
+              "width": 176,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 144,
+              "width": 320,
+              "height": 24
+            },
+            {
+              "type": "water",
+              "x": 520,
+              "y": 144,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 616,
+              "y": 144,
+              "width": 184,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 520,
+              "y": 152,
+              "width": 88,
+              "height": 16
+            },
+            {
+              "type": "grass",
+              "x": 608,
+              "y": 152,
+              "width": 192,
+              "height": 16
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 168,
+              "width": 328,
+              "height": 24
+            },
+            {
+              "type": "water",
+              "x": 528,
+              "y": 168,
+              "width": 72,
+              "height": 16
+            },
+            {
+              "type": "grass",
+              "x": 600,
+              "y": 168,
+              "width": 200,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 528,
+              "y": 184,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 592,
+              "y": 184,
+              "width": 208,
+              "height": 32
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 192,
+              "width": 336,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 536,
+              "y": 192,
+              "width": 56,
+              "height": 16
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 208,
+              "width": 344,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 544,
+              "y": 208,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 216,
+              "width": 352,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 552,
+              "y": 216,
+              "width": 24,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 576,
+              "y": 216,
+              "width": 224,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 224,
+              "width": 600,
+              "height": 24
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 248,
+              "width": 320,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 520,
+              "y": 248,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 632,
+              "y": 248,
+              "width": 168,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 256,
+              "width": 40,
+              "height": 24
+            },
+            {
+              "type": "dirt",
+              "x": 240,
+              "y": 256,
+              "width": 32,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 272,
+              "y": 256,
+              "width": 224,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 496,
+              "y": 256,
+              "width": 160,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 656,
+              "y": 256,
+              "width": 144,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 240,
+              "y": 264,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 280,
+              "y": 264,
+              "width": 192,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 472,
+              "y": 264,
+              "width": 224,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 696,
+              "y": 264,
+              "width": 184,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 240,
+              "y": 272,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 312,
+              "y": 272,
+              "width": 144,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 456,
+              "y": 272,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 528,
+              "y": 272,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 608,
+              "y": 272,
+              "width": 272,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 280,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 272,
+              "y": 280,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 328,
+              "y": 280,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 424,
+              "y": 280,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 504,
+              "y": 280,
+              "width": 136,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 640,
+              "y": 280,
+              "width": 240,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 288,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 288,
+              "y": 288,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 352,
+              "y": 288,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 408,
+              "y": 288,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 480,
+              "y": 288,
+              "width": 400,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 296,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 304,
+              "y": 296,
+              "width": 160,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 464,
+              "y": 296,
+              "width": 336,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 304,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 328,
+              "y": 304,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 440,
+              "y": 304,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 544,
+              "y": 304,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 584,
+              "y": 304,
+              "width": 216,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 312,
+              "width": 152,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 352,
+              "y": 312,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 400,
+              "y": 312,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 528,
+              "y": 312,
+              "width": 72,
+              "height": 16
+            },
+            {
+              "type": "grass",
+              "x": 600,
+              "y": 312,
+              "width": 200,
+              "height": 40
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 320,
+              "width": 328,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 328,
+              "width": 320,
+              "height": 32
+            },
+            {
+              "type": "water",
+              "x": 520,
+              "y": 328,
+              "width": 80,
+              "height": 24
+            },
+            {
+              "type": "water",
+              "x": 520,
+              "y": 352,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 608,
+              "y": 352,
+              "width": 192,
+              "height": 48
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 360,
+              "width": 336,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 536,
+              "y": 360,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 368,
+              "width": 328,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 528,
+              "y": 368,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 376,
+              "width": 336,
+              "height": 32
+            },
+            {
+              "type": "water",
+              "x": 536,
+              "y": 376,
+              "width": 72,
+              "height": 24
+            },
+            {
+              "type": "water",
+              "x": 536,
+              "y": 400,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 616,
+              "y": 400,
+              "width": 184,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 408,
+              "width": 320,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 520,
+              "y": 408,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 608,
+              "y": 408,
+              "width": 192,
+              "height": 16
+            },
+            {
+              "type": "grass",
+              "x": 200,
+              "y": 416,
+              "width": 312,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 512,
+              "y": 416,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 512,
+              "y": 424,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "grass",
+              "x": 600,
+              "y": 424,
+              "width": 200,
+              "height": 8
+            }
+          ]
+        },
+        "collision": {
+          "waterRects": []
+        },
+        "npcs": []
       }
     }
   });

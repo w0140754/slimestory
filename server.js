@@ -7,13 +7,14 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-300";
+const BUILD_VERSION = "6-11-336";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
 const TERRAIN_RULES = require("./public/shared/terrain-rules.js");
 const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
 const RAIN_FIELD = require("./public/shared/rain-field.js");
+const ABILITY_SCALING = require("./public/shared/ability-scaling.js");
 const CAMOUFLAGE_RULES = require("./public/shared/camouflage-rules.js");
 const ENEMY_NET_PROTOCOL = require("./public/shared/enemy-net-protocol.js");
 const PLAYER_NET_PROTOCOL = require("./public/shared/player-net-protocol.js");
@@ -560,6 +561,45 @@ function mapWorldDimensions(mapId) {
   };
 }
 
+function worldContentPlayerSpawn(mapId, spawnId) {
+  if (!ALLOWED_MAPS.has(mapId) || typeof spawnId !== "string" || !spawnId) return null;
+  const spawns = WORLD_CONTENT.maps[mapId]?.playerSpawns;
+  if (!Array.isArray(spawns)) return null;
+  return spawns.find(spawn => spawn?.id === spawnId) || null;
+}
+
+function defaultPlayerLoadTarget() {
+  const configured = WORLD_CONTENT.defaultPlayerLoad;
+  if (
+    configured &&
+    ALLOWED_MAPS.has(configured.mapId) &&
+    worldContentPlayerSpawn(configured.mapId, configured.spawnId)
+  ) {
+    return { mapId: configured.mapId, spawnId: configured.spawnId };
+  }
+
+  // Compatibility with v329's temporary per-map representation.
+  for (const mapId of ALLOWED_MAPS) {
+    const spawnId = typeof WORLD_CONTENT.maps[mapId]?.defaultPlayerSpawnId === "string"
+      ? WORLD_CONTENT.maps[mapId].defaultPlayerSpawnId
+      : "";
+    if (worldContentPlayerSpawn(mapId, spawnId)) return { mapId, spawnId };
+  }
+
+  return { mapId: "spawn", spawnId: "center" };
+}
+
+function defaultPlayerLoadState() {
+  const target = defaultPlayerLoadTarget();
+  const dimensions = mapWorldDimensions(target.mapId);
+  const spawn = worldContentPlayerSpawn(target.mapId, target.spawnId);
+  return {
+    mapId: target.mapId,
+    x: spawn && Number.isFinite(Number(spawn.x)) ? Number(spawn.x) : dimensions.width / 2,
+    y: spawn && Number.isFinite(Number(spawn.y)) ? Number(spawn.y) : dimensions.height / 2
+  };
+}
+
 
 // -----------------------------------------------------------------------------
 // SHARED ENEMY AGGRO RULES
@@ -603,6 +643,23 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
         aggressiveOnSight: Boolean(enemy.aggressiveOnSight)
       };
     }
+  }),
+  mushroom: Object.freeze({
+    bodyOffsetY: -7,
+    meleeBodyRadius: 7,
+    fireSpreadChance: 0.42,
+    respawnSeconds: 30,
+    coinDropChance: 0.45,
+    hurlable: true,
+    snareable: true,
+    rainEffect: "none",
+    damageKnockback: Object.freeze({
+      melee: 32,
+      bowMelee: 12,
+      basic: 18,
+      arrow: 22,
+      fireball: 24
+    })
   }),
   goblin: Object.freeze({
     bodyOffsetY: -11,
@@ -951,6 +1008,10 @@ function ensureServerEnemySnareState(enemy) {
   );
 
   enemy.magicGrassFieldActive = Boolean(enemy.magicGrassFieldActive);
+  enemy.magicGrassSlowMultiplier = Math.max(
+    0.1,
+    Math.min(1, Number(enemy.magicGrassSlowMultiplier) || RAIN_FIELD.SPEED_MULTIPLIER)
+  );
 
   enemy.snareSlowMultiplier = Math.max(
     0.1,
@@ -998,7 +1059,7 @@ function serverEnemyMovementMultiplier(enemy) {
     multiplier = Math.min(multiplier, enemy.snareSlowMultiplier);
   }
   if (enemy.magicGrassFieldActive) {
-    multiplier = Math.min(multiplier, RAIN_FIELD.SPEED_MULTIPLIER);
+    multiplier = Math.min(multiplier, enemy.magicGrassSlowMultiplier);
   }
   if (enemy.wetTime > 0) {
     multiplier = Math.min(multiplier, STATUS_RULES.enemyWetSpeedMultiplier);
@@ -2454,7 +2515,8 @@ function handleResourcePickup(
   } else if (resource.kind === "stone") {
     playerState.stone += 1;
   } else if (resource.kind === "flower") {
-    playerState.flowers += 1;
+    if (resource.flowerType === "blue") playerState.blueFlowers += 1;
+    else playerState.whiteFlowers += 1;
   } else if (resource.kind === "goldSlimeBubble") {
     playerState.goldSlimeBubbles += 1;
   }
@@ -2467,7 +2529,9 @@ function handleResourcePickup(
     collectorId: playerId,
     totalWood: playerState.wood,
     totalStone: playerState.stone,
-    totalFlowers: playerState.flowers,
+    flowerType: resource.flowerType === "blue" ? "blue" : "white",
+    totalWhiteFlowers: playerState.whiteFlowers,
+    totalBlueFlowers: playerState.blueFlowers,
     totalGoldSlimeBubbles: playerState.goldSlimeBubbles
   });
 }
@@ -2506,13 +2570,70 @@ const CRAFT_RECIPES = Object.freeze({
     stateKey: "woodGreavesCrafted",
     repeatable: false
   }),
+  woodRing: Object.freeze({
+    cost: 2,
+    stateKey: "woodRingCrafted",
+    repeatable: false
+  }),
   arrows: Object.freeze({
-    cost: 1,
     repeatable: true,
     resourceKey: "arrows",
-    outputCount: 5
+    outputCount: 20,
+    ingredients: Object.freeze({ wood: 5, stone: 1 })
+  }),
+  healingPotion: Object.freeze({
+    repeatable: true,
+    resourceKey: "healingPotions",
+    outputCount: 1,
+    ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 })
+  }),
+  attackPotion: Object.freeze({
+    repeatable: true,
+    resourceKey: "attackPotions",
+    outputCount: 1,
+    ingredients: Object.freeze({ whiteFlowers: 2 })
+  }),
+  magicPotion: Object.freeze({
+    repeatable: true,
+    resourceKey: "magicPotions",
+    outputCount: 1,
+    ingredients: Object.freeze({ blueFlowers: 2 })
   })
 });
+
+function playerNearPlacedInteraction(playerState, type, minimumAuthorityRadius, cushion = 16) {
+  if (!playerState || !type) return false;
+  const placedNpcs = WORLD_CONTENT.maps[playerState.mapId]?.npcs;
+  if (!Array.isArray(placedNpcs)) return false;
+
+  return placedNpcs.some(npc => {
+    if (npc?.type !== type) return false;
+    const x = Number(npc.x);
+    const y = Number(npc.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+    const interactionRadius = Math.max(8, Number(npc.interactionRadius) || 24);
+    const authorityRadius = Math.max(minimumAuthorityRadius, interactionRadius + cushion);
+    return Math.hypot(playerState.x - x, playerState.y - y) <= authorityRadius;
+  });
+}
+
+function playerNearAuthorizedCraftingTable(playerState) {
+  if (!playerState) return false;
+
+  // Preserve the original Spawn Clearing crafting bench.
+  if (
+    playerState.mapId === "spawn" &&
+    Math.hypot(
+      playerState.x - FIRST_BENCH_X,
+      playerState.y - FIRST_BENCH_Y
+    ) <= 40
+  ) {
+    return true;
+  }
+
+  // Editor-authored crafting tables are authorized from their actual saved position.
+  return playerNearPlacedInteraction(playerState, "craftingTable", 40, 12);
+}
 
 function handleCraftRequest(
   playerId,
@@ -2538,11 +2659,7 @@ function handleCraftRequest(
   }
 
   const validBench =
-    playerState.mapId === "spawn" &&
-    Math.hypot(
-      playerState.x - FIRST_BENCH_X,
-      playerState.y - FIRST_BENCH_Y
-    ) <= 30;
+    playerNearAuthorizedCraftingTable(playerState);
 
   if (!validBench) {
     sendJson(socket, {
@@ -2572,23 +2689,31 @@ function handleCraftRequest(
     return;
   }
 
-  if (playerState.wood < recipe.cost) {
+  const ingredients = recipe.ingredients || { wood: recipe.cost };
+  const missingIngredient = Object.entries(ingredients).find(
+    ([key, amount]) => (Number(playerState[key]) || 0) < amount
+  );
+  if (missingIngredient) {
     sendJson(socket, {
       type: "craftResult",
       recipe: recipeId,
       success: false,
-      reason: "needWood",
+      reason: "missingIngredients",
       totalWood: playerState.wood,
+      totalStone: playerState.stone,
+      totalWhiteFlowers: playerState.whiteFlowers,
+      totalBlueFlowers: playerState.blueFlowers,
       totalArrows: playerState.arrows
     });
     return;
   }
 
-  playerState.wood -=
-    recipe.cost;
+  for (const [key, amount] of Object.entries(ingredients)) {
+    playerState[key] = Math.max(0, (Number(playerState[key]) || 0) - amount);
+  }
 
-  if (recipe.resourceKey === "arrows") {
-    playerState.arrows +=
+  if (recipe.resourceKey) {
+    playerState[recipe.resourceKey] +=
       Math.max(1, Number(recipe.outputCount) || 1);
   } else if (recipe.stateKey) {
     playerState[recipe.stateKey] = true;
@@ -2599,8 +2724,76 @@ function handleCraftRequest(
     recipe: recipeId,
     success: true,
     totalWood: playerState.wood,
-    totalArrows: playerState.arrows
+    totalStone: playerState.stone,
+    totalWhiteFlowers: playerState.whiteFlowers,
+    totalBlueFlowers: playerState.blueFlowers,
+    totalArrows: playerState.arrows,
+    totalHealingPotions: playerState.healingPotions,
+    totalAttackPotions: playerState.attackPotions,
+    totalMagicPotions: playerState.magicPotions
   });
+}
+
+const HEALING_POTION_COOLDOWN_MS = 15000;
+const BUFF_POTION_COOLDOWN_MS = 1000;
+const POTION_BUFF_MS = 300000;
+
+function consumableCooldownUntilForItem(playerState, item) {
+  if (item === "healingPotion") return Number(playerState.consumableCooldownUntil) || 0;
+  if (item === "attackPotion") return Number(playerState.attackPotionCooldownUntil) || 0;
+  if (item === "magicPotion") return Number(playerState.magicPotionCooldownUntil) || 0;
+  return 0;
+}
+
+function setConsumableCooldown(playerState, item, now) {
+  if (item === "healingPotion") {
+    // Legacy field name retained for save/network compatibility. It is now the
+    // shared healing-potion-family cooldown for current and future HP potions.
+    playerState.consumableCooldownUntil = now + HEALING_POTION_COOLDOWN_MS;
+  } else if (item === "attackPotion") {
+    playerState.attackPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
+  } else if (item === "magicPotion") {
+    playerState.magicPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
+  }
+}
+
+function consumableStatePayload(playerState) {
+  return {
+    hp: playerState.hp,
+    maxHp: playerState.maxHp,
+    totalHealingPotions: playerState.healingPotions,
+    totalAttackPotions: playerState.attackPotions,
+    totalMagicPotions: playerState.magicPotions,
+    consumableCooldownUntil: playerState.consumableCooldownUntil,
+    attackPotionCooldownUntil: playerState.attackPotionCooldownUntil,
+    magicPotionCooldownUntil: playerState.magicPotionCooldownUntil,
+    attackPotionUntil: playerState.attackPotionUntil,
+    magicPotionUntil: playerState.magicPotionUntil
+  };
+}
+
+function handleConsumableUse(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  if (!playerState || playerState.hp <= 0) return;
+  const item = String(message.item || "");
+  const inventoryKey = { healingPotion: "healingPotions", attackPotion: "attackPotions", magicPotion: "magicPotions" }[item];
+  const now = Date.now();
+  let reason = "";
+  if (!inventoryKey) reason = "invalid";
+  else if (consumableCooldownUntilForItem(playerState, item) > now) reason = "cooldown";
+  else if ((Number(playerState[inventoryKey]) || 0) <= 0) reason = "empty";
+  else if (item === "healingPotion" && playerState.hp >= playerState.maxHp) reason = "fullHp";
+  if (reason) {
+    sendJson(socket, { type: "consumableUseResult", success: false, item, reason, ...consumableStatePayload(playerState) });
+    return;
+  }
+  playerState[inventoryKey] -= 1;
+  setConsumableCooldown(playerState, item, now);
+  if (item === "healingPotion") playerState.hp = Math.min(playerState.maxHp, playerState.hp + 20);
+  if (item === "attackPotion") playerState.attackPotionUntil = now + POTION_BUFF_MS;
+  if (item === "magicPotion") playerState.magicPotionUntil = now + POTION_BUFF_MS;
+  sendJson(socket, { type: "consumableUseResult", success: true, item, ...consumableStatePayload(playerState) });
+  broadcastToMap(playerState.mapId, { type: "playerConsumableEffect", playerId, item }, socket);
 }
 
 function handleArrowUse(playerId, socket) {
@@ -2630,8 +2823,6 @@ const SHOP_PRICE = 1;
 const SHOP_ITEM_IDS = new Set([
   "weapon_sword",
   "weapon_axe",
-  "weapon_wand",
-  "weapon_rainWand",
   "weapon_katana",
   "weapon_oldSword",
   "weapon_bow",
@@ -2639,6 +2830,7 @@ const SHOP_ITEM_IDS = new Set([
   "weapon_shepherdStaff",
   "weapon_lostKey",
   "weapon_hugeSunflower",
+  "weapon_sapgemWand",
   "weapon_pickaxe",
 
   "hat_original",
@@ -2669,6 +2861,34 @@ const SHOP_ITEM_IDS = new Set([
   "pants_arcanist"
 ]);
 
+// Fire/Rain Wands are retired from sale in v336, but old browser saves that
+// legitimately purchased them keep that purchase history/ownership.
+const SHOP_PURCHASE_HISTORY_ITEM_IDS = new Set([
+  ...SHOP_ITEM_IDS,
+  "weapon_wand",
+  "weapon_rainWand"
+]);
+
+function playerNearAuthorizedShopkeeper(playerState) {
+  if (!playerState) return false;
+
+  // Preserve the original Spawn Clearing shopkeeper authorization.
+  if (
+    playerState.mapId === "spawn" &&
+    Math.hypot(
+      playerState.x - FIRST_NPC_X,
+      playerState.y - FIRST_NPC_Y
+    ) <= 48
+  ) {
+    return true;
+  }
+
+  // Editor-authored shopkeepers are authorized from their actual saved position.
+  // A small authority cushion prevents latency from rejecting a purchase
+  // immediately after the client opens the nearby shop UI.
+  return playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16);
+}
+
 function handleShopPurchase(
   playerId,
   socket,
@@ -2690,11 +2910,7 @@ function handleShopPurchase(
   }
 
   const validShop =
-    playerState.mapId === "spawn" &&
-    Math.hypot(
-      playerState.x - FIRST_NPC_X,
-      playerState.y - FIRST_NPC_Y
-    ) <= 48;
+    playerNearAuthorizedShopkeeper(playerState);
 
   if (!validShop) {
     sendJson(socket, {
@@ -4385,6 +4601,7 @@ function makeServerBigGoldSlime(spawn) {
 
 const SERVER_ENEMY_FACTORIES = Object.freeze({
   slime: makeServerSlime,
+  mushroom: makeServerMushroom,
   goblin: makeServerGoblin,
   ghost: makeServerGhost,
   bigGoldSlime: makeServerBigGoldSlime
@@ -4418,6 +4635,9 @@ const worldEntitiesByType = new Map(
 
 const sharedSlimes =
   worldEntitiesByType.get("slime") || [];
+
+const sharedMushrooms =
+  worldEntitiesByType.get("mushroom") || [];
 
 const sharedGoblins =
   worldEntitiesByType.get("goblin") || [];
@@ -4987,7 +5207,12 @@ function enemyPassiveIntentDescriptor(enemyType, enemy, state, motionCache) {
   let intentKey = "idle";
   let stableTarget = false;
 
-  if (enemyType === "slime" || enemyType === "goblin" || enemyType === "ghost") {
+  if (
+    enemyType === "slime" ||
+    enemyType === "mushroom" ||
+    enemyType === "goblin" ||
+    enemyType === "ghost"
+  ) {
     targetX = Number(enemy?.wanderTargetX);
     targetY = Number(enemy?.wanderTargetY);
 
@@ -5692,17 +5917,20 @@ function resolveEnemyAggroTarget(
 
 function chooseServerGhostWanderTarget(ghost) {
   const candidates = [];
+  const dimensions = mapWorldDimensions(ghost.mapId);
+  const maxWanderX = Math.max(10, dimensions.width - 10);
+  const maxWanderY = Math.max(24, dimensions.height - 5);
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const angle = Math.random() * Math.PI * 2;
     const radiusX = (ghost.wanderRadiusX || 48) * (0.72 + Math.random() * 0.28);
     const radiusY = (ghost.wanderRadiusY || 30) * (0.72 + Math.random() * 0.28);
     const x = Math.max(
       10,
-      Math.min(630, ghost.homeX + Math.cos(angle) * radiusX)
+      Math.min(maxWanderX, ghost.homeX + Math.cos(angle) * radiusX)
     );
     const y = Math.max(
       24,
-      Math.min(395, ghost.homeY + Math.sin(angle) * radiusY)
+      Math.min(maxWanderY, ghost.homeY + Math.sin(angle) * radiusY)
     );
     candidates.push({
       x,
@@ -5727,6 +5955,10 @@ function chooseServerEnemyPassiveTarget(enemy) {
   if (!enemy) return;
   if (enemy.type === "slime") {
     chooseServerSlimeWanderTarget(enemy);
+  } else if (enemy.type === "mushroom") {
+    enemy.wanderTargetX = enemy.homeX;
+    enemy.wanderTargetY = enemy.homeY;
+    enemy.wanderStuckTime = 0;
   } else if (enemy.type === "goblin") {
     chooseServerGoblinWanderTarget(enemy);
   } else if (enemy.type === "ghost") {
@@ -5813,12 +6045,11 @@ function tickEnemyReturningHome(enemy, dt) {
   const beforeX = enemy.x;
   const beforeY = enemy.y;
 
-  if (enemy.type === "slime") {
+  if (enemy.type === "slime" || enemy.type === "mushroom") {
     moveServerSlime(enemy, moveX, moveY, speed, dt);
   } else if (enemy.type === "goblin") {
-    // Returning goblins may phase through decorative tree-base collision so a
-    // strict straight return cannot deadlock behind a tree. They still respect
-    // the map's actual walkable/water bounds through mapPointAllowed().
+    // Goblins phase through decorative trees during all movement states. They
+    // still respect the map's actual walkable/water bounds through mapPointAllowed().
     const nextX = enemy.x + moveX * speed * dt;
     const nextY = enemy.y + moveY * speed * dt;
     if (mapPointAllowed(enemy.mapId, nextX, enemy.y)) enemy.x = nextX;
@@ -6370,86 +6601,18 @@ function serverCircleRectCollision(
   return dx * dx + dy * dy < radius * radius;
 }
 
-function buildGoblinTreeBases() {
-  const treeBases = [];
-
-  function add(x, y) {
-    treeBases.push({ x, y });
-  }
-
-  for (let x = 12; x <= 628; x += 28) {
-    add(x, 28);
-    add(x, 394);
-  }
-
-  for (let x = 26; x <= 628; x += 28) {
-    add(x, 52);
-    add(x, 370);
-  }
-
-  for (let y = 78; y <= 322; y += 28) {
-    if (y < 160 || y > 240) {
-      add(14, y);
-    }
-    add(626, y);
-  }
-
-  for (let y = 92; y <= 322; y += 28) {
-    if (y < 160 || y > 240) {
-      add(40, y);
-    }
-    add(600, y);
-  }
-
-  [
-    [120, 105], [148, 125],
-    [116, 330], [150, 312],
-    [530, 105], [555, 130],
-    [545, 258], [575, 280],
-    [220, 300], [245, 328],
-    [355, 92], [385, 112]
-  ].forEach(([x, y]) => add(x, y));
-
-  return treeBases;
-}
-
-const goblinTreeBases = buildGoblinTreeBases();
-
+// Goblins intentionally phase through decorative trees. Their movement still
+// respects authored terrain, water, and map bounds via mapPointAllowed().
 function goblinPositionAllowed(
   goblin,
   x,
   y
 ) {
-  if (
-    !mapPointAllowed(
-      goblin.mapId,
-      x,
-      y
-    )
-  ) {
-    return false;
-  }
-
-  // Preserve the currently-tested Goblin Woods tree collision.
-  if (goblin.mapId === "goblinWoods") {
-    for (const tree of goblinTreeBases) {
-      if (
-        serverCircleRectCollision(
-          x,
-          y,
-          4,
-          tree.x - 5,
-          tree.y - 8,
-          10,
-          8
-        )
-      ) {
-        return false;
-      }
-    }
-  }
-
-  return true;
+  return mapPointAllowed(
+    goblin.mapId,
+    x,
+    y
+  );
 }
 
 function moveServerGoblin(
@@ -6479,6 +6642,9 @@ function moveServerGoblin(
 
 function chooseServerGoblinWanderTarget(goblin) {
   const candidates = [];
+  const dimensions = mapWorldDimensions(goblin.mapId);
+  const maxWanderX = Math.max(12, dimensions.width - 12);
+  const maxWanderY = Math.max(18, dimensions.height - 8);
 
   for (let attempt = 0; attempt < 16; attempt++) {
     const angle = Math.random() * Math.PI * 2;
@@ -6492,7 +6658,7 @@ function chooseServerGoblinWanderTarget(goblin) {
     const x = Math.max(
       12,
       Math.min(
-        628,
+        maxWanderX,
         goblin.homeX +
           Math.cos(angle) * radiusX
       )
@@ -6501,7 +6667,7 @@ function chooseServerGoblinWanderTarget(goblin) {
     const y = Math.max(
       18,
       Math.min(
-        392,
+        maxWanderY,
         goblin.homeY +
           Math.sin(angle) * radiusY
       )
@@ -6693,7 +6859,8 @@ function applyServerPlayerDamage(
   const equippedProtection = {
     hatIndex: target.hatIndex,
     shirtIndex: target.shirtIndex,
-    pantsIndex: target.pantsIndex
+    pantsIndex: target.pantsIndex,
+    charmIndex: target.charmIndex
   };
   const armor = COMBAT_BALANCE.playerArmorFromGear(equippedProtection);
   const resist = COMBAT_BALANCE.playerResistFromGear(equippedProtection);
@@ -6889,12 +7056,22 @@ function isBowWeaponIndex(index) {
   return index === 6 || index === 7;
 }
 
-function wandAttackRateLimitMs(weaponIndex) {
-  if (!COMBAT_BALANCE.isWandWeaponIndex(weaponIndex)) return 260;
-  const cooldown = COMBAT_BALANCE.wandAttackCooldown(weaponIndex);
+function weaponAttackRateLimitMs(weaponIndex) {
+  if (isBowWeaponIndex(weaponIndex)) return 260;
+  const cooldown = typeof COMBAT_BALANCE.weaponAttackCooldown === "function"
+    ? COMBAT_BALANCE.weaponAttackCooldown(weaponIndex)
+    : COMBAT_BALANCE.isWandWeaponIndex(weaponIndex)
+      ? COMBAT_BALANCE.wandAttackCooldown(weaponIndex)
+      : 0.75;
   // Leave a small transport/frame grace while still enforcing the equipped
-  // wand's Slow / Normal / Quick cadence authoritatively.
+  // non-bow weapon's Slow / Normal / Quick cadence authoritatively.
   return Math.max(260, Math.round(cooldown * 1000) - 80);
+}
+
+// Compatibility alias for older wand-specific call sites while the cadence
+// table is now shared by all non-bow weapons/tools.
+function wandAttackRateLimitMs(weaponIndex) {
+  return weaponAttackRateLimitMs(weaponIndex);
 }
 
 function pvpAttackRateLimited(
@@ -6967,11 +7144,16 @@ function calculateServerPvpDamage(
     critical,
     abilityLevel: serverCombatAbilityLevel(attacker, source)
   });
+  const now = Date.now();
+  const physicalSources = new Set(["melee", "basic", "arrow"]);
+  const potionMultiplier = physicalSources.has(source)
+    ? ((Number(attacker.attackPotionUntil) || 0) > now ? 1.15 : 1)
+    : ((Number(attacker.magicPotionUntil) || 0) > now ? 1.15 : 1);
 
   return Math.max(
     1,
     Math.round(
-      rawDamage * PVP_DAMAGE_MULTIPLIER
+      rawDamage * PVP_DAMAGE_MULTIPLIER * potionMultiplier
     )
   );
 }
@@ -7092,7 +7274,7 @@ function handlePvpAttack(
 
   if (source === "melee") {
     // Melee weapons plus unmastered wand-type weapons use this path.
-    if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11].includes(attacker.weaponIndex)) {
+    if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12].includes(attacker.weaponIndex)) {
       return;
     }
 
@@ -7107,15 +7289,13 @@ function handlePvpAttack(
       0.92
     );
 
-    minimumMs = COMBAT_BALANCE.isWandWeaponIndex(attacker.weaponIndex)
-      ? wandAttackRateLimitMs(attacker.weaponIndex)
-      : 260;
+    minimumMs = weaponAttackRateLimitMs(attacker.weaponIndex);
     knockback =
       attacker.weaponIndex === 1 ? 18 : 15;
   } else if (source === "wandMasteryMelee") {
     if (
       (Number(attacker.abilities?.wandMastery) || 0) <= 0 ||
-      ![2, 3, 8, 9, 10].includes(attacker.weaponIndex)
+      ![2, 3, 8, 9, 10, 12].includes(attacker.weaponIndex)
     ) {
       return;
     }
@@ -7128,7 +7308,7 @@ function handlePvpAttack(
       0.56
     );
 
-    minimumMs = wandAttackRateLimitMs(attacker.weaponIndex);
+    minimumMs = weaponAttackRateLimitMs(attacker.weaponIndex);
     knockback = 15;
   } else if (source === "bowMelee") {
     if (!isBowWeaponIndex(attacker.weaponIndex)) {
@@ -7844,14 +8024,15 @@ function tickSharedGhosts(dt) {
     ghost.x += moveX * speed * snareMoveMultiplier * dt;
     ghost.y += moveY * speed * snareMoveMultiplier * dt;
 
+    const ghostDimensions = mapWorldDimensions(ghost.mapId);
     ghost.x = Math.max(
       8,
-      Math.min(632, ghost.x)
+      Math.min(Math.max(8, ghostDimensions.width - 8), ghost.x)
     );
 
     ghost.y = Math.max(
       24,
-      Math.min(395, ghost.y)
+      Math.min(Math.max(24, ghostDimensions.height - 5), ghost.y)
     );
 
     if (
@@ -8282,7 +8463,7 @@ function validateSharedEnemyMeleeHit(
   enemy,
   payload
 ) {
-  if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11].includes(playerState.weaponIndex)) {
+  if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12].includes(playerState.weaponIndex)) {
     return false;
   }
 
@@ -8328,7 +8509,7 @@ function validateSharedEnemyWandMasteryHit(
   enemy,
   payload
 ) {
-  if (![2, 3, 8, 9, 10].includes(playerState.weaponIndex)) {
+  if (![2, 3, 8, 9, 10, 12].includes(playerState.weaponIndex)) {
     return false;
   }
 
@@ -8424,7 +8605,7 @@ function calculateServerPlayerDamage(
   critical = false,
   options = {}
 ) {
-  return COMBAT_BALANCE.calculateDamage({
+  const baseDamage = COMBAT_BALANCE.calculateDamage({
     source,
     weaponIndex:
       playerState.weaponIndex,
@@ -8444,6 +8625,12 @@ function calculateServerPlayerDamage(
     abilityLevel:
       options.abilityLevel ?? serverCombatAbilityLevel(playerState, source)
   });
+  const now = Date.now();
+  const physicalSources = new Set(["melee", "basic", "arrow"]);
+  const multiplier = physicalSources.has(source)
+    ? ((Number(playerState.attackPotionUntil) || 0) > now ? 1.15 : 1)
+    : ((Number(playerState.magicPotionUntil) || 0) > now ? 1.15 : 1);
+  return Math.max(1, Math.round(baseDamage * multiplier));
 }
 
 const FIREBALL_SPLASH_BURN_RADIUS = 30;
@@ -8659,9 +8846,7 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    minimumMs = COMBAT_BALANCE.isWandWeaponIndex(playerState.weaponIndex)
-      ? wandAttackRateLimitMs(playerState.weaponIndex)
-      : 260;
+    minimumMs = weaponAttackRateLimitMs(playerState.weaponIndex);
 
     critical = Boolean(payload.critical);
 
@@ -8690,7 +8875,7 @@ function handleSharedEnemyDamageAction(
       return;
     }
 
-    minimumMs = wandAttackRateLimitMs(playerState.weaponIndex);
+    minimumMs = weaponAttackRateLimitMs(playerState.weaponIndex);
     critical = Boolean(payload.critical);
     damage = Math.max(
       1,
@@ -8734,7 +8919,7 @@ function handleSharedEnemyDamageAction(
       serverEnemyProfile(enemy)?.damageKnockback?.bowMelee ?? 10;
   } else if (source === "basic") {
     if (
-      ![2, 3, 8, 9, 10].includes(playerState.weaponIndex) ||
+      ![2, 3, 8, 9, 10, 12].includes(playerState.weaponIndex) ||
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
@@ -8742,6 +8927,8 @@ function handleSharedEnemyDamageAction(
     ) {
       return;
     }
+
+    minimumMs = weaponAttackRateLimitMs(playerState.weaponIndex);
 
     critical = false;
 
@@ -8920,6 +9107,7 @@ function handleSharedEnemyDamageAction(
       hp: enemy.hp,
       critical,
       source,
+      element: COMBAT_BALANCE.elementForAttack(source, currentPlayerState.weaponIndex),
       attackerId: playerId,
       aimAngle: Number.isFinite(pushAngle) ? pushAngle : null
     });
@@ -9514,6 +9702,368 @@ function makeServerSlime(spawn) {
   };
 }
 
+function makeServerMushroom(spawn) {
+  const {
+    id,
+    mapId,
+    x,
+    y,
+    phase = 0,
+    level = 1
+  } = spawn;
+
+  return {
+    id,
+    mapId,
+    type: "mushroom",
+    level,
+
+    x,
+    y,
+    homeX: x,
+    homeY: y,
+    dir: 1,
+    phase,
+
+    speed: 16,
+    chaseSpeed: 22,
+    detectionRadius: 72,
+    aggroMode: ENEMY_AGGRO_PROVOKED,
+
+    aggroTargetId: null,
+    aggroEngagementTime: 0,
+    confusionTime: 0,
+    confusionTargetId: null,
+    wasEngaged: false,
+    returningHome: false,
+    returnStuckTime: 0,
+
+    tauntTime: 0,
+    tauntX: x,
+    tauntY: y,
+    tauntOwnerId: null,
+
+    // Sleeping mushrooms do not choose passive wander legs. These home-locked
+    // fields let the shared passive network planner emit a stable idle intent.
+    wanderTargetX: x,
+    wanderTargetY: y,
+    wanderDecisionTime: 0,
+    pauseTime: 0,
+    wanderStuckTime: 0,
+
+    maxHp: 40,
+    hp: 40,
+    alive: true,
+    respawnTime: 0,
+
+    burnTime: 0,
+    burnTickTimer: 0,
+    burnTickInterval: 0.5,
+
+    knockbackX: 0,
+    knockbackY: 0,
+
+    lastDamagePlayerId: null
+  };
+}
+
+function resetServerMushroom(mushroom) {
+  mushroom.x = mushroom.homeX;
+  mushroom.y = mushroom.homeY;
+  mushroom.dir = 1;
+
+  mushroom.wanderTargetX = mushroom.homeX;
+  mushroom.wanderTargetY = mushroom.homeY;
+  mushroom.wanderDecisionTime = 0;
+  mushroom.pauseTime = 0;
+  mushroom.wanderStuckTime = 0;
+
+  mushroom.aggroTargetId = null;
+  mushroom.aggroEngagementTime = 0;
+  mushroom.confusionTime = 0;
+  mushroom.confusionTargetId = null;
+  mushroom.wasEngaged = false;
+  mushroom.returningHome = false;
+  mushroom.returnStuckTime = 0;
+
+  mushroom.tauntTime = 0;
+  mushroom.tauntX = mushroom.homeX;
+  mushroom.tauntY = mushroom.homeY;
+  mushroom.tauntOwnerId = null;
+  mushroom.tauntCloneId = null;
+
+  mushroom.hp = mushroom.maxHp;
+  mushroom.alive = true;
+  mushroom.respawnTime = 0;
+
+  mushroom.burnTime = 0;
+  mushroom.burnTickTimer = 0;
+
+  mushroom.knockbackX = 0;
+  mushroom.knockbackY = 0;
+  clearEnemyAggroTarget(mushroom);
+  clearServerEnemyHurlState(mushroom);
+  clearServerEnemyStatuses(mushroom);
+  clearServerEnemySnareState(mushroom);
+
+  mushroom.lastDamagePlayerId = null;
+}
+
+function tryServerMushroomContact(mushroom) {
+  // A sleeping mushroom is harmless until something has actually provoked or
+  // redirected it. Merely walking over an idle spawn does not wake/contact-hit.
+  if (
+    !mushroom?.alive ||
+    mushroom.carriedBy ||
+    mushroom.hurlTime > 0 ||
+    (
+      !mushroom.aggroTargetId &&
+      (Number(mushroom.tauntTime) || 0) <= 0
+    )
+  ) {
+    return;
+  }
+
+  const target = nearestVisiblePlayer(
+    mushroom.mapId,
+    mushroom.x,
+    mushroom.y,
+    9
+  );
+
+  if (
+    !target ||
+    target.distance > 9 ||
+    !playerContactAvailable(target.player.id)
+  ) {
+    return;
+  }
+
+  let dx =
+    target.player.x - mushroom.x;
+  let dy =
+    (target.player.y - 3) -
+    (mushroom.y - 4);
+  const distance = Math.hypot(dx, dy);
+
+  if (distance >= 7.0) return;
+
+  if (distance < 0.001) {
+    dx = -mushroom.dir;
+    dy = 0;
+  } else {
+    dx /= distance;
+    dy /= distance;
+  }
+
+  const damage =
+    4 + Math.floor(Math.random() * 4);
+
+  setPlayerContactCooldown(
+    target.player.id,
+    0.42
+  );
+
+  broadcastEnemyHitPlayer(
+    target.player,
+    mushroom,
+    damage,
+    dx,
+    dy,
+    78,
+    0.42
+  );
+}
+
+function tickSharedMushrooms(dt) {
+  for (const mushroom of sharedMushrooms) {
+    if (!mushroom.alive) {
+      mushroom.respawnTime -= dt;
+
+      if (mushroom.respawnTime <= 0) {
+        resetServerMushroom(mushroom);
+      }
+
+      continue;
+    }
+
+    if (mushroom.returningHome) {
+      tickEnemyReturningHome(
+        mushroom,
+        dt
+      );
+      continue;
+    }
+
+    tickEnemyStatuses(mushroom, dt);
+    if (!mushroom.alive) continue;
+
+    if (
+      tickServerEnemyHurl(
+        mushroom,
+        dt
+      )
+    ) {
+      continue;
+    }
+
+    if (mushroom.tauntTime > 0) {
+      mushroom.tauntTime = Math.max(
+        0,
+        mushroom.tauntTime - dt
+      );
+
+      if (mushroom.tauntTime <= 0) {
+        mushroom.tauntOwnerId = null;
+        mushroom.tauntCloneId = null;
+      } else {
+        mushroom.wasEngaged = true;
+        releaseEnemyTauntOnContact(
+          mushroom
+        );
+      }
+    }
+
+    const confused =
+      tickEnemyConfusion(
+        mushroom,
+        dt
+      );
+
+    if (
+      Math.abs(mushroom.knockbackX) > 0.1 ||
+      Math.abs(mushroom.knockbackY) > 0.1
+    ) {
+      const nextX =
+        mushroom.x +
+        mushroom.knockbackX * dt;
+      const nextY =
+        mushroom.y +
+        mushroom.knockbackY * dt;
+
+      if (
+        slimePositionAllowed(
+          mushroom,
+          nextX,
+          mushroom.y
+        )
+      ) {
+        mushroom.x = nextX;
+      }
+
+      if (
+        slimePositionAllowed(
+          mushroom,
+          mushroom.x,
+          nextY
+        )
+      ) {
+        mushroom.y = nextY;
+      }
+
+      mushroom.knockbackX *= 0.82;
+      mushroom.knockbackY *= 0.82;
+    }
+
+    if (confused) {
+      continue;
+    }
+
+    if (mushroom.tauntTime > 0) {
+      tryServerMushroomContact(
+        mushroom
+      );
+
+      const dx =
+        mushroom.tauntX - mushroom.x;
+      const dy =
+        mushroom.tauntY - mushroom.y;
+      const distance =
+        Math.hypot(dx, dy);
+
+      if (distance > 1) {
+        const moveX = dx / distance;
+        const moveY = dy / distance;
+
+        moveServerSlime(
+          mushroom,
+          moveX,
+          moveY,
+          mushroom.chaseSpeed,
+          dt
+        );
+
+        if (Math.abs(moveX) > 0.05) {
+          mushroom.dir =
+            moveX >= 0 ? 1 : -1;
+        }
+      }
+
+      continue;
+    }
+
+    const targetPlayer =
+      resolveEnemyAggroTarget(
+        mushroom,
+        dt
+      );
+
+    if (targetPlayer) {
+      tryServerMushroomContact(
+        mushroom
+      );
+
+      const dx =
+        targetPlayer.x - mushroom.x;
+      const dy =
+        targetPlayer.y - mushroom.y;
+      const distance =
+        Math.hypot(dx, dy);
+
+      if (distance > 1) {
+        const moveX = dx / distance;
+        const moveY = dy / distance;
+
+        moveServerSlime(
+          mushroom,
+          moveX,
+          moveY,
+          mushroom.chaseSpeed,
+          dt
+        );
+
+        if (Math.abs(moveX) > 0.05) {
+          mushroom.dir =
+            moveX >= 0 ? 1 : -1;
+        }
+      }
+
+      continue;
+    }
+
+    if (
+      mushroom.wasEngaged &&
+      !mushroom.aggroTargetId
+    ) {
+      beginEnemyReturningHome(
+        mushroom
+      );
+      tickEnemyReturningHome(
+        mushroom,
+        dt
+      );
+      continue;
+    }
+
+    // Passive state: deliberately no wander target choice or movement. The
+    // creature stays planted at its authored map-editor spawn and sleeps.
+    mushroom.wanderTargetX =
+      mushroom.homeX;
+    mushroom.wanderTargetY =
+      mushroom.homeY;
+  }
+}
+
 function getWorldEntity(
   entityId,
   expectedType = null
@@ -9644,6 +10194,9 @@ function moveServerSlime(slime, moveX, moveY, speed, dt) {
 
 function chooseServerSlimeWanderTarget(slime) {
   const candidates = [];
+  const dimensions = mapWorldDimensions(slime.mapId);
+  const maxWanderX = Math.max(12, dimensions.width - 12);
+  const maxWanderY = Math.max(18, dimensions.height - 8);
 
   for (let attempt = 0; attempt < 16; attempt++) {
     const angle = Math.random() * Math.PI * 2;
@@ -9652,12 +10205,12 @@ function chooseServerSlimeWanderTarget(slime) {
 
     const x = Math.max(
       12,
-      Math.min(628, slime.homeX + Math.cos(angle) * radiusX)
+      Math.min(maxWanderX, slime.homeX + Math.cos(angle) * radiusX)
     );
 
     const y = Math.max(
       18,
-      Math.min(392, slime.homeY + Math.sin(angle) * radiusY)
+      Math.min(maxWanderY, slime.homeY + Math.sin(angle) * radiusY)
     );
 
     if (!slimePositionAllowed(slime, x, y)) continue;
@@ -9798,7 +10351,7 @@ function hurlObjectHitsTree(mapId, x, y, radius = 12) {
 }
 
 function serverEnemyPositionAllowedForHurl(enemy, x, y) {
-  if (enemy.type === "slime") {
+  if (enemy.type === "slime" || enemy.type === "mushroom") {
     return slimePositionAllowed(enemy, x, y);
   }
 
@@ -9827,7 +10380,7 @@ function finishServerEnemyHurl(
 
   if (landingDamage) {
     const landingDamageAmount =
-      enemy.type === "slime"
+      (enemy.type === "slime" || enemy.type === "mushroom")
         ? 4 + Math.floor(Math.random() * 4)
         : 6 + Math.floor(Math.random() * 4);
 
@@ -10391,6 +10944,7 @@ setInterval(() => {
   tickServerRainClouds(dt);
   tickServerRainGrassMembership();
   tickSharedSlimes(dt);
+  tickSharedMushrooms(dt);
   tickSharedGoblins(dt);
   tickSharedGhosts(dt);
   tickSharedBigGoldSlimes(dt);
@@ -10489,7 +11043,7 @@ function handlePlayerAction(playerId, message) {
     outgoing = [code, active ? 1 : 0];
   } else if (code === A.RAIN_CAST) {
     const active = data[1] === 1;
-    const duration = clampNumber((Number(data[2]) || 500) / 1000, 0.05, 1, 0.50);
+    const duration = clampNumber((Number(data[2]) || 500) / 1000, 0.05, 2, 0.50);
     target.rainCloudCasting = active;
     target.rainCloudCastDuration = duration;
     target.rainCloudCastTime = 0;
@@ -10560,8 +11114,12 @@ function tickServerPlayerPresentation(dt) {
 // -----------------------------------------------------------------------------
 // Presentation-only events. Authoritative gameplay still uses the existing
 // player/enemy HP, status, AI, and drop paths.
-function sanitizeVisualPoint(value, fallback = 0) {
-  return clampNumber(value, -32, 672, fallback);
+function sanitizeVisualPoint(value, mapId, axis = "x", fallback = 0) {
+  const dimensions = mapWorldDimensions(mapId);
+  const mapExtent = axis === "y"
+    ? Number(dimensions.height) || 400
+    : Number(dimensions.width) || 640;
+  return clampNumber(value, -32, Math.max(32, mapExtent) + 32, fallback);
 }
 
 function sanitizeVisualVelocity(value) {
@@ -10573,7 +11131,7 @@ function sanitizeVisualVelocity(value) {
 // -----------------------------------------------------------------------------
 // The decoy's gameplay clock lives on the server so backgrounding the caster
 // cannot pause its redirect lifetime while other players continue to see the map.
-const SERVER_HALLUCINATION_DURATION = 5.8;
+const SERVER_HALLUCINATION_DURATION = 2.0;
 const SERVER_HALLUCINATION_REDIRECT_RADIUS = 120;
 const SERVER_HALLUCINATION_CONTACT_RADIUS = 8.5;
 const SERVER_HALLUCINATION_RETURN_LOCKOUT_MS = 350;
@@ -10610,17 +11168,21 @@ function startServerHallucination(ownerId, mapId, payload) {
     : `hallucination:${ownerId}:${Date.now().toString(36)}`;
 
   const startedAtMs = Date.now();
+  const owner = players.get(ownerId);
+  const abilityLevel = Math.max(1, Number(owner?.abilities?.jesterBlink) || 1);
+  const duration = ABILITY_SCALING.hallucinationDecoyDurationAtLevel(abilityLevel);
   const clone = {
     ownerId,
     mapId,
     cloneId,
-    x: sanitizeVisualPoint(payload.startX),
-    y: sanitizeVisualPoint(payload.startY),
+    x: sanitizeVisualPoint(payload.startX, mapId, "x"),
+    y: sanitizeVisualPoint(payload.startY, mapId, "y"),
     startedAtMs,
     hatIndex: clampInteger(payload.hatIndex, -1, 9, -1),
     shirtIndex: clampInteger(payload.shirtIndex, -1, 6, -1),
     pantsIndex: clampInteger(payload.pantsIndex, -1, 6, -1),
-    expiresAtMs: startedAtMs + SERVER_HALLUCINATION_DURATION * 1000,
+    duration,
+    expiresAtMs: startedAtMs + duration * 1000,
     redirectedEnemyIds: new Set(),
     releasedEnemyIds: new Set()
   };
@@ -10639,11 +11201,13 @@ function startServerHallucination(ownerId, mapId, payload) {
 
     enemy.tauntX = clone.x;
     enemy.tauntY = clone.y;
-    enemy.tauntTime = SERVER_HALLUCINATION_DURATION;
+    enemy.tauntTime = duration;
     enemy.tauntOwnerId = ownerId;
     enemy.tauntCloneId = clone.cloneId;
     clone.redirectedEnemyIds.add(enemy.id);
   }
+
+  return clone;
 }
 
 function completeServerHallucinationReturn(ownerId, mapId, payload) {
@@ -10731,8 +11295,12 @@ let serverRainPatchSequence = 0;
 function serverRainFieldKey(ownerId, patchId) { return `${String(ownerId)}|${Number(patchId) || 0}`; }
 function createServerRainField(ownerId, mapId, patchId, centerX, centerY, startedAtMs = Date.now()) {
   const dimensions = mapWorldDimensions(mapId);
+  const owner = players.get(ownerId);
+  const abilityLevel = Math.max(1, Number(owner?.abilities?.rainCloud) || 1);
+  removeServerRainGrassForOwner(ownerId);
   const cells = RAIN_FIELD.generateCells({ ownerId, patchId, centerX, centerY, worldWidth: dimensions.width, worldHeight: dimensions.height });
-  const field = { ownerId: String(ownerId), mapId, patchId: Number(patchId)||0, centerX, centerY, startedAtMs,
+  const field = { ownerId: String(ownerId), mapId, patchId: Number(patchId)||0, centerX, centerY, startedAtMs, abilityLevel,
+    grassSlowMultiplier: ABILITY_SCALING.rainCloudGrassSpeedMultiplierAtLevel(abilityLevel),
     expiresAtMs: RAIN_FIELD.fieldExpiresAtMs(startedAtMs), cells, burningMask:0, burntMask:0,
     burnExpiresAtMs:Array(RAIN_FIELD.CELL_COUNT).fill(0), burnSourcePlayerIds:Array(RAIN_FIELD.CELL_COUNT).fill(null) };
   activeServerRainFields.set(serverRainFieldKey(ownerId,patchId),field); rainDiagnostics.fieldsCreated += 1; return field;
@@ -10782,11 +11350,12 @@ function extinguishServerRainGrassNear(mapId,x,y,radius){const now=Date.now();se
     if(mask)broadcastServerRainFieldDelta(field,{extinguishedMask:mask});} return changed;}
 function burningServerRainGrassNear(mapId,x,y,radius){const now=Date.now(),r2=radius*radius;settleServerRainFields(now);for(const field of activeServerRainFields.values()){if(field.mapId!==mapId||!field.burningMask)continue;
   for(const cell of field.cells){if(!serverRainFieldCellBurning(field,cell.index,now))continue;const dx=cell.x-x,dy=(cell.y-5)-y;if(dx*dx+dy*dy<=r2)return true;}}return false;}
-function pointIsInServerRainGrass(mapId,x,y,entityRadius=7,now=Date.now()){rainDiagnostics.grassQueries+=1;for(const field of activeServerRainFields.values()){if(field.mapId!==mapId)continue;
+function serverRainGrassSlowMultiplierAtPoint(mapId,x,y,entityRadius=7,now=Date.now()){rainDiagnostics.grassQueries+=1;let multiplier=1;for(const field of activeServerRainFields.values()){if(field.mapId!==mapId)continue;
   const broad=Math.max(RAIN_FIELD.FIELD_RADIUS_X,RAIN_FIELD.FIELD_RADIUS_Y)+entityRadius+16,fdx=field.centerX-x,fdy=field.centerY-y;if(fdx*fdx+fdy*fdy>broad*broad)continue;
-  for(const cell of field.cells){rainDiagnostics.grassCellChecks+=1;if(!serverRainFieldCellAvailable(field,cell,now))continue;const r=RAIN_FIELD.combinedHitRadius(cell,entityRadius),dx=x-cell.x,dy=y-cell.y;if(dx*dx+dy*dy<=r*r)return true;}}return false;}
-function updateEnemyRainGrassDerivedState(enemy,now=Date.now()){if(!enemy?.alive)return false;const active=pointIsInServerRainGrass(enemy.mapId,Number(enemy.x)||0,Number(enemy.y)||0,7,now);
-  if(Boolean(enemy.magicGrassFieldActive)!==active){if(active)rainDiagnostics.grassEnters+=1;else rainDiagnostics.grassExits+=1;enemy.magicGrassFieldActive=active;}return active;}
+  for(const cell of field.cells){rainDiagnostics.grassCellChecks+=1;if(!serverRainFieldCellAvailable(field,cell,now))continue;const r=RAIN_FIELD.combinedHitRadius(cell,entityRadius),dx=x-cell.x,dy=y-cell.y;if(dx*dx+dy*dy<=r*r){multiplier=Math.min(multiplier,Math.max(.1,Math.min(1,Number(field.grassSlowMultiplier)||RAIN_FIELD.SPEED_MULTIPLIER)));break;}}}return multiplier;}
+function pointIsInServerRainGrass(mapId,x,y,entityRadius=7,now=Date.now()){return serverRainGrassSlowMultiplierAtPoint(mapId,x,y,entityRadius,now)<1;}
+function updateEnemyRainGrassDerivedState(enemy,now=Date.now()){if(!enemy?.alive)return false;const multiplier=serverRainGrassSlowMultiplierAtPoint(enemy.mapId,Number(enemy.x)||0,Number(enemy.y)||0,7,now);const active=multiplier<1;
+  if(Boolean(enemy.magicGrassFieldActive)!==active){if(active)rainDiagnostics.grassEnters+=1;else rainDiagnostics.grassExits+=1;enemy.magicGrassFieldActive=active;}enemy.magicGrassSlowMultiplier=active?multiplier:RAIN_FIELD.SPEED_MULTIPLIER;return active;}
 function tickServerRainGrassMembership(){const now=Date.now();settleServerRainFields(now);for(const enemy of allSharedEnemies()){if(!enemy.alive){enemy.magicGrassFieldActive=false;continue;}updateEnemyRainGrassDerivedState(enemy,now);}}
 function spreadServerRainGrassFire(){const now=Date.now();settleServerRainFields(now);const sources=[];for(const field of activeServerRainFields.values())for(const cell of field.cells)if(serverRainFieldCellBurning(field,cell.index,now))sources.push({field,cell});
   fireDiagnostics.spreadSources+=sources.length;for(const {field,cell} of sources){const sourceId=field.burnSourcePlayerIds[cell.index]||field.ownerId;igniteServerLivingNear(field.mapId,cell.x,cell.y-5,14,sourceId);
@@ -10863,7 +11432,7 @@ function tickServerPlayerWetTimers(dt){for(const target of players.values()){if(
 function serverRainCloudAffectsPoint(cloud,x,y,inset=0){const r=Math.max(1,cloud.radius-inset),dx=x-cloud.x,dy=y-cloud.y;return dx*dx+dy*dy<=r*r;}
 function applyServerRainCloudToLiving(cloud,owner,damageTick){for(const enemy of allSharedEnemies()){if(!enemy.alive||enemy.returningHome||enemy.mapId!==cloud.mapId)continue;const profile=serverEnemyProfile(enemy),body=serverEnemyBodyPoint(enemy),inset=profile?.rainRadiusInset??2;if(!serverRainCloudAffectsPoint(cloud,body.x,body.y,inset))continue;
   const burning=burningServerRainGrassNear(cloud.mapId,body.x,body.y,14);if(profile?.rainEffect==="damage"){if(!burning)clearServerEnemyBurn(enemy);if(!damageTick)continue;if(!owner||owner.hp<=0||(Number(owner.abilities?.rainCloud)||0)<=0||!COMBAT_BALANCE.isWandWeaponIndex(owner.weaponIndex))continue;
-    const damage=calculateServerPlayerDamage(owner,enemy,"rain",false,{rainPower:SERVER_RAIN_GHOST_POWER});enemy.hp=Math.max(0,enemy.hp-damage);setEnemyAggroTarget(enemy,owner.id);enemy.lastDamagePlayerId=owner.id;broadcastToMap(enemy.mapId,{type:"enemyDamage",enemyType:enemy.type,enemyId:enemy.id,mapId:enemy.mapId,amount:damage,hp:enemy.hp,critical:false,source:"rain",attackerId:owner.id});rainDiagnostics.ghostDamageTicks+=1;if(enemy.hp<=0)killSharedEnemy(enemy,owner.id);continue;}
+    const damage=calculateServerPlayerDamage(owner,enemy,"rain",false,{rainPower:SERVER_RAIN_GHOST_POWER});enemy.hp=Math.max(0,enemy.hp-damage);setEnemyAggroTarget(enemy,owner.id);enemy.lastDamagePlayerId=owner.id;broadcastToMap(enemy.mapId,{type:"enemyDamage",enemyType:enemy.type,enemyId:enemy.id,mapId:enemy.mapId,amount:damage,hp:enemy.hp,critical:false,source:"rain",element:COMBAT_BALANCE.elementForAttack("rain",owner.weaponIndex),attackerId:owner.id});rainDiagnostics.ghostDamageTicks+=1;if(enemy.hp<=0)killSharedEnemy(enemy,owner.id);continue;}
   if(burning){if(enemy.wetTime>0){enemy.wetTime=0;rainDiagnostics.enemyWetExits+=1;}continue;}const wasWet=enemy.wetTime>0;applyServerEnemyWet(enemy,STATUS_RULES.enemyWetDuration);if(!wasWet&&enemy.wetTime>0)rainDiagnostics.enemyWetEnters+=1;}}
 function tickServerRainClouds(dt){const now=Date.now();settleServerRainFields(now);for(const [ownerId,cloud] of activeServerRainClouds){const owner=players.get(ownerId);if(!owner||owner.hp<=0||owner.mapId!==cloud.mapId||now>=cloud.expiresAtMs){activeServerRainClouds.delete(ownerId);continue;}
   cloud.orbitElapsed=Math.max(0,(now-cloud.startedAtMs)/1000);cloud.orbitAngle+=SERVER_RAIN_CLOUD_ORBIT_ANGULAR_SPEED*dt;const progress=Math.max(0,Math.min(1,cloud.orbitElapsed/SERVER_RAIN_CLOUD_ORBIT_EXPAND_TIME)),eased=progress*progress*(3-2*progress);cloud.orbitRadius=SERVER_RAIN_CLOUD_ORBIT_MAX_RADIUS*eased;const d=mapWorldDimensions(cloud.mapId);let orbitTargetX=clampNumber(cloud.orbitCenterX+Math.cos(cloud.orbitAngle)*cloud.orbitRadius,6,d.width-6,cloud.x);let orbitTargetY=clampNumber(cloud.orbitCenterY+Math.sin(cloud.orbitAngle)*cloud.orbitRadius*.72,10,d.height-4,cloud.y);const mapDefinition=WORLD_CONTENT.maps[cloud.mapId]||{};if(TERRAIN_RULES.terrainDefinition(mapDefinition)){const resolved=TERRAIN_RULES.clampSegmentToNonVoid(mapDefinition,cloud.x,cloud.y,orbitTargetX,orbitTargetY);orbitTargetX=resolved.x;orbitTargetY=resolved.y;}cloud.targetX=orbitTargetX;cloud.targetY=orbitTargetY;const dx=cloud.targetX-cloud.x,dy=cloud.targetY-cloud.y,dist=Math.hypot(dx,dy);if(dist>.25){const step=Math.min(dist,cloud.moveSpeed*dt);cloud.x+=dx/dist*step;cloud.y+=dy/dist*step;}else{cloud.x=cloud.targetX;cloud.y=cloud.targetY;}
@@ -10969,6 +11538,7 @@ function transientAbilitySnapshotForMap(
       x: clone.x,
       y: clone.y,
       remainingLife: Math.max(0, (clone.expiresAtMs - nowMs) / 1000),
+      duration: Math.max(0.05, Number(clone.duration) || SERVER_HALLUCINATION_DURATION),
       hatIndex: clone.hatIndex,
       shirtIndex: clone.shirtIndex,
       pantsIndex: clone.pantsIndex
@@ -10989,7 +11559,8 @@ function transientAbilitySnapshotForMap(
 
 function sanitizeVisualEffectPayload(
   effect,
-  payload = {}
+  payload = {},
+  mapId = null
 ) {
   if (effect === "basicProjectile") {
     return {
@@ -11002,8 +11573,8 @@ function sanitizeVisualEffectPayload(
               ? "arrow"
               : "wand",
 
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y),
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y"),
       vx: sanitizeVisualVelocity(payload.vx),
       vy: sanitizeVisualVelocity(payload.vy),
 
@@ -11018,10 +11589,10 @@ function sanitizeVisualEffectPayload(
 
   if (effect === "focusFireArc") {
     return {
-      startX: sanitizeVisualPoint(payload.startX),
-      startY: sanitizeVisualPoint(payload.startY),
-      targetX: sanitizeVisualPoint(payload.targetX),
-      targetY: sanitizeVisualPoint(payload.targetY),
+      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
+      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
+      targetX: sanitizeVisualPoint(payload.targetX, mapId, "x"),
+      targetY: sanitizeVisualPoint(payload.targetY, mapId, "y"),
       duration: clampNumber(
         payload.duration,
         0.18,
@@ -11033,15 +11604,15 @@ function sanitizeVisualEffectPayload(
 
   if (effect === "fireball") {
     return {
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y),
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y"),
       vx: sanitizeVisualVelocity(payload.vx),
       vy: sanitizeVisualVelocity(payload.vy),
       airborne: Boolean(payload.airborne),
-      startX: sanitizeVisualPoint(payload.startX),
-      startY: sanitizeVisualPoint(payload.startY),
-      targetX: sanitizeVisualPoint(payload.targetX),
-      targetY: sanitizeVisualPoint(payload.targetY),
+      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
+      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
+      targetX: sanitizeVisualPoint(payload.targetX, mapId, "x"),
+      targetY: sanitizeVisualPoint(payload.targetY, mapId, "y"),
       duration: clampNumber(
         payload.duration,
         0.18,
@@ -11066,8 +11637,8 @@ function sanitizeVisualEffectPayload(
 
   if (effect === "fireballImpact") {
     return {
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y),
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y"),
       primaryEnemyId: typeof payload.primaryEnemyId === "string"
         ? payload.primaryEnemyId.slice(0, 96)
         : null
@@ -11085,15 +11656,15 @@ function sanitizeVisualEffectPayload(
               ? "arrow"
               : "wand",
 
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y)
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y")
     };
   }
 
   if (effect === "wandMasteryHit") {
     return {
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y),
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y"),
       angle: clampNumber(payload.angle, -20, 20, 0)
     };
   }
@@ -11106,17 +11677,17 @@ function sanitizeVisualEffectPayload(
         999,
         1
       ),
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y)
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y")
     };
   }
 
   if (effect === "rainCast") {
     return {
-      startX: sanitizeVisualPoint(payload.startX),
-      startY: sanitizeVisualPoint(payload.startY),
-      targetX: sanitizeVisualPoint(payload.targetX),
-      targetY: sanitizeVisualPoint(payload.targetY),
+      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
+      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
+      targetX: sanitizeVisualPoint(payload.targetX, mapId, "x"),
+      targetY: sanitizeVisualPoint(payload.targetY, mapId, "y"),
 
       followPlayer: Boolean(payload.followPlayer),
       retarget: Boolean(payload.retarget),
@@ -11147,8 +11718,8 @@ function sanitizeVisualEffectPayload(
 
   if (effect === "shadowSmoke") {
     return {
-      x: sanitizeVisualPoint(payload.x),
-      y: sanitizeVisualPoint(payload.y),
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y"),
 
       count: clampInteger(
         payload.count,
@@ -11168,10 +11739,10 @@ function sanitizeVisualEffectPayload(
 
   if (effect === "jesterBlink") {
     return {
-      startX: sanitizeVisualPoint(payload.startX),
-      startY: sanitizeVisualPoint(payload.startY),
-      endX: sanitizeVisualPoint(payload.endX),
-      endY: sanitizeVisualPoint(payload.endY),
+      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
+      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
+      endX: sanitizeVisualPoint(payload.endX, mapId, "x"),
+      endY: sanitizeVisualPoint(payload.endY, mapId, "y"),
       cloneId: typeof payload.cloneId === "string"
         ? payload.cloneId.slice(0, 96)
         : "",
@@ -11201,10 +11772,10 @@ function sanitizeVisualEffectPayload(
 
   if (effect === "jesterReturn") {
     return {
-      startX: sanitizeVisualPoint(payload.startX),
-      startY: sanitizeVisualPoint(payload.startY),
-      endX: sanitizeVisualPoint(payload.endX),
-      endY: sanitizeVisualPoint(payload.endY),
+      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
+      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
+      endX: sanitizeVisualPoint(payload.endX, mapId, "x"),
+      endY: sanitizeVisualPoint(payload.endY, mapId, "y"),
       cloneId: typeof payload.cloneId === "string"
         ? payload.cloneId.slice(0, 96)
         : ""
@@ -11315,13 +11886,15 @@ function handleVisualEffect(
   const payload =
     sanitizeVisualEffectPayload(
       effect,
-      message.payload
+      message.payload,
+      playerState.mapId
     );
 
   if (!payload) return;
 
   if (effect === "jesterBlink") {
-    startServerHallucination(playerId, playerState.mapId, payload);
+    const clone = startServerHallucination(playerId, playerState.mapId, payload);
+    payload.duration = Math.max(0.05, Number(clone?.duration) || SERVER_HALLUCINATION_DURATION);
   }
 
   if (effect === "jesterReturn") {
@@ -11406,9 +11979,16 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.stone
       : 0,
 
-    flowers: previous && Number.isFinite(previous.flowers)
-      ? previous.flowers
-      : 0,
+    whiteFlowers: previous && Number.isFinite(previous.whiteFlowers) ? previous.whiteFlowers : 0,
+    blueFlowers: previous && Number.isFinite(previous.blueFlowers) ? previous.blueFlowers : 0,
+    healingPotions: previous && Number.isFinite(previous.healingPotions) ? previous.healingPotions : 0,
+    attackPotions: previous && Number.isFinite(previous.attackPotions) ? previous.attackPotions : 0,
+    magicPotions: previous && Number.isFinite(previous.magicPotions) ? previous.magicPotions : 0,
+    consumableCooldownUntil: previous && Number.isFinite(previous.consumableCooldownUntil) ? previous.consumableCooldownUntil : 0,
+    attackPotionCooldownUntil: previous && Number.isFinite(previous.attackPotionCooldownUntil) ? previous.attackPotionCooldownUntil : 0,
+    magicPotionCooldownUntil: previous && Number.isFinite(previous.magicPotionCooldownUntil) ? previous.magicPotionCooldownUntil : 0,
+    attackPotionUntil: previous && Number.isFinite(previous.attackPotionUntil) ? previous.attackPotionUntil : 0,
+    magicPotionUntil: previous && Number.isFinite(previous.magicPotionUntil) ? previous.magicPotionUntil : 0,
 
     goldSlimeBubbles:
       previous && Number.isFinite(previous.goldSlimeBubbles)
@@ -11467,6 +12047,11 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? Boolean(previous.woodGreavesCrafted)
         : false,
 
+    woodRingCrafted:
+      previous
+        ? Boolean(previous.woodRingCrafted)
+        : false,
+
     shopPurchases:
       previous &&
       Array.isArray(previous.shopPurchases)
@@ -11517,7 +12102,8 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     hatIndex: clampInteger(source.hatIndex, -1, 9, -1),
     shirtIndex: clampInteger(source.shirtIndex, -1, 6, -1),
     pantsIndex: clampInteger(source.pantsIndex, -1, 6, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 11, -1),
+    charmIndex: clampInteger(source.charmIndex, -1, 0, -1),
+    weaponIndex: clampInteger(source.weaponIndex, -1, 12, -1),
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -11581,8 +12167,14 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       rainCloud: clampInteger(
         source.abilities?.rainCloud,
         0,
-        1,
+        ABILITY_SCALING.rainCloud.maxLevel,
         previous?.abilities?.rainCloud || 0
+      ),
+      jesterBlink: clampInteger(
+        source.abilities?.jesterBlink,
+        0,
+        ABILITY_SCALING.hallucination.maxLevel,
+        previous?.abilities?.jesterBlink || 0
       ),
       camouflage: clampInteger(
         source.abilities?.camouflage,
@@ -11617,7 +12209,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     fireballAimTime: previous ? Math.max(0, Number(previous.fireballAimTime) || 0) : 0,
     rainCloudCasting: previous ? Boolean(previous.rainCloudCasting) : false,
     rainCloudCastTime: previous ? Math.max(0, Number(previous.rainCloudCastTime) || 0) : 0,
-    rainCloudCastDuration: previous ? clampNumber(previous.rainCloudCastDuration, 0.05, 1, 0.50) : clampNumber(source.rainCloudCastDuration, 0.05, 1, 0.50),
+    rainCloudCastDuration: previous ? clampNumber(previous.rainCloudCastDuration, 0.05, 2, 0.50) : clampNumber(source.rainCloudCastDuration, 0.05, 2, 0.50),
 
     // Camouflage is server-owned. Ordinary client state packets cannot enter,
     // extend, or leave it; dedicated server state tracks cover and opener use.
@@ -11676,6 +12268,7 @@ function publicPlayerState(playerState) {
     hatIndex: playerState.hatIndex,
     shirtIndex: playerState.shirtIndex,
     pantsIndex: playerState.pantsIndex,
+    charmIndex: playerState.charmIndex,
     weaponIndex: playerState.weaponIndex,
 
     walkTime: playerState.walkTime,
@@ -12530,7 +13123,23 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.coins = clampInteger(resources.coins, 0, 999999, 0);
   playerState.wood = clampInteger(resources.wood, 0, 999999, 0);
   playerState.stone = clampInteger(resources.stone, 0, 999999, 0);
-  playerState.flowers = clampInteger(resources.flowers, 0, 999999, 0);
+  playerState.whiteFlowers = clampInteger(resources.whiteFlowers ?? resources.flowers, 0, 999999, 0);
+  playerState.blueFlowers = clampInteger(resources.blueFlowers, 0, 999999, 0);
+  playerState.healingPotions = clampInteger(resources.healingPotions, 0, 999999, 0);
+  playerState.attackPotions = clampInteger(resources.attackPotions, 0, 999999, 0);
+  playerState.magicPotions = clampInteger(resources.magicPotions, 0, 999999, 0);
+  const now = Date.now();
+  const buffs = state.buffs && typeof state.buffs === "object" ? state.buffs : {};
+  playerState.attackPotionUntil = now + Math.min(POTION_BUFF_MS, clampInteger(buffs.attackRemainingMs, 0, POTION_BUFF_MS, 0));
+  playerState.magicPotionUntil = now + Math.min(POTION_BUFF_MS, clampInteger(buffs.magicRemainingMs, 0, POTION_BUFF_MS, 0));
+  playerState.consumableCooldownUntil = now + Math.min(HEALING_POTION_COOLDOWN_MS, clampInteger(
+    buffs.healingPotionCooldownRemainingMs ?? buffs.consumableCooldownRemainingMs,
+    0,
+    HEALING_POTION_COOLDOWN_MS,
+    0
+  ));
+  playerState.attackPotionCooldownUntil = now + Math.min(BUFF_POTION_COOLDOWN_MS, clampInteger(buffs.attackPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
+  playerState.magicPotionCooldownUntil = now + Math.min(BUFF_POTION_COOLDOWN_MS, clampInteger(buffs.magicPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   playerState.goldSlimeBubbles = clampInteger(resources.goldSlimeBubbles, 0, 999999, 0);
   playerState.arrows = clampInteger(resources.arrows, 0, 999999, 0);
 
@@ -12543,14 +13152,15 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.woodHelmCrafted = Boolean(story.woodHelmCrafted);
   playerState.woodChestCrafted = Boolean(story.woodChestCrafted);
   playerState.woodGreavesCrafted = Boolean(story.woodGreavesCrafted);
+  playerState.woodRingCrafted = Boolean(story.woodRingCrafted);
 
   const purchases = Array.isArray(state.shopPurchases)
     ? state.shopPurchases
     : [];
   playerState.shopPurchases = Array.from(new Set(
     purchases
-      .filter(itemId => typeof itemId === "string" && SHOP_ITEM_IDS.has(itemId) && itemId !== "weapon_axe")
-      .slice(0, SHOP_ITEM_IDS.size)
+      .filter(itemId => typeof itemId === "string" && SHOP_PURCHASE_HISTORY_ITEM_IDS.has(itemId) && itemId !== "weapon_axe")
+      .slice(0, SHOP_PURCHASE_HISTORY_ITEM_IDS.size)
   ));
 
   sendJson(socket, {
@@ -12558,7 +13168,16 @@ function handlePersistentStateRestore(playerId, socket, message) {
     coins: playerState.coins,
     wood: playerState.wood,
     stone: playerState.stone,
-    flowers: playerState.flowers,
+    whiteFlowers: playerState.whiteFlowers,
+    blueFlowers: playerState.blueFlowers,
+    healingPotions: playerState.healingPotions,
+    attackPotions: playerState.attackPotions,
+    magicPotions: playerState.magicPotions,
+    consumableCooldownUntil: playerState.consumableCooldownUntil,
+    attackPotionCooldownUntil: playerState.attackPotionCooldownUntil,
+    magicPotionCooldownUntil: playerState.magicPotionCooldownUntil,
+    attackPotionUntil: playerState.attackPotionUntil,
+    magicPotionUntil: playerState.magicPotionUntil,
     goldSlimeBubbles: playerState.goldSlimeBubbles,
     arrows: playerState.arrows
   });
@@ -12677,6 +13296,10 @@ function handleClientMessage(playerId, socket, message) {
       handleCraftRequest(playerId, socket, message);
       return;
 
+    case "consumableUse":
+      handleConsumableUse(playerId, socket, message);
+      return;
+
     case "shopPurchase":
       handleShopPurchase(playerId, socket, message);
       return;
@@ -12702,11 +13325,12 @@ function handleClientMessage(playerId, socket, message) {
 
 wss.on("connection", socket => {
   const id = crypto.randomUUID();
+  const initialLoad = defaultPlayerLoadState();
 
   const initialState = sanitizePlayerState(id, {
-    mapId: "spawn",
-    x: 172,
-    y: 112,
+    mapId: initialLoad.mapId,
+    x: initialLoad.x,
+    y: initialLoad.y,
     weaponIndex: -1
   });
 
@@ -12720,7 +13344,16 @@ wss.on("connection", socket => {
     coins: initialState.coins,
     wood: initialState.wood,
     stone: initialState.stone,
-    flowers: initialState.flowers,
+    whiteFlowers: initialState.whiteFlowers,
+    blueFlowers: initialState.blueFlowers,
+    healingPotions: initialState.healingPotions,
+    attackPotions: initialState.attackPotions,
+    magicPotions: initialState.magicPotions,
+    consumableCooldownUntil: initialState.consumableCooldownUntil,
+    attackPotionCooldownUntil: initialState.attackPotionCooldownUntil,
+    magicPotionCooldownUntil: initialState.magicPotionCooldownUntil,
+    attackPotionUntil: initialState.attackPotionUntil,
+    magicPotionUntil: initialState.magicPotionUntil,
     goldSlimeBubbles: initialState.goldSlimeBubbles,
     arrows: initialState.arrows,
     hunterSnareCharges: initialState.hunterSnareCharges,

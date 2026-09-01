@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Slime Story Map Editor</title>
-  <link rel="stylesheet" href="/map-editor.css?v=300">
+  <link rel="stylesheet" href="/map-editor.css?v=336">
 </head>
 <body>
   <div class="editor-shell">
     <header class="editor-header">
       <div>
         <div class="eyebrow">SLIME STORY • DEV TOOL</div>
-        <h1>Map Editor <span>v300</span></h1>
+        <h1>Map Editor <span>v336</span></h1>
       </div>
       <div class="header-actions">
         <a class="button secondary" href="/">Play Game</a>
@@ -73,6 +73,11 @@
             <button type="button" class="palette-tool" data-place="sceneryRock"><span class="palette-icon scenery-rock">■</span><span>Scenery rock</span></button>
             <button type="button" class="palette-tool" data-place="harvestFlower"><span class="palette-icon flower-object">✿</span><span>Harvest flower</span></button>
             <button type="button" class="palette-tool" data-place="house"><span class="palette-icon house-object">⌂</span><span>House</span></button>
+            <button type="button" class="palette-tool" data-place="shopkeeperNpc"><img class="palette-sprite" src="/assets/shopkeeper_npc_v1.png?v=336" alt=""><span>Shopkeeper NPC</span></button>
+            <button type="button" class="palette-tool" data-place="hunterNpc"><img class="palette-sprite" src="/assets/hunter_npc_v1.png?v=336" alt=""><span>Hunter NPC</span></button>
+            <button type="button" class="palette-tool" data-place="jesterNpc"><img class="palette-sprite" src="/assets/jester_npc_v1.png?v=336" alt=""><span>Jester NPC</span></button>
+            <button type="button" class="palette-tool" data-place="craftingTableNpc"><img class="palette-sprite" src="/assets/wood_bench_v2.png?v=336" alt=""><span>Crafting Table</span></button>
+            <button type="button" class="palette-tool" data-place="classResetCrystalNpc"><img class="palette-sprite" src="/assets/class_reset_crystal.png?v=336" alt=""><span>Class Reset Crystal</span></button>
             <button type="button" class="palette-tool" data-place="enemySpawn"><span class="palette-icon enemy-object">E</span><span>Enemy spawn</span></button>
             <button type="button" class="palette-tool" data-place="playerSpawn"><span class="palette-icon player-object">+</span><span>Player spawn</span></button>
             <button type="button" class="palette-tool" data-place="portal"><span class="palette-icon portal-object">▯</span><span>Portal</span></button>
@@ -93,7 +98,7 @@
           <div class="section-title">Layers</div>
           <label class="check-row"><input id="layerTerrain" type="checkbox" checked> Terrain</label>
           <label class="check-row"><input id="layerObjects" type="checkbox" checked> Environment objects</label>
-          <label class="check-row"><input id="layerEntities" type="checkbox" checked> Enemy + player spawns</label>
+          <label class="check-row"><input id="layerEntities" type="checkbox" checked> NPCs + enemy/player spawns</label>
           <label class="check-row"><input id="layerPortals" type="checkbox" checked> Portals</label>
           <label class="check-row"><input id="layerGrid" type="checkbox"> Terrain grid</label>
         </section>
@@ -124,14 +129,14 @@
           <span id="statusDirty">source map</span>
         </footer>
         <div class="draft-note">
-          <strong>v300 keeps the current map-editor workflow unchanged while the gameplay build receives the PvP rebuild.</strong> Apply is intentionally local-development only; after a successful apply, restart the server and reload before testing.
+          <strong>v324 expands placeable interactions: Shopkeeper, Hunter, Jester, Crafting Table, and Class Reset Crystal.</strong> Apply is intentionally local-development only; after a successful apply, restart the server and reload before testing new placements in-game.
         </div>
       </section>
 
       <aside class="panel inspector-panel">
         <div class="section-title">Selection / Properties</div>
         <div id="inspectorEmpty" class="inspector-empty">
-          Select a tree, grass, rock, flower, house, spawn, or portal on the map. You can drag selected objects directly.
+          Select a tree, grass, rock, flower, house, NPC, spawn, or portal on the map. You can drag selected objects directly.
         </div>
         <div id="inspectorContent" class="inspector-content hidden">
           <div class="selection-heading">
@@ -147,10 +152,10 @@
       </aside>
     </main>
   </div>
-<script src="/shared/world-content-runtime.js?v=300"></script>
-  <script src="/shared/terrain-rules.js?v=300"></script>
-  <script src="/shared/terrain-presentation.js?v=300"></script>
-  <script src="/shared/map-draft-format.js?v=300"></script>
-  <script src="/map-editor.js?v=300"></script>
+<script src="/shared/world-content-runtime.js?v=336"></script>
+  <script src="/shared/terrain-rules.js?v=336"></script>
+  <script src="/shared/terrain-presentation.js?v=336"></script>
+  <script src="/shared/map-draft-format.js?v=336"></script>
+  <script src="/map-editor.js?v=336"></script>
 </body>
 </html>

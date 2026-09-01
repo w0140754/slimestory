@@ -15,7 +15,7 @@ function buildClientEnemyFoundation() {
 
   const slimeFlashImage = new Image();
   const coinImage = new Image();
-  coinImage.src = "./assets/coin_native.png";
+  coinImage.src = "./assets/coin_loot_v2.png";
 
   const arrowResourceImage = new Image();
   arrowResourceImage.src = "./assets/arrow_resource.png";
@@ -25,7 +25,7 @@ function buildClientEnemyFoundation() {
   const woodImage = new Image();
   woodImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAe0lEQVQ4T2NkoBAwwllkgkFmgJI4y3+42/CAey//wF0OZ4A0ZwZqMZy99pRBSpQHJowVbDjyFG4ImIBpfv76I4OkKD+cxgVA8jBD4AYE2EgzPHv9BWw7SDMvDxdMPQb4/OUbw/T111ANoMgFIEBRGMAARbFALhg1gIEBAEAwSRFp34JXAAAAEGRlQkc1OERFQTUyNzFDOURCMUM4CKL2nwAAAABJRU5ErkJgggAA";
 
-  function makeFlowerIcon() {
+  function makeFlowerIcon(type = "white") {
     const c = document.createElement("canvas");
     c.width = 16;
     c.height = 16;
@@ -37,7 +37,7 @@ function buildClientEnemyFoundation() {
     fctx.fillRect(5, 9, 2, 1);
     fctx.fillRect(9, 10, 2, 1);
 
-    fctx.fillStyle = "#f4bfdc";
+    fctx.fillStyle = type === "blue" ? "#83b9f0" : "#f4bfdc";
     fctx.fillRect(6, 3, 2, 2);
     fctx.fillRect(8, 3, 2, 2);
     fctx.fillRect(5, 5, 2, 2);
@@ -51,7 +51,25 @@ function buildClientEnemyFoundation() {
   }
 
   const flowerImage = new Image();
-  flowerImage.src = makeFlowerIcon();
+  flowerImage.src = makeFlowerIcon("white");
+  const blueFlowerImage = new Image();
+  blueFlowerImage.src = makeFlowerIcon("blue");
+
+  function makePotionIcon(color) {
+    const c = document.createElement("canvas");
+    c.width = 16; c.height = 16;
+    const pctx = c.getContext("2d");
+    pctx.imageSmoothingEnabled = false;
+    pctx.fillStyle = "#d8cba0"; pctx.fillRect(6, 1, 4, 3);
+    pctx.fillStyle = "#765d48"; pctx.fillRect(5, 4, 6, 2);
+    pctx.fillStyle = "#e8e1cf"; pctx.fillRect(4, 6, 8, 8);
+    pctx.fillStyle = color; pctx.fillRect(5, 9, 6, 4);
+    pctx.fillStyle = "#ffffff"; pctx.fillRect(5, 7, 2, 2);
+    return c.toDataURL("image/png");
+  }
+  const healingPotionImage = loadImage("assets/healing_potion_v2.png");
+  const attackPotionImage = new Image(); attackPotionImage.src = "assets/attack_potion_v2.png?v=336";
+  const magicPotionImage = new Image(); magicPotionImage.src = "assets/magic_potion_v2.png?v=336";
 
 
   // Inventory / equipment menu uses the exact same game sprites.
@@ -62,15 +80,35 @@ function buildClientEnemyFoundation() {
   document.getElementById("inventoryArrowImg").src = arrowResourceImage.src;
   document.getElementById("inventoryGoldSlimeBubbleImg").src = goldSlimeBubbleLootImage.src;
   document.getElementById("arrowHudImg").src = arrowResourceImage.src;
-  document.getElementById("inventoryFlowerImg").src = flowerImage.src;
+  document.getElementById("inventoryWhiteFlowerImg").src = flowerLootImage("white").src;
+  document.getElementById("inventoryBlueFlowerImg").src = flowerLootImage("blue").src;
+  document.getElementById("inventoryHealingPotionImg").src = healingPotionImage.src;
+  document.getElementById("inventoryAttackPotionImg").src = attackPotionImage.src;
+  document.getElementById("inventoryMagicPotionImg").src = magicPotionImage.src;
+  const attackBuffHudImg = document.getElementById("attackBuffHudImg");
+  if (attackBuffHudImg) attackBuffHudImg.src = attackPotionImage.src;
+  const magicBuffHudImg = document.getElementById("magicBuffHudImg");
+  if (magicBuffHudImg) magicBuffHudImg.src = magicPotionImage.src;
   document.getElementById("craftSwordWoodIcon").src = woodImage.src;
   document.getElementById("craftBowWoodIcon").src = woodImage.src;
   document.getElementById("craftArrowWoodIcon").src = woodImage.src;
+  document.getElementById("craftArrowStoneIcon").src = rockLootableImage.src;
+  document.getElementById("craftHealingWhiteIcon").src = flowerImage.src;
+  document.getElementById("craftHealingBlueIcon").src = blueFlowerImage.src;
+  document.getElementById("craftAttackWhiteIcon").src = flowerImage.src;
+  document.getElementById("craftMagicBlueIcon").src = blueFlowerImage.src;
+  document.getElementById("craftHealingPotionImg").src = healingPotionImage.src;
+  document.getElementById("craftAttackPotionImg").src = attackPotionImage.src;
+  document.getElementById("craftMagicPotionImg").src = magicPotionImage.src;
   document.getElementById("craftStaffWoodIcon").src = woodImage.src;
   document.getElementById("craftHelmWoodIcon").src = woodImage.src;
   document.getElementById("craftChestWoodIcon").src = woodImage.src;
   document.getElementById("craftGreavesWoodIcon").src = woodImage.src;
   document.getElementById("craftArrowsImg").src = arrowResourceImage.src;
+  const craftWoodRingImg = document.getElementById("craftWoodRingImg");
+  if (craftWoodRingImg) craftWoodRingImg.src = woodRingImage.src;
+  const craftRingWoodIcon = document.getElementById("craftRingWoodIcon");
+  if (craftRingWoodIcon) craftRingWoodIcon.src = woodImage.src;
 
   document.getElementById("inventorySwordImg").src = swordImage.src;
   document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
@@ -85,6 +123,7 @@ function buildClientEnemyFoundation() {
   document.getElementById("inventoryShepherdStaffImg").src = shepherdStaffImage.src;
   document.getElementById("inventoryLostKeyImg").src = lostKeyWandImage.src;
   document.getElementById("inventoryHugeSunflowerImg").src = hugeSunflowerWandImage.src;
+  document.getElementById("inventorySapgemWandImg").src = sapgemWandImage.src;
   document.getElementById("inventoryHatImg").src = sprite.hat.src;
   document.getElementById("inventoryCapImg").src = sprite.blueCap.src;
   document.getElementById("inventoryWizardHatImg").src = sprite.wizardHat.src;
@@ -137,6 +176,12 @@ function buildClientEnemyFoundation() {
   document.getElementById("equipRangerPantsImg").src = pantsImageForIndex(4).src;
   document.getElementById("equipWoodPantsImg").src = pantsImageForIndex(5).src;
   document.getElementById("equipArcanistPantsImg").src = pantsImageForIndex(6).src;
+  const equipBaseCharmImg = document.getElementById("equipBaseCharmImg");
+  if (equipBaseCharmImg) equipBaseCharmImg.src = emptyCharmImage.src;
+  const equipWoodRingImg = document.getElementById("equipWoodRingImg");
+  if (equipWoodRingImg) equipWoodRingImg.src = woodRingImage.src;
+  const inventoryWoodRingImg = document.getElementById("inventoryWoodRingImg");
+  if (inventoryWoodRingImg) inventoryWoodRingImg.src = woodRingImage.src;
 
   slimeFlashImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVklEQVR4nO2TMQ4AIAgDhfj/L+OmoYApcbVjWy9CVMxsvGgWfkUVNLRxOM0QwMzjOloFLETR6EKyHbT0AQcQXhghwRt0ILuLIzAQ18l2cIOErPqN9DgLZicMIqXQ8kgAAAAASUVORK5CYII=";slimeImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAt0lEQVQ4T2NkoBAwwlmo4D+chQow1GMIgDTPvlbPcP7eCbgACBgqWTCkajWCmCh60A3AqhkGsBmCbMB/7wlaDPIqsnABbODhnccMWwuugZhgvTADwJpBgBgDQABmCPUNAAFchsA0gwBeA7bkX2XwmagN54MAuhiGAQaZogzS6qJgDkgS2UAQQBZ7evM1w4Xpr0FM6hkAAiiG4ALImuEEEsBrCLpmFAYSwGoINs0ggM0AEKAoM5EEAGibZRH6RFzgAAAAEGRlQkc4QTY1NkIwRTJBQzdBMDI0vGYFOwAAAABJRU5ErkJgggAA";
 
@@ -221,6 +266,65 @@ function buildClientEnemyFoundation() {
     makeSlime(330, 172, 1.3, 24, 17),
     makeSlime(455, 330, 3.6, 24, 17)
   ];
+
+  // -----------------------------------------------------------------------------
+  // SLEEPING MUSHROOM
+  // -----------------------------------------------------------------------------
+  // First mushroom-family enemy. It stays still/asleep while passive, wakes
+  // into the annoyed sprite when combat/control motion begins, then returns to
+  // its home point and falls asleep again after disengaging.
+  const mushroomSleepImage = loadImage("assets/mushroom_sleep_v1.png?v=336");
+  const mushroomAwakeImage = loadImage("assets/mushroom_awake_v1.png?v=336");
+  const mushroomFlashImage = loadImage("assets/mushroom_flash_v1.png?v=336");
+
+  function makeMushroom(
+    x,
+    y,
+    phase = 0,
+    level = 1
+  ) {
+    return {
+      level,
+      x,
+      y,
+      homeX: x,
+      homeY: y,
+      dir: 1,
+      phase,
+
+      speed: 16,
+      chaseSpeed: 22,
+      detectionRadius: 72,
+
+      maxHp: 40,
+      hp: 40,
+      alive: true,
+      respawnTime: 0,
+
+      hitFlash: 0,
+      shakeTime: 0,
+      knockbackX: 0,
+      knockbackY: 0,
+
+      burnTime: 0,
+      burnDuration: 3.0,
+      burnTickTimer: 0,
+      burnTickInterval: 0.5,
+      burnDamagePerTick: 2
+    };
+  }
+
+  function updateMushrooms(dt) {
+    for (
+      const mushroom
+      of currentEnemyCollection("mushroom")
+    ) {
+      tickTimer(mushroom, "hitFlash", dt);
+      tickTimer(mushroom, "shakeTime", dt);
+      tickReplicatedEnemyCountdowns(mushroom, dt);
+      updateReplicatedEnemyPosition(mushroom, dt, 14);
+    }
+  }
 
   // -----------------------------------------------------------------------------
   // BIG GOLD SLIME
@@ -1016,8 +1120,17 @@ function buildClientEnemyFoundation() {
     woodImage,
     makeFlowerIcon,
     flowerImage,
+    blueFlowerImage,
+    healingPotionImage,
+    attackPotionImage,
+    magicPotionImage,
     makeSlime,
     slimes,
+    mushroomSleepImage,
+    mushroomAwakeImage,
+    mushroomFlashImage,
+    makeMushroom,
+    updateMushrooms,
     bigGoldSlimeImage,
     bigGoldSlimeBubbleImage,
     bigGoldSlimeFlashImage,

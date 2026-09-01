@@ -29,6 +29,19 @@ function updateHudUi() {
       `LV ${player.level} · ${player.exp} / ${player.expToNext} EXP`;
   }
 
+  const now = Date.now();
+  const buffRows = [
+    ["attackBuffHud", "attackBuffHudTime", Number(player.attackPotionUntil) || 0],
+    ["magicBuffHud", "magicBuffHudTime", Number(player.magicPotionUntil) || 0]
+  ];
+  for (const [hudId, timeId, until] of buffRows) {
+    const remaining = Math.max(0, until - now);
+    const hud = document.getElementById(hudId);
+    const time = document.getElementById(timeId);
+    if (hud) hud.classList.toggle("active", remaining > 0);
+    if (time) time.textContent = remaining > 0 ? `${Math.ceil(remaining / 1000)}s` : "";
+  }
+
   setRespawnButtonVisible(player.isDead);
 }
 
@@ -212,6 +225,7 @@ function updateTransientSystems(dt) {
   updateRockPresentation(dt);
   updateDamageNumbers(dt);
   updateFloatingTexts(dt);
+  updatePotionUseEffects(dt);
   updateJesterConfetti(dt);
   updateLevelUpParticles(dt);
   updateWandSweepParticles(dt);
@@ -277,16 +291,16 @@ function updatePlayerStatusAndTimers(dt) {
     player.attackTime = 0;
     player.attackDuration = DEFAULT_BASIC_ATTACK_DURATION;
     player.attackCooldown = 0;
-    player.wandMovementLockTime = 0;
+    player.basicAttackMovementLockTime = 0;
     player.slashTime = 0;
-    pendingWandBasicAttack = null;
+    pendingBasicAttack = null;
     player.wetTime = 0;
     player.burnTime = 0;
     return;
   }
 
   updateBowVisualState(dt);
-  updatePendingWandBasicAttack(dt);
+  updatePendingBasicAttack(dt);
 
   tickTimer(player, "shadowHideRevealTime", dt);
   tickTimer(player, "contactCooldown", dt);
@@ -295,7 +309,7 @@ function updatePlayerStatusAndTimers(dt) {
   const attackWasActive = player.attackTime > 0;
   tickTimer(player, "attackTime", dt);
   tickTimer(player, "attackCooldown", dt);
-  tickTimer(player, "wandMovementLockTime", dt);
+  tickTimer(player, "basicAttackMovementLockTime", dt);
   tickTimer(player, "slashTime", dt);
 
   if (attackWasActive && player.attackTime <= 0) {
@@ -394,7 +408,7 @@ function updatePlayerMovement(dt) {
     !player.rainCloudCasting &&
     !player.hunterSnareSetting &&
     !pvpSnareRooted &&
-    player.wandMovementLockTime <= 0 &&
+    player.basicAttackMovementLockTime <= 0 &&
     movement.moving &&
     strafeMultiplier > 0;
 
@@ -762,8 +776,20 @@ function drawPrototypeIslandGroundLayer(camX, camY) {
     typeof drawTerrainMapTop === "function" &&
     drawTerrainMapTop(currentMapId, camX, camY)
   ) {
-    // Terrain owns the top surface (including dirt/water). Ground-level spell
-    // and structure effects still use the normal world draw order.
+    // Terrain owns the top surface (including dirt/water). Reflections are
+    // layered into authored water before a light surface veil.
+    drawPlayerReflection(camX, camY);
+
+    if (onlineClient) {
+      for (const remotePlayer of onlineClient.playersOnCurrentMap()) {
+        drawRemotePlayerReflection(remotePlayer, camX, camY);
+      }
+    }
+
+    if (typeof drawTerrainWaterSurfaceOverlay === "function") {
+      drawTerrainWaterSurfaceOverlay(currentMapId, camX, camY);
+    }
+
     for (const cloud of rainClouds) {
       drawRainCloudGround(cloud, camX, camY);
     }
@@ -927,6 +953,14 @@ function buildWorldDrawables(camX, camY) {
     );
   }
 
+  for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
+    addDrawable(
+      drawables,
+      Number(npc.y) || 0,
+      () => drawPlacedNpc(npc, camX, camY)
+    );
+  }
+
   for (const flower of harvestFlowers) {
     addDrawable(
       drawables,
@@ -961,7 +995,6 @@ function buildWorldDrawables(camX, camY) {
         screenY - 15 + bob
       );
 
-      drawCoinDropSparkles(coin, screenX, screenY - 7 + bob);
     });
   });
 
@@ -1139,6 +1172,7 @@ function drawForegroundLayer(camX, camY) {
   drawHunterSnarePlacementIndicator(camX, camY);
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
+  drawPotionUseEffects(camX, camY);
   drawInteractionPrompt(camX, camY);
 }
 
@@ -1206,6 +1240,13 @@ class GameApp {
 
     this.simulation.update(dt);
 
+    // Cooldown deadlines are wall-clock based; refresh only the lightweight
+    // hotbar cooldown layer every frame so cast-time cooldowns are visible
+    // immediately and continue counting down without requiring a menu refresh.
+    if (typeof updateAbilityCooldownHud === "function") {
+      updateAbilityCooldownHud();
+    }
+
     if (this.online) {
       this.online.update(dt);
     }
@@ -1235,9 +1276,11 @@ applySharedWorldContentToClientMaps();
 assignPersistentEntityIds();
 loadLocalCharacterState();
 
-// New/reloaded sessions still begin in the safe spawn clearing. Character
-// progression/loadout persists, but map position intentionally does not.
-activateMap("spawn", "center");
+// Character progression/loadout persists, but map position intentionally does
+// not. The map editor owns one global loading target; when none has been
+// authored yet, preserve the historical Spawn Clearing center fallback.
+const initialPlayerLoadTarget = sharedDefaultPlayerLoadTarget();
+activateMap(initialPlayerLoadTarget.mapId, initialPlayerLoadTarget.spawnId);
 updateHotbar();
 updateInventoryUi();
 
@@ -1266,3 +1309,4 @@ window.gameSimulation = gameSimulation;
 window.onlineClient = onlineClient;
 
 gameApp.start();
+

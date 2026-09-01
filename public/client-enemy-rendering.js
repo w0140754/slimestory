@@ -70,6 +70,8 @@ function drawEnemyDeathEffect(effect, camX, camY) {
       effect.variant === "blue" ? blueSlimeImage :
       effect.variant === "goldBaby" ? goldBabySlimeImage :
       slimeImage;
+  } else if (effect.enemyType === "mushroom") {
+    image = mushroomAwakeImage;
   } else if (effect.enemyType === "goblin") {
     image = goblinImage;
     height = 24;
@@ -304,6 +306,233 @@ function drawSlime(slime, camX, camY) {
   }
 }
 
+function mushroomIsAwakePresentation(mushroom) {
+  if (!mushroom?.alive) return false;
+
+  const motionSpeed = Math.hypot(
+    Number(mushroom.serverVelocityX) || 0,
+    Number(mushroom.serverVelocityY) || 0
+  );
+  const targetDistance = Math.hypot(
+    (Number(mushroom.serverTargetX) || mushroom.x) - mushroom.x,
+    (Number(mushroom.serverTargetY) || mushroom.y) - mushroom.y
+  );
+
+  return Boolean(
+    mushroom.aggroTargetId ||
+    (Number(mushroom.confusionTime) || 0) > 0 ||
+    (Number(mushroom.hitFlash) || 0) > 0 ||
+    (Number(mushroom.burnTime) || 0) > 0 ||
+    motionSpeed > 0.75 ||
+    targetDistance > 0.75
+  );
+}
+
+function drawMushroom(mushroom, camX, camY) {
+  if (!mushroom.alive) return;
+
+  const carrier =
+    mushroom.carriedBy &&
+    typeof onlineClient !== "undefined"
+      ? onlineClient.playerForNetworkId(
+          mushroom.carriedBy
+        )
+      : null;
+
+  const baseWorldX =
+    carrier ? carrier.x : mushroom.x;
+  const baseWorldY =
+    carrier ? carrier.y : mushroom.y;
+
+  let screenX =
+    Math.round(baseWorldX - camX);
+  const screenY =
+    Math.round(baseWorldY - camY);
+
+  if (mushroom.shakeTime > 0) {
+    screenX +=
+      Math.sin(mushroom.shakeTime * 125) > 0
+        ? 1
+        : -1;
+  }
+
+  const awake =
+    mushroomIsAwakePresentation(mushroom);
+
+  let lift = 0;
+  if (carrier) {
+    const pickupDuration = Math.max(
+      0.01,
+      mushroom.pickupDuration || 0.18
+    );
+    const pickupProgress = Math.max(
+      0,
+      Math.min(
+        1,
+        1 -
+          (Number(mushroom.pickupTime) || 0) /
+            pickupDuration
+      )
+    );
+    lift = Math.round(
+      9 *
+      (1 - Math.pow(1 - pickupProgress, 2))
+    );
+  } else if ((Number(mushroom.hurlTime) || 0) > 0) {
+    const duration = Math.max(
+      0.01,
+      mushroom.hurlDuration || 0.58
+    );
+    const progress = Math.max(
+      0,
+      Math.min(
+        1,
+        1 -
+          (Number(mushroom.hurlTime) || 0) /
+            duration
+      )
+    );
+    lift = Math.round(
+      Math.sin(progress * Math.PI) * 13
+    );
+  } else if (awake) {
+    const hop =
+      Math.max(
+        0,
+        Math.sin(
+          worldTime * 7.1 + mushroom.phase
+        )
+      );
+    lift = Math.round(hop * 2);
+  }
+
+  const shadowWidth =
+    awake ? 10 : 12;
+  ctx.fillStyle = "rgba(35, 45, 32, .28)";
+  ctx.fillRect(
+    Math.round(screenX - shadowWidth / 2),
+    screenY,
+    shadowWidth,
+    2
+  );
+
+  const spawnScale =
+    enemySpawnScale(mushroom);
+  const breathe =
+    !awake && !carrier
+      ? Math.sin(
+          worldTime * 2.1 + mushroom.phase
+        ) * 0.025
+      : 0;
+
+  const drawWidth = Math.max(
+    1,
+    Math.round(
+      16 *
+      spawnScale.x *
+      (1 + breathe)
+    )
+  );
+  const drawHeight = Math.max(
+    1,
+    Math.round(
+      16 *
+      spawnScale.y *
+      (1 - breathe * 0.45)
+    )
+  );
+  const drawX =
+    Math.round(screenX - drawWidth / 2);
+  const drawY =
+    Math.round(
+      screenY - drawHeight + 1 - lift
+    );
+  const image =
+    awake
+      ? mushroomAwakeImage
+      : mushroomSleepImage;
+
+  const imageReady = Boolean(
+    image &&
+    image.complete &&
+    image.naturalWidth > 0 &&
+    image.naturalHeight > 0
+  );
+
+  ctx.save();
+  ctx.globalAlpha *= spawnScale.alpha;
+  if (imageReady) {
+    ctx.drawImage(
+      image,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight
+    );
+  } else {
+    // Never let a still-loading/failed mushroom asset abort the entire render loop.
+    // The normal sprite takes over automatically as soon as the Image decodes.
+    const fallbackScaleX = drawWidth / 16;
+    const fallbackScaleY = drawHeight / 16;
+    ctx.fillStyle = awake ? "#b64b3b" : "#b95b48";
+    ctx.fillRect(
+      Math.round(drawX + 2 * fallbackScaleX),
+      Math.round(drawY + 2 * fallbackScaleY),
+      Math.max(1, Math.round(12 * fallbackScaleX)),
+      Math.max(1, Math.round(5 * fallbackScaleY))
+    );
+    ctx.fillStyle = "#ead4ad";
+    ctx.fillRect(
+      Math.round(drawX + 5 * fallbackScaleX),
+      Math.round(drawY + 7 * fallbackScaleY),
+      Math.max(1, Math.round(6 * fallbackScaleX)),
+      Math.max(1, Math.round(7 * fallbackScaleY))
+    );
+  }
+  ctx.restore();
+
+  if (
+    mushroom.hitFlash > 0 &&
+    mushroomFlashImage.complete &&
+    mushroomFlashImage.naturalWidth > 0 &&
+    mushroomFlashImage.naturalHeight > 0
+  ) {
+    ctx.save();
+    ctx.globalAlpha = 0.66;
+    ctx.drawImage(
+      mushroomFlashImage,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight
+    );
+    ctx.restore();
+  }
+
+  if (mushroom.burnTime > 0) {
+    drawPixelFlame(
+      screenX - 4,
+      drawY + 8,
+      mushroom.phase + 0.8
+    );
+    drawPixelFlame(
+      screenX + 3,
+      drawY + 10,
+      mushroom.phase + 2.9
+    );
+  }
+
+  if ((Number(mushroom.wetTime) || 0) > 0) {
+    drawWetStatus(
+      screenX,
+      Math.round(screenY - lift - 2),
+      mushroom.wetTime,
+      mushroom.wetDuration ||
+        GAME_CONFIG.status.enemyWetDuration
+    );
+  }
+}
+
 function drawGoblin(goblin, camX, camY) {
   if (!goblin.alive) return;
 
@@ -471,3 +700,4 @@ function drawGhost(ghost, camX, camY) {
     }
   }
 }
+

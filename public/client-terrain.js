@@ -20,6 +20,114 @@ function terrainAllowsMagicGrass(x, y, mapId = currentMapId) {
   return TERRAIN_RULES.canGrowMagicGrassAt(definition, x, y) !== false;
 }
 
+function terrainWaterReflectionInfo(x, y, mapId = currentMapId, maxDistance = 16) {
+  const definition = currentTerrainDefinition(mapId);
+  if (!definition) return null;
+
+  const size = TERRAIN_RULES.cellSize(definition);
+  const distanceLimit = Math.max(0, Number(maxDistance) || 0);
+  const horizontalMargin = 8;
+  const minCellX = Math.floor((x - horizontalMargin) / size) * size;
+  const maxCellX = Math.floor((x + horizontalMargin) / size) * size;
+  const minCellY = Math.floor((y - distanceLimit - size) / size) * size;
+  const maxCellY = Math.floor((y + distanceLimit) / size) * size;
+  let best = null;
+
+  const consider = (mirrorWorldY, distanceToShore) => {
+    if (distanceToShore < 0 || distanceToShore > distanceLimit) return;
+    if (!best || distanceToShore < best.distanceToShore) {
+      best = {
+        mirrorWorldY,
+        distanceToShore,
+        fade: distanceLimit > 0 ? Math.max(0, 1 - distanceToShore / distanceLimit) : 1
+      };
+    }
+  };
+
+  for (let cellY = minCellY; cellY <= maxCellY; cellY += size) {
+    for (let cellX = minCellX; cellX <= maxCellX; cellX += size) {
+      if (
+        TERRAIN_RULES.terrainTypeAt(
+          definition,
+          cellX + size / 2,
+          cellY + size / 2
+        ) !== "water"
+      ) {
+        continue;
+      }
+
+      if (x < cellX - horizontalMargin || x > cellX + size + horizontalMargin) continue;
+
+      const topEdge = cellY;
+      const bottomEdge = cellY + size;
+      const topNeighbor = TERRAIN_RULES.terrainTypeAt(definition, cellX + size / 2, topEdge - 1);
+      const bottomNeighbor = TERRAIN_RULES.terrainTypeAt(definition, cellX + size / 2, bottomEdge + 1);
+
+      if (y <= topEdge && topNeighbor !== "water") {
+        consider(topEdge, topEdge - y);
+      }
+
+      if (y >= bottomEdge && bottomNeighbor !== "water") {
+        consider(bottomEdge, y - bottomEdge);
+      }
+    }
+  }
+
+  return best;
+}
+
+function terrainWaterClipPath(mapId = currentMapId, camX = 0, camY = 0) {
+  const definition = currentTerrainDefinition(mapId);
+  if (!definition) return false;
+
+  const size = TERRAIN_RULES.cellSize(definition);
+  const startX = Math.floor(camX / size) * size;
+  const startY = Math.floor(camY / size) * size;
+  const endX = camX + VIEW_W + size;
+  const endY = camY + VIEW_H + size;
+  let hasWater = false;
+
+  ctx.beginPath();
+
+  for (let worldY = startY; worldY < endY; worldY += size) {
+    for (let worldX = startX; worldX < endX; worldX += size) {
+      if (
+        TERRAIN_RULES.terrainTypeAt(
+          definition,
+          worldX + size / 2,
+          worldY + size / 2
+        ) !== "water"
+      ) {
+        continue;
+      }
+
+      hasWater = true;
+      ctx.rect(
+        Math.round(worldX - camX),
+        Math.round(worldY - camY),
+        Math.round(size),
+        Math.round(size)
+      );
+    }
+  }
+
+  return hasWater;
+}
+
+function drawTerrainWaterSurfaceOverlay(mapId = currentMapId, camX = 0, camY = 0) {
+  ctx.save();
+  if (!terrainWaterClipPath(mapId, camX, camY)) {
+    ctx.restore();
+    return false;
+  }
+
+  ctx.clip();
+  ctx.fillStyle = "rgba(76, 139, 151, .12)";
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.restore();
+  return true;
+}
+
 function drawTerrainCellTexture(type, worldX, worldY, screenX, screenY, size) {
   TERRAIN_PRESENTATION.drawCellTexture(
     ctx,
@@ -182,4 +290,5 @@ function drawTerrainSouthVoidFaces(mapId, camX, camY, depth = 10) {
   ctx.restore();
   return true;
 }
+
 
