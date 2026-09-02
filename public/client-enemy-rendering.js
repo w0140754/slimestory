@@ -232,13 +232,10 @@ function drawSlime(slime, camX, camY) {
   const shadowWidth = Math.round(12 - shadowWave * 5);
   const shadowAlpha = 0.42 - shadowWave * 0.16;
 
-  ctx.fillStyle = `rgba(35, 52, 37, ${shadowAlpha})`;
-  ctx.fillRect(
-    Math.round(screenX - shadowWidth / 2),
-    screenY,
-    shadowWidth,
-    3
-  );
+  if (!(typeof terrainEntityIsWading === "function" && terrainEntityIsWading(slime.x, slime.y))) {
+    ctx.fillStyle = `rgba(35, 52, 37, ${shadowAlpha})`;
+    ctx.fillRect(Math.round(screenX - shadowWidth / 2), screenY, shadowWidth, 3);
+  }
 
   const drawX = Math.round(screenX - drawWidth / 2);
   const drawY = Math.round(screenY - hopHeight - drawHeight + 1);
@@ -344,29 +341,38 @@ function drawCrab(crab, camX, camY) {
     const progress = Math.max(0, Math.min(1, 1 - (Number(crab.hurlTime) || 0) / duration));
     lift = Math.round(Math.sin(progress * Math.PI) * 12);
   } else if (moving) {
-    // Two-beat sideways scuttle. The body stays low while alternating feet/claws
-    // read as a quick 1px lift/squash rather than a slime-like hop.
     lift = Math.sin(worldTime * 15 + crab.phase) > 0 ? 1 : 0;
   }
 
-  ctx.fillStyle = "rgba(35, 45, 32, .28)";
-  ctx.fillRect(screenX - 11, screenY, 22, 2);
+  if (!(typeof terrainEntityIsWading === "function" && terrainEntityIsWading(crab.x, crab.y))) {
+    ctx.fillStyle = "rgba(35, 45, 32, .28)";
+    ctx.fillRect(screenX - 11, screenY, 22, 2);
+  }
 
   const spawnScale = enemySpawnScale(crab);
-  const idlePinch = !moving && !carrier
-    ? (Math.sin(worldTime * 3.4 + crab.phase) > 0.82 ? 1 : 0)
-    : 0;
-  const scuttleSquash = moving
-    ? (Math.sin(worldTime * 15 + crab.phase) > 0 ? 1 : 0)
-    : 0;
-  const drawWidth = Math.max(1, Math.round((30 + idlePinch) * spawnScale.x));
-  const drawHeight = Math.max(1, Math.round((16 - scuttleSquash) * spawnScale.y));
+  const scuttleWave = Math.sin(worldTime * 15 + crab.phase);
+  const idleWave = Math.sin(worldTime * 3.4 + crab.phase);
+  const idleFrontTwitch = !moving && !carrier && idleWave > 0.82 ? 1 : 0;
+  const baseWidth = 30;
+  const baseHeight = 16;
+  const drawWidth = Math.max(1, Math.round(baseWidth * spawnScale.x));
+  const drawHeight = Math.max(1, Math.round(baseHeight * spawnScale.y));
   const drawX = Math.round(screenX - drawWidth / 2);
   const drawY = Math.round(screenY - drawHeight + 1 - lift);
 
-  const imageReady = Boolean(
+  const crabCombinedReady = Boolean(
     crabImage && crabImage.complete && crabImage.naturalWidth > 0 && crabImage.naturalHeight > 0
   );
+  const crabBackReady = Boolean(
+    crabBackImage && crabBackImage.complete && crabBackImage.naturalWidth > 0 && crabBackImage.naturalHeight > 0
+  );
+  const crabFrontReady = Boolean(
+    crabFrontImage && crabFrontImage.complete && crabFrontImage.naturalWidth > 0 && crabFrontImage.naturalHeight > 0
+  );
+
+  const backOffsetY = moving ? (scuttleWave > 0 ? 0 : 1) : (idleWave < -0.45 ? 1 : 0);
+  const frontOffsetX = moving ? (scuttleWave > 0 ? 1 : -1) : (idleFrontTwitch ? 1 : 0);
+  const frontOffsetY = moving ? (scuttleWave > 0 ? 0 : 1) : (idleFrontTwitch ? 0 : 0);
 
   ctx.save();
   ctx.globalAlpha *= spawnScale.alpha;
@@ -375,7 +381,10 @@ function drawCrab(crab, camX, camY) {
     ctx.scale(-1, 1);
   }
 
-  if (imageReady) {
+  if (crabBackReady && crabFrontReady) {
+    ctx.drawImage(crabBackImage, drawX, drawY + backOffsetY, drawWidth, drawHeight);
+    ctx.drawImage(crabFrontImage, drawX + frontOffsetX, drawY + frontOffsetY, drawWidth, drawHeight);
+  } else if (crabCombinedReady) {
     ctx.drawImage(crabImage, drawX, drawY, drawWidth, drawHeight);
   } else {
     ctx.fillStyle = "#df6e45";
@@ -383,14 +392,34 @@ function drawCrab(crab, camX, camY) {
   }
   ctx.restore();
 
-  drawEnemySpawnShimmer(crab, screenX, screenY - 8 - lift, spawnScale.alpha);
-  drawBurnEffect(crab, screenX, screenY - 7 - lift);
-  drawWetStatus(
-    screenX,
-    Math.round(screenY - 9 - lift),
-    crab.wetTime,
-    crab.wetDuration || GAME_CONFIG.status.enemyWetDuration
-  );
+  if ((Number(crab.burnTime) || 0) > 0) {
+    drawPixelFlame(
+      Math.round(screenX - 6),
+      Math.round(drawY + 6),
+      crab.phase + 0.6
+    );
+    drawPixelFlame(
+      Math.round(screenX + 5),
+      Math.round(drawY + 8),
+      crab.phase + 2.7
+    );
+    if (Math.sin(worldTime * 13 + crab.phase) > 0.12) {
+      drawPixelFlame(
+        Math.round(screenX),
+        Math.round(drawY + 3),
+        crab.phase + 4.8
+      );
+    }
+  }
+
+  if ((Number(crab.wetTime) || 0) > 0) {
+    drawWetStatus(
+      screenX,
+      Math.round(screenY - 9 - lift),
+      crab.wetTime,
+      crab.wetDuration || GAME_CONFIG.status.enemyWetDuration
+    );
+  }
 }
 
 function mushroomIsAwakePresentation(mushroom) {
@@ -495,13 +524,10 @@ function drawMushroom(mushroom, camX, camY) {
 
   const shadowWidth =
     awake ? 10 : 12;
-  ctx.fillStyle = "rgba(35, 45, 32, .28)";
-  ctx.fillRect(
-    Math.round(screenX - shadowWidth / 2),
-    screenY,
-    shadowWidth,
-    2
-  );
+  if (!(typeof terrainEntityIsWading === "function" && terrainEntityIsWading(mushroom.x, mushroom.y))) {
+    ctx.fillStyle = "rgba(35, 45, 32, .28)";
+    ctx.fillRect(Math.round(screenX - shadowWidth / 2), screenY, shadowWidth, 2);
+  }
 
   const spawnScale =
     enemySpawnScale(mushroom);
@@ -646,13 +672,10 @@ function drawGoblin(goblin, camX, camY) {
   const sway = Math.round(Math.sin(goblin.walkTime * 5 + goblin.phase) * motionAmount);
 
   const shadowWidth = goblin.lungeTime > 0 ? 11 : 9;
-  ctx.fillStyle = "rgba(35, 52, 37, .30)";
-  ctx.fillRect(
-    Math.round(screenX - shadowWidth / 2),
-    screenY,
-    shadowWidth,
-    2
-  );
+  if (!(typeof terrainEntityIsWading === "function" && terrainEntityIsWading(goblin.x, goblin.y))) {
+    ctx.fillStyle = "rgba(35, 52, 37, .30)";
+    ctx.fillRect(Math.round(screenX - shadowWidth / 2), screenY, shadowWidth, 2);
+  }
 
   let drawWidth = 16;
   let drawHeight = 24;
@@ -745,8 +768,10 @@ function drawGhost(ghost, camX, camY) {
   const shadowPulse =
     Math.sin(worldTime * 2.35 + ghost.phase) * 0.5 + 0.5;
 
-  ctx.fillStyle = `rgba(25, 34, 29, ${0.27 - shadowPulse * 0.05})`;
-  ctx.fillRect(screenX - 5, screenY, 10, 2);
+  if (!(typeof terrainEntityIsWading === "function" && terrainEntityIsWading(ghost.x, ghost.y))) {
+    ctx.fillStyle = `rgba(25, 34, 29, ${0.27 - shadowPulse * 0.05})`;
+    ctx.fillRect(screenX - 5, screenY, 10, 2);
+  }
 
   const spawnScale = enemySpawnScale(ghost);
   const drawWidth = Math.max(1, Math.round(16 * spawnScale.x));
@@ -787,4 +812,3 @@ function drawGhost(ghost, camX, camY) {
     }
   }
 }
-

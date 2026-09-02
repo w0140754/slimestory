@@ -29,6 +29,13 @@
       light: "#bd9362",
       bright: "#c9a06f"
     }),
+    sand: Object.freeze({
+      base: "#d7c18a",
+      dark: "#b79f68",
+      deep: "#9d8756",
+      light: "#ead6a1",
+      bright: "#f4e5bd"
+    }),
     water: Object.freeze({
       base: "#3f7690",
       dark: "#315e76",
@@ -119,6 +126,34 @@
       return;
     }
 
+    if (type === "sand") {
+      context.fillStyle = palette.dark;
+      context.fillRect(px(4), py(6), 1, 1);
+      if ((cellHash & 7) <= 4) context.fillRect(px(11), py(13), 1, 1);
+
+      if ((hash2 & 7) <= 4) {
+        context.fillStyle = palette.light;
+        context.fillRect(px(15), py(17), 1, 1);
+      }
+
+      if ((cellHash & 15) === 5 && size >= 8) {
+        const shellX = screenX + 2 + ((hash2 >>> 4) % Math.max(1, size - 5));
+        const shellY = screenY + 2 + ((hash2 >>> 10) % Math.max(1, size - 4));
+        context.fillStyle = palette.deep;
+        context.fillRect(shellX, shellY, 2, 1);
+        context.fillStyle = palette.bright;
+        context.fillRect(shellX + 1, shellY, 1, 1);
+      }
+
+      if ((hash2 & 31) === 7 && size >= 8) {
+        context.fillStyle = palette.bright;
+        const sparkleX = screenX + 1 + ((cellHash >>> 18) % Math.max(1, size - 2));
+        const sparkleY = screenY + 1 + ((hash2 >>> 18) % Math.max(1, size - 2));
+        context.fillRect(sparkleX, sparkleY, 1, 1);
+      }
+      return;
+    }
+
     if (type === "water") {
       context.fillStyle = palette.dark;
       const darkWidth = Math.max(2, Math.min(4, size - 2));
@@ -153,7 +188,7 @@
     }
   }
 
-  function drawTransitions(context, type, worldX, worldY, screenX, screenY, size, typeAt) {
+  function drawTransitions(context, type, worldX, worldY, screenX, screenY, size, typeAt, timeSeconds = 0) {
     if (!context || typeof typeAt !== "function") return;
 
     if (type === "water") {
@@ -163,26 +198,48 @@
       const bottom = typeAt(worldX + size / 2, worldY + size + 1);
 
       const touchesLand = value => value && value !== "water" && value !== "void";
-      const shoreDark = "#665038";
-      const shoreLight = "#856a46";
-      const waterLight = PALETTE.water.light;
+      const shorelineStyle = value => value === "sand"
+        ? { dark: "#bfa46e", light: "#e3d2a0", foam: "#eef9ff", water: "#86bfd0" }
+        : { dark: "#665038", light: "#856a46", foam: null, water: PALETTE.water.light };
       const cellHash = hash(worldX, worldY, 133);
+      const foamPhase = Math.floor((Number(timeSeconds) || 0) * 2.2) % 4;
 
-      context.fillStyle = shoreDark;
-      if (touchesLand(left)) context.fillRect(screenX, screenY, 1, size);
-      if (touchesLand(right)) context.fillRect(screenX + size - 1, screenY, 1, size);
-      if (touchesLand(top)) context.fillRect(screenX, screenY, size, 1);
-      if (touchesLand(bottom)) context.fillRect(screenX, screenY + size - 1, size, 1);
+      function drawSide(side, neighborType) {
+        if (!touchesLand(neighborType)) return;
+        const style = shorelineStyle(neighborType);
 
-      context.fillStyle = shoreLight;
-      if (touchesLand(top) && (cellHash & 1)) context.fillRect(screenX + 1 + ((cellHash >>> 5) % Math.max(1, size - 4)), screenY, 2, 1);
-      if (touchesLand(bottom) && (cellHash & 2)) context.fillRect(screenX + 1 + ((cellHash >>> 8) % Math.max(1, size - 4)), screenY + size - 1, 2, 1);
+        context.fillStyle = style.dark;
+        if (side === "left") context.fillRect(screenX, screenY, 1, size);
+        if (side === "right") context.fillRect(screenX + size - 1, screenY, 1, size);
+        if (side === "top") context.fillRect(screenX, screenY, size, 1);
+        if (side === "bottom") context.fillRect(screenX, screenY + size - 1, size, 1);
 
-      context.fillStyle = waterLight;
-      if (touchesLand(left) && size >= 5) context.fillRect(screenX + 1, screenY + 2 + ((cellHash >>> 10) % Math.max(1, size - 4)), 1, 2);
-      if (touchesLand(right) && size >= 5) context.fillRect(screenX + size - 2, screenY + 2 + ((cellHash >>> 13) % Math.max(1, size - 4)), 1, 2);
-      if (touchesLand(top) && size >= 5) context.fillRect(screenX + 2 + ((cellHash >>> 16) % Math.max(1, size - 5)), screenY + 1, 3, 1);
-      if (touchesLand(bottom) && size >= 5) context.fillRect(screenX + 2 + ((cellHash >>> 19) % Math.max(1, size - 5)), screenY + size - 2, 3, 1);
+        context.fillStyle = style.light;
+        if (side === "top" && (cellHash & 1)) context.fillRect(screenX + 1 + ((cellHash >>> 5) % Math.max(1, size - 4)), screenY, 2, 1);
+        if (side === "bottom" && (cellHash & 2)) context.fillRect(screenX + 1 + ((cellHash >>> 8) % Math.max(1, size - 4)), screenY + size - 1, 2, 1);
+        if (side === "left" && (cellHash & 4)) context.fillRect(screenX, screenY + 1 + ((cellHash >>> 11) % Math.max(1, size - 4)), 1, 2);
+        if (side === "right" && (cellHash & 8)) context.fillRect(screenX + size - 1, screenY + 1 + ((cellHash >>> 14) % Math.max(1, size - 4)), 1, 2);
+
+        context.fillStyle = style.water;
+        if (side === "left" && size >= 5) context.fillRect(screenX + 1, screenY + 2 + ((cellHash >>> 10) % Math.max(1, size - 4)), 1, 2);
+        if (side === "right" && size >= 5) context.fillRect(screenX + size - 2, screenY + 2 + ((cellHash >>> 13) % Math.max(1, size - 4)), 1, 2);
+        if (side === "top" && size >= 5) context.fillRect(screenX + 2 + ((cellHash >>> 16) % Math.max(1, size - 5)), screenY + 1, 3, 1);
+        if (side === "bottom" && size >= 5) context.fillRect(screenX + 2 + ((cellHash >>> 19) % Math.max(1, size - 5)), screenY + size - 2, 3, 1);
+
+        if (style.foam && size >= 5) {
+          const animate = ((cellHash >>> 22) & 3) === foamPhase;
+          context.fillStyle = style.foam;
+          if (side === "left" && animate) context.fillRect(screenX + 1, screenY + 1 + ((cellHash >>> 9) % Math.max(1, size - 3)), 1, 2);
+          if (side === "right" && animate) context.fillRect(screenX + size - 2, screenY + 1 + ((cellHash >>> 12) % Math.max(1, size - 3)), 1, 2);
+          if (side === "top" && animate) context.fillRect(screenX + 1 + ((cellHash >>> 15) % Math.max(1, size - 4)), screenY + 1, 2, 1);
+          if (side === "bottom" && animate) context.fillRect(screenX + 1 + ((cellHash >>> 18) % Math.max(1, size - 4)), screenY + size - 2, 2, 1);
+        }
+      }
+
+      drawSide("left", left);
+      drawSide("right", right);
+      drawSide("top", top);
+      drawSide("bottom", bottom);
       return;
     }
 
@@ -209,3 +266,4 @@
     drawTransitions
   });
 });
+

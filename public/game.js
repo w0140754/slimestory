@@ -189,7 +189,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
-const sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=337");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=347");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -897,8 +897,7 @@ function canOccupyPlayerPoint(x, y) {
     x <= world.width - 8 &&
     y >= 15 &&
     y <= world.height - 1 &&
-    !hitsSolidObstacle(x, y) &&
-    !hitsWater(x, y)
+    !hitsSolidObstacle(x, y)
   );
 }
 
@@ -1053,6 +1052,8 @@ const {
   mushroomAwakeImage,
   mushroomFlashImage,
   crabImage,
+  crabBackImage,
+  crabFrontImage,
   makeMushroom,
   updateMushrooms,
   makeCrab,
@@ -1320,6 +1321,7 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
 
   crab: Object.freeze({
     bodyOffsetY: -6,
+    wetSpeedMultiplier: 1.25,
     projectileHitRadius: 9,
     lockRadiusX: 14,
     lockRadiusY: 7,
@@ -9359,7 +9361,8 @@ document.querySelectorAll(".stat-plus").forEach(button => {
 
 
 function worldPositionIsOpen(x, y) {
-  return !hitsSolidObstacle(x, y) && !hitsWater(x, y);
+  // Water is traversable for players. Void/solid geometry still blocks.
+  return !hitsSolidObstacle(x, y);
 }
 
 function moveWithWorldCollision(entity, nextX, nextY) {
@@ -9532,20 +9535,25 @@ function hitsSpawnFixtureObstacle(
 }
 
 function hitsPrototypeIslandVoid(x, y, playerRadius = 4) {
-  if (!isPrototypeIslandMap(currentMapId)) return false;
-
   const definition = WORLD_CONTENT?.maps?.[currentMapId] || null;
-  const terrainOccupancy = TERRAIN_RULES.circleCanOccupy(
-    definition,
-    x,
-    y,
-    playerRadius
+  const hasAuthoredTerrain = Boolean(
+    definition &&
+    typeof TERRAIN_RULES !== "undefined" &&
+    TERRAIN_RULES.terrainDefinition(definition)
   );
 
-  if (terrainOccupancy !== null) {
-    return !terrainOccupancy;
+  if (hasAuthoredTerrain) {
+    const terrainOccupancy = TERRAIN_RULES.circleCanOccupy(
+      definition,
+      x,
+      y,
+      playerRadius,
+      { allowWater: true }
+    );
+    return terrainOccupancy === false;
   }
 
+  if (!isPrototypeIslandMap(currentMapId)) return false;
   return !pointInPrototypeIslandWalkableArea(x, y);
 }
 
@@ -9735,7 +9743,11 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   if (!reflectionMode) {
     const visuallyHidden = player.shadowHidden && player.shadowHideRevealTime <= 0;
 
-    if (!visuallyHidden) {
+    const wading =
+      typeof terrainEntityIsWading === "function" &&
+      terrainEntityIsWading(player.x, player.y, currentMapId);
+
+    if (!visuallyHidden && !wading) {
       ctx.fillStyle = "rgba(35, 52, 37, .48)";
       ctx.fillRect(screenX - 5, screenY, 10, 3);
     }

@@ -20,7 +20,7 @@ const checks = [
   [server.includes('broadcastToMap(playerState.mapId, { type: "playerConsumableEffect", playerId, item }, socket);'), "existing consumable presentation broadcast retained"],
   [server.includes('playerState.hp = Math.min(playerState.maxHp, playerState.hp + 20)') && server.includes('const POTION_BUFF_MS = 300000;') && server.includes('const HEALING_POTION_COOLDOWN_MS = 15000;') && server.includes('const BUFF_POTION_COOLDOWN_MS = 1000;'), "potion healing/buff values and new cooldowns"],
   [game.includes('equippedWeapon() === "bow" ? "flex" : "none"'), "arrow HUD remains bow-only"],
-  [html.includes('/client-app.js?v=337') && html.includes('/client-network.js?v=337') && html.includes('/game.js?v=337'), "323 client cache keys"],
+  [html.includes('/client-app.js?v=350') && html.includes('/client-network.js?v=350') && html.includes('/game.js?v=350'), "323 client cache keys"],
 ];
 
 for (const [ok, label] of checks) {

@@ -6,6 +6,20 @@
 // UPDATE
 // -----------------------------------------------------------------------------
 function updateHudUi() {
+  const mobileInteractButton = document.getElementById("mobileInteractButton");
+  if (mobileInteractButton) {
+    const interactionAvailable = Boolean(
+      !player.isDead &&
+      !inventoryOpen &&
+      !shopOpen &&
+      !craftingOpen &&
+      !classResetConfirmOpen &&
+      nearbySpawnInteraction()
+    );
+    mobileInteractButton.classList.toggle("available", interactionAvailable);
+    mobileInteractButton.disabled = !interactionAvailable;
+  }
+
   const hpFill = document.getElementById("hpFill");
   if (hpFill) {
     const pct = Math.max(0, Math.min(1, player.hp / player.maxHp));
@@ -305,6 +319,14 @@ function updatePlayerStatusAndTimers(dt) {
   tickTimer(player, "shadowHideRevealTime", dt);
   tickTimer(player, "contactCooldown", dt);
   tickTimer(player, "wetTime", dt);
+
+  if (
+    typeof terrainEntityTouchesWater === "function" &&
+    terrainEntityTouchesWater(player.x, player.y, currentMapId, 4)
+  ) {
+    applyLocalWetStatus(player, player.wetDuration || GAME_CONFIG.player.wetDuration);
+  }
+
   tickTimer(player, "hurlReachTime", dt);
   const attackWasActive = player.attackTime > 0;
   tickTimer(player, "attackTime", dt);
@@ -488,6 +510,18 @@ function updateEnemySystems(dt) {
     called.add(profile.update);
     profile.update(dt);
   }
+
+  // Enemy Wet from open water is derived locally from the same authored
+  // terrain geometry the server uses. This mirrors the existing Rain approach
+  // and avoids a noisy wetTime packet every simulation tick.
+  if (typeof terrainEntityTouchesWater === "function") {
+    for (const { enemy } of activeEnemyRecords()) {
+      if (!enemy?.alive || enemy.carriedBy || (Number(enemy.hurlTime) || 0) > 0) continue;
+      if (terrainEntityTouchesWater(enemy.x, enemy.y, currentMapId, 4)) {
+        applyLocalWetStatus(enemy, enemy.wetDuration || GAME_CONFIG.status.enemyWetDuration);
+      }
+    }
+  }
 }
 
 const GAMEPLAY_UPDATE_SYSTEMS = Object.freeze([
@@ -618,6 +652,19 @@ function isPrototypeIslandMap(mapId = currentMapId) {
   return (
     mapId === PROTOTYPE_ISLAND_MAP_ID ||
     mapId === PROTOTYPE_ISLAND_WEST_MAP_ID
+  );
+}
+
+function isAuthoredTerrainMap(mapId = currentMapId) {
+  const definition =
+    typeof WORLD_CONTENT !== "undefined"
+      ? WORLD_CONTENT?.maps?.[mapId]
+      : null;
+
+  return Boolean(
+    definition &&
+    typeof TERRAIN_RULES !== "undefined" &&
+    TERRAIN_RULES.terrainDefinition(definition)
   );
 }
 
@@ -788,6 +835,10 @@ function drawPrototypeIslandGroundLayer(camX, camY) {
 
     if (typeof drawTerrainWaterSurfaceOverlay === "function") {
       drawTerrainWaterSurfaceOverlay(currentMapId, camX, camY);
+    }
+
+    if (typeof drawBeachTideOverlay === "function") {
+      drawBeachTideOverlay(currentMapId, camX, camY);
     }
 
     for (const cloud of rainClouds) {
@@ -1049,11 +1100,30 @@ function buildWorldDrawables(camX, camY) {
       addDrawable(
         drawables,
         sortY,
-        () => profile.draw(
-          enemy,
-          camX,
-          camY
-        )
+        () => {
+          profile.draw(
+            enemy,
+            camX,
+            camY
+          );
+          if (
+            !enemy.carriedBy &&
+            (Number(enemy.hurlTime) || 0) <= 0 &&
+            typeof drawTerrainWadingOverlay === "function"
+          ) {
+            drawTerrainWadingOverlay(
+              enemy.x,
+              enemy.y,
+              camX,
+              camY,
+              {
+                width: enemy.type === "crab" ? 24 : 14,
+                depth: enemy.type === "ghost" ? 4 : 5,
+                phase: enemy.phase || 0
+              }
+            );
+          }
+        }
       );
     }
 
@@ -1123,7 +1193,18 @@ function buildWorldDrawables(camX, camY) {
       addDrawable(
         drawables,
         remotePlayer.y,
-        () => drawRemotePlayer(remotePlayer, camX, camY)
+        () => {
+          drawRemotePlayer(remotePlayer, camX, camY);
+          if (typeof drawTerrainWadingOverlay === "function") {
+            drawTerrainWadingOverlay(
+              remotePlayer.x,
+              remotePlayer.y,
+              camX,
+              camY,
+              { width: 14, depth: 5, phase: 1.7 }
+            );
+          }
+        }
       );
     }
   }
@@ -1133,6 +1214,15 @@ function buildWorldDrawables(camX, camY) {
     player.y,
     () => {
       drawPlayer(camX, camY);
+      if (typeof drawTerrainWadingOverlay === "function") {
+        drawTerrainWadingOverlay(
+          player.x,
+          player.y,
+          camX,
+          camY,
+          { width: 14, depth: 5, phase: 0.4 }
+        );
+      }
       drawPvpMarker(player, camX, camY);
     }
   );
@@ -1187,7 +1277,7 @@ class GameRenderer {
     currentCamX = camera.x;
     currentCamY = camera.y;
 
-    if (isPrototypeIslandMap(currentMapId)) {
+    if (isPrototypeIslandMap(currentMapId) || isAuthoredTerrainMap(currentMapId)) {
       drawPrototypeIslandBackdrop();
       drawPrototypeIslandEarthFaces(camera.x, camera.y);
       drawPrototypeIslandGroundLayer(camera.x, camera.y);
@@ -1309,4 +1399,3 @@ window.gameSimulation = gameSimulation;
 window.onlineClient = onlineClient;
 
 gameApp.start();
-

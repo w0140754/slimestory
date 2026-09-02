@@ -426,6 +426,9 @@ function buildClientMapRegistry() {
   const prototypeIslandWestMap =
     buildSharedEnvironmentMapState("prototypeIslandWest");
 
+  const crabBeachMap =
+    buildSharedEnvironmentMapState("crabBeach");
+
   // Move the three existing goblin objects to their own connected map so their
   // combat/HP/respawn state remains exactly the same system as before.
   const goblinMapGoblins = goblins.slice();
@@ -851,6 +854,7 @@ function buildClientMapRegistry() {
     spawn: spawnMap,
     prototypeIsland: prototypeIslandMap,
     prototypeIslandWest: prototypeIslandWestMap,
+    crabBeach: crabBeachMap,
     meadow: meadowMap,
     hunterHollow: hunterHollowMap,
     goldSlimeDen: goldSlimeDenMap,
@@ -870,3 +874,4 @@ function buildClientMapRegistry() {
     mapStates,
   };
 }
+

@@ -10,6 +10,8 @@ class InputController {
   constructor() {
     this.keys = Object.create(null);
     this.commandQueue = [];
+    this.mobileDx = 0;
+    this.mobileDy = 0;
   }
 
   setKey(key, pressed) {
@@ -35,6 +37,13 @@ class InputController {
     for (const key of Object.keys(this.keys)) {
       this.keys[key] = false;
     }
+    this.mobileDx = 0;
+    this.mobileDy = 0;
+  }
+
+  setMobileMovement(dx, dy) {
+    this.mobileDx = Number.isFinite(dx) ? dx : 0;
+    this.mobileDy = Number.isFinite(dy) ? dy : 0;
   }
 
   getMovementVector() {
@@ -52,6 +61,11 @@ class InputController {
     if (this.keys["a"]) dx -= 1;
     if (this.keys["d"]) dx += 1;
 
+    if (Math.hypot(this.mobileDx, this.mobileDy) > 0.08) {
+      dx += this.mobileDx;
+      dy += this.mobileDy;
+    }
+
     const moving = dx !== 0 || dy !== 0;
 
     if (moving) {
@@ -65,6 +79,165 @@ class InputController {
 }
 
 const inputController = new InputController();
+
+const mobileControlsEnabled = window.matchMedia(
+  "(hover: none) and (pointer: coarse)"
+).matches;
+let mobileAimDx = 1;
+let mobileAimDy = 0;
+
+function mobileAimCanvasPoint(distance = 64) {
+  const playerScreenX = player.x - currentCamX;
+  const playerScreenY = player.y - currentCamY - 8;
+  return {
+    x: Math.max(0, Math.min(canvas.width, playerScreenX + mobileAimDx * distance)),
+    y: Math.max(0, Math.min(canvas.height, playerScreenY + mobileAimDy * distance))
+  };
+}
+
+function mobilePointerEventForCanvas(point) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    button: 0,
+    clientX: rect.left + point.x * (rect.width / canvas.width),
+    clientY: rect.top + point.y * (rect.height / canvas.height)
+  };
+}
+
+function installMobileControls() {
+  if (!mobileControlsEnabled) return;
+
+  const pad = document.getElementById("mobileMovePad");
+  const knob = document.getElementById("mobileMoveKnob");
+  const attack = document.getElementById("mobileAttackButton");
+  const interact = document.getElementById("mobileInteractButton");
+  if (!pad || !knob || !attack || !interact) return;
+
+  let movePointerId = null;
+  const updateMove = event => {
+    const rect = pad.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const radius = Math.max(1, rect.width * 0.32);
+    const length = Math.hypot(dx, dy);
+    const scale = length > radius ? radius / length : 1;
+    const knobX = dx * scale;
+    const knobY = dy * scale;
+    knob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+    const normalizedLength = Math.min(1, length / radius);
+    const nx = length > 0 ? dx / length : 0;
+    const ny = length > 0 ? dy / length : 0;
+    inputController.setMobileMovement(nx * normalizedLength, ny * normalizedLength);
+    if (normalizedLength > 0.18) {
+      mobileAimDx = nx;
+      mobileAimDy = ny;
+    }
+  };
+  const stopMove = event => {
+    if (movePointerId !== event.pointerId) return;
+    movePointerId = null;
+    knob.style.transform = "translate(0, 0)";
+    inputController.setMobileMovement(0, 0);
+  };
+  pad.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    movePointerId = event.pointerId;
+    pad.setPointerCapture(event.pointerId);
+    updateMove(event);
+  });
+  pad.addEventListener("pointermove", event => {
+    if (movePointerId === event.pointerId) updateMove(event);
+  });
+  pad.addEventListener("pointerup", stopMove);
+  pad.addEventListener("pointercancel", stopMove);
+
+  let attackPointerId = null;
+  const aimAttackFromEvent = event => {
+    const rect = attack.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const length = Math.hypot(dx, dy);
+    if (length > 8) {
+      mobileAimDx = dx / length;
+      mobileAimDy = dy / length;
+    }
+    const point = mobileAimCanvasPoint();
+    mouseCanvasX = point.x;
+    mouseCanvasY = point.y;
+    updateAttackAimFromPointer(point.x, point.y);
+  };
+  attack.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    attackPointerId = event.pointerId;
+    attack.setPointerCapture(event.pointerId);
+    aimAttackFromEvent(event);
+    handlePrimaryAttack(mobilePointerEventForCanvas(mobileAimCanvasPoint()));
+  });
+  attack.addEventListener("pointermove", event => {
+    if (attackPointerId === event.pointerId) aimAttackFromEvent(event);
+  });
+  const releaseAttack = event => {
+    if (attackPointerId !== event.pointerId) return;
+    attackPointerId = null;
+    handleBowVisualMouseUp(mobilePointerEventForCanvas(mobileAimCanvasPoint()));
+  };
+  attack.addEventListener("pointerup", releaseAttack);
+  attack.addEventListener("pointercancel", releaseAttack);
+
+  interact.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    if (!interact.classList.contains("available")) return;
+    inputController.queueCommand("interact");
+  });
+
+  const abilityKeys = ["shift", "space", "e", "r"];
+  for (const key of abilityKeys) {
+    const slot = document.getElementById(
+      key === "shift" ? "abilitySlotShift" :
+      key === "space" ? "abilitySlotSpace" :
+      key === "e" ? "abilitySlotE" : "abilitySlotR"
+    );
+    if (!slot) continue;
+    let pointerId = null;
+    slot.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      pointerId = event.pointerId;
+      slot.setPointerCapture(event.pointerId);
+      const point = mobileAimCanvasPoint();
+      mouseCanvasX = point.x;
+      mouseCanvasY = point.y;
+      inputController.queueCommand("useActiveSkill", { key });
+    });
+    slot.addEventListener("pointermove", event => {
+      if (pointerId !== event.pointerId) return;
+      const rect = slot.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+      const length = Math.hypot(dx, dy);
+      if (length <= 7) return;
+      mobileAimDx = dx / length;
+      mobileAimDy = dy / length;
+      const point = mobileAimCanvasPoint();
+      mouseCanvasX = point.x;
+      mouseCanvasY = point.y;
+      updateAttackAimFromPointer(point.x, point.y);
+    });
+    const releaseSkill = event => {
+      if (pointerId !== event.pointerId) return;
+      pointerId = null;
+      const skillId = skillBindings[key];
+      if (skillId === "focusFire") {
+        inputController.queueCommand("releaseFocusFire", { key });
+      } else if (skillId === "fireball") {
+        inputController.queueCommand("releaseFireball", { key });
+      }
+    };
+    slot.addEventListener("pointerup", releaseSkill);
+    slot.addEventListener("pointercancel", releaseSkill);
+  }
+}
+
+installMobileControls();
 
 const HUNTER_SNARE_MOVEMENT_KEYS = new Set([
   "w",

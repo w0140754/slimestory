@@ -13,7 +13,7 @@ assert.strictEqual(scaling.hallucinationBlinkRangeAtLevel(20), 60);
 
 assert(server.includes("Goblins intentionally phase through decorative trees."));
 assert(!server.includes("goblinTreeBases"));
-assert(/function goblinPositionAllowed\([\s\S]*?return mapPointAllowed\([\s\S]*?goblin\.mapId/.test(server));
+assert(/function goblinPositionAllowed\([\s\S]*?return enemyMapPointAllowed\([\s\S]*?goblin/.test(server));
 
 assert(combat.includes("const slashStartExtension = 8;"));
 assert(combat.includes("const slashEndExtension = 2;"));

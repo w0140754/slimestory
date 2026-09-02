@@ -1,3 +1,83 @@
+## v6-11-350 — Mobile controls prototype
+- Added an opt-in coarse-pointer mobile layout for landscape phones while preserving all desktop keyboard/mouse controls.
+- Added a left-thumb analog movement pad, a right-thumb hold/drag attack button, touch-enabled Shift/Space/E/R skill slots, and a contextual ACT button that becomes available near supported NPCs and stations.
+- Touch aim follows the last movement direction by default; dragging ATK or a skill button adjusts aim, and releasing Fireball/Focus Fire completes their existing charge/release lifecycle.
+- Added a portrait orientation prompt instead of relying on unsupported forced browser rotation, plus mobile viewport/safe-area handling.
+- Substantially reduced the HP/EXP, equipment/potion hotbar, skill buttons, and connection indicator on landscape phones. Desktop HUD sizing and behavior are unchanged.
+- Preserves v349 shoreline/water presentation, all gameplay values, multiplayer authority, and editor-authored world data.
+
+## v6-11-349 — Shoreline rendering cache-bust fix
+- Updated every browser script cache key to v349 so the v348 shoreline clipping and water-shadow corrections cannot be masked by cached v347 rendering modules.
+- Added a narrow shallow-water threshold at shorelines: sprites remain fully visible with their shadow while merely straddling land and water, then switch to the wading presentation once their foot area is properly inside the water.
+- Preserves v348 rendering logic, gameplay, traversal, Wet rules, Crab affinity, and editor-authored world data.
+
+## v6-11-348 — Shoreline wading presentation fix
+- Clipped player and enemy wading overlays to the actual water pixels beneath them, so shoreline overlap no longer paints a rectangular water band across dry ground.
+- Suppressed player and grounded-enemy shadows while their foot point is in water; shadows return immediately on dry ground.
+- Preserves v347 traversal, Wet rules, Crab speed affinity, combat behavior, and editor-authored world data.
+
+## v6-11-347 — Water traversal + Crab Wet affinity
+- Players and enemy species can now enter water by default instead of treating every pool/shoreline as an impassable safety barrier. Enemy species can explicitly opt out later with `canEnterWater: false`.
+- Standing/wading in water continuously applies **Wet** using the existing status rules and extinguishes Burn; Wet keeps its normal 3-second linger after leaving the water.
+- Added lightweight wading presentation for local/remote players and grounded enemies: the lower portion of the sprite is covered by an animated water/ripple band so entities read as partially submerged.
+- Crabs invert the normal Wet movement penalty: while Wet they gain a **1.25× movement multiplier**, making shoreline/water pursuit especially dangerous while other Wet enemies keep the existing slowdown.
+- Preserves v346 Crab combat tuning, v345 terrain lookup caching, portals, map layouts, and editor-authored world data.
+
+## v6-11-346 — Crab combat buff
+- Buffed Crab durability from **58 HP to 120 HP** and raised physical Defense from **4 to 18**, making the shell meaningfully tougher against physical attacks.
+- Increased Crab contact damage from **5–8 to 9–13** per hit.
+- Increased Crab aggro/chase speed from **24 to 42** while preserving its existing passive beach scuttle speed of 15, so calm Crabs still wander normally but become considerably faster once provoked.
+- Preserves Crab AI style, status interactions, drops, respawn behavior, map placement, and the latest editor-authored world data; this build changes Crab combat tuning only.
+
+## v6-11-345 — Terrain lookup cache
+- Optimized shared authored-terrain lookup with a per-map spatial bucket cache, so render/collision samples no longer scan every terrain paint region on every query.
+- Preserves exact paint-order and rectangle-edge behavior, including non-cell-aligned terrain regions; later paint regions still override earlier ones exactly as before.
+- Prototype Island West keeps the latest editor-authored **W48** map data unchanged; this build changes lookup performance only, not terrain layout or gameplay rules.
+- Added a regression that compares cached results against the original full-scan algorithm across Prototype Island West and reports candidate-bucket/performance diagnostics.
+
+## v6-11-344 — Terrain map runtime rendering
+- Fixed authored terrain maps outside the original Prototype Island pair falling back to the legacy grass ground renderer in-game.
+- Crab Beach now uses the shared runtime terrain renderer, so its sand, beach water, shoreline treatment, and animated tide/foam presentation match the map editor.
+- Generalized the renderer gate to detect any map with authored terrain data instead of hard-coding only `prototypeIsland` and `prototypeIslandWest`.
+- No map layout, enemy placement, Crab behavior, combat, portal, or authored world-data changes. The latest editor-authored world data is preserved unchanged at W44.
+
+## v6-11-343 — Crab Beach + sand terrain
+- Added a new **Crab Beach** map with a sandy shoreline, tide-pool water, four placed Crab spawns, and a return portal back to Prototype Island West.
+- Added a new shared **sand** terrain type to gameplay/editor data. Sand is walkable, blocks Magic Grass growth, renders with beach-specific pixel texture, and supports south-void faces like other terrain.
+- Added beach-styled water presentation where water meets sand, including lighter sandy shoreline treatment and a subtle animated foam/tide wash along beach edges.
+- Added **sand** to the map editor terrain brush so beach maps can be authored directly.
+- Preserved all existing combat, Crab behavior, potion, HUD, NPC, and authored-map systems aside from the intentional new Prototype Island West -> Crab Beach portal.
+
+## v6-11-342 — Crab face clip fix
+- Fixed the two-piece Crab walk presentation so the front/face section no longer reads as clipped at the top while scuttling.
+- Removed the walk-time vertical squash from the two-piece Crab renderer and tuned the front/back offsets so the scuttle still has motion without chopping the face.
+- Crab AI, combat, statuses, balance, editor placement, and authored world data are unchanged.
+
+## v6-11-341 — Crab two-piece animation
+- Replaced the Crab's single flat presentation with the user-supplied two-piece art split: `crab_back_v1.png` for the shell/rear section and `crab_front_v1.png` for the eyes/front claws.
+- The Crab renderer now animates the back and front sections independently with subtle idle bobbing, claw twitching, and out-of-phase sideways scuttle motion while preserving existing AI, combat, status, and multiplayer behavior.
+- Added a fresh combined `crab_v2.png` asset for cache-safe legacy/death presentation and a focused regression check covering the two-piece renderer wiring.
+
+## v6-11-340 — Crab wet status fix
+
+- Fixed Crab Wet presentation being drawn even when `wetTime` was zero, which made every Crab appear permanently Wet.
+- Crab droplets now render only while the Crab actually has active Wet status, matching Slime, Mushroom, and Goblin presentation guards.
+- Wet mechanics, duration, slowing/status rules, Crab AI/combat/balance, and authored map data are unchanged.
+- Preserves the newer map-editor-authored world override data incorporated into the v339 snapshot.
+
+## v6-11-339 — Crab renderer hardening
+
+- Fixed a second Crab renderer crash caused by a call to the nonexistent `drawBurnEffect` helper.
+- Crab burn visuals now use the same proven `drawPixelFlame` primitive already used by Slimes, Mushrooms, and Goblins, with no combat/status-rule change.
+- Audited the full Crab draw path for standalone renderer helper calls so the v337/v338 undefined-helper class cannot recur through another Crab-only helper.
+- Preserves the newer map-editor-authored world override data detected after v337; no authored map data was overwritten.
+
+## v6-11-338 — Crab render fix
+
+- Fixed a Crab renderer crash caused by a call to the nonexistent `drawEnemySpawnShimmer` helper.
+- Crab spawn scaling, idle/scuttle animation, status effects, combat, AI, editor placement, and balance are unchanged from v337.
+- No authored world/map data changed.
+
 ## v6-11-337 — Crab enemy
 
 - Added the user-drawn 30×16 **Crab** as a new editor-placeable enemy species without adding it to any existing authored map.

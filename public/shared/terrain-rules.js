@@ -15,6 +15,7 @@
     void: Object.freeze({ walkable: false, magicGrass: false }),
     grass: Object.freeze({ walkable: true, magicGrass: true }),
     dirt: Object.freeze({ walkable: true, magicGrass: true }),
+    sand: Object.freeze({ walkable: true, magicGrass: false }),
     water: Object.freeze({ walkable: false, magicGrass: false }),
     stone: Object.freeze({ walkable: true, magicGrass: false })
   });
@@ -68,18 +69,119 @@
     );
   }
 
-  function terrainTypeAt(mapDefinition, x, y) {
+  // Runtime terrain definitions are effectively immutable between world-content
+  // reloads, so build a tiny spatial index once per terrain object. Each 8px
+  // bucket stores only the paint regions that overlap that bucket. This keeps
+  // exact point/rectangle semantics (including non-cell-aligned region edges)
+  // while avoiding a full regions[] scan for every render/collision sample.
+  const TERRAIN_LOOKUP_CACHE = new WeakMap();
+
+  function terrainBucketKey(x, y, size) {
+    return `${Math.floor(Number(x) / size)},${Math.floor(Number(y) / size)}`;
+  }
+
+  function buildTerrainLookup(mapDefinition) {
     const terrain = terrainDefinition(mapDefinition);
     if (!terrain) return null;
 
-    let type = normalizeType(terrain.defaultType, "void");
+    const size = cellSize(mapDefinition);
     const regions = Array.isArray(terrain.regions) ? terrain.regions : [];
+    const buckets = new Map();
+    let validRegionCount = 0;
+    let bucketAssignments = 0;
+    let maxBucketSize = 0;
 
-    // Regions are paint operations: later entries sit on top of earlier ones.
-    // That makes the same schema convenient for a future visual terrain brush.
     for (const region of regions) {
       const rect = regionRect(region);
-      if (!rect || !pointInRect(x, y, rect)) continue;
+      if (!rect) continue;
+      validRegionCount += 1;
+
+      const compiled = { type: region.type, rect };
+      const minCol = Math.floor(rect.x / size);
+      const minRow = Math.floor(rect.y / size);
+      const maxCol = Math.ceil((rect.x + rect.width) / size) - 1;
+      const maxRow = Math.ceil((rect.y + rect.height) / size) - 1;
+
+      for (let row = minRow; row <= maxRow; row += 1) {
+        for (let col = minCol; col <= maxCol; col += 1) {
+          const key = `${col},${row}`;
+          let bucket = buckets.get(key);
+          if (!bucket) {
+            bucket = [];
+            buckets.set(key, bucket);
+          }
+          // Iteration order matches the authored paint-operation order, so
+          // later regions still override earlier regions exactly as before.
+          bucket.push(compiled);
+          bucketAssignments += 1;
+          if (bucket.length > maxBucketSize) maxBucketSize = bucket.length;
+        }
+      }
+    }
+
+    const lookup = {
+      terrain,
+      regions,
+      regionsLength: regions.length,
+      cellSize: size,
+      defaultTypeSource: terrain.defaultType,
+      defaultType: normalizeType(terrain.defaultType, "void"),
+      buckets,
+      validRegionCount,
+      bucketAssignments,
+      maxBucketSize
+    };
+    TERRAIN_LOOKUP_CACHE.set(terrain, lookup);
+    return lookup;
+  }
+
+  function terrainLookup(mapDefinition) {
+    const terrain = terrainDefinition(mapDefinition);
+    if (!terrain) return null;
+
+    const regions = Array.isArray(terrain.regions) ? terrain.regions : [];
+    const size = cellSize(mapDefinition);
+    const cached = TERRAIN_LOOKUP_CACHE.get(terrain);
+    if (
+      cached &&
+      cached.regions === regions &&
+      cached.regionsLength === regions.length &&
+      cached.cellSize === size &&
+      cached.defaultTypeSource === terrain.defaultType
+    ) {
+      return cached;
+    }
+    return buildTerrainLookup(mapDefinition);
+  }
+
+  function invalidateTerrainLookup(mapDefinition) {
+    const terrain = terrainDefinition(mapDefinition);
+    if (terrain) TERRAIN_LOOKUP_CACHE.delete(terrain);
+  }
+
+  function terrainLookupStats(mapDefinition) {
+    const lookup = terrainLookup(mapDefinition);
+    if (!lookup) return null;
+    return Object.freeze({
+      regionCount: lookup.regionsLength,
+      validRegionCount: lookup.validRegionCount,
+      bucketCount: lookup.buckets.size,
+      bucketAssignments: lookup.bucketAssignments,
+      maxBucketSize: lookup.maxBucketSize,
+      cellSize: lookup.cellSize
+    });
+  }
+
+  function terrainTypeAt(mapDefinition, x, y) {
+    const lookup = terrainLookup(mapDefinition);
+    if (!lookup) return null;
+
+    let type = lookup.defaultType;
+    const bucket = lookup.buckets.get(terrainBucketKey(x, y, lookup.cellSize));
+    if (!bucket) return type;
+
+    for (const region of bucket) {
+      if (!pointInRect(x, y, region.rect)) continue;
       type = normalizeType(region.type, type);
     }
 
@@ -124,14 +226,24 @@
     return true;
   }
 
-  function circleCanOccupy(mapDefinition, x, y, radius = 0) {
+  function circleCanOccupy(
+    mapDefinition,
+    x,
+    y,
+    radius = 0,
+    { allowWater = false } = {}
+  ) {
     if (!terrainDefinition(mapDefinition)) return null;
     return sampleCircle(
       mapDefinition,
       x,
       y,
       radius,
-      type => Boolean(typeRules(type).walkable)
+      type => (
+        normalizeType(type, "void") === "water"
+          ? Boolean(allowWater)
+          : Boolean(typeRules(type).walkable)
+      )
     );
   }
 
@@ -216,6 +328,8 @@
     cellSize,
     regionRect,
     terrainTypeAt,
+    terrainLookupStats,
+    invalidateTerrainLookup,
     typeRules,
     isWalkableAt,
     canGrowMagicGrassAt,
@@ -224,3 +338,4 @@
     clampSegmentToNonVoid
   });
 });
+

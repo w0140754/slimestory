@@ -406,6 +406,107 @@
         }
       },
 
+
+      crabBeach: {
+        name: "Crab Beach",
+        dimensions: {
+          width: 920,
+          height: 560
+        },
+        playerSpawns: [
+          { id: "westDune", x: 156, y: 286 },
+          { id: "centerBeach", x: 356, y: 286 },
+          { id: "eastShore", x: 708, y: 300 }
+        ],
+        portals: [
+          {
+            id: "crabBeach:portal:west",
+            x: 116, y: 252, width: 12, height: 60,
+            targetMapId: "prototypeIslandWest",
+            targetSpawnId: "center"
+          }
+        ],
+        environment: {
+          trees: [],
+          tallGrass: [],
+          rocks: [
+            { id: "crabBeach:rock:1", x: 228, y: 222, variant: "plain" },
+            { id: "crabBeach:rock:2", x: 322, y: 360, variant: "plain" },
+            { id: "crabBeach:rock:3", x: 438, y: 206, variant: "plain" }
+          ],
+          sceneryRocks: [
+            { id: "crabBeach:sceneryRock:1", x: 184, y: 172, collision: { width: 10, height: 6 } },
+            { id: "crabBeach:sceneryRock:2", x: 270, y: 404, collision: { width: 10, height: 6 } },
+            { id: "crabBeach:sceneryRock:3", x: 516, y: 188, collision: { width: 10, height: 6 } },
+            { id: "crabBeach:sceneryRock:4", x: 654, y: 396, collision: { width: 10, height: 6 } }
+          ],
+          harvestFlowers: [],
+          houses: []
+        },
+        enemySpawns: [
+          {
+            id: "crabBeach:crab:1",
+            type: "crab",
+            level: 3,
+            x: 286,
+            y: 246,
+            phase: 0.4,
+            wanderRadiusX: 24,
+            wanderRadiusY: 10
+          },
+          {
+            id: "crabBeach:crab:2",
+            type: "crab",
+            level: 3,
+            x: 382,
+            y: 318,
+            phase: 1.1,
+            wanderRadiusX: 24,
+            wanderRadiusY: 10
+          },
+          {
+            id: "crabBeach:crab:3",
+            type: "crab",
+            level: 4,
+            x: 548,
+            y: 258,
+            phase: 2.1,
+            wanderRadiusX: 26,
+            wanderRadiusY: 10
+          },
+          {
+            id: "crabBeach:crab:4",
+            type: "crab",
+            level: 4,
+            x: 640,
+            y: 332,
+            phase: 3.2,
+            wanderRadiusX: 26,
+            wanderRadiusY: 10
+          }
+        ],
+        terrain: {
+          cellSize: 8,
+          defaultType: "void",
+          regions: [
+            { type: "sand", x: 120, y: 140, width: 640, height: 264 },
+            { type: "sand", x: 96, y: 220, width: 48, height: 88 },
+            { type: "sand", x: 176, y: 124, width: 464, height: 24 },
+            { type: "sand", x: 176, y: 404, width: 420, height: 16 },
+            { type: "sand", x: 760, y: 236, width: 40, height: 72 },
+            { type: "water", x: 488, y: 228, width: 304, height: 164 },
+            { type: "water", x: 536, y: 196, width: 256, height: 196 },
+            { type: "water", x: 600, y: 164, width: 192, height: 228 },
+            { type: "water", x: 680, y: 140, width: 112, height: 252 },
+            { type: "water", x: 396, y: 248, width: 56, height: 48 },
+            { type: "water", x: 404, y: 240, width: 40, height: 64 }
+          ]
+        },
+        collision: {
+          waterRects: []
+        }
+      },
+
       meadow: {
         enemySpawns: [
           {

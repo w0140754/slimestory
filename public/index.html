@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
 <title>Slime Story Online</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png?v=215">
 <style>
@@ -32,6 +32,148 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     background: #6f9f52;
+  }
+
+  #mobileControls,
+  #mobileRotatePrompt {
+    display: none;
+  }
+
+  #mobileControls {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 18;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  #mobileMovePad {
+    position: absolute;
+    left: max(14px, env(safe-area-inset-left));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 244, 194, .52);
+    background: rgba(20, 24, 20, .42);
+    box-shadow: inset 0 0 0 7px rgba(20, 24, 20, .18), 2px 3px 0 rgba(0,0,0,.28);
+    pointer-events: auto;
+  }
+
+  #mobileMoveKnob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 38px;
+    height: 38px;
+    margin: -19px 0 0 -19px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 244, 194, .75);
+    background: rgba(88, 111, 71, .88);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.35);
+    transform: translate(0, 0);
+  }
+
+  .mobile-action-button {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    color: #fff6d4;
+    border: 2px solid #b89d68;
+    background: rgba(69, 52, 39, .82);
+    box-shadow: 3px 3px 0 rgba(0,0,0,.35);
+    font: 700 11px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  #mobileAttackButton {
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  #mobileInteractButton {
+    right: max(96px, calc(env(safe-area-inset-right) + 96px));
+    bottom: max(23px, calc(env(safe-area-inset-bottom) + 23px));
+    width: 54px;
+    height: 54px;
+    opacity: .28;
+    transform: scale(.88);
+    transition: opacity .12s linear, transform .12s linear;
+  }
+
+  #mobileInteractButton.available {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  #mobileRotatePrompt {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    color: #fff6d4;
+    background: #1b211b;
+    font: 700 15px/1.5 monospace;
+    text-align: center;
+  }
+
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    #gameViewport,
+    canvas {
+      touch-action: none;
+    }
+
+    #mobileControls {
+      display: block;
+    }
+
+    #abilityBar {
+      right: max(10px, env(safe-area-inset-right));
+      top: 12px;
+      transform: none;
+      grid-template-columns: repeat(4, 46px);
+      grid-template-rows: 46px;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .ability-slot {
+      width: 46px;
+      height: 46px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .ability-slot img {
+      width: 34px;
+      height: 34px;
+    }
+
+    #bottomUi {
+      transform: translateX(-50%) scale(.72);
+      transform-origin: top center;
+    }
+
+    #hpBarWrap {
+      bottom: 5px;
+      transform: translateX(-50%) scale(.66);
+      transform-origin: bottom center;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+    #mobileRotatePrompt {
+      display: flex;
+    }
   }
 
   #onlineStatus {
@@ -4099,12 +4241,97 @@
     }
   }
 
+  /* Mobile prototype overrides intentionally live last so the desktop
+     narrow-window rules above cannot enlarge or reposition touch HUD groups. */
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    #onlineStatus {
+      right: max(4px, env(safe-area-inset-right));
+      top: max(4px, env(safe-area-inset-top));
+      padding: 2px 3px;
+      font-size: 6px;
+    }
+
+    #bottomUi {
+      top: 5px !important;
+      transform: translateX(-50%) scale(.46) !important;
+      transform-origin: top center !important;
+    }
+
+    #hpBarWrap {
+      bottom: 3px !important;
+      width: 320px !important;
+      transform: translateX(-50%) scale(.48) !important;
+      transform-origin: bottom center !important;
+    }
+
+    #hpBar,
+    #xpBar {
+      width: 320px !important;
+    }
+
+    #abilityBar {
+      right: max(7px, env(safe-area-inset-right)) !important;
+      top: max(7px, env(safe-area-inset-top)) !important;
+      transform: none !important;
+      grid-template-columns: repeat(4, 36px) !important;
+      grid-template-rows: 36px !important;
+      gap: 4px !important;
+    }
+
+    .ability-slot {
+      width: 36px !important;
+      height: 36px !important;
+    }
+
+    .ability-slot img {
+      width: 27px !important;
+      height: 27px !important;
+    }
+
+    .ability-slot .hotbar-label {
+      font-size: 6px !important;
+    }
+
+    .ability-slot .ability-cooldown-text {
+      font-size: 8px !important;
+    }
+
+    #mobileMovePad {
+      width: 82px;
+      height: 82px;
+    }
+
+    #mobileMoveKnob {
+      width: 34px;
+      height: 34px;
+      margin: -17px 0 0 -17px;
+    }
+
+    #mobileAttackButton {
+      width: 60px;
+      height: 60px;
+    }
+
+    #mobileInteractButton {
+      right: max(86px, calc(env(safe-area-inset-right) + 86px));
+      width: 46px;
+      height: 46px;
+    }
+  }
+
 </style>
 </head>
 <body>
 <div id="onlineStatus">CONNECTING…</div>
 <div id="gameViewport">
 <canvas id="game" width="320" height="180"></canvas>
+<div id="mobileControls" aria-label="Mobile game controls">
+  <div id="mobileMovePad" aria-label="Movement joystick">
+    <div id="mobileMoveKnob"></div>
+  </div>
+  <button id="mobileInteractButton" class="mobile-action-button" type="button" aria-label="Interact">ACT</button>
+  <button id="mobileAttackButton" class="mobile-action-button" type="button" aria-label="Attack">ATK</button>
+</div>
 <button id="respawnButton" type="button">Respawn</button>
 <div id="hpBarWrap">
     <div id="hudBuffs" aria-label="Potion buffs">
@@ -4132,6 +4359,7 @@
       <span id="arrowHudCount">0</span>
     </div>
 </div>
+<div id="mobileRotatePrompt">Rotate your phone sideways to play Slime Story.</div>
 
 <div id="abilityBar">
       <div class="ability-slot empty" id="abilitySlotShift">
@@ -5048,33 +5276,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=337"></script>
-<script src="/shared/terrain-rules.js?v=337"></script>
-<script src="/shared/terrain-presentation.js?v=337"></script>
-<script src="/shared/combat-balance.js?v=26"></script>
-<script src="/shared/ability-scaling.js?v=337"></script>
-<script src="/shared/rain-field.js?v=337"></script>
-<script src="/shared/camouflage-rules.js?v=337"></script>
-<script src="/shared/enemy-net-protocol.js?v=337"></script>
-<script src="/shared/player-net-protocol.js?v=337"></script>
-<script src="/client-config.js?v=337"></script>
-<script src="/client-utils.js?v=337"></script>
-<script src="/client-world.js?v=337"></script>
-<script src="/client-maps.js?v=337"></script>
-<script src="/client-enemies.js?v=337"></script>
-<script src="/client-enemy-runtime.js?v=337"></script>
-<script src="/client-enemy-rendering.js?v=337"></script>
-<script src="/client-combat.js?v=337"></script>
-<script src="/client-abilities.js?v=337"></script>
-<script src="/client-magus-abilities.js?v=337"></script>
-<script src="/client-class-abilities.js?v=337"></script>
-<script src="/client-status.js?v=337"></script>
-<script src="/client-fire-environment.js?v=337"></script>
-<script src="/client-network.js?v=337"></script>
-<script src="/client-simulation-foundation.js?v=337"></script>
-<script src="/game.js?v=337"></script>
-<script src="/client-terrain.js?v=337"></script>
-<script src="/client-input.js?v=337"></script>
-<script src="/client-app.js?v=337"></script>
+<script src="/shared/world-content-runtime.js?v=350"></script>
+<script src="/shared/terrain-rules.js?v=350"></script>
+<script src="/shared/terrain-presentation.js?v=350"></script>
+<script src="/shared/combat-balance.js?v=350"></script>
+<script src="/shared/ability-scaling.js?v=350"></script>
+<script src="/shared/rain-field.js?v=350"></script>
+<script src="/shared/camouflage-rules.js?v=350"></script>
+<script src="/shared/enemy-net-protocol.js?v=350"></script>
+<script src="/shared/player-net-protocol.js?v=350"></script>
+<script src="/client-config.js?v=350"></script>
+<script src="/client-utils.js?v=350"></script>
+<script src="/client-world.js?v=350"></script>
+<script src="/client-maps.js?v=350"></script>
+<script src="/client-enemies.js?v=350"></script>
+<script src="/client-enemy-runtime.js?v=350"></script>
+<script src="/client-enemy-rendering.js?v=350"></script>
+<script src="/client-combat.js?v=350"></script>
+<script src="/client-abilities.js?v=350"></script>
+<script src="/client-magus-abilities.js?v=350"></script>
+<script src="/client-class-abilities.js?v=350"></script>
+<script src="/client-status.js?v=350"></script>
+<script src="/client-fire-environment.js?v=350"></script>
+<script src="/client-network.js?v=350"></script>
+<script src="/client-simulation-foundation.js?v=350"></script>
+<script src="/game.js?v=350"></script>
+<script src="/client-terrain.js?v=350"></script>
+<script src="/client-input.js?v=350"></script>
+<script src="/client-app.js?v=350"></script>
 </body>
 </html>

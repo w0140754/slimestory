@@ -12,13 +12,13 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = require(path.join(root, "package.json"));
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-337";'), "server build must be 6-11-337");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-337";'), "client build must be 6-11-337");
-assert(pkg.version === "0.6.11.337", "package version must be 0.6.11.337");
-assert(html.includes('/shared/combat-balance.js?v=26') && html.includes('/game.js?v=337'), "v336 cache keys missing");
-assert(balanceText.includes('const VERSION = 26;'), "combat balance version must be 26");
+assert(server.includes('const BUILD_VERSION = "6-11-350";'), "server build must be 6-11-350");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-350";'), "client build must be 6-11-350");
+assert(pkg.version === "0.6.11.350", "package version must be 0.6.11.350");
+assert(html.includes('/shared/combat-balance.js?v=350') && html.includes('/game.js?v=350'), "v336 cache keys missing");
+assert(balanceText.includes('const VERSION = 27;'), "combat balance version must be 27");
 assert(fs.existsSync(path.join(root, "public", "assets", "sapgem_wand_v3.png")), "redrawn Sapgem sprite missing");
-assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=337")'), "redrawn Sapgem sprite not wired with fresh cache key");
+assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=347")'), "redrawn Sapgem sprite not wired with fresh cache key");
 
 const expected = [
   ["weapon_shepherdStaff", 10, "slow"],

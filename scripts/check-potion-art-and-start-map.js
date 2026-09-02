@@ -15,9 +15,9 @@ const enemies = read("public", "client-enemies.js");
 const worldSource = read("public", "shared", "world-content.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-337";'), "server build is not 6-11-337");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-337";'), "client build is not 6-11-337");
-assert(pkg.version === "0.6.11.337", "package version is not 0.6.11.337");
+assert(server.includes('const BUILD_VERSION = "6-11-350";'), "server build is not 6-11-350");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-350";'), "client build is not 6-11-350");
+assert(pkg.version === "0.6.11.350", "package version is not 0.6.11.350");
 
 for (const [file, marker] of [
   ["attack_potion_v2.png", "attack potion"],
@@ -28,8 +28,8 @@ for (const [file, marker] of [
   assert(bytes.subarray(1, 4).toString("ascii") === "PNG", `${marker} asset is not PNG`);
   assert(bytes.readUInt32BE(16) === 16 && bytes.readUInt32BE(20) === 16, `${marker} asset must be 16x16`);
 }
-assert(enemies.includes('attackPotionImage.src = "assets/attack_potion_v2.png?v=337"'), "attack potion does not use supplied sprite");
-assert(enemies.includes('magicPotionImage.src = "assets/magic_potion_v2.png?v=337"'), "magic potion does not use supplied sprite");
+assert(enemies.includes('attackPotionImage.src = "assets/attack_potion_v2.png?v=347"'), "attack potion does not use supplied sprite");
+assert(enemies.includes('magicPotionImage.src = "assets/magic_potion_v2.png?v=347"'), "magic potion does not use supplied sprite");
 
 assert(game.includes("function sharedDefaultPlayerLoadTarget()"), "client global load-target resolver missing");
 assert(app.includes("const initialPlayerLoadTarget = sharedDefaultPlayerLoadTarget();"), "startup does not resolve global load target");

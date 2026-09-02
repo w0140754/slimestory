@@ -68,8 +68,8 @@ function buildClientEnemyFoundation() {
     return c.toDataURL("image/png");
   }
   const healingPotionImage = loadImage("assets/healing_potion_v2.png");
-  const attackPotionImage = new Image(); attackPotionImage.src = "assets/attack_potion_v2.png?v=337";
-  const magicPotionImage = new Image(); magicPotionImage.src = "assets/magic_potion_v2.png?v=337";
+  const attackPotionImage = new Image(); attackPotionImage.src = "assets/attack_potion_v2.png?v=347";
+  const magicPotionImage = new Image(); magicPotionImage.src = "assets/magic_potion_v2.png?v=347";
 
 
   // Inventory / equipment menu uses the exact same game sprites.
@@ -273,9 +273,9 @@ function buildClientEnemyFoundation() {
   // First mushroom-family enemy. It stays still/asleep while passive, wakes
   // into the annoyed sprite when combat/control motion begins, then returns to
   // its home point and falls asleep again after disengaging.
-  const mushroomSleepImage = loadImage("assets/mushroom_sleep_v1.png?v=337");
-  const mushroomAwakeImage = loadImage("assets/mushroom_awake_v1.png?v=337");
-  const mushroomFlashImage = loadImage("assets/mushroom_flash_v1.png?v=337");
+  const mushroomSleepImage = loadImage("assets/mushroom_sleep_v1.png?v=347");
+  const mushroomAwakeImage = loadImage("assets/mushroom_awake_v1.png?v=347");
+  const mushroomFlashImage = loadImage("assets/mushroom_flash_v1.png?v=347");
 
   function makeMushroom(
     x,
@@ -331,7 +331,9 @@ function buildClientEnemyFoundation() {
   // -----------------------------------------------------------------------------
   // User-drawn 30x16 crab. Server AI supplies horizontal-biased scuttling;
   // the client adds only lightweight presentation motion.
-  const crabImage = loadImage("assets/crab_v1.png?v=337");
+  const crabImage = loadImage("assets/crab_v2.png?v=347");
+  const crabBackImage = loadImage("assets/crab_back_v1.png?v=347");
+  const crabFrontImage = loadImage("assets/crab_front_v1.png?v=347");
 
   function makeCrab(x, y, phase = 0, level = 2) {
     return {
@@ -343,10 +345,10 @@ function buildClientEnemyFoundation() {
       dir: 1,
       phase,
       speed: 15,
-      chaseSpeed: 24,
+      chaseSpeed: 42,
       detectionRadius: 76,
-      maxHp: 58,
-      hp: 58,
+      maxHp: 120,
+      hp: 120,
       alive: true,
       respawnTime: 0,
       hitFlash: 0,
@@ -893,14 +895,10 @@ function buildClientEnemyFoundation() {
     const shadowAlpha =
       0.46 - hopWave * 0.16;
 
-    ctx.fillStyle =
-      `rgba(38, 47, 28, ${shadowAlpha})`;
-    ctx.fillRect(
-      Math.round(screenX - shadowWidth / 2),
-      screenY,
-      shadowWidth,
-      4
-    );
+    if (!(typeof terrainEntityIsWading === "function" && terrainEntityIsWading(slime.x, slime.y))) {
+      ctx.fillStyle = `rgba(38, 47, 28, ${shadowAlpha})`;
+      ctx.fillRect(Math.round(screenX - shadowWidth / 2), screenY, shadowWidth, 4);
+    }
 
     const drawX =
       Math.round(screenX - drawWidth / 2);
@@ -1174,6 +1172,8 @@ function buildClientEnemyFoundation() {
     mushroomAwakeImage,
     mushroomFlashImage,
     crabImage,
+    crabBackImage,
+    crabFrontImage,
     makeMushroom,
     updateMushrooms,
     makeCrab,

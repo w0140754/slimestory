@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-337";
+const BUILD_VERSION = "6-11-350";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -663,6 +663,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
   }),
   crab: Object.freeze({
     bodyOffsetY: -6,
+    // Water traversal is allowed for enemy species by default. Crab keeps the
+    // default access and uniquely turns Wet into a movement advantage.
+    wetSpeedMultiplier: 1.25,
     meleeBodyRadius: 8,
     fireSpreadChance: 0.42,
     respawnSeconds: 32,
@@ -769,6 +772,13 @@ function serverEnemyProfile(enemyOrType) {
     SERVER_ENEMY_RUNTIME_PROFILES[type] ||
     null
   );
+}
+
+function serverEnemyCanEnterWater(enemyOrType) {
+  const profile = serverEnemyProfile(enemyOrType);
+  // Default-open prevents water from becoming a universal safe zone. Future
+  // species opt out explicitly with canEnterWater: false.
+  return profile?.canEnterWater !== false;
 }
 
 // -----------------------------------------------------------------------------
@@ -1079,7 +1089,19 @@ function serverEnemyMovementMultiplier(enemy) {
     multiplier = Math.min(multiplier, enemy.magicGrassSlowMultiplier);
   }
   if (enemy.wetTime > 0) {
-    multiplier = Math.min(multiplier, STATUS_RULES.enemyWetSpeedMultiplier);
+    const wetMultiplier = Number(serverEnemyProfile(enemy)?.wetSpeedMultiplier);
+    if (Number.isFinite(wetMultiplier) && wetMultiplier > 1) {
+      // Crab-style Wet affinity is a bonus layered on top of any existing
+      // snare/grass control, rather than erasing those debuffs.
+      multiplier *= wetMultiplier;
+    } else {
+      multiplier = Math.min(
+        multiplier,
+        Number.isFinite(wetMultiplier)
+          ? wetMultiplier
+          : STATUS_RULES.enemyWetSpeedMultiplier
+      );
+    }
   }
 
   return multiplier;
@@ -6073,11 +6095,12 @@ function tickEnemyReturningHome(enemy, dt) {
     moveServerSlime(enemy, moveX, moveY, speed, dt);
   } else if (enemy.type === "goblin") {
     // Goblins phase through decorative trees during all movement states. They
-    // still respect the map's actual walkable/water bounds through mapPointAllowed().
+    // still respect authored terrain/void while water remains traversable by
+    // default through the enemy capability rule.
     const nextX = enemy.x + moveX * speed * dt;
     const nextY = enemy.y + moveY * speed * dt;
-    if (mapPointAllowed(enemy.mapId, nextX, enemy.y)) enemy.x = nextX;
-    if (mapPointAllowed(enemy.mapId, enemy.x, nextY)) enemy.y = nextY;
+    if (enemyMapPointAllowed(enemy, nextX, enemy.y)) enemy.x = nextX;
+    if (enemyMapPointAllowed(enemy, enemy.x, nextY)) enemy.y = nextY;
     enemy.moving = true;
     enemy.walkTime += dt;
   } else if (enemy.type === "ghost") {
@@ -6626,14 +6649,14 @@ function serverCircleRectCollision(
 }
 
 // Goblins intentionally phase through decorative trees. Their movement still
-// respects authored terrain, water, and map bounds via mapPointAllowed().
+// respects authored terrain and map bounds; water access is species-capability driven.
 function goblinPositionAllowed(
   goblin,
   x,
   y
 ) {
-  return mapPointAllowed(
-    goblin.mapId,
+  return enemyMapPointAllowed(
+    goblin,
     x,
     y
   );
@@ -9346,7 +9369,7 @@ function handleSharedEnemyAction(
 function bigGoldSlimePositionAllowed(slime, x, y) {
   // Gold Slime Den now has true map dimensions instead of an inset invisible
   // restriction. The elite can pursue anywhere the player can actually stand.
-  return mapPointAllowed(slime.mapId, x, y, 10);
+  return enemyMapPointAllowed(slime, x, y, 10);
 }
 
 function moveServerBigGoldSlime(
@@ -9752,7 +9775,7 @@ function makeServerCrab(spawn) {
 
     // Crabs prefer long horizontal legs and only make small vertical changes.
     speed: 15,
-    chaseSpeed: 24,
+    chaseSpeed: 42,
     detectionRadius: 76,
     aggroMode: ENEMY_AGGRO_PROVOKED,
 
@@ -9777,8 +9800,8 @@ function makeServerCrab(spawn) {
     wanderRadiusX: 38,
     wanderRadiusY: 9,
 
-    maxHp: 58,
-    hp: 58,
+    maxHp: 120,
+    hp: 120,
     alive: true,
     respawnTime: 0,
 
@@ -9883,7 +9906,7 @@ function tryServerCrabContact(crab) {
   broadcastEnemyHitPlayer(
     target.player,
     crab,
-    5 + Math.floor(Math.random() * 4),
+    9 + Math.floor(Math.random() * 5),
     dx,
     dy,
     76,
@@ -10396,7 +10419,8 @@ function mapPointAllowed(
   mapId,
   x,
   y,
-  padding = 0
+  padding = 0,
+  { allowWater = false } = {}
 ) {
   const dimensions =
     mapWorldDimensions(mapId);
@@ -10417,7 +10441,8 @@ function mapPointAllowed(
     definition,
     x,
     y,
-    padding
+    padding,
+    { allowWater }
   );
 
   if (terrainOccupancy !== null) {
@@ -10437,19 +10462,21 @@ function mapPointAllowed(
       return false;
     }
 
-    const waterRects =
-      definition.collision?.waterRects || [];
+    if (!allowWater) {
+      const waterRects =
+        definition.collision?.waterRects || [];
 
-    for (const rect of waterRects) {
-      if (
-        pointInsideRect(
-          x,
-          y,
-          rect,
-          padding
-        )
-      ) {
-        return false;
+      for (const rect of waterRects) {
+        if (
+          pointInsideRect(
+            x,
+            y,
+            rect,
+            padding
+          )
+        ) {
+          return false;
+        }
       }
     }
   }
@@ -10457,13 +10484,23 @@ function mapPointAllowed(
   return true;
 }
 
+function enemyMapPointAllowed(enemy, x, y, padding = 0) {
+  return mapPointAllowed(
+    enemy.mapId,
+    x,
+    y,
+    padding,
+    { allowWater: serverEnemyCanEnterWater(enemy) }
+  );
+}
+
 function slimePositionAllowed(
   slime,
   x,
   y
 ) {
-  return mapPointAllowed(
-    slime.mapId,
+  return enemyMapPointAllowed(
+    slime,
     x,
     y,
     6
@@ -10652,7 +10689,7 @@ function serverEnemyPositionAllowedForHurl(enemy, x, y) {
     return goblinPositionAllowed(enemy, x, y);
   }
 
-  return mapPointAllowed(enemy.mapId, x, y);
+  return enemyMapPointAllowed(enemy, x, y);
 }
 
 function finishServerEnemyHurl(
@@ -11214,6 +11251,54 @@ function angleDifference(a, b) {
 
 
 
+function serverPointTouchesWater(mapId, x, y, radius = 3) {
+  const definition = WORLD_CONTENT.maps[mapId] || {};
+  if (TERRAIN_RULES.terrainDefinition(definition)) {
+    return TERRAIN_RULES.circleTouchesType(
+      definition,
+      x,
+      y,
+      Math.max(0, Number(radius) || 0),
+      "water"
+    );
+  }
+
+  for (const rect of definition.collision?.waterRects || []) {
+    if (pointInsideRect(x, y, rect, Math.max(0, Number(radius) || 0))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function refreshServerWaterWetness() {
+  for (const target of players.values()) {
+    if (
+      target.hp > 0 &&
+      serverPointTouchesWater(target.mapId, target.x, target.y, 4)
+    ) {
+      applyServerPlayerWet(target, STATUS_RULES.playerWetDuration);
+    }
+  }
+
+  for (const enemy of allSharedEnemies()) {
+    if (
+      !enemy.alive ||
+      enemy.returningHome ||
+      !serverEnemyCanEnterWater(enemy) ||
+      !serverPointTouchesWater(enemy.mapId, enemy.x, enemy.y, 4)
+    ) {
+      continue;
+    }
+
+    const wasWet = enemy.wetTime > 0;
+    applyServerEnemyWet(enemy, STATUS_RULES.enemyWetDuration);
+    if (!wasWet && enemy.wetTime > 0) {
+      rainDiagnostics.enemyWetEnters += 1;
+    }
+  }
+}
+
 // 30 Hz authoritative enemy simulation. Normal enemy replication is a compact
 // 10 Hz precise combat stream plus event-driven passive wander plans; full snapshots are map-entry/keyframe only.
 let previousSlimeTick = Date.now();
@@ -11228,6 +11313,7 @@ setInterval(() => {
 
   tickSharedEnemySnareStatuses(dt);
   tickServerPlayerBurns(dt);
+  refreshServerWaterWetness();
   tickServerPlayerWetTimers(dt);
   tickServerPlayerPresentation(dt);
   tickServerCamouflage();

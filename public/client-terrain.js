@@ -128,6 +128,59 @@ function drawTerrainWaterSurfaceOverlay(mapId = currentMapId, camX = 0, camY = 0
   return true;
 }
 
+function drawBeachTideOverlay(mapId = currentMapId, camX = 0, camY = 0) {
+  const definition = currentTerrainDefinition(mapId);
+  if (!definition) return false;
+
+  const size = TERRAIN_RULES.cellSize(definition);
+  const startX = Math.floor(camX / size) * size;
+  const startY = Math.floor(camY / size) * size;
+  const endX = camX + VIEW_W + size;
+  const endY = camY + VIEW_H + size;
+  const tidePhase = Math.floor((worldTime || 0) * 2) % 6;
+  let drew = false;
+
+  const sampleType = (x, y) => TERRAIN_RULES.terrainTypeAt(definition, x, y);
+
+  ctx.save();
+  for (let worldY = startY; worldY < endY; worldY += size) {
+    for (let worldX = startX; worldX < endX; worldX += size) {
+      const type = sampleType(worldX + size / 2, worldY + size / 2);
+      if (type !== "sand") continue;
+
+      const top = sampleType(worldX + size / 2, worldY - 1);
+      const bottom = sampleType(worldX + size / 2, worldY + size + 1);
+      const left = sampleType(worldX - 1, worldY + size / 2);
+      const right = sampleType(worldX + size + 1, worldY + size / 2);
+      if (top !== "water" && bottom !== "water" && left !== "water" && right !== "water") {
+        continue;
+      }
+
+      const screenX = Math.round(worldX - camX);
+      const screenY = Math.round(worldY - camY);
+      const hashValue = terrainHash(worldX, worldY, 209);
+      const drift = ((hashValue >>> 3) % 2) + (tidePhase >= 3 ? 1 : 0);
+
+      ctx.fillStyle = "rgba(171, 152, 108, 0.28)";
+      if (top === "water") ctx.fillRect(screenX, screenY, size, Math.min(2 + drift, size));
+      if (bottom === "water") ctx.fillRect(screenX, screenY + size - Math.min(2 + drift, size), size, Math.min(2 + drift, size));
+      if (left === "water") ctx.fillRect(screenX, screenY, Math.min(2 + drift, size), size);
+      if (right === "water") ctx.fillRect(screenX + size - Math.min(2 + drift, size), screenY, Math.min(2 + drift, size), size);
+
+      if (((hashValue >>> 6) % 6) === tidePhase) {
+        ctx.fillStyle = "rgba(240, 248, 252, 0.72)";
+        if (top === "water") ctx.fillRect(screenX + 1, screenY + drift, Math.max(2, size - 2), 1);
+        if (bottom === "water") ctx.fillRect(screenX + 1, screenY + size - 1 - drift, Math.max(2, size - 2), 1);
+        if (left === "water") ctx.fillRect(screenX + drift, screenY + 1, 1, Math.max(2, size - 2));
+        if (right === "water") ctx.fillRect(screenX + size - 1 - drift, screenY + 1, 1, Math.max(2, size - 2));
+      }
+      drew = true;
+    }
+  }
+  ctx.restore();
+  return drew;
+}
+
 function drawTerrainCellTexture(type, worldX, worldY, screenX, screenY, size) {
   TERRAIN_PRESENTATION.drawCellTexture(
     ctx,
@@ -150,7 +203,8 @@ function drawTerrainTransitions(definition, type, worldX, worldY, screenX, scree
     screenX,
     screenY,
     size,
-    (x, y) => TERRAIN_RULES.terrainTypeAt(definition, x, y)
+    (x, y) => TERRAIN_RULES.terrainTypeAt(definition, x, y),
+    worldTime
   );
 }
 
@@ -186,6 +240,129 @@ function drawTerrainMapTop(mapId, camX, camY) {
   return true;
 }
 
+
+function terrainEntityTouchesWater(
+  worldX,
+  worldY,
+  mapId = currentMapId,
+  radius = 3
+) {
+  const definition = currentTerrainDefinition(mapId);
+  if (definition) {
+    return TERRAIN_RULES.circleTouchesType(
+      definition,
+      worldX,
+      worldY,
+      Math.max(0, Number(radius) || 0),
+      "water"
+    );
+  }
+
+  // Legacy maps currently expose one pond/water collision helper. Keep the
+  // same result for local/remote entities without changing legacy map data.
+  if (
+    mapId === currentMapId &&
+    typeof hitsWater === "function"
+  ) {
+    return hitsWater(worldX, worldY);
+  }
+
+  return false;
+}
+
+function terrainPointIsWater(worldX, worldY, mapId = currentMapId) {
+  const definition = currentTerrainDefinition(mapId);
+  if (definition) {
+    return TERRAIN_RULES.terrainTypeAt(definition, worldX, worldY) === "water";
+  }
+  return Boolean(
+    mapId === currentMapId &&
+    typeof hitsWater === "function" &&
+    hitsWater(worldX, worldY)
+  );
+}
+
+function terrainEntityIsWading(worldX, worldY, mapId = currentMapId) {
+  // Keep the immediate shoreline visually shallow. Requiring a small footprint
+  // to be inside water prevents a hard half-sprite cut when an entity is only
+  // straddling the land/water boundary.
+  return (
+    terrainPointIsWater(worldX, worldY, mapId) &&
+    terrainPointIsWater(worldX - 3, worldY, mapId) &&
+    terrainPointIsWater(worldX + 3, worldY, mapId) &&
+    terrainPointIsWater(worldX, worldY - 2, mapId)
+  );
+}
+
+function drawTerrainWadingOverlay(
+  worldX,
+  worldY,
+  camX = 0,
+  camY = 0,
+  {
+    width = 14,
+    depth = 5,
+    phase = 0,
+    mapId = currentMapId
+  } = {}
+) {
+  if (!terrainEntityIsWading(worldX, worldY, mapId)) return false;
+
+  const safeWidth = Math.max(6, Math.round(Number(width) || 14));
+  const safeDepth = Math.max(3, Math.round(Number(depth) || 5));
+  const screenX = Math.round(worldX - camX);
+  const screenY = Math.round(worldY - camY);
+  const left = screenX - Math.floor(safeWidth / 2);
+  const top = screenY - safeDepth + 1;
+  const ripple = Math.floor((worldTime * 5 + Number(phase || 0) * 3) % 4);
+
+  ctx.save();
+  // Clip each overlay row to the actual water beneath it so shoreline overlap
+  // cannot paint a rectangular blue band across dry terrain.
+  ctx.beginPath();
+  let hasWaterPixels = false;
+  for (let row = 0; row <= safeDepth; row++) {
+    const sampleWorldY = worldY - safeDepth + 1 + row;
+    let runStart = -1;
+    for (let column = 0; column <= safeWidth; column++) {
+      const inWater =
+        column < safeWidth &&
+        terrainPointIsWater(
+          worldX - Math.floor(safeWidth / 2) + column + 0.5,
+          sampleWorldY + 0.5,
+          mapId
+        );
+      if (inWater && runStart < 0) runStart = column;
+      if (!inWater && runStart >= 0) {
+        ctx.rect(left + runStart, top + row, column - runStart, 1);
+        hasWaterPixels = true;
+        runStart = -1;
+      }
+    }
+  }
+  if (!hasWaterPixels) {
+    ctx.restore();
+    return false;
+  }
+  ctx.clip();
+  // The opaque lower band is what makes the feet/body read as submerged rather
+  // than simply standing on a blue tile. A brighter one-pixel ripple sells the
+  // water surface without introducing another per-frame terrain scan.
+  ctx.fillStyle = "rgba(63, 118, 144, .93)";
+  ctx.fillRect(left, top + 1, safeWidth, safeDepth);
+
+  ctx.fillStyle = "rgba(114, 170, 190, .92)";
+  ctx.fillRect(left + 1, top, Math.max(3, safeWidth - 2), 1);
+
+  ctx.fillStyle = "rgba(238, 249, 255, .60)";
+  const rippleWidth = Math.max(3, Math.floor(safeWidth * 0.38));
+  const rippleX = left + 1 + (ripple % Math.max(1, safeWidth - rippleWidth - 1));
+  ctx.fillRect(rippleX, top, rippleWidth, 1);
+  ctx.restore();
+
+  return true;
+}
+
 const TERRAIN_SOUTH_FACE_CACHE = new Map();
 
 function terrainSouthFaceStyle(type) {
@@ -194,6 +371,14 @@ function terrainSouthFaceStyle(type) {
       face: "#315e76",
       band: "#294f65",
       bottom: "#1f3d50"
+    };
+  }
+
+  if (type === "sand") {
+    return {
+      face: "#bea36d",
+      band: "#a68e61",
+      bottom: "#806946"
     };
   }
 
@@ -290,5 +475,3 @@ function drawTerrainSouthVoidFaces(mapId, camX, camY, depth = 10) {
   ctx.restore();
   return true;
 }
-
-

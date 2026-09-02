@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Slime Story Map Editor</title>
-  <link rel="stylesheet" href="/map-editor.css?v=337">
+  <link rel="stylesheet" href="/map-editor.css?v=350">
 </head>
 <body>
   <div class="editor-shell">
     <header class="editor-header">
       <div>
         <div class="eyebrow">SLIME STORY • DEV TOOL</div>
-        <h1>Map Editor <span>v337</span></h1>
+        <h1>Map Editor <span>v347</span></h1>
       </div>
       <div class="header-actions">
         <a class="button secondary" href="/">Play Game</a>
@@ -47,11 +47,14 @@
             <button type="button" class="terrain-tool" data-terrain="dirt" title="Dirt (2)">
               <span class="swatch dirt"></span><span>Dirt</span><kbd>2</kbd>
             </button>
-            <button type="button" class="terrain-tool" data-terrain="water" title="Water (3)">
-              <span class="swatch water"></span><span>Water</span><kbd>3</kbd>
+            <button type="button" class="terrain-tool" data-terrain="sand" title="Sand (3)">
+              <span class="swatch sand"></span><span>Sand</span><kbd>3</kbd>
             </button>
-            <button type="button" class="terrain-tool" data-terrain="void" title="Void / erase (4)">
-              <span class="swatch void"></span><span>Void</span><kbd>4</kbd>
+            <button type="button" class="terrain-tool" data-terrain="water" title="Water (4)">
+              <span class="swatch water"></span><span>Water</span><kbd>4</kbd>
+            </button>
+            <button type="button" class="terrain-tool" data-terrain="void" title="Void / erase (5)">
+              <span class="swatch void"></span><span>Void</span><kbd>5</kbd>
             </button>
           </div>
           <label class="field-label spaced" for="brushSize">Brush size</label>
@@ -73,11 +76,11 @@
             <button type="button" class="palette-tool" data-place="sceneryRock"><span class="palette-icon scenery-rock">■</span><span>Scenery rock</span></button>
             <button type="button" class="palette-tool" data-place="harvestFlower"><span class="palette-icon flower-object">✿</span><span>Harvest flower</span></button>
             <button type="button" class="palette-tool" data-place="house"><span class="palette-icon house-object">⌂</span><span>House</span></button>
-            <button type="button" class="palette-tool" data-place="shopkeeperNpc"><img class="palette-sprite" src="/assets/shopkeeper_npc_v1.png?v=337" alt=""><span>Shopkeeper NPC</span></button>
-            <button type="button" class="palette-tool" data-place="hunterNpc"><img class="palette-sprite" src="/assets/hunter_npc_v1.png?v=337" alt=""><span>Hunter NPC</span></button>
-            <button type="button" class="palette-tool" data-place="jesterNpc"><img class="palette-sprite" src="/assets/jester_npc_v1.png?v=337" alt=""><span>Jester NPC</span></button>
-            <button type="button" class="palette-tool" data-place="craftingTableNpc"><img class="palette-sprite" src="/assets/wood_bench_v2.png?v=337" alt=""><span>Crafting Table</span></button>
-            <button type="button" class="palette-tool" data-place="classResetCrystalNpc"><img class="palette-sprite" src="/assets/class_reset_crystal.png?v=337" alt=""><span>Class Reset Crystal</span></button>
+            <button type="button" class="palette-tool" data-place="shopkeeperNpc"><img class="palette-sprite" src="/assets/shopkeeper_npc_v1.png?v=347" alt=""><span>Shopkeeper NPC</span></button>
+            <button type="button" class="palette-tool" data-place="hunterNpc"><img class="palette-sprite" src="/assets/hunter_npc_v1.png?v=347" alt=""><span>Hunter NPC</span></button>
+            <button type="button" class="palette-tool" data-place="jesterNpc"><img class="palette-sprite" src="/assets/jester_npc_v1.png?v=347" alt=""><span>Jester NPC</span></button>
+            <button type="button" class="palette-tool" data-place="craftingTableNpc"><img class="palette-sprite" src="/assets/wood_bench_v2.png?v=347" alt=""><span>Crafting Table</span></button>
+            <button type="button" class="palette-tool" data-place="classResetCrystalNpc"><img class="palette-sprite" src="/assets/class_reset_crystal.png?v=347" alt=""><span>Class Reset Crystal</span></button>
             <button type="button" class="palette-tool" data-place="enemySpawn"><span class="palette-icon enemy-object">E</span><span>Enemy spawn</span></button>
             <button type="button" class="palette-tool" data-place="playerSpawn"><span class="palette-icon player-object">+</span><span>Player spawn</span></button>
             <button type="button" class="palette-tool" data-place="portal"><span class="palette-icon portal-object">▯</span><span>Portal</span></button>
@@ -152,10 +155,10 @@
       </aside>
     </main>
   </div>
-<script src="/shared/world-content-runtime.js?v=337"></script>
-  <script src="/shared/terrain-rules.js?v=337"></script>
-  <script src="/shared/terrain-presentation.js?v=337"></script>
-  <script src="/shared/map-draft-format.js?v=337"></script>
-  <script src="/map-editor.js?v=337"></script>
+<script src="/shared/world-content-runtime.js?v=350"></script>
+  <script src="/shared/terrain-rules.js?v=350"></script>
+  <script src="/shared/terrain-presentation.js?v=350"></script>
+  <script src="/shared/map-draft-format.js?v=350"></script>
+  <script src="/map-editor.js?v=350"></script>
 </body>
 </html>

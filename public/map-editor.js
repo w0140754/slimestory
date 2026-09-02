@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "337";
+  const BUILD = "350";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -91,15 +91,15 @@
   const editorSceneryRockImage = new Image();
   editorSceneryRockImage.src = "./assets/scenery_grassy_rock_v2.png";
   const editorShopkeeperNpcImage = new Image();
-  editorShopkeeperNpcImage.src = "./assets/shopkeeper_npc_v1.png?v=337";
+  editorShopkeeperNpcImage.src = "./assets/shopkeeper_npc_v1.png?v=347";
   const editorHunterNpcImage = new Image();
-  editorHunterNpcImage.src = "./assets/hunter_npc_v1.png?v=337";
+  editorHunterNpcImage.src = "./assets/hunter_npc_v1.png?v=347";
   const editorJesterNpcImage = new Image();
-  editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=337";
+  editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=347";
   const editorWoodBenchImage = new Image();
-  editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=337";
+  editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=347";
   const editorClassResetCrystalImage = new Image();
-  editorClassResetCrystalImage.src = "./assets/class_reset_crystal.png?v=337";
+  editorClassResetCrystalImage.src = "./assets/class_reset_crystal.png?v=347";
 
   const HOUSE_WIDTH = 64;
   const HOUSE_HEIGHT = 64;
@@ -348,6 +348,7 @@
     const styles = {
       grass: { face: "#855b3b", band: "#725036", bottom: "#543723" },
       dirt: { face: "#855b3b", band: "#725036", bottom: "#543723" },
+      sand: { face: "#bea36d", band: "#a68e61", bottom: "#806946" },
       water: { face: "#315e76", band: "#294f65", bottom: "#1f3d50" }
     };
 
@@ -417,7 +418,7 @@
         ctx.fillStyle = palette.base;
         ctx.fillRect(x, y, size, size);
         TERRAIN_PRESENTATION.drawCellTexture(ctx, type, x, y, x, y, size, nowSeconds);
-        TERRAIN_PRESENTATION.drawTransitions(ctx, type, x, y, x, y, size, typeAtWorld);
+        TERRAIN_PRESENTATION.drawTransitions(ctx, type, x, y, x, y, size, typeAtWorld, nowSeconds);
       }
     }
 
@@ -1973,8 +1974,9 @@
     }
     if (event.key === "1") setActiveTerrain("grass");
     if (event.key === "2") setActiveTerrain("dirt");
-    if (event.key === "3") setActiveTerrain("water");
-    if (event.key === "4") setActiveTerrain("void");
+    if (event.key === "3") setActiveTerrain("sand");
+    if (event.key === "4") setActiveTerrain("water");
+    if (event.key === "5") setActiveTerrain("void");
   });
 
   window.addEventListener("keyup", event => {
