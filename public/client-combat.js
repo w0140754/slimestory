@@ -1291,6 +1291,9 @@ function repeatHeldPrimaryAttackIfReady() {
 function handleBowVisualMouseUp(event) {
   if (event.button === 0) {
     primaryAttackHeld = false;
+    if (typeof clearMobileAutoBowTarget === "function") {
+      clearMobileAutoBowTarget();
+    }
   }
   if (
     player.isDead ||
@@ -1351,6 +1354,9 @@ function updateBowVisualState(dt) {
     player.bowDrawing = false;
     player.bowDrawAmount = 0;
     player.bowReleaseTime = 0;
+    if (typeof clearMobileAutoBowTarget === "function") {
+      clearMobileAutoBowTarget();
+    }
     return;
   }
 
@@ -1367,6 +1373,12 @@ function updateBowVisualState(dt) {
       );
 
     player.bowReleaseTime = 0;
+    if (
+      typeof updateMobilePointBowShot === "function" &&
+      updateMobilePointBowShot()
+    ) {
+      return;
+    }
     return;
   }
 

@@ -15,6 +15,60 @@ function aimPlayerTowardPoint(targetX, targetY) {
   player.attackAimAngle = Math.atan2(dy, dx);
 }
 
+function resolvePlayerPointTarget(
+  targetX,
+  targetY,
+  {
+    minRange = 0,
+    maxRange = Infinity,
+    insetX = 5,
+    insetTop = 5,
+    insetBottom = 5
+  } = {}
+) {
+  const originX = player.x;
+  const originY = player.y - 8;
+  let dx = Number(targetX) - originX;
+  let dy = Number(targetY) - originY;
+  let distance = Math.hypot(dx, dy);
+
+  if (!Number.isFinite(distance)) {
+    dx = Math.cos(player.attackAimAngle || 0);
+    dy = Math.sin(player.attackAimAngle || 0);
+    distance = 1;
+  } else if (distance <= 0.001) {
+    dx = Math.cos(player.attackAimAngle || 0);
+    dy = Math.sin(player.attackAimAngle || 0);
+    distance = 1;
+  }
+
+  const clampedDistance = Math.max(
+    Math.max(0, Number(minRange) || 0),
+    Math.min(
+      Number.isFinite(Number(maxRange)) ? Number(maxRange) : distance,
+      distance
+    )
+  );
+  const scale = clampedDistance / distance;
+  const resolvedX = clampToWorld(
+    originX + dx * scale,
+    insetX,
+    world.width - insetX
+  );
+  const resolvedY = clampToWorld(
+    originY + dy * scale,
+    insetTop,
+    world.height - insetBottom
+  );
+
+  return {
+    x: resolvedX,
+    y: resolvedY,
+    angle: Math.atan2(resolvedY - originY, resolvedX - originX),
+    radius: Math.hypot(resolvedX - originX, resolvedY - originY)
+  };
+}
+
 function updateCanvasCursor() {
   // Rain Cloud no longer has self-targeting/repositioning, so there is no
   // ability-specific cursor state to maintain here.
@@ -120,9 +174,10 @@ function normalizeActiveSkillKey(event) {
   return null;
 }
 
-function triggerActiveSkillForKey(key) {
+function triggerActiveSkillForKey(key, options = {}) {
   const skillId = skillBindings[key];
   if (!skillId || !isAbilityUnlocked(skillId)) return false;
+  const pointTarget = options?.pointTarget || null;
 
   if (
     player.hunterSnareSetting &&
@@ -183,11 +238,11 @@ function triggerActiveSkillForKey(key) {
   }
 
   if (skillId === "fireball") {
-    return beginFireballAim(key);
+    return beginFireballAim(key, pointTarget);
   }
 
   if (skillId === "rainCloud") {
-    return beginRainCloudCast();
+    return beginRainCloudCast(pointTarget);
   }
 
   return false;
@@ -206,4 +261,3 @@ function handleActiveSkillKeyDown(event, activeSkillKey) {
 
   return true;
 }
-

@@ -1,3 +1,11 @@
+## v6-11-355 — Mobile point targeting
+
+- Changed mobile Bow attacks to a two-step point-target flow: tap ATK, then tap the battlefield. The Bow automatically holds its normal full draw and releases toward that point; close taps still use the existing Bow-smack fallback.
+- Changed mobile Ignite (Fireball), Rainbloom (Rain Cloud), and Focus Fire (the rapid-fire barrage) to tap-skill, tap-battlefield placement.
+- Added a compact target prompt and a bright armed-state outline so it is always clear which attack is waiting for a target; tapping the armed control again cancels it.
+- Direct spell/marker points are clamped to each skill's existing minimum and maximum range. Damage, cooldowns, ammo costs, projectile behavior, and multiplayer authority are unchanged.
+- Preserved desktop mouse/keyboard hold-and-release controls and the live map-editor-authored map override revision 50 unchanged.
+
 ## v6-11-354 — Mobile HUD and weapon reach tuning
 
 - Enlarged the mobile Items 1–3 / Equipment 4–8 toolbar again for easier reading and tapping.

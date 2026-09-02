@@ -45,10 +45,10 @@ for (const name of assetNames) {
 }
 
 const checks = [
-  [packageJson.version === "0.6.11.354", "package version is 0.6.11.354"],
-  [server.includes('const BUILD_VERSION = "6-11-354";') && read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-354";'), "server/client build versions are 330"],
-  [indexHtml.includes('/client-enemies.js?v=354') && indexHtml.includes('/client-enemy-rendering.js?v=354') && indexHtml.includes('/game.js?v=354'), "330 game cache keys"],
-  [editorHtml.includes('/map-editor.js?v=354') && editor.includes('const BUILD = "351";'), "330 editor cache/build keys"],
+  [packageJson.version === "0.6.11.355", "package version is 0.6.11.355"],
+  [server.includes('const BUILD_VERSION = "6-11-355";') && read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-355";'), "server/client build versions are 330"],
+  [indexHtml.includes('/client-enemies.js?v=355') && indexHtml.includes('/client-enemy-rendering.js?v=355') && indexHtml.includes('/game.js?v=355'), "330 game cache keys"],
+  [editorHtml.includes('/map-editor.js?v=355') && editor.includes('const BUILD = "351";'), "330 editor cache/build keys"],
   [server.includes('mushroom: Object.freeze({') && server.includes('mushroom: makeServerMushroom') && server.includes('const sharedMushrooms =') && server.includes('tickSharedMushrooms(dt);'), "server registry/factory/collection/tick wiring"],
   [/function makeServerMushroom\([\s\S]*?type: "mushroom"[\s\S]*?aggroMode: ENEMY_AGGRO_PROVOKED/.test(server), "mushroom starts provoked-only"],
   [/function tickSharedMushrooms\([\s\S]*?Passive state: deliberately no wander target choice or movement\./.test(server), "sleeping mushroom has no passive wander"],

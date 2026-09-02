@@ -145,7 +145,21 @@ function fireballAimRadius() {
     (FIREBALL_AIM_MAX_RANGE - FIREBALL_AIM_MIN_RANGE) * progress;
 }
 
-function fireballLandingPoint() {
+function fireballLandingPoint(pointTarget = null) {
+  if (
+    Number.isFinite(Number(pointTarget?.x)) &&
+    Number.isFinite(Number(pointTarget?.y))
+  ) {
+    return resolvePlayerPointTarget(
+      Number(pointTarget.x),
+      Number(pointTarget.y),
+      {
+        minRange: FIREBALL_AIM_MIN_RANGE,
+        maxRange: FIREBALL_AIM_MAX_RANGE
+      }
+    );
+  }
+
   const target = getCurrentWorldMouseTarget();
   let dx = target.x - player.x;
   let dy = target.y - (player.y - 8);
@@ -185,7 +199,7 @@ function cancelFireballAim() {
   return true;
 }
 
-function beginFireballAim(boundKey = null) {
+function beginFireballAim(boundKey = null, pointTarget = null) {
   if (!isAbilityUnlocked("fireball")) return false;
 
   if (!isWandTypeWeapon()) {
@@ -210,7 +224,7 @@ function beginFireballAim(boundKey = null) {
   player.fireballTargetY = null;
   player.fireballTargetAngle = null;
 
-  const target = getCurrentWorldMouseTarget();
+  const target = pointTarget || getCurrentWorldMouseTarget();
   aimPlayerTowardPoint(target.x, target.y);
 
   if (typeof onlineClient !== "undefined") {
@@ -220,7 +234,7 @@ function beginFireballAim(boundKey = null) {
   return true;
 }
 
-function releaseFireballAim() {
+function releaseFireballAim(pointTarget = null) {
   if (!player.fireballAiming) return false;
 
   if (currentMapId !== player.fireballAimMapId) {
@@ -228,7 +242,7 @@ function releaseFireballAim() {
     return true;
   }
 
-  const landing = fireballLandingPoint();
+  const landing = fireballLandingPoint(pointTarget);
 
   clearFireballChargeState();
   player.attackAimAngle = landing.angle;
@@ -424,7 +438,7 @@ function cancelRainCloudCast() {
   return true;
 }
 
-function beginRainCloudCast() {
+function beginRainCloudCast(pointTarget = null) {
   if (!isAbilityUnlocked("rainCloud")) return false;
 
   if (!isWandTypeWeapon()) {
@@ -453,7 +467,7 @@ function beginRainCloudCast() {
 
   breakShadowHide();
 
-  const mouseTarget = getCurrentWorldMouseTarget();
+  const mouseTarget = pointTarget || getCurrentWorldMouseTarget();
   const target = resolveRainCloudCastTarget(mouseTarget.x, mouseTarget.y);
 
   player.rainCloudCasting = true;
@@ -2180,4 +2194,3 @@ function drawJesterClone(camX, camY) {
     camY
   );
 }
-

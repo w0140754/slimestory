@@ -569,6 +569,11 @@ function processGameCommand(command) {
     return;
   }
 
+  if (command.type === "mobilePointTarget") {
+    executeMobilePointTargetCommand(command.payload);
+    return;
+  }
+
   if (command.type === "interact") {
     if (player.rainCloudCasting) return;
     interactWithNearbyObject();

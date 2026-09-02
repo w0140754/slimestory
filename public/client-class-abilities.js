@@ -132,7 +132,24 @@ function beginFocusFireCharge(boundKey = null) {
   return true;
 }
 
-function focusFireLandingPoint() {
+function focusFireLandingPoint(pointTarget = null) {
+  if (
+    Number.isFinite(Number(pointTarget?.x)) &&
+    Number.isFinite(Number(pointTarget?.y))
+  ) {
+    return resolvePlayerPointTarget(
+      Number(pointTarget.x),
+      Number(pointTarget.y),
+      {
+        minRange: FOCUS_FIRE_MIN_RADIUS,
+        maxRange: FOCUS_FIRE_MAX_RADIUS,
+        insetX: 4,
+        insetTop: 4,
+        insetBottom: 4
+      }
+    );
+  }
+
   const target = getCurrentWorldMouseTarget();
   let dx = target.x - player.x;
   let dy = target.y - (player.y - 8);
@@ -158,7 +175,7 @@ function focusFireLandingPoint() {
   };
 }
 
-function releaseFocusFireCharge() {
+function releaseFocusFireCharge(pointTarget = null) {
   if (!player.focusFireCharging) return false;
 
   if (
@@ -169,7 +186,7 @@ function releaseFocusFireCharge() {
     return true;
   }
 
-  const landing = focusFireLandingPoint();
+  const landing = focusFireLandingPoint(pointTarget);
 
   player.focusFireCharging = false;
   player.focusFireOpening = true;
