@@ -7742,11 +7742,11 @@ function updateInventoryUi() {
   document.querySelectorAll('#inventoryPage [data-utility-hotbar-assignable="true"]').forEach(element => {
     const itemId = element.dataset.utilityItem;
     const eligible = utilityHotbarItemCanBeAssigned(itemId) && consumableCount(itemId) > 0;
-    element.classList.toggle("hotbar-selected", false);
+    element.classList.toggle("hotbar-selected", itemId === selectedHotbarInventoryItemId);
     element.classList.toggle("hotbar-ineligible", !eligible);
     element.draggable = eligible;
     if (eligible) {
-      element.title = `${utilityItemDisplayName(itemId)} · drag to Items 1–3`;
+      element.title = `${utilityItemDisplayName(itemId)} · drag, or tap then choose Items 1–3`;
     }
   });
 
@@ -8967,6 +8967,10 @@ document.getElementById("craftClose").addEventListener("click", () => {
   setCraftingOpen(false);
 });
 
+document.getElementById("craftOverlay").addEventListener("pointerdown", event => {
+  if (event.target === event.currentTarget) setCraftingOpen(false);
+});
+
 document.getElementById("classResetYes").addEventListener("click", () => {
   setClassResetConfirmOpen(false);
   resetClassAndSkills();
@@ -8995,7 +8999,16 @@ document.getElementById("craftGrid").addEventListener("click", event => {
 });
 
 document.getElementById("inventoryPage").addEventListener("click", event => {
-  if (event.target.closest('[data-utility-hotbar-assignable="true"]')) return;
+  const utilityElement = event.target.closest('[data-utility-hotbar-assignable="true"]');
+  if (utilityElement) {
+    const utilityItemId = utilityElement.dataset.utilityItem;
+    if (!utilityHotbarItemCanBeAssigned(utilityItemId) || consumableCount(utilityItemId) <= 0) {
+      return;
+    }
+    selectedHotbarInventoryItemId = utilityItemId;
+    updateInventoryUi();
+    return;
+  }
 
   const itemElement =
     event.target.closest(
@@ -9131,6 +9144,15 @@ menuItemHotkeyRail?.addEventListener("contextmenu", event => {
 });
 
 const menuUtilityHotkeyRail = document.getElementById("menuUtilityHotkeyRail");
+menuUtilityHotkeyRail?.addEventListener("click", event => {
+  const slot = event.target.closest("[data-menu-utility-slot]");
+  if (!slot || !utilityHotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) return;
+  assignUtilityItemToHotbar(
+    selectedHotbarInventoryItemId,
+    Number(slot.dataset.menuUtilitySlot)
+  );
+});
+
 menuUtilityHotkeyRail?.addEventListener("dragstart", event => {
   const slot = event.target.closest("[data-menu-utility-slot]");
   if (!slot) return;

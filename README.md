@@ -1,3 +1,12 @@
+## v6-11-353 — Mobile toolbar, crafting, and hotbar assignment
+
+- Enlarged the mobile Items 1–3 / Equipment 4–8 toolbar while keeping desktop HUD sizing unchanged.
+- Rebuilt the crafting menu as a compact landscape panel with dense recipe cards, internal scrolling, a large always-visible close button, and tap-outside dismissal.
+- Added a persistent compact assignment dock to the mobile Inventory and Class pages.
+- Mobile players can now tap a potion or weapon and then tap its Items/Equipment slot; active skills use the same tap-skill, tap-slot workflow.
+- Desktop drag-and-drop and right-click clearing remain available and unchanged.
+- Preserved the live map-editor-authored map override revision 50 unchanged.
+
 ## v6-11-352 — Mobile world scale and compact shop
 
 - Mobile coarse-pointer clients now render the world at a 256×144 logical viewport instead of 320×180, making players, mobs, tiles, attack spacing, and distance cues about 25% larger while leaving the DOM HUD independently sized.

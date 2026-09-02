@@ -4271,7 +4271,7 @@
 
     #bottomUi {
       top: 5px !important;
-      transform: translateX(-50%) scale(.52) !important;
+      transform: translateX(-50%) scale(.64) !important;
       transform-origin: top center !important;
     }
 
@@ -4423,10 +4423,83 @@
       display: none;
     }
 
+    #craftOverlay {
+      height: 100dvh;
+      padding:
+        max(6px, env(safe-area-inset-top))
+        max(6px, env(safe-area-inset-right))
+        max(6px, env(safe-area-inset-bottom))
+        max(6px, env(safe-area-inset-left));
+      box-sizing: border-box;
+    }
+
+    #craftPanel {
+      width: min(640px, 88vw);
+      height: min(300px, 82dvh);
+      max-height: min(300px, 82dvh);
+      min-height: 0;
+      border-width: 2px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #craftTop {
+      min-height: 34px;
+      flex: 0 0 34px;
+    }
+
+    #craftTitle {
+      padding: 0 9px;
+      font-size: 11px;
+    }
+
+    #craftClose {
+      flex: 0 0 46px;
+      width: 46px;
+      font-size: 18px;
+    }
+
+    #craftGrid {
+      flex: 1 1 auto;
+      min-height: 0;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      padding: 5px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      align-content: start;
+    }
+
+    .craft-recipe {
+      min-height: 52px;
+      grid-template-columns: 22px minmax(0, 1fr);
+      column-gap: 4px;
+      padding: 4px;
+      border-width: 1px;
+    }
+
+    .craft-recipe > img {
+      width: 22px;
+      height: 22px;
+    }
+
+    .craft-recipe-name { font-size: 8px; }
+    .craft-recipe-cost { gap: 2px; font-size: 6px; }
+    .craft-ingredient-icon { width: 10px; height: 10px; }
+    .craft-ingredient-check { margin-left: 0; font-size: 8px; }
+    .craft-recipe-status { font-size: 6px; }
+
+    #craftFooter {
+      display: none;
+    }
+
     #inventoryOverlay {
       height: 100dvh;
-      grid-template-columns: minmax(0, 1fr) !important;
+      grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+      grid-template-rows: minmax(0, 1fr) auto !important;
       column-gap: 0 !important;
+      row-gap: 4px;
       padding:
         max(6px, env(safe-area-inset-top))
         max(6px, env(safe-area-inset-right))
@@ -4435,12 +4508,71 @@
       box-sizing: border-box;
     }
 
-    #inventoryOverlay .menu-hotkey-rail {
-      display: none !important;
+    #inventoryOverlay .menu-hotkey-rail:not(.context-hidden) {
+      display: block !important;
+      width: 100%;
+      padding: 4px;
+      align-self: end;
+    }
+
+    #inventoryOverlay .menu-hotkey-rail-title,
+    #inventoryOverlay .menu-hotkey-rail-help,
+    #inventoryOverlay .menu-hotkey-item-name,
+    #inventoryOverlay #menuSkillHotkeyRail .skill-key-skill {
+      display: none;
+    }
+
+    #inventoryOverlay .menu-hotkey-stack,
+    #inventoryOverlay #menuSkillHotkeyRail .skill-key-strip {
+      flex-direction: row;
+      gap: 4px;
+    }
+
+    #inventoryOverlay .menu-item-hotkey-slot,
+    #inventoryOverlay #menuSkillHotkeyRail .skill-key-slot {
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 42px;
+      padding: 4px 3px 3px 22px;
+      border-width: 1px;
+    }
+
+    #inventoryOverlay .menu-item-hotkey-slot img,
+    #inventoryOverlay #menuSkillHotkeyRail .skill-key-icon {
+      width: 24px;
+      height: 24px;
+      margin: 5px auto 0;
+    }
+
+    #inventoryOverlay .menu-item-hotkey-slot .menu-hotkey-key,
+    #inventoryOverlay #menuSkillHotkeyRail .skill-key-name {
+      left: 3px;
+      top: 3px;
+      width: 17px;
+      height: 17px;
+      font-size: 7px;
+    }
+
+    #menuUtilityHotkeyRail {
+      grid-column: 1 / 4 !important;
+      grid-row: 2 !important;
+      margin-right: 2px;
+    }
+
+    #menuItemHotkeyRail {
+      grid-column: 4 / 9 !important;
+      grid-row: 2 !important;
+      margin-left: 2px;
+    }
+
+    #menuSkillHotkeyRail {
+      grid-column: 1 / 9 !important;
+      grid-row: 2 !important;
     }
 
     #inventoryPanel {
-      grid-column: 1 !important;
+      grid-column: 1 / 9 !important;
+      grid-row: 1 !important;
       width: 100% !important;
       height: 100% !important;
       max-height: none !important;
@@ -4522,7 +4654,15 @@
   }
 
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 620px) {
+    #bottomUi {
+      transform: translateX(-50%) scale(.58) !important;
+    }
+
     #shopGrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #craftGrid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -4670,7 +4810,7 @@
       <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="3" tabindex="0"><span class="menu-hotkey-key">7</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
       <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="4" tabindex="0"><span class="menu-hotkey-key">8</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
     </div>
-    <div class="menu-hotkey-rail-help">Drag weapons · right-click to clear</div>
+    <div class="menu-hotkey-rail-help">Drag, or tap a weapon then a slot · right-click to clear</div>
   </div>
   <div id="menuUtilityHotkeyRail" class="menu-hotkey-rail" aria-label="Item hotkeys">
     <div class="menu-hotkey-rail-title">Items</div>
@@ -4679,7 +4819,7 @@
       <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="1" tabindex="0"><span class="menu-hotkey-key">2</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
       <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="2" tabindex="0"><span class="menu-hotkey-key">3</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
     </div>
-    <div class="menu-hotkey-rail-help">Drag consumables · right-click to clear</div>
+    <div class="menu-hotkey-rail-help">Drag, or tap an item then a slot · right-click to clear</div>
   </div>
   <div id="inventoryPanel">
     <div id="inventoryTop">
@@ -5346,7 +5486,7 @@
       <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotEIcon" alt="" /><span class="skill-key-name">E</span><span class="skill-key-skill" id="skillSlotE">Empty</span></div>
       <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotRIcon" alt="" /><span class="skill-key-name">R</span><span class="skill-key-skill" id="skillSlotR">Empty</span></div>
     </div>
-    <div class="menu-hotkey-rail-help">Drag active skills · right-click to clear</div>
+    <div class="menu-hotkey-rail-help">Drag, or tap an active skill then a slot · right-click to clear</div>
   </div>
 </div>
 
@@ -5502,33 +5642,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=352"></script>
-<script src="/shared/terrain-rules.js?v=352"></script>
-<script src="/shared/terrain-presentation.js?v=352"></script>
-<script src="/shared/combat-balance.js?v=352"></script>
-<script src="/shared/ability-scaling.js?v=352"></script>
-<script src="/shared/rain-field.js?v=352"></script>
-<script src="/shared/camouflage-rules.js?v=352"></script>
-<script src="/shared/enemy-net-protocol.js?v=352"></script>
-<script src="/shared/player-net-protocol.js?v=352"></script>
-<script src="/client-config.js?v=352"></script>
-<script src="/client-utils.js?v=352"></script>
-<script src="/client-world.js?v=352"></script>
-<script src="/client-maps.js?v=352"></script>
-<script src="/client-enemies.js?v=352"></script>
-<script src="/client-enemy-runtime.js?v=352"></script>
-<script src="/client-enemy-rendering.js?v=352"></script>
-<script src="/client-combat.js?v=352"></script>
-<script src="/client-abilities.js?v=352"></script>
-<script src="/client-magus-abilities.js?v=352"></script>
-<script src="/client-class-abilities.js?v=352"></script>
-<script src="/client-status.js?v=352"></script>
-<script src="/client-fire-environment.js?v=352"></script>
-<script src="/client-network.js?v=352"></script>
-<script src="/client-simulation-foundation.js?v=352"></script>
-<script src="/game.js?v=352"></script>
-<script src="/client-terrain.js?v=352"></script>
-<script src="/client-input.js?v=352"></script>
-<script src="/client-app.js?v=352"></script>
+<script src="/shared/world-content-runtime.js?v=353"></script>
+<script src="/shared/terrain-rules.js?v=353"></script>
+<script src="/shared/terrain-presentation.js?v=353"></script>
+<script src="/shared/combat-balance.js?v=353"></script>
+<script src="/shared/ability-scaling.js?v=353"></script>
+<script src="/shared/rain-field.js?v=353"></script>
+<script src="/shared/camouflage-rules.js?v=353"></script>
+<script src="/shared/enemy-net-protocol.js?v=353"></script>
+<script src="/shared/player-net-protocol.js?v=353"></script>
+<script src="/client-config.js?v=353"></script>
+<script src="/client-utils.js?v=353"></script>
+<script src="/client-world.js?v=353"></script>
+<script src="/client-maps.js?v=353"></script>
+<script src="/client-enemies.js?v=353"></script>
+<script src="/client-enemy-runtime.js?v=353"></script>
+<script src="/client-enemy-rendering.js?v=353"></script>
+<script src="/client-combat.js?v=353"></script>
+<script src="/client-abilities.js?v=353"></script>
+<script src="/client-magus-abilities.js?v=353"></script>
+<script src="/client-class-abilities.js?v=353"></script>
+<script src="/client-status.js?v=353"></script>
+<script src="/client-fire-environment.js?v=353"></script>
+<script src="/client-network.js?v=353"></script>
+<script src="/client-simulation-foundation.js?v=353"></script>
+<script src="/game.js?v=353"></script>
+<script src="/client-terrain.js?v=353"></script>
+<script src="/client-input.js?v=353"></script>
+<script src="/client-app.js?v=353"></script>
 </body>
 </html>
