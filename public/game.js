@@ -876,15 +876,15 @@ function drawPixelGlow(screenX, screenY, size, strength, phase = 0) {
 // The slash arc is drawn at this radius, and this is also the sword's
 // actual maximum hit range. Keeping both tied to one value means the
 // visual effect accurately shows the player's reach.
-const SWORD_REACH = 22;
+const SWORD_REACH = 26;
 const SWORD_HALF_ARC = 0.62;
-const WAND_MASTERY_REACH = 41;
+const WAND_MASTERY_REACH = 49;
 const WAND_MASTERY_HALF_ARC = 0.56;
 
 
 
 
-const BOW_MELEE_TRIGGER_RANGE = 24;
+const BOW_MELEE_TRIGGER_RANGE = 28;
 const BOW_MELEE_HALF_ARC = 1.05;
 
 

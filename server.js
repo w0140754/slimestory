@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-353";
+const BUILD_VERSION = "6-11-354";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -3082,8 +3082,8 @@ function environmentMeleeValid(
 
   const reach =
     playerState.weaponIndex === 4
-      ? 27
-      : 22;
+      ? 31
+      : 26;
 
   if (distance > reach + extraRange) {
     return false;
@@ -7326,7 +7326,7 @@ function handlePvpAttack(
     }
 
     const maxDistance =
-      attacker.weaponIndex === 4 ? 36 : 32;
+      attacker.weaponIndex === 4 ? 40 : 36;
 
     valid = pvpAimHitsTarget(
       attacker,
@@ -7351,7 +7351,7 @@ function handlePvpAttack(
       attacker,
       target,
       payload.aimAngle,
-      49,
+      57,
       0.56
     );
 
@@ -7366,7 +7366,7 @@ function handlePvpAttack(
       attacker,
       target,
       payload.aimAngle,
-      32,
+      36,
       1.05
     );
 
@@ -8515,7 +8515,7 @@ function validateSharedEnemyMeleeHit(
   }
 
   const reach =
-    playerState.weaponIndex === 4 ? 27 : 22;
+    playerState.weaponIndex === 4 ? 31 : 26;
 
   const profile = serverEnemyProfile(enemy);
   const targetOffsetY = profile?.bodyOffsetY ?? -11;
@@ -8574,7 +8574,7 @@ function validateSharedEnemyWandMasteryHit(
   // simulation at the instant of a melee swing. Give Wand Mastery a small
   // reconciliation grace rather than rejecting a hit that visibly connected.
   const reconciliationRangeGrace = 8;
-  if (distance > 41 + bodyRadius + reconciliationRangeGrace) {
+  if (distance > 49 + bodyRadius + reconciliationRangeGrace) {
     return false;
   }
 
@@ -8611,7 +8611,7 @@ function validateSharedEnemyBowMeleeHit(
     (playerState.y - 8);
   const distance = Math.hypot(dx, dy);
 
-  if (distance > 24 + bodyRadius) {
+  if (distance > 28 + bodyRadius) {
     return false;
   }
 

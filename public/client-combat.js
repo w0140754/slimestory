@@ -573,7 +573,7 @@ function wandMasteryMeleeActive() {
 
 function currentMeleeReach() {
   if (wandMasteryMeleeActive()) return WAND_MASTERY_REACH;
-  return equippedWeapon() === "katana" ? 27 : SWORD_REACH;
+  return equippedWeapon() === "katana" ? 31 : SWORD_REACH;
 }
 
 function damageEnemyWithProjectile(

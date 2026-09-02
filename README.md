@@ -1,3 +1,13 @@
+## v6-11-354 — Mobile HUD and weapon reach tuning
+
+- Enlarged the mobile Items 1–3 / Equipment 4–8 toolbar again for easier reading and tapping.
+- Tucked the mobile MENU button into the rendered game viewport's top-left safe corner.
+- Returned the mobile skill hotbar to a vertical four-slot column centered on the right edge.
+- Increased standard melee reach from 22 to 26 px, Katana reach from 27 to 31 px, and close-range Bow-smack reach from 24 to 28 px.
+- Increased Wand Mastery reach more substantially, from 41 to 49 px, so Spellshred retains a clear reach advantage.
+- Updated matching multiplayer enemy, PvP, and resource-hit validation without changing arrow or spell projectile ranges.
+- Preserved the live map-editor-authored map override revision 50 unchanged.
+
 ## v6-11-353 — Mobile toolbar, crafting, and hotbar assignment
 
 - Enlarged the mobile Items 1–3 / Equipment 4–8 toolbar while keeping desktop HUD sizing unchanged.
