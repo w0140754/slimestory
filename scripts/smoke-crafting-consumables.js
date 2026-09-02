@@ -1,5 +1,6 @@
 const { spawn } = require("child_process");
 const WebSocket = require("ws");
+const WORLD_CONTENT = require("../public/shared/world-content.js");
 
 const port = 32191;
 const server = spawn(process.execPath, ["server.js"], {
@@ -57,9 +58,17 @@ async function sendAndWait(socket, payload, type, predicate) {
       throw new Error("split flower persistence failed");
     }
 
+    const defaultMapId = WORLD_CONTENT.defaultPlayerLoad?.mapId;
+    const craftingTable = WORLD_CONTENT.maps?.[defaultMapId]?.npcs?.find(
+      npc => npc?.type === "craftingTable"
+    );
+    if (!craftingTable) {
+      throw new Error("default map crafting table missing");
+    }
+
     socket.send(JSON.stringify({
       type: "playerStatePatch",
-      player: { x: 216, y: 101 }
+      player: { x: craftingTable.x, y: craftingTable.y }
     }));
     await delay(100);
 

@@ -1,3 +1,10 @@
+## v6-11-351 — Mobile combat and menu refinement
+- Added a mobile **MENU** button so touch players can open the existing Escape menu and reach inventory, class, talents, stats, PvP, and skill binding without a keyboard.
+- Added held-ATK soft targeting: tapping/holding ATK tracks the nearest monster within a modest combat-assist radius while the movement thumb remains independent; dragging ATK still switches to deliberate manual aim.
+- Moved the movement pad slightly upward and increased the top item/weapon toolbar scale from the first mobile prototype.
+- Reworked shop and Escape-menu sizing for landscape touch screens using the dynamic viewport and safe-area padding so tabs/close controls remain reachable; desktop layouts are unchanged.
+- Preserved the live Google Drive map-editor override revision (v50) instead of replacing it with the older copy embedded in the v350 ZIP.
+
 ## v6-11-350 — Mobile controls prototype
 - Added an opt-in coarse-pointer mobile layout for landscape phones while preserving all desktop keyboard/mouse controls.
 - Added a left-thumb analog movement pad, a right-thumb hold/drag attack button, touch-enabled Shift/Space/E/R skill slots, and a contextual ACT button that becomes available near supported NPCs and stations.

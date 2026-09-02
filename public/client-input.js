@@ -86,6 +86,48 @@ const mobileControlsEnabled = window.matchMedia(
 let mobileAimDx = 1;
 let mobileAimDy = 0;
 
+const MOBILE_COMBAT_ASSIST_MELEE_DISTANCE = 62;
+const MOBILE_COMBAT_ASSIST_BOW_DISTANCE = 150;
+
+function mobileCombatAssistCanvasPoint() {
+  if (!mobileControlsEnabled || player.isDead || player.hp <= 0) return null;
+  if (typeof activeEnemyRecords !== "function" || typeof enemyBodyPoint !== "function") return null;
+
+  const originX = player.x;
+  const originY = player.y - 8;
+  const maxDistance = equippedWeapon() === "bow"
+    ? MOBILE_COMBAT_ASSIST_BOW_DISTANCE
+    : MOBILE_COMBAT_ASSIST_MELEE_DISTANCE;
+
+  let best = null;
+  for (const { enemy } of activeEnemyRecords({ aliveOnly: true })) {
+    const target = enemyBodyPoint(enemy);
+    const dx = target.x - originX;
+    const dy = target.y - originY;
+    const distance = Math.hypot(dx, dy);
+    if (distance > maxDistance || (best && distance >= best.distance)) continue;
+    best = { target, dx, dy, distance };
+  }
+
+  if (!best || best.distance <= 0.001) return null;
+
+  mobileAimDx = best.dx / best.distance;
+  mobileAimDy = best.dy / best.distance;
+  return {
+    x: best.target.x - currentCamX,
+    y: best.target.y - currentCamY
+  };
+}
+
+function applyMobileCombatAssistAim() {
+  const point = mobileCombatAssistCanvasPoint();
+  if (!point) return false;
+  mouseCanvasX = point.x;
+  mouseCanvasY = point.y;
+  updateAttackAimFromPointer(point.x, point.y);
+  return true;
+}
+
 function mobileAimCanvasPoint(distance = 64) {
   const playerScreenX = player.x - currentCamX;
   const playerScreenY = player.y - currentCamY - 8;
@@ -111,8 +153,14 @@ function installMobileControls() {
   const knob = document.getElementById("mobileMoveKnob");
   const attack = document.getElementById("mobileAttackButton");
   const interact = document.getElementById("mobileInteractButton");
-  if (!pad || !knob || !attack || !interact) return;
+  const menu = document.getElementById("mobileMenuButton");
+  if (!pad || !knob || !attack || !interact || !menu) return;
 
+  let attackPointerId = null;
+  let attackPointerStartX = 0;
+  let attackPointerStartY = 0;
+  let attackManualAim = false;
+  let attackAssistFrame = 0;
   let movePointerId = null;
   const updateMove = event => {
     const rect = pad.getBoundingClientRect();
@@ -128,7 +176,10 @@ function installMobileControls() {
     const nx = length > 0 ? dx / length : 0;
     const ny = length > 0 ? dy / length : 0;
     inputController.setMobileMovement(nx * normalizedLength, ny * normalizedLength);
-    if (normalizedLength > 0.18) {
+    if (
+      normalizedLength > 0.18 &&
+      !(attackPointerId !== null && !attackManualAim)
+    ) {
       mobileAimDx = nx;
       mobileAimDy = ny;
     }
@@ -151,7 +202,6 @@ function installMobileControls() {
   pad.addEventListener("pointerup", stopMove);
   pad.addEventListener("pointercancel", stopMove);
 
-  let attackPointerId = null;
   const aimAttackFromEvent = event => {
     const rect = attack.getBoundingClientRect();
     const dx = event.clientX - (rect.left + rect.width / 2);
@@ -166,20 +216,63 @@ function installMobileControls() {
     mouseCanvasY = point.y;
     updateAttackAimFromPointer(point.x, point.y);
   };
+
+  const keepMobileAttackAssistFresh = () => {
+    attackAssistFrame = 0;
+    if (attackPointerId === null || attackManualAim) return;
+    applyMobileCombatAssistAim();
+    attackAssistFrame = requestAnimationFrame(keepMobileAttackAssistFresh);
+  };
+
   attack.addEventListener("pointerdown", event => {
     event.preventDefault();
     attackPointerId = event.pointerId;
+    attackPointerStartX = event.clientX;
+    attackPointerStartY = event.clientY;
+    attackManualAim = false;
     attack.setPointerCapture(event.pointerId);
-    aimAttackFromEvent(event);
-    handlePrimaryAttack(mobilePointerEventForCanvas(mobileAimCanvasPoint()));
+
+    if (!applyMobileCombatAssistAim()) {
+      aimAttackFromEvent(event);
+    }
+    if (!attackAssistFrame) {
+      attackAssistFrame = requestAnimationFrame(keepMobileAttackAssistFresh);
+    }
+
+    handlePrimaryAttack(mobilePointerEventForCanvas({
+      x: mouseCanvasX,
+      y: mouseCanvasY
+    }));
   });
+
   attack.addEventListener("pointermove", event => {
-    if (attackPointerId === event.pointerId) aimAttackFromEvent(event);
+    if (attackPointerId !== event.pointerId) return;
+    if (
+      Math.hypot(
+        event.clientX - attackPointerStartX,
+        event.clientY - attackPointerStartY
+      ) > 11
+    ) {
+      attackManualAim = true;
+      if (attackAssistFrame) {
+        cancelAnimationFrame(attackAssistFrame);
+        attackAssistFrame = 0;
+      }
+    }
+    if (attackManualAim) aimAttackFromEvent(event);
   });
+
   const releaseAttack = event => {
     if (attackPointerId !== event.pointerId) return;
     attackPointerId = null;
-    handleBowVisualMouseUp(mobilePointerEventForCanvas(mobileAimCanvasPoint()));
+    if (attackAssistFrame) {
+      cancelAnimationFrame(attackAssistFrame);
+      attackAssistFrame = 0;
+    }
+    handleBowVisualMouseUp(mobilePointerEventForCanvas({
+      x: mouseCanvasX,
+      y: mouseCanvasY
+    }));
   };
   attack.addEventListener("pointerup", releaseAttack);
   attack.addEventListener("pointercancel", releaseAttack);
@@ -188,6 +281,11 @@ function installMobileControls() {
     event.preventDefault();
     if (!interact.classList.contains("available")) return;
     inputController.queueCommand("interact");
+  });
+
+  menu.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    handleMenuKeyDown("escape");
   });
 
   const abilityKeys = ["shift", "space", "e", "r"];
