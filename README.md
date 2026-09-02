@@ -1,3 +1,10 @@
+## v6-11-352 — Mobile world scale and compact shop
+
+- Mobile coarse-pointer clients now render the world at a 256×144 logical viewport instead of 320×180, making players, mobs, tiles, attack spacing, and distance cues about 25% larger while leaving the DOM HUD independently sized.
+- Desktop keeps the existing 320×180 logical viewport and rendering scale.
+- The mobile shop is now a centered compact panel rather than nearly full-screen, with denser item cards, more columns in landscape, and the verbose footer hidden on touch layouts.
+- Preserved the live map-editor-authored map override revision 50 unchanged.
+
 ## v6-11-351 — Mobile combat and menu refinement
 - Added a mobile **MENU** button so touch players can open the existing Escape menu and reach inventory, class, talents, stats, PvP, and skill binding without a keyboard.
 - Added held-ATK soft targeting: tapping/holding ATK tracks the nearest monster within a modest combat-assist radius while the movement thumb remains independent; dragging ATK still switches to deliberate manual aim.

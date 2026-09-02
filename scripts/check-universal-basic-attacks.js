@@ -13,9 +13,9 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-351";'), "server build must be 6-11-351");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-351";'), "client build must be 6-11-351");
-assert(html.includes('/client-combat.js?v=351') && html.includes('/game.js?v=351'), "client cache keys must be v333");
+assert(server.includes('const BUILD_VERSION = "6-11-352";'), "server build must be 6-11-352");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-352";'), "client build must be 6-11-352");
+assert(html.includes('/client-combat.js?v=352') && html.includes('/game.js?v=352'), "client cache keys must be v333");
 
 assert(game.includes('let pendingBasicAttack = null;'), "generic pending basic attack state missing");
 assert(game.includes('basicAttackMovementLockTime: 0'), "generic basic attack movement lock missing");

@@ -12,9 +12,9 @@ const clientApp = read('public', 'client-app.js');
 const html = read('public', 'index.html');
 const config = read('public', 'client-config.js');
 
-assert(server.includes('const BUILD_VERSION = "6-11-351";'), 'server build must be 6-11-351');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-351";'), 'client build must be 6-11-351');
-assert(html.includes('/game.js?v=351') && html.includes('/client-app.js?v=351'), 'client cache keys must be v333');
+assert(server.includes('const BUILD_VERSION = "6-11-352";'), 'server build must be 6-11-352');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-352";'), 'client build must be 6-11-352');
+assert(html.includes('/game.js?v=352') && html.includes('/client-app.js?v=352'), 'client cache keys must be v333');
 
 assert(!server.includes('clampNumber(value, -32, 672'), 'legacy 640px visual-effect clamp must be removed');
 assert(server.includes('function sanitizeVisualPoint(value, mapId, axis = "x", fallback = 0)'), 'visual point sanitizer must be map-aware');
