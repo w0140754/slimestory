@@ -12,10 +12,10 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-363";'), "server build must be v355");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-363";'), "client build must be v355");
-assert.strictEqual(pkg.version, "0.6.11.363", "package version must be v355");
-assert(html.includes('/game.js?v=363') && html.includes('/client-combat.js?v=363'), "v355 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-364";'), "server build must be v355");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-364";'), "client build must be v355");
+assert.strictEqual(pkg.version, "0.6.11.364", "package version must be v355");
+assert(html.includes('/game.js?v=364') && html.includes('/client-combat.js?v=364'), "v355 cache keys missing");
 
 assert(html.includes('translateX(-50%) scale(.78)'), "wide mobile top toolbar scale missing");
 assert(html.includes('translateX(-50%) scale(.70)'), "compact mobile top toolbar scale missing");

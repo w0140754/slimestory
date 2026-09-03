@@ -1202,7 +1202,7 @@ function executeBowMeleeAttack() {
 
 function handlePrimaryAttack(event) {
   if (player.isDead) return;
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || event.button !== 0) return;
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen || event.button !== 0) return;
   if (player.rainCloudCasting) return;
 
   if (player.hunterSnareSetting) {
@@ -1270,7 +1270,7 @@ function handlePrimaryAttack(event) {
 function repeatHeldPrimaryAttackIfReady() {
   if (!primaryAttackHeld) return;
   if (player.isDead || player.hp <= 0) return;
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) return;
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) return;
   if (player.rainCloudCasting || focusFireIsCasting() || fireballIsAiming()) return;
   if (player.attackCooldown > 0) return;
 

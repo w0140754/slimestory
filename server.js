@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-363";
+const BUILD_VERSION = "6-11-364";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -2440,6 +2440,7 @@ function sharedResourceSnapshot(mapId = null) {
       x: resource.x,
       y: resource.y,
       flowerType: resource.flowerType || null,
+      ownerId: resource.ownerId || null,
       life: Number(resource.life.toFixed(2))
     }));
 }
@@ -2451,7 +2452,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "stone", "flower", "goldSlimeBubble"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee"].includes(kind)) {
     return null;
   }
 
@@ -2468,7 +2469,8 @@ function spawnSharedResource(
         : kind === "flower"
           ? "white"
           : null,
-    life: 18.0
+    ownerId: typeof options.ownerId === "string" ? options.ownerId : null,
+    life: kind === "icedCoffee" ? 28.0 : 18.0
   };
 
   sharedResources.set(
@@ -2532,6 +2534,8 @@ function handleResourcePickup(
 
   if (!playerState || !resource) return;
 
+  if (resource.ownerId && resource.ownerId !== playerId) return;
+
   if (playerState.mapId !== resource.mapId) {
     return;
   }
@@ -2546,6 +2550,13 @@ function handleResourcePickup(
   // that was visibly in range on the collecting player's screen.
   if (distance > SHARED_LOOT_PICKUP_RADIUS) return;
 
+  if (
+    resource.kind === "icedCoffee" &&
+    (playerState.beachQuestStage !== "firstActive" || playerState.beachQuestIcedCoffee >= 1)
+  ) {
+    return;
+  }
+
   // Remove first so pickup races have exactly one winner.
   sharedResources.delete(resource.id);
 
@@ -2558,6 +2569,8 @@ function handleResourcePickup(
     else playerState.whiteFlowers += 1;
   } else if (resource.kind === "goldSlimeBubble") {
     playerState.goldSlimeBubbles += 1;
+  } else if (resource.kind === "icedCoffee") {
+    playerState.beachQuestIcedCoffee = 1;
   }
 
   broadcastToMap(resource.mapId, {
@@ -2571,7 +2584,8 @@ function handleResourcePickup(
     flowerType: resource.flowerType === "blue" ? "blue" : "white",
     totalWhiteFlowers: playerState.whiteFlowers,
     totalBlueFlowers: playerState.blueFlowers,
-    totalGoldSlimeBubbles: playerState.goldSlimeBubbles
+    totalGoldSlimeBubbles: playerState.goldSlimeBubbles,
+    beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
 
@@ -2654,6 +2668,138 @@ function playerNearPlacedInteraction(playerState, type, minimumAuthorityRadius, 
     const authorityRadius = Math.max(minimumAuthorityRadius, interactionRadius + cushion);
     return Math.hypot(playerState.x - x, playerState.y - y) <= authorityRadius;
   });
+}
+
+const BEACH_QUEST_FIRST_CRAB_GOAL = 10;
+const BEACH_QUEST_SECOND_CRAB_GOAL = 25;
+const BEACH_QUEST_COFFEE_DROP_CHANCE = 0.15;
+
+function beachQuestStage(playerState) {
+  return ["none", "firstActive", "firstComplete", "secondActive", "complete"].includes(playerState?.beachQuestStage)
+    ? playerState.beachQuestStage
+    : "none";
+}
+
+function beachQuestStatePayload(playerState, rewardExp = 0, rewardCoins = 0) {
+  const stage = beachQuestStage(playerState);
+  const level = Math.max(1, Math.floor(Number(playerState?.level) || 1));
+  const firstCrabKills = Math.max(0, Math.min(BEACH_QUEST_FIRST_CRAB_GOAL, Math.floor(Number(playerState?.beachQuestFirstCrabKills) || 0)));
+  const secondCrabKills = Math.max(0, Math.min(BEACH_QUEST_SECOND_CRAB_GOAL, Math.floor(Number(playerState?.beachQuestSecondCrabKills) || 0)));
+  const icedCoffee = Math.max(0, Math.min(1, Math.floor(Number(playerState?.beachQuestIcedCoffee) || 0)));
+  let questName = "Crab Beach";
+  let dialogue = "Beautiful water, isn't it? Just watch your ankles—the crabs here are bolder than they look.";
+  let objectives = [];
+  let action = null;
+  let actionLabel = null;
+
+  if (stage === "none" && level >= 5) {
+    questName = "A Very Iced Emergency";
+    dialogue = "I set my iced coffee down for one second, and a crab ran off with it! Help me find it—and thin out ten of those little thieves?";
+    objectives = [
+      { text: "Find the lost iced coffee", complete: false, icon: "coffee" },
+      { text: `Defeat crabs 0 / ${BEACH_QUEST_FIRST_CRAB_GOAL}`, complete: false }
+    ];
+    action = "acceptFirst";
+    actionLabel = "Accept Quest";
+  } else if (stage === "firstActive") {
+    questName = "A Very Iced Emergency";
+    const ready = icedCoffee >= 1 && firstCrabKills >= BEACH_QUEST_FIRST_CRAB_GOAL;
+    dialogue = ready
+      ? "You found it! A little sandy, maybe, but still cold. And the beach is much safer now."
+      : "The crabs sometimes drop whatever they've stolen. Please keep looking—the coffee and all ten crabs both matter!";
+    objectives = [
+      { text: `Lost iced coffee ${icedCoffee >= 1 ? "1 / 1" : "0 / 1"}`, complete: icedCoffee >= 1, icon: "coffee" },
+      { text: `Defeat crabs ${firstCrabKills} / ${BEACH_QUEST_FIRST_CRAB_GOAL}`, complete: firstCrabKills >= BEACH_QUEST_FIRST_CRAB_GOAL }
+    ];
+    if (ready) {
+      action = "turnInFirst";
+      actionLabel = "Return Coffee";
+    }
+  } else if (stage === "firstComplete" && level >= 7) {
+    questName = "Crab Revenge";
+    dialogue = "You know what? Ten wasn't enough. They've been terrorizing every picnic on this beach. How about twenty-five more—for revenge?";
+    objectives = [{ text: `Defeat crabs 0 / ${BEACH_QUEST_SECOND_CRAB_GOAL}`, complete: false }];
+    action = "acceptSecond";
+    actionLabel = "Accept Quest";
+  } else if (stage === "firstComplete") {
+    dialogue = "Thanks again for saving my coffee. Come back when you're a little stronger—these crabs haven't learned their lesson.";
+  } else if (stage === "secondActive") {
+    questName = "Crab Revenge";
+    const ready = secondCrabKills >= BEACH_QUEST_SECOND_CRAB_GOAL;
+    dialogue = ready
+      ? "Twenty-five! That ought to make them think twice before raiding another beach bag."
+      : "This is for every stolen drink, ruined towel, and pinched toe on the beach.";
+    objectives = [{ text: `Defeat crabs ${secondCrabKills} / ${BEACH_QUEST_SECOND_CRAB_GOAL}`, complete: ready }];
+    if (ready) {
+      action = "turnInSecond";
+      actionLabel = "Finish Quest";
+    }
+  } else if (stage === "complete") {
+    dialogue = "The beach has never been this peaceful. I can finally enjoy my coffee without watching the sand for claws.";
+  }
+
+  return {
+    type: "beachQuestState",
+    stage,
+    questName,
+    dialogue,
+    objectives,
+    action,
+    actionLabel,
+    firstCrabKills,
+    secondCrabKills,
+    icedCoffee,
+    totalCoins: Math.max(0, Math.floor(Number(playerState?.coins) || 0)),
+    rewardExp: Math.max(0, Math.floor(Number(rewardExp) || 0)),
+    rewardCoins: Math.max(0, Math.floor(Number(rewardCoins) || 0))
+  };
+}
+
+function handleBeachQuestInteract(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  if (!playerState || !playerNearPlacedInteraction(playerState, "beachGirl", 48, 16)) return;
+  const action = typeof message?.action === "string" ? message.action : "talk";
+  const stage = beachQuestStage(playerState);
+  let rewardExp = 0;
+  let rewardCoins = 0;
+
+  if (action === "acceptFirst" && stage === "none" && playerState.level >= 5) {
+    playerState.beachQuestStage = "firstActive";
+    playerState.beachQuestFirstCrabKills = 0;
+    playerState.beachQuestIcedCoffee = 0;
+  } else if (
+    action === "turnInFirst" &&
+    stage === "firstActive" &&
+    playerState.beachQuestFirstCrabKills >= BEACH_QUEST_FIRST_CRAB_GOAL &&
+    playerState.beachQuestIcedCoffee >= 1
+  ) {
+    playerState.beachQuestStage = "firstComplete";
+    playerState.beachQuestIcedCoffee = 0;
+    playerState.coins += 20;
+    rewardExp = 5;
+    rewardCoins = 20;
+  } else if (action === "acceptSecond" && stage === "firstComplete" && playerState.level >= 7) {
+    playerState.beachQuestStage = "secondActive";
+    playerState.beachQuestSecondCrabKills = 0;
+  } else if (
+    action === "turnInSecond" &&
+    stage === "secondActive" &&
+    playerState.beachQuestSecondCrabKills >= BEACH_QUEST_SECOND_CRAB_GOAL
+  ) {
+    playerState.beachQuestStage = "complete";
+    playerState.coins += 50;
+    rewardExp = 10;
+    rewardCoins = 50;
+  }
+
+  sendJson(socket, beachQuestStatePayload(playerState, rewardExp, rewardCoins));
+}
+
+function pendingIcedCoffeeDropFor(playerId) {
+  for (const resource of sharedResources.values()) {
+    if (resource.kind === "icedCoffee" && resource.ownerId === playerId) return true;
+  }
+  return false;
 }
 
 function playerNearAuthorizedCraftingTable(playerState) {
@@ -7886,6 +8032,38 @@ function killSharedEnemy(
     profile.onKilled(enemy);
   }
 
+  const killer = typeof killerId === "string" ? players.get(killerId) : null;
+  if (enemy.type === "crab" && killer) {
+    if (killer.beachQuestStage === "firstActive") {
+      killer.beachQuestFirstCrabKills = Math.min(
+        BEACH_QUEST_FIRST_CRAB_GOAL,
+        Math.max(0, Math.floor(Number(killer.beachQuestFirstCrabKills) || 0)) + 1
+      );
+      if (
+        killer.beachQuestIcedCoffee < 1 &&
+        !pendingIcedCoffeeDropFor(killerId) &&
+        Math.random() < BEACH_QUEST_COFFEE_DROP_CHANCE
+      ) {
+        spawnSharedResource(enemy.mapId, "icedCoffee", enemy.x, enemy.y - 2, { ownerId: killerId });
+      }
+    } else if (killer.beachQuestStage === "secondActive") {
+      killer.beachQuestSecondCrabKills = Math.min(
+        BEACH_QUEST_SECOND_CRAB_GOAL,
+        Math.max(0, Math.floor(Number(killer.beachQuestSecondCrabKills) || 0)) + 1
+      );
+    }
+
+    if (killer.beachQuestStage === "firstActive" || killer.beachQuestStage === "secondActive") {
+      sendToPlayer(killerId, {
+        type: "beachQuestProgress",
+        stage: killer.beachQuestStage,
+        firstCrabKills: killer.beachQuestFirstCrabKills,
+        secondCrabKills: killer.beachQuestSecondCrabKills,
+        icedCoffee: killer.beachQuestIcedCoffee
+      });
+    }
+  }
+
   const pendingDrops = [];
 
   for (const drop of profile?.resourceDrops || []) {
@@ -12379,6 +12557,22 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.arrows
       : 0,
 
+    beachQuestStage: previous
+      ? beachQuestStage(previous)
+      : "none",
+
+    beachQuestFirstCrabKills: previous
+      ? Math.max(0, Math.min(BEACH_QUEST_FIRST_CRAB_GOAL, Math.floor(Number(previous.beachQuestFirstCrabKills) || 0)))
+      : 0,
+
+    beachQuestSecondCrabKills: previous
+      ? Math.max(0, Math.min(BEACH_QUEST_SECOND_CRAB_GOAL, Math.floor(Number(previous.beachQuestSecondCrabKills) || 0)))
+      : 0,
+
+    beachQuestIcedCoffee: previous
+      ? Math.max(0, Math.min(1, Math.floor(Number(previous.beachQuestIcedCoffee) || 0)))
+      : 0,
+
     hunterSnareCharges:
       previous && Number.isFinite(previous.hunterSnareCharges)
         ? Math.max(
@@ -13534,6 +13728,16 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.woodGreavesCrafted = Boolean(story.woodGreavesCrafted);
   playerState.woodRingCrafted = Boolean(story.woodRingCrafted);
 
+  const beachQuest = state.beachQuest && typeof state.beachQuest === "object"
+    ? state.beachQuest
+    : {};
+  playerState.beachQuestStage = ["none", "firstActive", "firstComplete", "secondActive", "complete"].includes(beachQuest.stage)
+    ? beachQuest.stage
+    : "none";
+  playerState.beachQuestFirstCrabKills = clampInteger(beachQuest.firstCrabKills, 0, BEACH_QUEST_FIRST_CRAB_GOAL, 0);
+  playerState.beachQuestSecondCrabKills = clampInteger(beachQuest.secondCrabKills, 0, BEACH_QUEST_SECOND_CRAB_GOAL, 0);
+  playerState.beachQuestIcedCoffee = clampInteger(beachQuest.icedCoffee, 0, 1, 0);
+
   const purchases = Array.isArray(state.shopPurchases)
     ? state.shopPurchases
     : [];
@@ -13559,7 +13763,11 @@ function handlePersistentStateRestore(playerId, socket, message) {
     attackPotionUntil: playerState.attackPotionUntil,
     magicPotionUntil: playerState.magicPotionUntil,
     goldSlimeBubbles: playerState.goldSlimeBubbles,
-    arrows: playerState.arrows
+    arrows: playerState.arrows,
+    beachQuestStage: playerState.beachQuestStage,
+    beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
+    beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,
+    beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
 
@@ -13662,6 +13870,10 @@ function handleClientMessage(playerId, socket, message) {
       if (typeof message.resourceId === "string") {
         handleResourcePickup(playerId, message.resourceId);
       }
+      return;
+
+    case "beachQuestInteract":
+      handleBeachQuestInteract(playerId, socket, message);
       return;
 
     case "persistentStateRestore":

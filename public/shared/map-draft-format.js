@@ -88,7 +88,7 @@
     }
 
     for (const [index, npc] of (Array.isArray(map?.npcs) ? map.npcs : []).entries()) {
-      if (!["shopkeeper", "hunter", "jester", "craftingTable", "classResetCrystal"].includes(npc?.type)) {
+      if (!["shopkeeper", "hunter", "jester", "beachGirl", "craftingTable", "classResetCrystal"].includes(npc?.type)) {
         fail(`npcs[${index}] has unsupported type "${npc?.type}".`);
       }
       if (npc?.interactionRadius != null && (!finite(npc.interactionRadius) || Number(npc.interactionRadius) < 8)) {
@@ -133,4 +133,3 @@
 
   return Object.freeze({ validate });
 });
-

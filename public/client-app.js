@@ -14,6 +14,7 @@ function updateHudUi() {
       !shopOpen &&
       !craftingOpen &&
       !classResetConfirmOpen &&
+      !beachQuestOpen &&
       nearbySpawnInteraction()
     );
     mobileInteractButton.classList.toggle("available", interactionAvailable);
@@ -612,7 +613,7 @@ class GameSimulation {
       return;
     }
 
-    const menuOpen = inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen;
+    const menuOpen = inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen;
 
     worldTime += dt;
     this.state.advanceTick();

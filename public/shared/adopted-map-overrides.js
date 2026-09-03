@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   return Object.freeze({
-    "version": 55,
+    "version": 56,
     "maps": {
       "prototypeIsland": {
         "name": "Prototype Island",
@@ -4677,7 +4677,15 @@
         "collision": {
           "waterRects": []
         },
-        "npcs": []
+        "npcs": [
+          {
+            "id": "crabBeach:npc:beachGirl",
+            "type": "beachGirl",
+            "x": 214,
+            "y": 194,
+            "interactionRadius": 28
+          }
+        ]
       },
       "waterfallGrove": {
         "name": "Waterfall Grove",

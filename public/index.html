@@ -1638,6 +1638,93 @@
     outline: none;
   }
 
+  #beachQuestOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    box-sizing: border-box;
+    background: rgba(13, 24, 27, .54);
+    pointer-events: auto;
+    z-index: 56;
+  }
+
+  #beachQuestOverlay.open { display: flex; }
+
+  #beachQuestPanel {
+    width: min(430px, calc(100vw - 28px));
+    max-height: calc(100dvh - 28px);
+    overflow: auto;
+    border: 3px solid #dfb978;
+    background: #243238;
+    box-shadow: 0 0 0 2px #5d4b36 inset, 6px 6px 0 rgba(0,0,0,.38);
+    color: #fff6d4;
+    font-family: monospace;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  #beachQuestTop {
+    display: flex;
+    align-items: center;
+    min-height: 46px;
+    border-bottom: 2px solid #66553d;
+    background: #2c3d42;
+  }
+
+  #beachQuestNpc {
+    width: 39px;
+    height: 51px;
+    margin: 5px 10px 0 12px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+
+  #beachQuestTitle { color: #ffe0a0; font: bold 14px/1.1 monospace; }
+  #beachQuestClose {
+    appearance: none;
+    align-self: stretch;
+    width: 48px;
+    margin-left: auto;
+    border: 0;
+    border-left: 2px solid #66553d;
+    background: transparent;
+    color: #fff1c8;
+    font: 20px/1 monospace;
+    cursor: pointer;
+  }
+
+  #beachQuestBody { padding: 15px; }
+  #beachQuestDialogue { min-height: 42px; font: 11px/1.45 monospace; color: #f8ecd0; }
+  #beachQuestObjectives { display: grid; gap: 7px; margin-top: 12px; }
+  .beach-quest-objective {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 9px;
+    border: 1px solid #7a694e;
+    background: #1d292d;
+    color: #f0dcb0;
+    font: 10px/1.25 monospace;
+  }
+  .beach-quest-objective.complete { color: #9de3a6; border-color: #52785c; }
+  .beach-quest-objective img { width: 24px; height: 24px; image-rendering: pixelated; }
+  #beachQuestButtons { display: flex; justify-content: flex-end; margin-top: 14px; }
+  #beachQuestAction {
+    appearance: none;
+    min-width: 120px;
+    padding: 9px 12px;
+    border: 2px solid #b38b52;
+    background: #3b4a3e;
+    color: #fff2b5;
+    font: bold 10px/1 monospace;
+    cursor: pointer;
+  }
+  #beachQuestAction:hover, #beachQuestAction:focus-visible { border-color: #ffe39b; outline: none; }
+  #beachQuestAction[hidden] { display: none; }
+
   #rewardToast {
     position: fixed;
     left: 50%;
@@ -4305,6 +4392,7 @@
     body:has(#inventoryOverlay.open) #onlineStatus,
     body:has(#shopOverlay.open) #onlineStatus,
     body:has(#craftOverlay.open) #onlineStatus,
+    body:has(#beachQuestOverlay.open) #onlineStatus,
     body:has(#classResetConfirmOverlay.open) #onlineStatus {
       display: block;
     }
@@ -4728,6 +4816,28 @@
     .ability-upgrade-button {
       min-height: 30px;
     }
+
+    #beachQuestOverlay {
+      padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    }
+
+    #beachQuestPanel {
+      width: min(540px, 86vw);
+      max-height: 82dvh;
+      border-width: 2px;
+    }
+
+    #beachQuestTop { min-height: 38px; }
+    #beachQuestNpc { width: 26px; height: 34px; margin: 3px 8px 0 9px; }
+    #beachQuestTitle { font-size: 11px; }
+    #beachQuestClose { width: 46px; font-size: 18px; }
+    #beachQuestBody { padding: 9px; }
+    #beachQuestDialogue { min-height: 0; font-size: 9px; line-height: 1.35; }
+    #beachQuestObjectives { margin-top: 7px; gap: 5px; }
+    .beach-quest-objective { padding: 5px 7px; font-size: 8px; }
+    .beach-quest-objective img { width: 20px; height: 20px; }
+    #beachQuestButtons { margin-top: 8px; }
+    #beachQuestAction { min-width: 106px; padding: 7px 9px; font-size: 9px; }
   }
 
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 620px) {
@@ -5765,6 +5875,23 @@
   </div>
 </div>
 
+<div id="beachQuestOverlay" aria-hidden="true">
+  <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
+    <div id="beachQuestTop">
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=364" alt="Beach girl" />
+      <div id="beachQuestTitle">Crab Beach</div>
+      <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
+    </div>
+    <div id="beachQuestBody">
+      <div id="beachQuestDialogue">The surf is nice today.</div>
+      <div id="beachQuestObjectives"></div>
+      <div id="beachQuestButtons">
+        <button id="beachQuestAction" type="button" hidden>Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="rewardToast" role="status" aria-live="polite">
   <img id="rewardToastImg" alt="" />
   <div id="rewardToastText">
@@ -5772,33 +5899,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=363"></script>
-<script src="/shared/terrain-rules.js?v=363"></script>
-<script src="/shared/terrain-presentation.js?v=363"></script>
-<script src="/shared/combat-balance.js?v=363"></script>
-<script src="/shared/ability-scaling.js?v=363"></script>
-<script src="/shared/rain-field.js?v=363"></script>
-<script src="/shared/camouflage-rules.js?v=363"></script>
-<script src="/shared/enemy-net-protocol.js?v=363"></script>
-<script src="/shared/player-net-protocol.js?v=363"></script>
-<script src="/client-config.js?v=363"></script>
-<script src="/client-utils.js?v=363"></script>
-<script src="/client-world.js?v=363"></script>
-<script src="/client-maps.js?v=363"></script>
-<script src="/client-enemies.js?v=363"></script>
-<script src="/client-enemy-runtime.js?v=363"></script>
-<script src="/client-enemy-rendering.js?v=363"></script>
-<script src="/client-combat.js?v=363"></script>
-<script src="/client-abilities.js?v=363"></script>
-<script src="/client-magus-abilities.js?v=363"></script>
-<script src="/client-class-abilities.js?v=363"></script>
-<script src="/client-status.js?v=363"></script>
-<script src="/client-fire-environment.js?v=363"></script>
-<script src="/client-network.js?v=363"></script>
-<script src="/client-simulation-foundation.js?v=363"></script>
-<script src="/game.js?v=363"></script>
-<script src="/client-terrain.js?v=363"></script>
-<script src="/client-input.js?v=363"></script>
-<script src="/client-app.js?v=363"></script>
+<script src="/shared/world-content-runtime.js?v=364"></script>
+<script src="/shared/terrain-rules.js?v=364"></script>
+<script src="/shared/terrain-presentation.js?v=364"></script>
+<script src="/shared/combat-balance.js?v=364"></script>
+<script src="/shared/ability-scaling.js?v=364"></script>
+<script src="/shared/rain-field.js?v=364"></script>
+<script src="/shared/camouflage-rules.js?v=364"></script>
+<script src="/shared/enemy-net-protocol.js?v=364"></script>
+<script src="/shared/player-net-protocol.js?v=364"></script>
+<script src="/client-config.js?v=364"></script>
+<script src="/client-utils.js?v=364"></script>
+<script src="/client-world.js?v=364"></script>
+<script src="/client-maps.js?v=364"></script>
+<script src="/client-enemies.js?v=364"></script>
+<script src="/client-enemy-runtime.js?v=364"></script>
+<script src="/client-enemy-rendering.js?v=364"></script>
+<script src="/client-combat.js?v=364"></script>
+<script src="/client-abilities.js?v=364"></script>
+<script src="/client-magus-abilities.js?v=364"></script>
+<script src="/client-class-abilities.js?v=364"></script>
+<script src="/client-status.js?v=364"></script>
+<script src="/client-fire-environment.js?v=364"></script>
+<script src="/client-network.js?v=364"></script>
+<script src="/client-simulation-foundation.js?v=364"></script>
+<script src="/game.js?v=364"></script>
+<script src="/client-terrain.js?v=364"></script>
+<script src="/client-input.js?v=364"></script>
+<script src="/client-app.js?v=364"></script>
 </body>
 </html>

@@ -181,6 +181,8 @@ const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
+const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=364");
+const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=364");
 const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
@@ -3090,7 +3092,8 @@ function anyMenuOverlayOpen() {
   return Boolean(
     document.getElementById("inventoryOverlay")?.classList.contains("open") ||
     document.getElementById("shopOverlay")?.classList.contains("open") ||
-    document.getElementById("craftOverlay")?.classList.contains("open")
+    document.getElementById("craftOverlay")?.classList.contains("open") ||
+    document.getElementById("beachQuestOverlay")?.classList.contains("open")
   );
 }
 
@@ -3864,6 +3867,13 @@ const player = {
     woodChestCrafted: false,
     woodGreavesCrafted: false,
     woodRingCrafted: false
+  },
+
+  beachQuest: {
+    stage: "none",
+    firstCrabKills: 0,
+    secondCrabKills: 0,
+    icedCoffee: 0
   },
 
   benchCraftPending: null,
@@ -4645,7 +4655,7 @@ function nearbySpawnInteraction() {
 
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     const type = npc?.type;
-    if (!["shopkeeper", "hunter", "craftingTable", "classResetCrystal"].includes(type)) continue;
+    if (!["shopkeeper", "hunter", "beachGirl", "craftingTable", "classResetCrystal"].includes(type)) continue;
     candidates.push({
       kind: "placedNpc",
       npcType: type,
@@ -5084,6 +5094,83 @@ function interactWithWoodBench() {
   setCraftingOpen(true);
 }
 
+let beachQuestView = null;
+
+function setBeachQuestOpen(open) {
+  beachQuestOpen = Boolean(open);
+  const overlay = document.getElementById("beachQuestOverlay");
+  if (!overlay) return;
+  overlay.classList.toggle("open", beachQuestOpen);
+  overlay.setAttribute("aria-hidden", beachQuestOpen ? "false" : "true");
+  inputController.clearKeys();
+  if (beachQuestOpen) inputController.clearCommands();
+}
+
+function updateBeachQuestPanel(message = beachQuestView) {
+  if (!message) return;
+  beachQuestView = message;
+
+  const title = document.getElementById("beachQuestTitle");
+  const dialogue = document.getElementById("beachQuestDialogue");
+  const objectives = document.getElementById("beachQuestObjectives");
+  const action = document.getElementById("beachQuestAction");
+  if (title) title.textContent = message.questName || "Crab Beach";
+  if (dialogue) dialogue.textContent = message.dialogue || "The surf is nice today.";
+
+  if (objectives) {
+    objectives.replaceChildren();
+    for (const objective of Array.isArray(message.objectives) ? message.objectives : []) {
+      const row = document.createElement("div");
+      row.className = `beach-quest-objective${objective.complete ? " complete" : ""}`;
+      if (objective.icon === "coffee") {
+        const image = document.createElement("img");
+        image.src = icedCoffeeImage.src;
+        image.alt = "Iced coffee";
+        row.append(image);
+      }
+      const copy = document.createElement("span");
+      copy.textContent = objective.text || "";
+      row.append(copy);
+      objectives.append(row);
+    }
+  }
+
+  if (action) {
+    const available = typeof message.action === "string" && message.action.length > 0;
+    action.hidden = !available;
+    action.disabled = !available;
+    action.dataset.questAction = available ? message.action : "";
+    action.textContent = message.actionLabel || "Continue";
+  }
+}
+
+function applyBeachQuestState(message) {
+  if (!message || message.type !== "beachQuestState") return;
+  player.beachQuest.stage = message.stage || player.beachQuest.stage;
+  player.beachQuest.firstCrabKills = Math.max(0, Math.floor(Number(message.firstCrabKills) || 0));
+  player.beachQuest.secondCrabKills = Math.max(0, Math.floor(Number(message.secondCrabKills) || 0));
+  player.beachQuest.icedCoffee = Math.max(0, Math.floor(Number(message.icedCoffee) || 0));
+  if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
+  if ((Number(message.rewardExp) || 0) > 0) awardExp(Math.floor(message.rewardExp));
+  if ((Number(message.rewardCoins) || 0) > 0) {
+    showMenuFeedback(`QUEST COMPLETE! +${Math.floor(message.rewardCoins)} COINS · +${Math.floor(message.rewardExp)} EXP`, "#ffe08a", 1.6);
+  }
+  updateBeachQuestPanel(message);
+  setBeachQuestOpen(true);
+  updateInventoryUi();
+  saveLocalCharacterState(true);
+}
+
+function interactWithBeachGirl() {
+  updateBeachQuestPanel({
+    questName: "Crab Beach",
+    dialogue: "She brushes sand from her beach clothes and turns to you.",
+    objectives: []
+  });
+  setBeachQuestOpen(true);
+  return Boolean(onlineClient?.requestBeachGirlQuest("talk"));
+}
+
 function interactWithNearbyObject() {
   const interaction =
     nearbySpawnInteraction();
@@ -5111,6 +5198,10 @@ function interactWithNearbyObject() {
     }
     if (interaction.npcType === "hunter") {
       interactWithHunterNpc(interaction.npc);
+      return true;
+    }
+    if (interaction.npcType === "beachGirl") {
+      interactWithBeachGirl();
       return true;
     }
     if (interaction.npcType === "craftingTable") {
@@ -7311,6 +7402,7 @@ let inventoryOpen = false;
 let shopOpen = false;
 let craftingOpen = false;
 let classResetConfirmOpen = false;
+let beachQuestOpen = false;
 let rewardToastTimer = null;
 let selectedHotbarInventoryItemId = null;
 
@@ -8207,7 +8299,15 @@ function buildLocalCharacterSave() {
       attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
       magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
     },
-    story
+    story,
+    beachQuest: {
+      stage: ["none", "firstActive", "firstComplete", "secondActive", "complete"].includes(player.beachQuest?.stage)
+        ? player.beachQuest.stage
+        : "none",
+      firstCrabKills: clampLocalSaveInteger(player.beachQuest?.firstCrabKills, 0, 10, 0),
+      secondCrabKills: clampLocalSaveInteger(player.beachQuest?.secondCrabKills, 0, 25, 0),
+      icedCoffee: clampLocalSaveInteger(player.beachQuest?.icedCoffee, 0, 1, 0)
+    }
   };
 }
 
@@ -8301,6 +8401,16 @@ function applyLocalCharacterSave(save) {
       player.story[key] = Boolean(save.story[key]);
     }
   }
+
+  const savedBeachQuest = save.beachQuest && typeof save.beachQuest === "object"
+    ? save.beachQuest
+    : {};
+  player.beachQuest.stage = ["none", "firstActive", "firstComplete", "secondActive", "complete"].includes(savedBeachQuest.stage)
+    ? savedBeachQuest.stage
+    : "none";
+  player.beachQuest.firstCrabKills = clampLocalSaveInteger(savedBeachQuest.firstCrabKills, 0, 10, 0);
+  player.beachQuest.secondCrabKills = clampLocalSaveInteger(savedBeachQuest.secondCrabKills, 0, 25, 0);
+  player.beachQuest.icedCoffee = clampLocalSaveInteger(savedBeachQuest.icedCoffee, 0, 1, 0);
 
   player.hatIndex = clampLocalSaveInteger(save.equipment?.hatIndex, -1, HAT_ITEM_IDS.length - 1, -1);
   player.shirtIndex = clampLocalSaveInteger(save.equipment?.shirtIndex, -1, SHIRT_ITEM_IDS.length - 1, -1);
@@ -8436,6 +8546,12 @@ function persistentServerBootstrapPayload() {
       woodChestCrafted: Boolean(player.story.woodChestCrafted),
       woodGreavesCrafted: Boolean(player.story.woodGreavesCrafted),
       woodRingCrafted: Boolean(player.story.woodRingCrafted)
+    },
+    beachQuest: {
+      stage: player.beachQuest.stage,
+      firstCrabKills: player.beachQuest.firstCrabKills,
+      secondCrabKills: player.beachQuest.secondCrabKills,
+      icedCoffee: player.beachQuest.icedCoffee
     },
     shopPurchases: Array.isArray(player.shopPurchases)
       ? player.shopPurchases.slice(0, 64)
@@ -8782,7 +8898,7 @@ document.querySelectorAll(".inventory-tab").forEach(tab => {
 });
 
 window.addEventListener("wheel", event => {
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) {
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
     return;
   }
 
@@ -8800,7 +8916,7 @@ window.addEventListener("wheel", event => {
 
 const topHotbar = document.getElementById("hotbar");
 topHotbar?.addEventListener("click", event => {
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) {
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
     return;
   }
 
@@ -8997,6 +9113,21 @@ document.getElementById("classResetYes").addEventListener("click", () => {
 
 document.getElementById("classResetNo").addEventListener("click", () => {
   setClassResetConfirmOpen(false);
+});
+
+document.getElementById("beachQuestClose")?.addEventListener("click", () => {
+  setBeachQuestOpen(false);
+});
+
+document.getElementById("beachQuestOverlay")?.addEventListener("pointerdown", event => {
+  if (event.target === event.currentTarget) setBeachQuestOpen(false);
+});
+
+document.getElementById("beachQuestAction")?.addEventListener("click", event => {
+  const action = event.currentTarget.dataset.questAction;
+  if (!action || !onlineClient?.requestBeachGirlQuest(action)) return;
+  event.currentTarget.disabled = true;
+  event.currentTarget.textContent = "...";
 });
 
 document.getElementById("craftGrid").addEventListener("click", event => {
@@ -11433,7 +11564,7 @@ function drawJesterNpc(camX, camY) {
 
 function drawPlacedNpc(npc, camX, camY) {
   if (!npc) return;
-  const allowed = ["shopkeeper", "hunter", "jester", "craftingTable", "classResetCrystal"];
+  const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "craftingTable", "classResetCrystal"];
   const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
   const screenX = Math.round((Number(npc.x) || 0) - camX);
   const screenY = Math.round((Number(npc.y) || 0) - camY);
@@ -11459,9 +11590,15 @@ function drawPlacedNpc(npc, camX, camY) {
 
   const swaySpeed = type === "shopkeeper" ? 1.0 : type === "hunter" ? 0.95 : 1.08;
   const swayOffset = Math.round(Math.sin(worldTime * swaySpeed + phase) * 1);
-  const image = type === "hunter" ? hunterNpcImage : type === "jester" ? jesterNpcImage : tutorialNpcImage;
-  const height = type === "shopkeeper" ? 16 : 20;
-  const width = type === "hunter" ? 17 : 16;
+  const image = type === "hunter"
+    ? hunterNpcImage
+    : type === "jester"
+      ? jesterNpcImage
+      : type === "beachGirl"
+        ? beachGirlNpcImage
+        : tutorialNpcImage;
+  const height = type === "shopkeeper" ? 16 : type === "beachGirl" ? 17 : 20;
+  const width = type === "hunter" ? 17 : type === "beachGirl" ? 13 : 16;
 
   ctx.fillStyle = type === "shopkeeper"
     ? "rgba(34, 46, 28, .32)"
@@ -11472,6 +11609,17 @@ function drawPlacedNpc(npc, camX, camY) {
   ctx.drawImage(image, screenX - Math.floor(width / 2) + swayOffset, screenY - height);
 
   if (type === "shopkeeper") drawNpcRoleMarker(screenX, screenY);
+  if (type === "beachGirl") {
+    const quest = player.beachQuest || {};
+    const firstReady = quest.stage === "firstActive" && quest.firstCrabKills >= 10 && quest.icedCoffee >= 1;
+    const secondReady = quest.stage === "secondActive" && quest.secondCrabKills >= 25;
+    const marker = firstReady || secondReady
+      ? "?"
+      : (quest.stage === "none" && player.level >= 5) || (quest.stage === "firstComplete" && player.level >= 7)
+        ? "!"
+        : "";
+    if (marker) drawStaticPixelText(marker, screenX, screenY - height - 8, "#ffe36e", 1);
+  }
 }
 
 function drawWoodCraftBench(camX, camY) {
@@ -11629,7 +11777,7 @@ function drawInteractionPrompt(
   camX,
   camY
 ) {
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) return;
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) return;
 
   const interaction =
     nearbySpawnInteraction();

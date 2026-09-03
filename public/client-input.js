@@ -204,6 +204,7 @@ function updateMobilePointBowShot() {
     shopOpen ||
     craftingOpen ||
     classResetConfirmOpen ||
+    beachQuestOpen ||
     mobilePointTargetMode ||
     player.rainCloudCasting ||
     focusFireIsCasting() ||
@@ -288,7 +289,7 @@ function executeMobilePointTargetCommand(payload = {}) {
 
 function handleMobilePointTargetPointerDown(event) {
   if (!mobileControlsEnabled || !mobilePointTargetMode || event.button !== 0) return;
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) {
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
     clearMobilePointTargetMode();
     return;
   }
@@ -486,6 +487,7 @@ function updateMobileAutoAttack() {
     shopOpen ||
     craftingOpen ||
     classResetConfirmOpen ||
+    beachQuestOpen ||
     mobilePointTargetMode ||
     player.rainCloudCasting ||
     focusFireIsCasting() ||
@@ -972,6 +974,11 @@ function grantDebugProgressionPoints() {
 }
 
 function handleMenuKeyDown(key) {
+  if (beachQuestOpen) {
+    if (key === "escape") setBeachQuestOpen(false);
+    return true;
+  }
+
   // The class-reset crystal uses a focused confirmation prompt. While it is
   // open, do not let gameplay/menu keys leak through underneath it.
   if (classResetConfirmOpen) {
@@ -1068,7 +1075,7 @@ function handleGameKeyDown(event) {
     grantDebugProgressionPoints();
     return;
   }
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen) {
+  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
     inputController.setKey(key, false);
     return;
   }

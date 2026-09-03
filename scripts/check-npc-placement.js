@@ -24,7 +24,7 @@ const checks = [
   [app.includes('for (const npc of placedNpcDefinitionsForMap(currentMapId))') && app.includes('drawPlacedNpc(npc, camX, camY)'), "NPC drawable integration"],
   [server.includes('function playerNearAuthorizedShopkeeper') && server.includes('playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16)'), "server shopkeeper authorization"],
   [shopkeeperAsset.length > 100 && craftBubbleAsset.length > 100 && crypto.createHash("sha256").update(shopkeeperAsset).digest("hex").length === 64, "required editor assets"],
-  [editorHtml.includes('/map-editor.js?v=363') && editorHtml.includes('/shared/map-draft-format.js?v=363'), "326 editor cache keys"],
+  [editorHtml.includes('/map-editor.js?v=364') && editorHtml.includes('/shared/map-draft-format.js?v=364'), "326 editor cache keys"],
 ];
 
 for (const [ok, label] of checks) {

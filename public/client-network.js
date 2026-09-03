@@ -434,6 +434,10 @@ class OnlineClient {
         player.goldSlimeBubbles = Math.max(0, Math.floor(message.goldSlimeBubbles));
       }
       if (Number.isFinite(message.arrows)) player.arrows = Math.max(0, Math.floor(message.arrows));
+      if (typeof message.beachQuestStage === "string") player.beachQuest.stage = message.beachQuestStage;
+      if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
+      if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
+      if (Number.isFinite(message.beachQuestIcedCoffee)) player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
 
       updateInventoryUi();
       updateShopUi();
@@ -910,6 +914,21 @@ class OnlineClient {
 
     if (message.type === "resourcePicked") {
       this.handleResourcePicked(message);
+      return;
+    }
+
+    if (message.type === "beachQuestState") {
+      applyBeachQuestState(message);
+      return;
+    }
+
+    if (message.type === "beachQuestProgress") {
+      player.beachQuest.stage = message.stage || player.beachQuest.stage;
+      player.beachQuest.firstCrabKills = Math.max(0, Math.floor(Number(message.firstCrabKills) || 0));
+      player.beachQuest.secondCrabKills = Math.max(0, Math.floor(Number(message.secondCrabKills) || 0));
+      player.beachQuest.icedCoffee = Math.max(0, Math.floor(Number(message.icedCoffee) || 0));
+      if (beachQuestOpen && beachQuestView) onlineClient.requestBeachGirlQuest("talk");
+      saveLocalCharacterState(true);
       return;
     }
 
@@ -1571,6 +1590,7 @@ class OnlineClient {
         flowerType:
           serverResource.flowerType ||
           "white",
+        ownerId: typeof serverResource.ownerId === "string" ? serverResource.ownerId : null,
         life: Math.max(
           0,
           Number(serverResource.life) || 0
@@ -1735,6 +1755,7 @@ class OnlineClient {
     ) {
       if (
         resource.mapId !== currentMapId ||
+        (resource.ownerId && resource.ownerId !== this.localPlayerId) ||
         resource.life <= 0
       ) {
         continue;
@@ -1755,6 +1776,7 @@ class OnlineClient {
             shared: true,
             entityId: resource.id,
             mapId: resource.mapId,
+            ownerId: resource.ownerId || null,
             pickupRequestCooldown: 0
           };
 
@@ -1764,6 +1786,7 @@ class OnlineClient {
           drop.y = resource.y;
           drop.life = resource.life;
           drop.mapId = resource.mapId;
+          drop.ownerId = resource.ownerId || null;
         }
 
         continue;
@@ -1844,6 +1867,22 @@ class OnlineClient {
       resourceId
     }));
 
+    return true;
+  }
+
+  requestBeachGirlQuest(action = "talk") {
+    if (
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "beachQuestInteract",
+      action
+    }));
     return true;
   }
 
@@ -2221,6 +2260,12 @@ class OnlineClient {
 
     if (Number.isFinite(message.totalGoldSlimeBubbles)) {
       player.goldSlimeBubbles = message.totalGoldSlimeBubbles;
+    }
+
+    if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
+      player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
+      spawnFloatingText(player.x, player.y - 42, "ICED COFFEE FOUND!", "#e8d6b4", 1.2);
+      saveLocalCharacterState(true);
     }
 
 

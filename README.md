@@ -1,3 +1,13 @@
+## v6-11-364 — Beach Girl questline
+
+- Added the user-drawn Beach Girl to the western side of Crab Beach, with matching map-editor support and a mobile-safe dialogue panel.
+- Added the level-5 **A Very Iced Emergency** quest: find her iced coffee and defeat 10 crabs, with both objectives required before NPC turn-in.
+- Added a private 15% iced-coffee world drop while the first quest is active, using the supplied 16×16 item artwork.
+- Added the level-7 follow-up **Crab Revenge**, unlocked only after the first quest, requiring 25 crab defeats and NPC turn-in.
+- Persisted quest stage, counters, and coffee ownership in the browser character save and restored them into authoritative server session state.
+- Added quest rewards of 20 Coins + 5 EXP for the first quest and 50 Coins + 10 EXP for the follow-up.
+- Advanced the authored map revision to 56 while preserving all existing map content outside the requested NPC placement.
+
 ## v6-11-363 — Pixel-perfect mobile scaling
 
 - Replaced arbitrary exact-fit mobile stretching with the largest whole physical-pixel scale that fits the usable landscape viewport, accepting small centred gutters when needed.

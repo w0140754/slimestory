@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "363";
+  const BUILD = "364";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -96,6 +96,8 @@
   editorHunterNpcImage.src = "./assets/hunter_npc_v1.png?v=347";
   const editorJesterNpcImage = new Image();
   editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=347";
+  const editorBeachGirlNpcImage = new Image();
+  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=364";
   const editorWoodBenchImage = new Image();
   editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=347";
   const editorClassResetCrystalImage = new Image();
@@ -109,6 +111,7 @@
   editorShopkeeperNpcImage.addEventListener("load", () => requestRender());
   editorHunterNpcImage.addEventListener("load", () => requestRender());
   editorJesterNpcImage.addEventListener("load", () => requestRender());
+  editorBeachGirlNpcImage.addEventListener("load", () => requestRender());
   editorWoodBenchImage.addEventListener("load", () => requestRender());
   editorClassResetCrystalImage.addEventListener("load", () => requestRender());
 
@@ -563,6 +566,7 @@
   function npcImageForEditorType(type) {
     if (type === "hunter") return editorHunterNpcImage;
     if (type === "jester") return editorJesterNpcImage;
+    if (type === "beachGirl") return editorBeachGirlNpcImage;
     if (type === "craftingTable") return editorWoodBenchImage;
     if (type === "classResetCrystal") return editorClassResetCrystalImage;
     return editorShopkeeperNpcImage;
@@ -574,6 +578,8 @@
         return { label: "HUNTER", color: "#bfe2a8", fallback: "#6d8a62", width: 17, height: 20, shadow: true };
       case "jester":
         return { label: "JESTER", color: "#e3b6ef", fallback: "#8b6299", width: 16, height: 20, shadow: true };
+      case "beachGirl":
+        return { label: "BEACH GIRL", color: "#ffd7a8", fallback: "#d69572", width: 13, height: 17, shadow: true };
       case "craftingTable":
         return { label: "CRAFT", color: "#ffd89b", fallback: "#9b6438", width: 18, height: 18, shadow: true };
       case "classResetCrystal":
@@ -584,7 +590,7 @@
   }
 
   function drawNpc(npc) {
-    const allowed = ["shopkeeper", "hunter", "jester", "craftingTable", "classResetCrystal"];
+    const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "craftingTable", "classResetCrystal"];
     const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
     const image = npcImageForEditorType(type);
     const config = npcDisplayConfig(type);
@@ -906,6 +912,7 @@
     if (kind === "shopkeeperNpc") return { kind: "npc", item: { x, y, type: "shopkeeper", interactionRadius: 24 } };
     if (kind === "hunterNpc") return { kind: "npc", item: { x, y, type: "hunter", interactionRadius: 24 } };
     if (kind === "jesterNpc") return { kind: "npc", item: { x, y, type: "jester", interactionRadius: 24 } };
+    if (kind === "beachGirlNpc") return { kind: "npc", item: { x, y, type: "beachGirl", interactionRadius: 28 } };
     if (kind === "craftingTableNpc") return { kind: "npc", item: { x, y, type: "craftingTable", interactionRadius: 24 } };
     if (kind === "classResetCrystalNpc") return { kind: "npc", item: { x, y, type: "classResetCrystal", interactionRadius: 28 } };
     if (kind === "enemySpawn") return { kind: "enemySpawn", item: { x, y } };
@@ -1170,7 +1177,7 @@
       };
       draft.map.environment.houses.push(item);
     } else if (
-      kind === "shopkeeperNpc" || kind === "hunterNpc" || kind === "jesterNpc" ||
+      kind === "shopkeeperNpc" || kind === "hunterNpc" || kind === "jesterNpc" || kind === "beachGirlNpc" ||
       kind === "craftingTableNpc" || kind === "classResetCrystalNpc"
     ) {
       selectionKind = "npc";
@@ -1178,6 +1185,8 @@
         ? "hunter"
         : kind === "jesterNpc"
           ? "jester"
+          : kind === "beachGirlNpc"
+            ? "beachGirl"
           : kind === "craftingTableNpc"
             ? "craftingTable"
             : kind === "classResetCrystalNpc"
@@ -1699,6 +1708,8 @@
       roleNote.className = "property-readonly";
       roleNote.textContent = descriptor.item.type === "jester"
         ? "Jester is visual-only for now."
+        : descriptor.item.type === "beachGirl"
+          ? "Beach Girl offers the Crab Beach questline."
         : descriptor.item.type === "hunter"
           ? "Hunter uses the existing Hunter talk interaction."
           : descriptor.item.type === "craftingTable"
@@ -1711,6 +1722,7 @@
           { value: "shopkeeper", label: "Shopkeeper" },
           { value: "hunter", label: "Hunter" },
           { value: "jester", label: "Jester" },
+          { value: "beachGirl", label: "Beach Girl" },
           { value: "craftingTable", label: "Crafting Table" },
           { value: "classResetCrystal", label: "Class Reset Crystal" }
         ], value => mutateSelected("Change NPC type", item => {
@@ -1874,6 +1886,7 @@
         shopkeeperNpc: "SHOPKEEPER NPC",
         hunterNpc: "HUNTER NPC",
         jesterNpc: "JESTER NPC",
+        beachGirlNpc: "BEACH GIRL NPC",
         craftingTableNpc: "CRAFTING TABLE",
         classResetCrystalNpc: "CLASS RESET CRYSTAL",
         enemySpawn: "ENEMY SPAWN",
