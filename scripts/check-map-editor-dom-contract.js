@@ -21,7 +21,7 @@ for (const className of ["terrain-tool", "palette-tool"]) {
   }
 }
 
-if (!/const BUILD = "358"/.test(js) || !/Map Editor <span>v358<\/span>/.test(html)) {
+if (!/const BUILD = "359"/.test(js) || !/Map Editor <span>v359<\/span>/.test(html)) {
   throw new Error("Map editor build markers are not synchronized for v358");
 }
 

@@ -1,3 +1,11 @@
+## v6-11-359 — Mobile attack movement freedom
+
+- Removed the voluntary movement self-root from mobile basic attacks and tool swings, including attacks triggered by the mobile AUTO toggle.
+- Kept attack animations, active-frame impact timing, cooldowns, hit ranges, damage, and multiplayer validation unchanged.
+- Reduced mobile base movement speed by a modest **8%** to balance attacking while moving without making exploration feel substantially slower.
+- Preserved the existing planted basic-attack gesture on desktop.
+- Incorporated and preserved the newer live Waterfall Grove/editor-authored world data revision 54 without overwriting it.
+
 ## v6-11-358 — Mobile resource targeting and auto attack
 
 - Added reach-aware mobile tool assistance: tapping ATK with an Axe targets the nearest usable tree in chopping range, and tapping with a Pickaxe targets the nearest usable rock in mining range. Dragging ATK still switches to manual aim.

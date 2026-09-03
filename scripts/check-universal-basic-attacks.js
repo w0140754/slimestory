@@ -13,9 +13,9 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-358";'), "server build must be 6-11-358");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-358";'), "client build must be 6-11-358");
-assert(html.includes('/client-combat.js?v=358') && html.includes('/game.js?v=358'), "client cache keys must be v333");
+assert(server.includes('const BUILD_VERSION = "6-11-359";'), "server build must be 6-11-359");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-359";'), "client build must be 6-11-359");
+assert(html.includes('/client-combat.js?v=359') && html.includes('/game.js?v=359'), "client cache keys must be v333");
 
 assert(game.includes('let pendingBasicAttack = null;'), "generic pending basic attack state missing");
 assert(game.includes('basicAttackMovementLockTime: 0'), "generic basic attack movement lock missing");
@@ -26,7 +26,7 @@ assert(game.includes('const MELEE_BASIC_ATTACK_IMPACT_PHASE = 0.34;'), "non-wand
 assert(combat.includes('function attackImpactDelayForWeapon(weapon)'), "generic impact timing helper missing");
 assert(combat.includes('function queueBasicAttackImpact(weapon, shadowCritAttack)'), "generic queued impact helper missing");
 assert(combat.includes('function updatePendingBasicAttack(dt)'), "generic pending attack updater missing");
-assert(combat.includes('player.basicAttackMovementLockTime =\n    player.attackDuration;'), "all non-bow basic attacks must plant movement for their gesture");
+assert(combat.includes('mobileControlsEnabled ? 0 : player.attackDuration;'), "desktop attacks must stay planted while mobile can move through the gesture");
 assert(combat.includes('queueBasicAttackImpact(\n    currentWeapon,'), "primary attacks must queue through generic impact path");
 assert(!combat.includes('if (isWandTypeWeapon(currentWeapon)) {\n    // Plant only voluntary movement'), "old wand-only impact branch still present");
 

@@ -458,6 +458,9 @@ function updatePlayerMovement(dt) {
 
     const moveSpeed =
       player.speed *
+      (mobileControlsEnabled
+        ? GAME_CONFIG.player.mobileBaseSpeedMultiplier
+        : 1) *
       strafeMultiplier *
       wetMovementMultiplier *
       pvpSnareMovementMultiplier;

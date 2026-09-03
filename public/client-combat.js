@@ -1092,13 +1092,11 @@ function executePrimaryAttackCommand(payload) {
     onlineClient.syncLocalTransientReplication(true);
   }
 
-  // Every non-bow basic attack now uses the same committed gesture that was
-  // previously wand-only: voluntary movement is planted for the visible
-  // attack, and damage/tool interaction lands on the active animation frame
-  // rather than invisibly at mouse-down. Held movement input is not consumed,
-  // so it resumes automatically as soon as the gesture ends.
+  // Desktop keeps the committed planted gesture. Touch combat stays mobile:
+  // joystick movement remains available through the attack while damage/tool
+  // interaction still lands on the normal active animation frame.
   player.basicAttackMovementLockTime =
-    player.attackDuration;
+    mobileControlsEnabled ? 0 : player.attackDuration;
 
   player.slashTime = 0;
   queueBasicAttackImpact(

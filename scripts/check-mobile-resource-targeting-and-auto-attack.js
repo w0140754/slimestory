@@ -14,10 +14,10 @@ const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.358");
-assert(server.includes('const BUILD_VERSION = "6-11-358";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-358";'));
-assert(html.includes('/client-input.js?v=358') && html.includes('/client-app.js?v=358'));
+assert.strictEqual(pkg.version, "0.6.11.359");
+assert(server.includes('const BUILD_VERSION = "6-11-359";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-359";'));
+assert(html.includes('/client-input.js?v=359') && html.includes('/client-app.js?v=359'));
 
 assert(html.includes('id="mobileAutoAttackButton"'), "AUTO control missing");
 assert(html.includes('aria-pressed="false">AUTO</button>'), "AUTO toggle semantics missing");
@@ -40,7 +40,7 @@ assert(input.includes('automatedDrawBlocked'), "automated Bow draw pause/cancel 
 assert(input.includes('setMobileAutoAttackEnabled(false, { quiet: true });'), "focus/death safety shutoff missing");
 assert(app.includes('repeatHeldPrimaryAttackIfReady();\n      updateMobileAutoAttack();'), "AUTO must run in gameplay command phase");
 
-assert.strictEqual(adopted.version, 53, "mobile combat changes must not alter authored world data");
+assert.strictEqual(adopted.version, 54, "mobile combat changes must preserve current authored world data");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must be preserved");
 
 console.log("Mobile resource targeting and optional in-range auto attack checks passed.");
