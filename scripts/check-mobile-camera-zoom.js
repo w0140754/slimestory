@@ -20,9 +20,9 @@ assert.strictEqual(224 / 126, 16 / 9, "mobile logical viewport must remain 16:9"
 assert.strictEqual(320 / 224, 180 / 126, "horizontal and vertical world scaling must match");
 assert.strictEqual(adopted.version, 55, "mobile camera zoom must preserve current authored world data");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must be preserved");
-assert.strictEqual(pkg.version, "0.6.11.360");
-assert(server.includes('const BUILD_VERSION = "6-11-360";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-360";'));
-assert(html.includes('/game.js?v=360') && html.includes('/client-app.js?v=360'));
+assert.strictEqual(pkg.version, "0.6.11.361");
+assert(server.includes('const BUILD_VERSION = "6-11-361";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-361";'));
+assert(html.includes('/game.js?v=361') && html.includes('/client-app.js?v=361'));
 
 console.log("Mobile camera zoom OK: 224x126 world view, 1.43x desktop scale, HUD independent.");

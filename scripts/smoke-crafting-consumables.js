@@ -75,7 +75,7 @@ async function sendAndWait(socket, payload, type, predicate) {
     const arrows = await sendAndWait(socket, {
       type: "craftRequest", recipe: "arrows"
     }, "craftResult", message => message.recipe === "arrows");
-    if (!arrows.success || arrows.totalArrows !== 20 || arrows.totalWood !== 2 || arrows.totalStone !== 0) {
+    if (!arrows.success || arrows.totalArrows !== 50 || arrows.totalWood !== 2 || arrows.totalStone !== 0) {
       throw new Error("authoritative arrow recipe failed");
     }
 

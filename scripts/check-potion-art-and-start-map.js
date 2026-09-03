@@ -15,9 +15,9 @@ const enemies = read("public", "client-enemies.js");
 const worldSource = read("public", "shared", "world-content.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-360";'), "server build is not 6-11-360");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-360";'), "client build is not 6-11-360");
-assert(pkg.version === "0.6.11.360", "package version is not 0.6.11.360");
+assert(server.includes('const BUILD_VERSION = "6-11-361";'), "server build is not 6-11-361");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-361";'), "client build is not 6-11-361");
+assert(pkg.version === "0.6.11.361", "package version is not 0.6.11.361");
 
 for (const [file, marker] of [
   ["attack_potion_v2.png", "attack potion"],

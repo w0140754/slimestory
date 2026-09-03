@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-360";
+const BUILD_VERSION = "6-11-361";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -2617,7 +2617,7 @@ const CRAFT_RECIPES = Object.freeze({
   arrows: Object.freeze({
     repeatable: true,
     resourceKey: "arrows",
-    outputCount: 20,
+    outputCount: 50,
     ingredients: Object.freeze({ wood: 5, stone: 1 })
   }),
   healingPotion: Object.freeze({

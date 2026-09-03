@@ -14,12 +14,12 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.360");
-assert(server.includes('const BUILD_VERSION = "6-11-360";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-360";'));
-assert(html.includes('/client-input.js?v=360') && html.includes('/game.js?v=360'));
+assert.strictEqual(pkg.version, "0.6.11.361");
+assert(server.includes('const BUILD_VERSION = "6-11-361";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-361";'));
+assert(html.includes('/client-input.js?v=361') && html.includes('/game.js?v=361'));
 
-assert(config.includes('mobileBaseSpeedMultiplier: 0.85'), "15% mobile movement reduction missing");
+assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "25% mobile movement reduction missing");
 assert(game.includes('(Number(player.speed) || GAME_CONFIG.player.baseSpeed) * touchSpeedMultiplier'), "mobile stat sheet must show effective movement speed");
 assert(game.includes('const WAND_MASTERY_REACH = 45;'), "client Spellshred reach must be 45");
 assert(server.includes('distance > 45 + bodyRadius + reconciliationRangeGrace'), "server Spellshred reach must match");

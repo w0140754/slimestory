@@ -4042,9 +4042,9 @@ const CRAFT_RECIPES = Object.freeze({
     repeatable: false
   }),
   arrows: Object.freeze({
-    name: "20 Arrows",
+    name: "50 Arrows",
     resourceKey: "arrows",
-    outputCount: 20,
+    outputCount: 50,
     ingredients: Object.freeze({ wood: 5, stone: 1 }),
     repeatable: true
   }),

@@ -4292,10 +4292,21 @@
      narrow-window rules above cannot enlarge or reposition touch HUD groups. */
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
     #onlineStatus {
-      right: max(4px, env(safe-area-inset-right));
-      top: max(4px, env(safe-area-inset-top));
+      display: none;
+      left: max(3px, env(safe-area-inset-left));
+      right: auto;
+      top: auto;
+      bottom: max(3px, env(safe-area-inset-bottom));
       padding: 2px 3px;
       font-size: 6px;
+      z-index: 260;
+    }
+
+    body:has(#inventoryOverlay.open) #onlineStatus,
+    body:has(#shopOverlay.open) #onlineStatus,
+    body:has(#craftOverlay.open) #onlineStatus,
+    body:has(#classResetConfirmOverlay.open) #onlineStatus {
+      display: block;
     }
 
     #bottomUi {
@@ -4317,9 +4328,9 @@
     }
 
     #abilityBar {
-      right: max(7px, env(safe-area-inset-right)) !important;
-      top: 50% !important;
-      transform: translateY(-50%) !important;
+      right: max(5px, calc(env(safe-area-inset-right) + 5px)) !important;
+      top: max(5px, calc(env(safe-area-inset-top) + 5px)) !important;
+      transform: none !important;
       grid-template-columns: 38px !important;
       grid-template-rows: repeat(4, 38px) !important;
       gap: 4px !important;
@@ -4335,8 +4346,9 @@
       height: 29px !important;
     }
 
-    .ability-slot .hotbar-label {
-      font-size: 6px !important;
+    #bottomUi .hotbar-label,
+    #abilityBar .hotbar-label {
+      display: none !important;
     }
 
     .ability-slot .ability-cooldown-text {
@@ -4373,8 +4385,8 @@
     }
 
     #mobileMenuButton {
-      left: max(4px, env(safe-area-inset-left));
-      top: max(4px, env(safe-area-inset-top));
+      left: max(1px, env(safe-area-inset-left));
+      top: max(2px, env(safe-area-inset-top));
       min-width: 56px;
       height: 36px;
       font-size: 9px;
@@ -5630,7 +5642,7 @@
       </button>
       <button class="craft-recipe" type="button" data-craft-recipe="arrows">
         <img id="craftArrowsImg" alt="Arrows" />
-        <span class="craft-recipe-name">Arrows ×20</span>
+        <span class="craft-recipe-name">Arrows ×50</span>
         <span class="craft-recipe-cost">
           <span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span>
           <span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span>
@@ -5709,33 +5721,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=360"></script>
-<script src="/shared/terrain-rules.js?v=360"></script>
-<script src="/shared/terrain-presentation.js?v=360"></script>
-<script src="/shared/combat-balance.js?v=360"></script>
-<script src="/shared/ability-scaling.js?v=360"></script>
-<script src="/shared/rain-field.js?v=360"></script>
-<script src="/shared/camouflage-rules.js?v=360"></script>
-<script src="/shared/enemy-net-protocol.js?v=360"></script>
-<script src="/shared/player-net-protocol.js?v=360"></script>
-<script src="/client-config.js?v=360"></script>
-<script src="/client-utils.js?v=360"></script>
-<script src="/client-world.js?v=360"></script>
-<script src="/client-maps.js?v=360"></script>
-<script src="/client-enemies.js?v=360"></script>
-<script src="/client-enemy-runtime.js?v=360"></script>
-<script src="/client-enemy-rendering.js?v=360"></script>
-<script src="/client-combat.js?v=360"></script>
-<script src="/client-abilities.js?v=360"></script>
-<script src="/client-magus-abilities.js?v=360"></script>
-<script src="/client-class-abilities.js?v=360"></script>
-<script src="/client-status.js?v=360"></script>
-<script src="/client-fire-environment.js?v=360"></script>
-<script src="/client-network.js?v=360"></script>
-<script src="/client-simulation-foundation.js?v=360"></script>
-<script src="/game.js?v=360"></script>
-<script src="/client-terrain.js?v=360"></script>
-<script src="/client-input.js?v=360"></script>
-<script src="/client-app.js?v=360"></script>
+<script src="/shared/world-content-runtime.js?v=361"></script>
+<script src="/shared/terrain-rules.js?v=361"></script>
+<script src="/shared/terrain-presentation.js?v=361"></script>
+<script src="/shared/combat-balance.js?v=361"></script>
+<script src="/shared/ability-scaling.js?v=361"></script>
+<script src="/shared/rain-field.js?v=361"></script>
+<script src="/shared/camouflage-rules.js?v=361"></script>
+<script src="/shared/enemy-net-protocol.js?v=361"></script>
+<script src="/shared/player-net-protocol.js?v=361"></script>
+<script src="/client-config.js?v=361"></script>
+<script src="/client-utils.js?v=361"></script>
+<script src="/client-world.js?v=361"></script>
+<script src="/client-maps.js?v=361"></script>
+<script src="/client-enemies.js?v=361"></script>
+<script src="/client-enemy-runtime.js?v=361"></script>
+<script src="/client-enemy-rendering.js?v=361"></script>
+<script src="/client-combat.js?v=361"></script>
+<script src="/client-abilities.js?v=361"></script>
+<script src="/client-magus-abilities.js?v=361"></script>
+<script src="/client-class-abilities.js?v=361"></script>
+<script src="/client-status.js?v=361"></script>
+<script src="/client-fire-environment.js?v=361"></script>
+<script src="/client-network.js?v=361"></script>
+<script src="/client-simulation-foundation.js?v=361"></script>
+<script src="/game.js?v=361"></script>
+<script src="/client-terrain.js?v=361"></script>
+<script src="/client-input.js?v=361"></script>
+<script src="/client-app.js?v=361"></script>
 </body>
 </html>

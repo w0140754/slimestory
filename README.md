@@ -1,3 +1,12 @@
+## v6-11-361 — Mobile HUD cleanup and arrow crafting
+
+- Increased the mobile-only base movement reduction from 15% to **25%**, bringing touch movement to 54 px/s while desktop remains at 72 px/s.
+- Nudged MENU nearly flush with the upper-left safe edge and moved the skill column to the upper-right with a small safe-area margin.
+- Removed keyboard labels from both mobile hotbars while preserving their tap targets, icons, cooldowns, and counts.
+- Hid version/online status during mobile gameplay and moved it to the lower-left whenever Inventory, Shop, Crafting, or confirmation menus are open.
+- Increased each Arrow craft from 20 to **50 arrows** while retaining its 5 Wood + 1 Stone cost.
+- Preserved the live editor-authored world data revision 55 without overwriting it.
+
 ## v6-11-360 — Mobile combat and tooltip polish
 
 - Increased the mobile-only base movement reduction from 8% to **15%**, bringing touch movement to 61.2 px/s while desktop remains at 72 px/s.
