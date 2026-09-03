@@ -18,7 +18,7 @@ const checks = [
   [html.includes('data-owned-item="charm_woodRing"') && html.includes('id="inventoryWoodRingImg"'), "wood ring accessory entry"],
   [game.includes('updateOwnedInventoryGroup("inventoryWeaponsGrid", "inventoryWeaponsEmpty")') && game.includes('updateOwnedInventoryGroup("inventoryArmorGrid", "inventoryArmorEmpty")') && game.includes('updateOwnedInventoryGroup("inventoryAccessoriesGrid", "inventoryAccessoriesEmpty")'), "per-category visibility/empty handling"],
   [enemies.includes('inventoryWoodRingImg') && enemies.includes('inventoryWoodRingImg.src = woodRingImage.src'), "wood ring inventory icon wiring"],
-  [html.includes('/game.js?v=355') && html.includes('/client-enemies.js?v=355'), "323 inventory cache keys"],
+  [html.includes('/game.js?v=358') && html.includes('/client-enemies.js?v=358'), "323 inventory cache keys"],
 ];
 
 for (const [ok, label] of checks) {

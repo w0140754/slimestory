@@ -89,9 +89,12 @@ let mobilePointTargetMode = null;
 let mobilePointTargetKey = null;
 let mobilePointTargetSuppressMouseUntil = 0;
 let mobileAutoBowTarget = null;
+let mobileAutoAttackEnabled = false;
+let mobileAutoAttackBowDrawing = false;
 
 const MOBILE_COMBAT_ASSIST_MELEE_DISTANCE = 62;
 const MOBILE_COMBAT_ASSIST_BOW_DISTANCE = 150;
+const MOBILE_AUTO_ATTACK_BOW_DISTANCE = 150;
 const MOBILE_POINT_TARGET_SKILLS = new Set([
   "fireball",
   "rainCloud",
@@ -158,17 +161,35 @@ function armMobilePointTarget(mode, key = null) {
 
 function clearMobileAutoBowTarget() {
   mobileAutoBowTarget = null;
+  mobileAutoAttackBowDrawing = false;
 }
 
 function updateMobilePointBowShot() {
   if (!mobileControlsEnabled || !mobileAutoBowTarget) return false;
 
+  const automatedDrawBlocked =
+    inventoryOpen ||
+    shopOpen ||
+    craftingOpen ||
+    classResetConfirmOpen ||
+    mobilePointTargetMode ||
+    player.rainCloudCasting ||
+    focusFireIsCasting() ||
+    fireballIsAiming() ||
+    getLocalCarriedHurlObject();
+
   if (
     !player.bowDrawing ||
     equippedWeapon() !== "bow" ||
     player.isDead ||
-    player.hp <= 0
+    player.hp <= 0 ||
+    automatedDrawBlocked
   ) {
+    if (automatedDrawBlocked && player.bowDrawing) {
+      player.bowDrawing = false;
+      player.bowDrawAmount = 0;
+      player.bowReleaseTime = 0;
+    }
     clearMobileAutoBowTarget();
     return false;
   }
@@ -209,6 +230,7 @@ function executeMobilePointTargetCommand(payload = {}) {
     if (equippedWeapon() !== "bow" || getLocalCarriedHurlObject()) return true;
 
     handlePrimaryAttack(mobilePointerEventForCanvas(point));
+    mobileAutoAttackBowDrawing = false;
     mobileAutoBowTarget = player.bowDrawing ? target : null;
     return true;
   }
@@ -252,25 +274,97 @@ function handleMobilePointTargetPointerDown(event) {
   inputController.queueCommand("mobilePointTarget", payload);
 }
 
-function mobileCombatAssistCanvasPoint() {
+function mobileEnemyTarget(maxDistance, requireMeleeRange = false) {
   if (!mobileControlsEnabled || player.isDead || player.hp <= 0) return null;
   if (typeof activeEnemyRecords !== "function" || typeof enemyBodyPoint !== "function") return null;
 
   const originX = player.x;
   const originY = player.y - 8;
-  const maxDistance = equippedWeapon() === "bow"
-    ? MOBILE_COMBAT_ASSIST_BOW_DISTANCE
-    : MOBILE_COMBAT_ASSIST_MELEE_DISTANCE;
 
   let best = null;
-  for (const { enemy } of activeEnemyRecords({ aliveOnly: true })) {
+  for (const { enemy, profile } of activeEnemyRecords({ aliveOnly: true })) {
     const target = enemyBodyPoint(enemy);
     const dx = target.x - originX;
     const dy = target.y - originY;
     const distance = Math.hypot(dx, dy);
+    if (requireMeleeRange) {
+      const horizontal = Math.abs(dx) >= Math.abs(dy);
+      const bodyRadius = horizontal
+        ? profile.horizontalMeleeBodyRadius ?? 6
+        : profile.meleeBodyRadius ?? 5;
+      if (distance > currentMeleeReach() + bodyRadius) continue;
+    }
     if (distance > maxDistance || (best && distance >= best.distance)) continue;
     best = { target, dx, dy, distance };
   }
+
+  return best;
+}
+
+function mobileResourceTarget() {
+  if (!mobileControlsEnabled || player.isDead || player.hp <= 0) return null;
+
+  const weapon = equippedWeapon();
+  if (weapon !== "axe" && weapon !== "pickaxe") return null;
+
+  const originX = player.x;
+  const originY = player.y - 8;
+  let best = null;
+
+  if (weapon === "axe" && Array.isArray(trees)) {
+    for (const tree of trees) {
+      if (!tree || tree.nonInteractive || tree.isStump || tree.falling) continue;
+      const target = { x: tree.x, y: tree.y - 15 };
+      const dx = target.x - originX;
+      const dy = target.y - originY;
+      const distance = Math.hypot(dx, dy);
+      const horizontal = Math.abs(dx) >= Math.abs(dy);
+      const trunkRadius = horizontal ? 9 : 8;
+      if (
+        distance > currentMeleeReach() + trunkRadius ||
+        (best && distance >= best.distance)
+      ) {
+        continue;
+      }
+      best = { target, dx, dy, distance, kind: "tree" };
+    }
+  }
+
+  if (weapon === "pickaxe" && Array.isArray(rocks)) {
+    for (const rock of rocks) {
+      if (
+        !rock ||
+        rock.depleted ||
+        rock.carriedBy ||
+        (Number(rock.hurlTime) || 0) > 0 ||
+        (Number(rock.rollTime) || 0) > 0
+      ) {
+        continue;
+      }
+      const target = { x: rock.x, y: rock.y - 4 };
+      const dx = target.x - originX;
+      const dy = target.y - originY;
+      const distance = Math.hypot(dx, dy);
+      if (
+        distance > currentMeleeReach() + 7 ||
+        (best && distance >= best.distance)
+      ) {
+        continue;
+      }
+      best = { target, dx, dy, distance, kind: "rock" };
+    }
+  }
+
+  return best;
+}
+
+function mobileCombatAssistCanvasPoint() {
+  const weapon = equippedWeapon();
+  const best = mobileResourceTarget() || mobileEnemyTarget(
+    weapon === "bow"
+      ? MOBILE_COMBAT_ASSIST_BOW_DISTANCE
+      : MOBILE_COMBAT_ASSIST_MELEE_DISTANCE
+  );
 
   if (!best || best.distance <= 0.001) return null;
 
@@ -280,6 +374,120 @@ function mobileCombatAssistCanvasPoint() {
     x: best.target.x - currentCamX,
     y: best.target.y - currentCamY
   };
+}
+
+function updateMobileAutoAttackButton() {
+  const button = document.getElementById("mobileAutoAttackButton");
+  if (!button) return;
+  button.classList.toggle("active", mobileAutoAttackEnabled);
+  button.setAttribute("aria-pressed", mobileAutoAttackEnabled ? "true" : "false");
+  button.textContent = mobileAutoAttackEnabled ? "AUTO ON" : "AUTO";
+}
+
+function setMobileAutoAttackEnabled(enabled, { quiet = false } = {}) {
+  const nextEnabled = Boolean(enabled && mobileControlsEnabled);
+  if (mobileAutoAttackEnabled === nextEnabled) {
+    updateMobileAutoAttackButton();
+    return;
+  }
+
+  mobileAutoAttackEnabled = nextEnabled;
+  if (!nextEnabled && mobileAutoAttackBowDrawing) {
+    player.bowDrawing = false;
+    player.bowDrawAmount = 0;
+    player.bowReleaseTime = 0;
+  }
+  clearMobileAutoBowTarget();
+  updateMobileAutoAttackButton();
+
+  if (!quiet) {
+    spawnFloatingText(
+      player.x,
+      player.y - 27,
+      nextEnabled ? "AUTO ATTACK ON" : "AUTO ATTACK OFF",
+      nextEnabled ? "#bff28f" : "#ffe38b",
+      0.72
+    );
+  }
+}
+
+function updateMobileAutoAttack() {
+  if (!mobileControlsEnabled || !mobileAutoAttackEnabled) return false;
+  if (player.isDead || player.hp <= 0) {
+    setMobileAutoAttackEnabled(false, { quiet: true });
+    return false;
+  }
+  if (
+    inventoryOpen ||
+    shopOpen ||
+    craftingOpen ||
+    classResetConfirmOpen ||
+    mobilePointTargetMode ||
+    player.rainCloudCasting ||
+    focusFireIsCasting() ||
+    fireballIsAiming() ||
+    getLocalCarriedHurlObject()
+  ) {
+    return false;
+  }
+
+  const weapon = equippedWeapon();
+  if (!weapon) return false;
+
+  const target = mobileEnemyTarget(
+    weapon === "bow"
+      ? MOBILE_AUTO_ATTACK_BOW_DISTANCE
+      : MOBILE_COMBAT_ASSIST_MELEE_DISTANCE,
+    weapon !== "bow"
+  );
+
+  if (!target) {
+    if (mobileAutoAttackBowDrawing) {
+      player.bowDrawing = false;
+      player.bowDrawAmount = 0;
+      player.bowReleaseTime = 0;
+      clearMobileAutoBowTarget();
+    }
+    return false;
+  }
+
+  const point = {
+    x: target.target.x - currentCamX,
+    y: target.target.y - currentCamY
+  };
+  mouseCanvasX = point.x;
+  mouseCanvasY = point.y;
+  mobileAimDx = target.dx / Math.max(0.001, target.distance);
+  mobileAimDy = target.dy / Math.max(0.001, target.distance);
+  updateAttackAimFromPointer(point.x, point.y);
+
+  if (weapon === "bow") {
+    if ((Number(player.arrows) || 0) <= 0) {
+      setMobileAutoAttackEnabled(false, { quiet: true });
+      spawnFloatingText(player.x, player.y - 27, "AUTO OFF · NO ARROWS", "#ffe38b", 0.72);
+      return false;
+    }
+
+    if (player.bowDrawing) {
+      if (mobileAutoAttackBowDrawing) {
+        mobileAutoBowTarget = target.target;
+      }
+      return mobileAutoAttackBowDrawing;
+    }
+    if (player.attackCooldown > 0 || player.bowReleaseTime > 0) return false;
+
+    handlePrimaryAttack(mobilePointerEventForCanvas(point));
+    mobileAutoAttackBowDrawing = Boolean(player.bowDrawing);
+    mobileAutoBowTarget = mobileAutoAttackBowDrawing ? target.target : null;
+    return true;
+  }
+
+  if (player.attackCooldown > 0) return false;
+  executePrimaryAttackCommand({
+    pointerX: point.x,
+    pointerY: point.y
+  });
+  return true;
 }
 
 function applyMobileCombatAssistAim() {
@@ -315,9 +523,10 @@ function installMobileControls() {
   const pad = document.getElementById("mobileMovePad");
   const knob = document.getElementById("mobileMoveKnob");
   const attack = document.getElementById("mobileAttackButton");
+  const autoAttack = document.getElementById("mobileAutoAttackButton");
   const interact = document.getElementById("mobileInteractButton");
   const menu = document.getElementById("mobileMenuButton");
-  if (!pad || !knob || !attack || !interact || !menu) return;
+  if (!pad || !knob || !attack || !autoAttack || !interact || !menu) return;
 
   let attackPointerId = null;
   let attackPointerStartX = 0;
@@ -456,6 +665,16 @@ function installMobileControls() {
   };
   attack.addEventListener("pointerup", releaseAttack);
   attack.addEventListener("pointercancel", releaseAttack);
+
+  autoAttack.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    clearMobilePointTargetMode();
+    if (!mobileAutoAttackEnabled && !equippedWeapon()) {
+      spawnFloatingText(player.x, player.y - 27, "EQUIP A WEAPON", "#ffe38b", 0.72);
+      return;
+    }
+    setMobileAutoAttackEnabled(!mobileAutoAttackEnabled);
+  });
 
   interact.addEventListener("pointerdown", event => {
     event.preventDefault();
@@ -880,7 +1099,7 @@ window.addEventListener("mouseup", handleBowVisualMouseUp);
 function resetInputAfterFocusLoss() {
   cancelHunterSnarePlacement(false);
   clearMobilePointTargetMode();
-  clearMobileAutoBowTarget();
+  setMobileAutoAttackEnabled(false, { quiet: true });
 
   // A key released while another tab/window owns focus does not reliably send
   // keyup back to the game. Clear every held input so the player cannot keep

@@ -12,8 +12,8 @@ const config = read("public", "client-config.js");
 const index = read("public", "index.html");
 const readme = read("README.md");
 
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-355";'), "client build must be v344");
-assert(index.includes('/client-app.js?v=355') && index.includes('/client-terrain.js?v=355'), "v344 terrain/app cache keys missing");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-358";'), "client build must be v344");
+assert(index.includes('/client-app.js?v=358') && index.includes('/client-terrain.js?v=358'), "v344 terrain/app cache keys missing");
 assert(app.includes('function isAuthoredTerrainMap('), "authored-terrain runtime detector missing");
 assert(app.includes('isPrototypeIslandMap(currentMapId) || isAuthoredTerrainMap(currentMapId)'), "renderer is still restricted to prototype island IDs");
 assert(app.includes('drawTerrainMapTop(currentMapId, camX, camY)'), "shared terrain renderer is not wired into ground layer");

@@ -102,6 +102,24 @@
     bottom: max(16px, env(safe-area-inset-bottom));
   }
 
+  #mobileAutoAttackButton {
+    right: max(22px, calc(env(safe-area-inset-right) + 22px));
+    bottom: max(88px, calc(env(safe-area-inset-bottom) + 88px));
+    width: 58px;
+    height: 32px;
+    border-radius: 6px;
+    font-size: 8px;
+  }
+
+  #mobileAutoAttackButton.active {
+    color: #f1ffd8;
+    border-color: #bff28f;
+    background: rgba(51, 91, 52, .94);
+    box-shadow:
+      0 0 0 2px rgba(191, 242, 143, .32),
+      3px 3px 0 rgba(0,0,0,.35);
+  }
+
   #mobileInteractButton {
     right: max(96px, calc(env(safe-area-inset-right) + 96px));
     bottom: max(23px, calc(env(safe-area-inset-bottom) + 23px));
@@ -4335,6 +4353,12 @@
       height: 60px;
     }
 
+    #mobileAutoAttackButton {
+      bottom: max(82px, calc(env(safe-area-inset-bottom) + 82px));
+      width: 54px;
+      height: 30px;
+    }
+
     #mobileInteractButton {
       right: max(86px, calc(env(safe-area-inset-right) + 86px));
       width: 46px;
@@ -4719,8 +4743,8 @@
   (() => {
     if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
     const mobileCanvas = document.getElementById("game");
-    mobileCanvas.width = 256;
-    mobileCanvas.height = 144;
+    mobileCanvas.width = 224;
+    mobileCanvas.height = 126;
     mobileCanvas.dataset.mobileWorldScale = "1.25";
   })();
 </script>
@@ -4730,6 +4754,7 @@
     <div id="mobileMoveKnob"></div>
   </div>
   <button id="mobileInteractButton" class="mobile-action-button" type="button" aria-label="Interact">ACT</button>
+  <button id="mobileAutoAttackButton" class="mobile-action-button" type="button" aria-label="Toggle automatic attacks" aria-pressed="false">AUTO</button>
   <button id="mobileAttackButton" class="mobile-action-button" type="button" aria-label="Attack">ATK</button>
   <div id="mobileTargetHint" aria-live="polite"></div>
 </div>
@@ -5677,33 +5702,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=355"></script>
-<script src="/shared/terrain-rules.js?v=355"></script>
-<script src="/shared/terrain-presentation.js?v=355"></script>
-<script src="/shared/combat-balance.js?v=355"></script>
-<script src="/shared/ability-scaling.js?v=355"></script>
-<script src="/shared/rain-field.js?v=355"></script>
-<script src="/shared/camouflage-rules.js?v=355"></script>
-<script src="/shared/enemy-net-protocol.js?v=355"></script>
-<script src="/shared/player-net-protocol.js?v=355"></script>
-<script src="/client-config.js?v=355"></script>
-<script src="/client-utils.js?v=355"></script>
-<script src="/client-world.js?v=355"></script>
-<script src="/client-maps.js?v=355"></script>
-<script src="/client-enemies.js?v=355"></script>
-<script src="/client-enemy-runtime.js?v=355"></script>
-<script src="/client-enemy-rendering.js?v=355"></script>
-<script src="/client-combat.js?v=355"></script>
-<script src="/client-abilities.js?v=355"></script>
-<script src="/client-magus-abilities.js?v=355"></script>
-<script src="/client-class-abilities.js?v=355"></script>
-<script src="/client-status.js?v=355"></script>
-<script src="/client-fire-environment.js?v=355"></script>
-<script src="/client-network.js?v=355"></script>
-<script src="/client-simulation-foundation.js?v=355"></script>
-<script src="/game.js?v=355"></script>
-<script src="/client-terrain.js?v=355"></script>
-<script src="/client-input.js?v=355"></script>
-<script src="/client-app.js?v=355"></script>
+<script src="/shared/world-content-runtime.js?v=358"></script>
+<script src="/shared/terrain-rules.js?v=358"></script>
+<script src="/shared/terrain-presentation.js?v=358"></script>
+<script src="/shared/combat-balance.js?v=358"></script>
+<script src="/shared/ability-scaling.js?v=358"></script>
+<script src="/shared/rain-field.js?v=358"></script>
+<script src="/shared/camouflage-rules.js?v=358"></script>
+<script src="/shared/enemy-net-protocol.js?v=358"></script>
+<script src="/shared/player-net-protocol.js?v=358"></script>
+<script src="/client-config.js?v=358"></script>
+<script src="/client-utils.js?v=358"></script>
+<script src="/client-world.js?v=358"></script>
+<script src="/client-maps.js?v=358"></script>
+<script src="/client-enemies.js?v=358"></script>
+<script src="/client-enemy-runtime.js?v=358"></script>
+<script src="/client-enemy-rendering.js?v=358"></script>
+<script src="/client-combat.js?v=358"></script>
+<script src="/client-abilities.js?v=358"></script>
+<script src="/client-magus-abilities.js?v=358"></script>
+<script src="/client-class-abilities.js?v=358"></script>
+<script src="/client-status.js?v=358"></script>
+<script src="/client-fire-environment.js?v=358"></script>
+<script src="/client-network.js?v=358"></script>
+<script src="/client-simulation-foundation.js?v=358"></script>
+<script src="/game.js?v=358"></script>
+<script src="/client-terrain.js?v=358"></script>
+<script src="/client-input.js?v=358"></script>
+<script src="/client-app.js?v=358"></script>
 </body>
 </html>

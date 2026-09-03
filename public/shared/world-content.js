@@ -188,6 +188,167 @@
       ]
     });
 
+    function buildWaterfallGroveMap() {
+      const mapId = "waterfallGrove";
+      const trees = [];
+      const tallGrass = [];
+      const harvestFlowers = [];
+      let treePhase = 0.21;
+
+      function addTree(x, y, { perimeter = false, variant = trees.length % 2 } = {}) {
+        trees.push({
+          id: `${mapId}:tree:${trees.length + 1}`,
+          x,
+          y,
+          phase: Number(treePhase.toFixed(2)),
+          fireImmune: perimeter,
+          nonInteractive: perimeter,
+          canopyVariant: variant
+        });
+        treePhase += 0.57;
+      }
+
+      // Two staggered rows frame the grove while preserving a broad southern
+      // entrance and an open view toward the waterfall.
+      for (const y of [84, 110]) {
+        const offset = y === 110 ? 12 : 0;
+        for (let x = 80 + offset; x <= 248; x += 28) addTree(x, y, { perimeter: true });
+        for (let x = 392 + offset; x <= 560; x += 28) addTree(x, y, { perimeter: true });
+      }
+      for (const y of [432, 456]) {
+        const offset = y === 432 ? 12 : 0;
+        for (let x = 80 + offset; x <= 560; x += 28) {
+          if (x >= 276 && x <= 364) continue;
+          addTree(x, y, { perimeter: true });
+        }
+      }
+      for (let y = 132; y <= 416; y += 28) {
+        addTree(80, y, { perimeter: true });
+        addTree(104, y + 12, { perimeter: true });
+        addTree(536, y + 12, { perimeter: true });
+        addTree(560, y, { perimeter: true });
+      }
+
+      // Irregular inner stands make the canopy feel natural instead of like a
+      // rectangular wall. These trees remain part of the interactive world.
+      [
+        [132, 164], [158, 188], [126, 242], [154, 276], [118, 334],
+        [150, 370], [190, 404], [230, 430], [508, 166], [482, 190],
+        [516, 244], [486, 282], [522, 336], [488, 374], [446, 414],
+        [410, 438], [198, 146], [442, 146]
+      ].forEach(([x, y], index) => addTree(x, y, { variant: index % 2 }));
+
+      const grassPatches = [
+        [178, 232, "yellow"], [196, 252, "pink"], [154, 302, "white"],
+        [188, 326, "blue"], [216, 350, "yellow"], [176, 390, "pink"],
+        [248, 330, "white"], [260, 372, "blue"], [236, 410, "yellow"],
+        [462, 232, "pink"], [444, 258, "white"], [480, 310, "blue"],
+        [438, 338, "yellow"], [466, 366, "pink"], [408, 386, "white"],
+        [394, 426, "blue"], [284, 344, "yellow"], [356, 354, "pink"],
+        [278, 398, "white"], [366, 404, "blue"], [206, 286, null],
+        [426, 292, null], [260, 246, "pink"], [380, 250, "yellow"]
+      ];
+      grassPatches.forEach(([x, y, flowerType], index) => {
+        tallGrass.push({
+          id: `${mapId}:grass:${index + 1}`,
+          x,
+          y,
+          phase: Number((0.35 + index * 0.49).toFixed(2)),
+          width: 11 + (index % 5),
+          flowerType
+        });
+      });
+
+      [
+        [164, 214, "white"], [190, 274, "blue"], [146, 352, "white"],
+        [212, 382, "blue"], [250, 308, "white"], [270, 430, "blue"],
+        [476, 216, "white"], [452, 280, "blue"], [494, 346, "white"],
+        [430, 366, "blue"], [392, 444, "white"], [370, 322, "blue"],
+        [226, 334, "white"], [416, 238, "blue"], [198, 414, "white"],
+        [458, 404, "blue"]
+      ].forEach(([x, y, type], index) => {
+        harvestFlowers.push({
+          id: `${mapId}:flower:${index + 1}`,
+          x,
+          y,
+          phase: Number((0.18 + index * 0.63).toFixed(2)),
+          type
+        });
+      });
+
+      return {
+        name: "Waterfall Grove",
+        dimensions: { width: 640, height: 520 },
+        playerSpawns: [
+          { id: "southEntrance", x: 320, y: 430 }
+        ],
+        portals: [
+          {
+            id: `${mapId}:portal:south`,
+            x: 292, y: 452, width: 56, height: 12,
+            targetMapId: "prototypeIslandWest",
+            targetSpawnId: "waterfallTrail"
+          }
+        ],
+        environment: {
+          trees,
+          tallGrass,
+          rocks: [
+            { id: `${mapId}:rock:1`, x: 206, y: 214, variant: "grass" },
+            { id: `${mapId}:rock:2`, x: 434, y: 218, variant: "grass" },
+            { id: `${mapId}:rock:3`, x: 226, y: 294, variant: "plain" },
+            { id: `${mapId}:rock:4`, x: 414, y: 296, variant: "plain" }
+          ],
+          sceneryRocks: [
+            { id: `${mapId}:sceneryRock:1`, x: 184, y: 196, collision: { width: 12, height: 7 } },
+            { id: `${mapId}:sceneryRock:2`, x: 456, y: 198, collision: { width: 12, height: 7 } },
+            { id: `${mapId}:sceneryRock:3`, x: 246, y: 286, collision: { width: 10, height: 6 } },
+            { id: `${mapId}:sceneryRock:4`, x: 394, y: 286, collision: { width: 10, height: 6 } }
+          ],
+          harvestFlowers,
+          houses: []
+        },
+        enemySpawns: [],
+        npcs: [],
+        landmarks: {
+          waterfall: {
+            x: 320,
+            topY: 76,
+            baseY: 218,
+            width: 88,
+            cliffLeft: 160,
+            cliffRight: 480,
+            pool: { x: 224, y: 200, width: 192, height: 104 }
+          },
+          lightBeams: [
+            { x: 230, y: 58, width: 58, height: 240, lean: 42, alpha: 0.09 },
+            { x: 340, y: 48, width: 74, height: 270, lean: 24, alpha: 0.12 },
+            { x: 430, y: 70, width: 42, height: 210, lean: -18, alpha: 0.07 }
+          ]
+        },
+        terrain: {
+          cellSize: 8,
+          defaultType: "void",
+          regions: [
+            { type: "grass", x: 64, y: 64, width: 512, height: 400 },
+            { type: "dirt", x: 304, y: 272, width: 32, height: 192 },
+            { type: "dirt", x: 288, y: 272, width: 64, height: 40 },
+            { type: "water", x: 248, y: 192, width: 144, height: 8 },
+            { type: "water", x: 232, y: 200, width: 176, height: 16 },
+            { type: "water", x: 224, y: 216, width: 192, height: 56 },
+            { type: "water", x: 232, y: 272, width: 176, height: 16 },
+            { type: "water", x: 248, y: 288, width: 144, height: 16 },
+            { type: "water", x: 272, y: 80, width: 96, height: 152 },
+            { type: "void", x: 160, y: 64, width: 112, height: 136 },
+            { type: "void", x: 368, y: 64, width: 112, height: 136 }
+          ]
+        },
+        collision: { waterRects: [] }
+      };
+    }
+
+    const waterfallGroveMap = buildWaterfallGroveMap();
+
     // Canonical shared world definitions. Prototype Island and Prototype West
     // now exercise the editor-facing schema end to end; legacy maps are migrated
     // gradually so gameplay does not change all at once.
@@ -405,6 +566,8 @@
           waterRects: []
         }
       },
+
+      waterfallGrove: waterfallGroveMap,
 
 
       crabBeach: {
@@ -1002,4 +1165,3 @@
     });
   }
 );
-

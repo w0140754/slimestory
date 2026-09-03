@@ -1,7 +1,7 @@
 // Slime Story client foundation: build identity and low-side-effect configuration.
 // Keep this file free of DOM access and mutable gameplay state.
 
-const CLIENT_BUILD_VERSION = "6-11-355";
+const CLIENT_BUILD_VERSION = "6-11-358";
 
 const CLIENT_AUTO_RELOAD_SIGNATURE_KEY = "slimeStoryAutoReloadSignature";
 
@@ -10,6 +10,7 @@ const MAP_WORLD_DIMENSIONS = Object.freeze({
   spawn: Object.freeze({ width: 344, height: 224 }),
   prototypeIsland: Object.freeze({ width: 760, height: 560 }),
   prototypeIslandWest: Object.freeze({ width: 1060, height: 560 }),
+  waterfallGrove: Object.freeze({ width: 640, height: 520 }),
   goldSlimeDen: Object.freeze({ width: 520, height: 330 })
 });
 

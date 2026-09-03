@@ -240,6 +240,148 @@ function drawTerrainMapTop(mapId, camX, camY) {
   return true;
 }
 
+function drawWaterfallGroveLandmark(mapId, camX, camY) {
+  if (mapId !== "waterfallGrove") return false;
+  const waterfall = WORLD_CONTENT?.maps?.[mapId]?.landmarks?.waterfall;
+  if (!waterfall) return false;
+
+  const centerX = Number(waterfall.x) || 320;
+  const topY = Number(waterfall.topY) || 76;
+  const baseY = Number(waterfall.baseY) || 218;
+  const width = Number(waterfall.width) || 88;
+  const left = Number(waterfall.cliffLeft) || 160;
+  const right = Number(waterfall.cliffRight) || 480;
+  const fallLeft = centerX - width / 2;
+  const fallRight = centerX + width / 2;
+  const sx = value => Math.round(value - camX);
+  const sy = value => Math.round(value - camY);
+  const fallFrame = Math.floor((worldTime || 0) * 8);
+
+  if (right < camX - 20 || left > camX + VIEW_W + 20 || baseY < camY - 20 || topY > camY + VIEW_H + 20) {
+    return true;
+  }
+
+  ctx.save();
+
+  // Mossy stepped cliff shoulders. Keeping the geometry chunky lets this sit
+  // naturally beside the game's pixel terrain instead of reading as a photo.
+  ctx.fillStyle = "#243b35";
+  ctx.fillRect(sx(left), sy(topY - 8), Math.round(right - left), Math.round(baseY - topY + 18));
+  ctx.fillStyle = "#405246";
+  ctx.fillRect(sx(left + 8), sy(topY), Math.round(fallLeft - left - 12), Math.round(baseY - topY));
+  ctx.fillRect(sx(fallRight + 4), sy(topY), Math.round(right - fallRight - 12), Math.round(baseY - topY));
+  ctx.fillStyle = "#536456";
+  ctx.fillRect(sx(left + 16), sy(topY + 10), Math.round(fallLeft - left - 28), 7);
+  ctx.fillRect(sx(fallRight + 12), sy(topY + 16), Math.round(right - fallRight - 32), 6);
+  ctx.fillRect(sx(left + 28), sy(topY + 55), Math.round(fallLeft - left - 40), 5);
+  ctx.fillRect(sx(fallRight + 24), sy(topY + 68), Math.round(right - fallRight - 38), 5);
+
+  const rockBlocks = [
+    [176, 102, 24, 13], [210, 128, 34, 17], [170, 158, 42, 19],
+    [226, 178, 28, 15], [398, 106, 31, 15], [438, 134, 25, 18],
+    [414, 164, 40, 16], [382, 190, 30, 13]
+  ];
+  for (let i = 0; i < rockBlocks.length; i += 1) {
+    const [x, y, blockWidth, blockHeight] = rockBlocks[i];
+    ctx.fillStyle = i % 2 === 0 ? "#66715f" : "#586657";
+    ctx.fillRect(sx(x), sy(y), blockWidth, blockHeight);
+    ctx.fillStyle = "rgba(151,175,126,.32)";
+    ctx.fillRect(sx(x + 2), sy(y + 1), Math.max(4, blockWidth - 7), 2);
+  }
+
+  // Ferny moss bands soften the rock and visually join it to the tree canopy.
+  ctx.fillStyle = "#567b45";
+  for (const [x, y, bandWidth] of [[164, 92, 88], [388, 94, 82], [186, 146, 60], [402, 150, 62], [204, 194, 48], [390, 198, 46]]) {
+    ctx.fillRect(sx(x), sy(y), bandWidth, 4);
+    ctx.fillStyle = "#75a255";
+    for (let blade = 2; blade < bandWidth; blade += 8) {
+      ctx.fillRect(sx(x + blade), sy(y - 3 - ((blade / 8) % 2)), 2, 4);
+    }
+    ctx.fillStyle = "#567b45";
+  }
+
+  // Deep channel first, then moving sheets and bright broken highlights.
+  ctx.fillStyle = "#28536a";
+  ctx.fillRect(sx(fallLeft - 3), sy(topY - 2), Math.round(width + 6), Math.round(baseY - topY + 5));
+  ctx.fillStyle = "#4d91aa";
+  ctx.fillRect(sx(fallLeft), sy(topY), Math.round(width), Math.round(baseY - topY));
+  ctx.fillStyle = "#75bfd0";
+  ctx.fillRect(sx(fallLeft + 8), sy(topY), 14, Math.round(baseY - topY));
+  ctx.fillRect(sx(fallLeft + 35), sy(topY), 9, Math.round(baseY - topY));
+  ctx.fillRect(sx(fallRight - 22), sy(topY), 12, Math.round(baseY - topY));
+
+  for (let y = topY + ((fallFrame * 3) % 18) - 18; y < baseY; y += 18) {
+    ctx.fillStyle = "rgba(229,250,255,.82)";
+    ctx.fillRect(sx(fallLeft + 4 + ((y / 18) % 3) * 7), sy(y), 18, 2);
+    ctx.fillRect(sx(centerX + 3), sy(y + 7), 25, 2);
+  }
+  ctx.fillStyle = "rgba(241,253,255,.92)";
+  ctx.fillRect(sx(fallLeft + 2), sy(topY + 3), 3, Math.round(baseY - topY - 4));
+  ctx.fillRect(sx(fallRight - 7), sy(topY + 8), 3, Math.round(baseY - topY - 12));
+
+  // A stepped burst of foam anchors the vertical fall to the pool surface.
+  const foamY = baseY - 2;
+  ctx.fillStyle = "rgba(235,252,255,.92)";
+  ctx.fillRect(sx(centerX - 54), sy(foamY), 108, 4);
+  ctx.fillRect(sx(centerX - 68), sy(foamY + 5), 136, 3);
+  ctx.fillRect(sx(centerX - 42), sy(foamY + 10), 84, 2);
+  ctx.fillStyle = "rgba(157,220,229,.70)";
+  ctx.fillRect(sx(centerX - 82), sy(foamY + 13), 52, 2);
+  ctx.fillRect(sx(centerX + 30), sy(foamY + 13), 52, 2);
+
+  ctx.restore();
+  return true;
+}
+
+function drawWaterfallGroveAtmosphere(mapId, camX, camY) {
+  if (mapId !== "waterfallGrove") return false;
+  const landmarks = WORLD_CONTENT?.maps?.[mapId]?.landmarks;
+  if (!landmarks) return false;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  for (const beam of landmarks.lightBeams || []) {
+    const x = Math.round(Number(beam.x) - camX);
+    const y = Math.round(Number(beam.y) - camY);
+    const width = Math.round(Number(beam.width));
+    const height = Math.round(Number(beam.height));
+    const lean = Math.round(Number(beam.lean) || 0);
+    ctx.fillStyle = `rgba(255,249,195,${Number(beam.alpha) || 0.08})`;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + width, y);
+    ctx.lineTo(x + width + lean, y + height);
+    ctx.lineTo(x + lean, y + height);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  const time = worldTime || 0;
+  for (let i = 0; i < 18; i += 1) {
+    const seedX = 148 + ((i * 71) % 344);
+    const seedY = 96 + ((i * 47) % 268);
+    const driftX = Math.sin(time * 0.7 + i * 1.9) * 5;
+    const driftY = ((time * (4 + i % 3) + i * 13) % 36) - 18;
+    const x = Math.round(seedX + driftX - camX);
+    const y = Math.round(seedY - driftY - camY);
+    ctx.fillStyle = i % 3 === 0 ? "rgba(255,248,177,.42)" : "rgba(221,255,224,.28)";
+    ctx.fillRect(x, y, i % 4 === 0 ? 2 : 1, i % 4 === 0 ? 2 : 1);
+  }
+
+  const fall = landmarks.waterfall;
+  if (fall) {
+    const baseX = Math.round(Number(fall.x) - camX);
+    const baseY = Math.round(Number(fall.baseY) - camY);
+    const mistShift = Math.round(Math.sin(time * 0.8) * 5);
+    ctx.fillStyle = "rgba(224,249,248,.12)";
+    ctx.fillRect(baseX - 78 + mistShift, baseY + 5, 64, 12);
+    ctx.fillRect(baseX - 20 - mistShift, baseY + 10, 86, 10);
+    ctx.fillRect(baseX + 44 + mistShift, baseY + 1, 46, 9);
+  }
+  ctx.restore();
+  return true;
+}
+
 
 function terrainEntityTouchesWater(
   worldX,

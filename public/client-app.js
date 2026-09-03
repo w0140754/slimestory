@@ -624,6 +624,7 @@ class GameSimulation {
       // This is the future client -> server command boundary.
       this.processInputCommands();
       repeatHeldPrimaryAttackIfReady();
+      updateMobileAutoAttack();
     }
 
     for (const system of this.systems) {
@@ -828,6 +829,10 @@ function drawPrototypeIslandGroundLayer(camX, camY) {
     typeof drawTerrainMapTop === "function" &&
     drawTerrainMapTop(currentMapId, camX, camY)
   ) {
+    if (typeof drawWaterfallGroveLandmark === "function") {
+      drawWaterfallGroveLandmark(currentMapId, camX, camY);
+    }
+
     // Terrain owns the top surface (including dirt/water). Reflections are
     // layered into authored water before a light surface veil.
     drawPlayerReflection(camX, camY);
@@ -1246,6 +1251,10 @@ function drawSortedWorldLayer(camX, camY) {
 
 function drawForegroundLayer(camX, camY) {
   drawFireLighting(camX, camY);
+
+  if (typeof drawWaterfallGroveAtmosphere === "function") {
+    drawWaterfallGroveAtmosphere(currentMapId, camX, camY);
+  }
 
   drawJesterAfterimages(camX, camY);
   drawFireParticles(camX, camY);

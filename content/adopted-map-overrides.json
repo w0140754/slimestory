@@ -1,5 +1,5 @@
 {
-  "version": 50,
+  "version": 53,
   "maps": {
     "prototypeIsland": {
       "name": "Prototype Island",
@@ -1468,6 +1468,11 @@
           "id": "eastBridge",
           "x": 864,
           "y": 280
+        },
+        {
+          "id": "waterfallTrail",
+          "x": 480,
+          "y": 196
         }
       ],
       "portals": [
@@ -1488,6 +1493,15 @@
           "height": 54,
           "targetMapId": "crabBeach",
           "targetSpawnId": "westDune"
+        },
+        {
+          "id": "prototypeIslandWest:portal:waterfallGrove",
+          "x": 464,
+          "y": 124,
+          "width": 32,
+          "height": 16,
+          "targetMapId": "waterfallGrove",
+          "targetSpawnId": "southEntrance"
         }
       ],
       "environment": {
@@ -1897,14 +1911,6 @@
             "x": 480,
             "y": 421,
             "phase": 39.859999999999985,
-            "fireImmune": true,
-            "nonInteractive": true
-          },
-          {
-            "id": "prototypeIslandWest:tree:55",
-            "x": 493,
-            "y": 140,
-            "phase": 40.58999999999998,
             "fireImmune": true,
             "nonInteractive": true
           },
@@ -3461,6 +3467,14 @@
             "y": 424,
             "width": 200,
             "height": 8
+          },
+          {
+            "id": "waterfall-grove-trail",
+            "type": "dirt",
+            "x": 464,
+            "y": 128,
+            "width": 32,
+            "height": 96
           }
         ]
       },
@@ -4509,6 +4523,1582 @@
         "waterRects": []
       },
       "npcs": []
+    },
+    "waterfallGrove": {
+      "name": "Waterfall Grove",
+      "dimensions": {
+        "width": 640,
+        "height": 520
+      },
+      "playerSpawns": [
+        {
+          "id": "southEntrance",
+          "x": 320,
+          "y": 430
+        }
+      ],
+      "portals": [
+        {
+          "id": "waterfallGrove:portal:south",
+          "x": 292,
+          "y": 452,
+          "width": 56,
+          "height": 12,
+          "targetMapId": "prototypeIslandWest",
+          "targetSpawnId": "waterfallTrail"
+        }
+      ],
+      "environment": {
+        "trees": [
+          {
+            "id": "waterfallGrove:tree:1",
+            "x": 80,
+            "y": 84,
+            "phase": 0.21,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:2",
+            "x": 108,
+            "y": 84,
+            "phase": 0.78,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:3",
+            "x": 136,
+            "y": 84,
+            "phase": 1.35,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:4",
+            "x": 164,
+            "y": 84,
+            "phase": 1.92,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:5",
+            "x": 192,
+            "y": 84,
+            "phase": 2.49,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:6",
+            "x": 220,
+            "y": 84,
+            "phase": 3.06,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:7",
+            "x": 248,
+            "y": 84,
+            "phase": 3.63,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:8",
+            "x": 392,
+            "y": 84,
+            "phase": 4.2,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:9",
+            "x": 420,
+            "y": 84,
+            "phase": 4.77,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:10",
+            "x": 448,
+            "y": 84,
+            "phase": 5.34,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:11",
+            "x": 476,
+            "y": 84,
+            "phase": 5.91,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:12",
+            "x": 504,
+            "y": 84,
+            "phase": 6.48,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:13",
+            "x": 532,
+            "y": 84,
+            "phase": 7.05,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:14",
+            "x": 560,
+            "y": 84,
+            "phase": 7.62,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:15",
+            "x": 92,
+            "y": 110,
+            "phase": 8.19,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:16",
+            "x": 120,
+            "y": 110,
+            "phase": 8.76,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:17",
+            "x": 148,
+            "y": 110,
+            "phase": 9.33,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:18",
+            "x": 176,
+            "y": 110,
+            "phase": 9.9,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:19",
+            "x": 204,
+            "y": 110,
+            "phase": 10.47,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:20",
+            "x": 232,
+            "y": 110,
+            "phase": 11.04,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:21",
+            "x": 404,
+            "y": 110,
+            "phase": 11.61,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:22",
+            "x": 432,
+            "y": 110,
+            "phase": 12.18,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:23",
+            "x": 460,
+            "y": 110,
+            "phase": 12.75,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:24",
+            "x": 488,
+            "y": 110,
+            "phase": 13.32,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:25",
+            "x": 516,
+            "y": 110,
+            "phase": 13.89,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:26",
+            "x": 544,
+            "y": 110,
+            "phase": 14.46,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:27",
+            "x": 92,
+            "y": 432,
+            "phase": 15.03,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:28",
+            "x": 120,
+            "y": 432,
+            "phase": 15.6,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:29",
+            "x": 148,
+            "y": 432,
+            "phase": 16.17,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:30",
+            "x": 176,
+            "y": 432,
+            "phase": 16.74,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:31",
+            "x": 204,
+            "y": 432,
+            "phase": 17.31,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:32",
+            "x": 232,
+            "y": 432,
+            "phase": 17.88,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:33",
+            "x": 260,
+            "y": 432,
+            "phase": 18.45,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:34",
+            "x": 372,
+            "y": 432,
+            "phase": 19.02,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:35",
+            "x": 400,
+            "y": 432,
+            "phase": 19.59,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:36",
+            "x": 428,
+            "y": 432,
+            "phase": 20.16,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:37",
+            "x": 456,
+            "y": 432,
+            "phase": 20.73,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:38",
+            "x": 484,
+            "y": 432,
+            "phase": 21.3,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:39",
+            "x": 512,
+            "y": 432,
+            "phase": 21.87,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:40",
+            "x": 540,
+            "y": 432,
+            "phase": 22.44,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:41",
+            "x": 80,
+            "y": 456,
+            "phase": 23.01,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:42",
+            "x": 108,
+            "y": 456,
+            "phase": 23.58,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:43",
+            "x": 136,
+            "y": 456,
+            "phase": 24.15,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:44",
+            "x": 164,
+            "y": 456,
+            "phase": 24.72,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:45",
+            "x": 192,
+            "y": 456,
+            "phase": 25.29,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:46",
+            "x": 220,
+            "y": 456,
+            "phase": 25.86,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:47",
+            "x": 248,
+            "y": 456,
+            "phase": 26.43,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:48",
+            "x": 388,
+            "y": 456,
+            "phase": 27,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:49",
+            "x": 416,
+            "y": 456,
+            "phase": 27.57,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:50",
+            "x": 444,
+            "y": 456,
+            "phase": 28.14,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:51",
+            "x": 472,
+            "y": 456,
+            "phase": 28.71,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:52",
+            "x": 500,
+            "y": 456,
+            "phase": 29.28,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:53",
+            "x": 528,
+            "y": 456,
+            "phase": 29.85,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:54",
+            "x": 556,
+            "y": 456,
+            "phase": 30.42,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:55",
+            "x": 80,
+            "y": 132,
+            "phase": 30.99,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:56",
+            "x": 104,
+            "y": 144,
+            "phase": 31.56,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:57",
+            "x": 536,
+            "y": 144,
+            "phase": 32.13,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:58",
+            "x": 560,
+            "y": 132,
+            "phase": 32.7,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:59",
+            "x": 80,
+            "y": 160,
+            "phase": 33.27,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:60",
+            "x": 104,
+            "y": 172,
+            "phase": 33.84,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:61",
+            "x": 536,
+            "y": 172,
+            "phase": 34.41,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:62",
+            "x": 560,
+            "y": 160,
+            "phase": 34.98,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:63",
+            "x": 80,
+            "y": 188,
+            "phase": 35.55,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:64",
+            "x": 104,
+            "y": 200,
+            "phase": 36.12,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:65",
+            "x": 536,
+            "y": 200,
+            "phase": 36.69,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:66",
+            "x": 560,
+            "y": 188,
+            "phase": 37.26,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:67",
+            "x": 80,
+            "y": 216,
+            "phase": 37.83,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:68",
+            "x": 104,
+            "y": 228,
+            "phase": 38.4,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:69",
+            "x": 536,
+            "y": 228,
+            "phase": 38.97,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:70",
+            "x": 560,
+            "y": 216,
+            "phase": 39.54,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:71",
+            "x": 80,
+            "y": 244,
+            "phase": 40.11,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:72",
+            "x": 104,
+            "y": 256,
+            "phase": 40.68,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:73",
+            "x": 536,
+            "y": 256,
+            "phase": 41.25,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:74",
+            "x": 560,
+            "y": 244,
+            "phase": 41.82,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:75",
+            "x": 80,
+            "y": 272,
+            "phase": 42.39,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:76",
+            "x": 104,
+            "y": 284,
+            "phase": 42.96,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:77",
+            "x": 536,
+            "y": 284,
+            "phase": 43.53,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:78",
+            "x": 560,
+            "y": 272,
+            "phase": 44.1,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:79",
+            "x": 80,
+            "y": 300,
+            "phase": 44.67,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:80",
+            "x": 104,
+            "y": 312,
+            "phase": 45.24,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:81",
+            "x": 536,
+            "y": 312,
+            "phase": 45.81,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:82",
+            "x": 560,
+            "y": 300,
+            "phase": 46.38,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:83",
+            "x": 80,
+            "y": 328,
+            "phase": 46.95,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:84",
+            "x": 104,
+            "y": 340,
+            "phase": 47.52,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:85",
+            "x": 536,
+            "y": 340,
+            "phase": 48.09,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:86",
+            "x": 560,
+            "y": 328,
+            "phase": 48.66,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:87",
+            "x": 80,
+            "y": 356,
+            "phase": 49.23,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:88",
+            "x": 104,
+            "y": 368,
+            "phase": 49.8,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:89",
+            "x": 536,
+            "y": 368,
+            "phase": 50.37,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:90",
+            "x": 560,
+            "y": 356,
+            "phase": 50.94,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:91",
+            "x": 80,
+            "y": 384,
+            "phase": 51.51,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:92",
+            "x": 104,
+            "y": 396,
+            "phase": 52.08,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:93",
+            "x": 536,
+            "y": 396,
+            "phase": 52.65,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:94",
+            "x": 560,
+            "y": 384,
+            "phase": 53.22,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:95",
+            "x": 80,
+            "y": 412,
+            "phase": 53.79,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:96",
+            "x": 104,
+            "y": 424,
+            "phase": 54.36,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:97",
+            "x": 536,
+            "y": 424,
+            "phase": 54.93,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:98",
+            "x": 560,
+            "y": 412,
+            "phase": 55.5,
+            "fireImmune": true,
+            "nonInteractive": true,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:99",
+            "x": 132,
+            "y": 164,
+            "phase": 56.07,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:100",
+            "x": 158,
+            "y": 188,
+            "phase": 56.64,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:101",
+            "x": 126,
+            "y": 242,
+            "phase": 57.21,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:102",
+            "x": 154,
+            "y": 276,
+            "phase": 57.78,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:103",
+            "x": 118,
+            "y": 334,
+            "phase": 58.35,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:104",
+            "x": 150,
+            "y": 370,
+            "phase": 58.92,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:105",
+            "x": 190,
+            "y": 404,
+            "phase": 59.49,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:106",
+            "x": 230,
+            "y": 430,
+            "phase": 60.06,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:107",
+            "x": 508,
+            "y": 166,
+            "phase": 60.63,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:108",
+            "x": 482,
+            "y": 190,
+            "phase": 61.2,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:109",
+            "x": 516,
+            "y": 244,
+            "phase": 61.77,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:110",
+            "x": 486,
+            "y": 282,
+            "phase": 62.34,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:111",
+            "x": 522,
+            "y": 336,
+            "phase": 62.91,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:112",
+            "x": 488,
+            "y": 374,
+            "phase": 63.48,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:113",
+            "x": 446,
+            "y": 414,
+            "phase": 64.05,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:114",
+            "x": 410,
+            "y": 438,
+            "phase": 64.62,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          },
+          {
+            "id": "waterfallGrove:tree:115",
+            "x": 198,
+            "y": 146,
+            "phase": 65.19,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 0
+          },
+          {
+            "id": "waterfallGrove:tree:116",
+            "x": 442,
+            "y": 146,
+            "phase": 65.76,
+            "fireImmune": false,
+            "nonInteractive": false,
+            "canopyVariant": 1
+          }
+        ],
+        "tallGrass": [
+          {
+            "id": "waterfallGrove:grass:1",
+            "x": 178,
+            "y": 232,
+            "phase": 0.35,
+            "width": 11,
+            "flowerType": "yellow"
+          },
+          {
+            "id": "waterfallGrove:grass:2",
+            "x": 196,
+            "y": 252,
+            "phase": 0.84,
+            "width": 12,
+            "flowerType": "pink"
+          },
+          {
+            "id": "waterfallGrove:grass:3",
+            "x": 154,
+            "y": 302,
+            "phase": 1.33,
+            "width": 13,
+            "flowerType": "white"
+          },
+          {
+            "id": "waterfallGrove:grass:4",
+            "x": 188,
+            "y": 326,
+            "phase": 1.82,
+            "width": 14,
+            "flowerType": "blue"
+          },
+          {
+            "id": "waterfallGrove:grass:5",
+            "x": 216,
+            "y": 350,
+            "phase": 2.31,
+            "width": 15,
+            "flowerType": "yellow"
+          },
+          {
+            "id": "waterfallGrove:grass:6",
+            "x": 176,
+            "y": 390,
+            "phase": 2.8,
+            "width": 11,
+            "flowerType": "pink"
+          },
+          {
+            "id": "waterfallGrove:grass:7",
+            "x": 248,
+            "y": 330,
+            "phase": 3.29,
+            "width": 12,
+            "flowerType": "white"
+          },
+          {
+            "id": "waterfallGrove:grass:8",
+            "x": 260,
+            "y": 372,
+            "phase": 3.78,
+            "width": 13,
+            "flowerType": "blue"
+          },
+          {
+            "id": "waterfallGrove:grass:9",
+            "x": 236,
+            "y": 410,
+            "phase": 4.27,
+            "width": 14,
+            "flowerType": "yellow"
+          },
+          {
+            "id": "waterfallGrove:grass:10",
+            "x": 462,
+            "y": 232,
+            "phase": 4.76,
+            "width": 15,
+            "flowerType": "pink"
+          },
+          {
+            "id": "waterfallGrove:grass:11",
+            "x": 444,
+            "y": 258,
+            "phase": 5.25,
+            "width": 11,
+            "flowerType": "white"
+          },
+          {
+            "id": "waterfallGrove:grass:12",
+            "x": 480,
+            "y": 310,
+            "phase": 5.74,
+            "width": 12,
+            "flowerType": "blue"
+          },
+          {
+            "id": "waterfallGrove:grass:13",
+            "x": 438,
+            "y": 338,
+            "phase": 6.23,
+            "width": 13,
+            "flowerType": "yellow"
+          },
+          {
+            "id": "waterfallGrove:grass:14",
+            "x": 466,
+            "y": 366,
+            "phase": 6.72,
+            "width": 14,
+            "flowerType": "pink"
+          },
+          {
+            "id": "waterfallGrove:grass:15",
+            "x": 408,
+            "y": 386,
+            "phase": 7.21,
+            "width": 15,
+            "flowerType": "white"
+          },
+          {
+            "id": "waterfallGrove:grass:16",
+            "x": 394,
+            "y": 426,
+            "phase": 7.7,
+            "width": 11,
+            "flowerType": "blue"
+          },
+          {
+            "id": "waterfallGrove:grass:17",
+            "x": 284,
+            "y": 344,
+            "phase": 8.19,
+            "width": 12,
+            "flowerType": "yellow"
+          },
+          {
+            "id": "waterfallGrove:grass:18",
+            "x": 356,
+            "y": 354,
+            "phase": 8.68,
+            "width": 13,
+            "flowerType": "pink"
+          },
+          {
+            "id": "waterfallGrove:grass:19",
+            "x": 278,
+            "y": 398,
+            "phase": 9.17,
+            "width": 14,
+            "flowerType": "white"
+          },
+          {
+            "id": "waterfallGrove:grass:20",
+            "x": 366,
+            "y": 404,
+            "phase": 9.66,
+            "width": 15,
+            "flowerType": "blue"
+          },
+          {
+            "id": "waterfallGrove:grass:21",
+            "x": 206,
+            "y": 286,
+            "phase": 10.15,
+            "width": 11,
+            "flowerType": null
+          },
+          {
+            "id": "waterfallGrove:grass:22",
+            "x": 426,
+            "y": 292,
+            "phase": 10.64,
+            "width": 12,
+            "flowerType": null
+          },
+          {
+            "id": "waterfallGrove:grass:23",
+            "x": 260,
+            "y": 246,
+            "phase": 11.13,
+            "width": 13,
+            "flowerType": "pink"
+          },
+          {
+            "id": "waterfallGrove:grass:24",
+            "x": 380,
+            "y": 250,
+            "phase": 11.62,
+            "width": 14,
+            "flowerType": "yellow"
+          }
+        ],
+        "rocks": [
+          {
+            "id": "waterfallGrove:rock:1",
+            "x": 206,
+            "y": 214,
+            "variant": "grass"
+          },
+          {
+            "id": "waterfallGrove:rock:2",
+            "x": 434,
+            "y": 218,
+            "variant": "grass"
+          },
+          {
+            "id": "waterfallGrove:rock:3",
+            "x": 226,
+            "y": 294,
+            "variant": "plain"
+          },
+          {
+            "id": "waterfallGrove:rock:4",
+            "x": 414,
+            "y": 296,
+            "variant": "plain"
+          }
+        ],
+        "sceneryRocks": [
+          {
+            "id": "waterfallGrove:sceneryRock:1",
+            "x": 184,
+            "y": 196,
+            "collision": {
+              "width": 12,
+              "height": 7
+            }
+          },
+          {
+            "id": "waterfallGrove:sceneryRock:2",
+            "x": 456,
+            "y": 198,
+            "collision": {
+              "width": 12,
+              "height": 7
+            }
+          },
+          {
+            "id": "waterfallGrove:sceneryRock:3",
+            "x": 246,
+            "y": 286,
+            "collision": {
+              "width": 10,
+              "height": 6
+            }
+          },
+          {
+            "id": "waterfallGrove:sceneryRock:4",
+            "x": 394,
+            "y": 286,
+            "collision": {
+              "width": 10,
+              "height": 6
+            }
+          }
+        ],
+        "harvestFlowers": [
+          {
+            "id": "waterfallGrove:flower:1",
+            "x": 164,
+            "y": 214,
+            "phase": 0.18,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:2",
+            "x": 190,
+            "y": 274,
+            "phase": 0.81,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:3",
+            "x": 146,
+            "y": 352,
+            "phase": 1.44,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:4",
+            "x": 212,
+            "y": 382,
+            "phase": 2.07,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:5",
+            "x": 250,
+            "y": 308,
+            "phase": 2.7,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:6",
+            "x": 270,
+            "y": 430,
+            "phase": 3.33,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:7",
+            "x": 476,
+            "y": 216,
+            "phase": 3.96,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:8",
+            "x": 452,
+            "y": 280,
+            "phase": 4.59,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:9",
+            "x": 494,
+            "y": 346,
+            "phase": 5.22,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:10",
+            "x": 430,
+            "y": 366,
+            "phase": 5.85,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:11",
+            "x": 392,
+            "y": 444,
+            "phase": 6.48,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:12",
+            "x": 370,
+            "y": 322,
+            "phase": 7.11,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:13",
+            "x": 226,
+            "y": 334,
+            "phase": 7.74,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:14",
+            "x": 416,
+            "y": 238,
+            "phase": 8.37,
+            "type": "blue"
+          },
+          {
+            "id": "waterfallGrove:flower:15",
+            "x": 198,
+            "y": 414,
+            "phase": 9,
+            "type": "white"
+          },
+          {
+            "id": "waterfallGrove:flower:16",
+            "x": 458,
+            "y": 404,
+            "phase": 9.63,
+            "type": "blue"
+          }
+        ],
+        "houses": []
+      },
+      "enemySpawns": [],
+      "npcs": [],
+      "landmarks": {
+        "waterfall": {
+          "x": 320,
+          "topY": 76,
+          "baseY": 218,
+          "width": 88,
+          "cliffLeft": 160,
+          "cliffRight": 480,
+          "pool": {
+            "x": 224,
+            "y": 200,
+            "width": 192,
+            "height": 104
+          }
+        },
+        "lightBeams": [
+          {
+            "x": 230,
+            "y": 58,
+            "width": 58,
+            "height": 240,
+            "lean": 42,
+            "alpha": 0.09
+          },
+          {
+            "x": 340,
+            "y": 48,
+            "width": 74,
+            "height": 270,
+            "lean": 24,
+            "alpha": 0.12
+          },
+          {
+            "x": 430,
+            "y": 70,
+            "width": 42,
+            "height": 210,
+            "lean": -18,
+            "alpha": 0.07
+          }
+        ]
+      },
+      "terrain": {
+        "cellSize": 8,
+        "defaultType": "void",
+        "regions": [
+          {
+            "type": "grass",
+            "x": 64,
+            "y": 64,
+            "width": 512,
+            "height": 400
+          },
+          {
+            "type": "dirt",
+            "x": 304,
+            "y": 272,
+            "width": 32,
+            "height": 192
+          },
+          {
+            "type": "dirt",
+            "x": 288,
+            "y": 272,
+            "width": 64,
+            "height": 40
+          },
+          {
+            "type": "water",
+            "x": 248,
+            "y": 192,
+            "width": 144,
+            "height": 8
+          },
+          {
+            "type": "water",
+            "x": 232,
+            "y": 200,
+            "width": 176,
+            "height": 16
+          },
+          {
+            "type": "water",
+            "x": 224,
+            "y": 216,
+            "width": 192,
+            "height": 56
+          },
+          {
+            "type": "water",
+            "x": 232,
+            "y": 272,
+            "width": 176,
+            "height": 16
+          },
+          {
+            "type": "water",
+            "x": 248,
+            "y": 288,
+            "width": 144,
+            "height": 16
+          },
+          {
+            "type": "water",
+            "x": 272,
+            "y": 80,
+            "width": 96,
+            "height": 152
+          },
+          {
+            "type": "void",
+            "x": 160,
+            "y": 64,
+            "width": 112,
+            "height": 136
+          },
+          {
+            "type": "void",
+            "x": 368,
+            "y": 64,
+            "width": 112,
+            "height": 136
+          }
+        ]
+      },
+      "collision": {
+        "waterRects": []
+      }
     }
   },
   "defaultPlayerLoad": {

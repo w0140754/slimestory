@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "351";
+  const BUILD = "358";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -683,6 +683,58 @@
     ctx.fillText(`→ ${portal.targetMapId}`, portal.x + portal.width + 3, portal.y - 2);
   }
 
+  function drawMapLandmarks(nowSeconds) {
+    const landmarks = draft.map.landmarks;
+    const waterfall = landmarks?.waterfall;
+    if (!waterfall) return;
+
+    const centerX = Number(waterfall.x);
+    const topY = Number(waterfall.topY);
+    const baseY = Number(waterfall.baseY);
+    const width = Number(waterfall.width);
+    const left = Number(waterfall.cliffLeft);
+    const right = Number(waterfall.cliffRight);
+    if (![centerX, topY, baseY, width, left, right].every(Number.isFinite)) return;
+
+    const fallLeft = centerX - width / 2;
+    const fallRight = centerX + width / 2;
+    ctx.save();
+    ctx.fillStyle = "#243b35";
+    ctx.fillRect(left, topY - 8, right - left, baseY - topY + 18);
+    ctx.fillStyle = "#405246";
+    ctx.fillRect(left + 8, topY, fallLeft - left - 12, baseY - topY);
+    ctx.fillRect(fallRight + 4, topY, right - fallRight - 12, baseY - topY);
+    ctx.fillStyle = "#567b45";
+    ctx.fillRect(left + 5, topY + 8, fallLeft - left - 14, 4);
+    ctx.fillRect(fallRight + 8, topY + 14, right - fallRight - 16, 4);
+    ctx.fillStyle = "#4d91aa";
+    ctx.fillRect(fallLeft, topY, width, baseY - topY);
+    ctx.fillStyle = "#75bfd0";
+    ctx.fillRect(fallLeft + 8, topY, 14, baseY - topY);
+    ctx.fillRect(centerX + 5, topY, 10, baseY - topY);
+    const flow = Math.floor(nowSeconds * 20) % 18;
+    ctx.fillStyle = "rgba(235,252,255,.86)";
+    for (let y = topY + flow - 18; y < baseY; y += 18) {
+      ctx.fillRect(fallLeft + 4, y, 20, 2);
+      ctx.fillRect(centerX + 1, y + 7, 26, 2);
+    }
+    ctx.fillRect(centerX - 54, baseY - 2, 108, 4);
+    ctx.fillRect(centerX - 68, baseY + 4, 136, 3);
+
+    ctx.globalCompositeOperation = "screen";
+    for (const beam of landmarks.lightBeams || []) {
+      ctx.fillStyle = `rgba(255,249,195,${Number(beam.alpha) || .08})`;
+      ctx.beginPath();
+      ctx.moveTo(beam.x, beam.y);
+      ctx.lineTo(beam.x + beam.width, beam.y);
+      ctx.lineTo(beam.x + beam.width + beam.lean, beam.y + beam.height);
+      ctx.lineTo(beam.x + beam.lean, beam.y + beam.height);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawEnvironmentObjects() {
     if (!layers.objects.checked) return;
     const env = draft.map.environment;
@@ -891,6 +943,7 @@
     if (!draft) return;
     withWorldTransform(() => {
       renderTerrain((timestamp || performance.now()) / 1000);
+      drawMapLandmarks((timestamp || performance.now()) / 1000);
       renderGrid();
       drawEnvironmentObjects();
       drawEntities();

@@ -1,3 +1,27 @@
+## v6-11-358 — Mobile resource targeting and auto attack
+
+- Added reach-aware mobile tool assistance: tapping ATK with an Axe targets the nearest usable tree in chopping range, and tapping with a Pickaxe targets the nearest usable rock in mining range. Dragging ATK still switches to manual aim.
+- Added a separate mobile **AUTO** toggle beside the attack controls. While enabled, the player attacks the nearest monster only when it is inside the equipped weapon's usable range; it never moves or chases for the player.
+- Auto attack supports melee weapons, tools, Wand Mastery reach, and Bow full-draw shots. Bow auto attack tracks moving targets during the draw, stops if they leave range, and switches itself off when arrows run out.
+- Auto attack pauses for menus, point-targeted skills, held objects, and casting, and disables when the game loses focus or the player dies.
+- Preserved desktop input, manual mobile attacks, Waterfall Grove, and editor-authored world data revision 53 unchanged.
+
+## v6-11-357 — Mobile camera zoom
+
+- Reduced the mobile logical world viewport from **256×144** to **224×126**, making players, monsters, terrain, and range spacing another **14.3% larger** on phones.
+- Mobile now renders the game world at roughly **1.43× desktop scale** while retaining the same 16:9 view shape.
+- Kept HUD, menu, toolbar, and touch-control sizing independent from the world zoom.
+- Desktop remains at **320×180** with no camera or gameplay changes.
+- Preserved Waterfall Grove and the live editor-authored world data at revision 53 unchanged.
+
+## v6-11-356 — Waterfall Grove
+
+- Added **Waterfall Grove**, a peaceful enemy-free destination centered on a broad animated waterfall, misty pool, pixel-art cliff, moving light shafts, and drifting sun motes.
+- Built a dense two-layer forest frame with 116 trees, an open southern approach, a simple dirt path to the water, 22 flowering grass patches, and 16 harvestable wildflowers.
+- Added a small north trail from Prototype Island West beside its existing stream, creating a reciprocal portal connection while preserving the rest of the live editor-authored layout.
+- Added Waterfall Grove to the visual map editor, including landmark preview rendering, so its terrain and environmental objects remain editable.
+- Preserved the existing global starting map and all prior combat/mobile behavior.
+
 ## v6-11-355 — Mobile point targeting
 
 - Changed mobile Bow attacks to a two-step point-target flow: tap ATK, then tap the battlefield. The Bow automatically holds its normal full draw and releases toward that point; close taps still use the existing Bow-smack fallback.
