@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "359";
+  const BUILD = "360";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });

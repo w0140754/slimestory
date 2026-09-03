@@ -878,7 +878,7 @@ function drawPixelGlow(screenX, screenY, size, strength, phase = 0) {
 // visual effect accurately shows the player's reach.
 const SWORD_REACH = 26;
 const SWORD_HALF_ARC = 0.62;
-const WAND_MASTERY_REACH = 49;
+const WAND_MASTERY_REACH = 45;
 const WAND_MASTERY_HALF_ARC = 0.56;
 
 
@@ -5583,6 +5583,7 @@ function showItemDetailTooltip(itemId, clientX, clientY) {
   const tooltip = document.getElementById("itemDetailTooltip");
   const data = itemDetailData(itemId);
   if (!tooltip || !data) return;
+  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
 
   const image = document.getElementById("itemDetailImage");
   const name = document.getElementById("itemDetailName");
@@ -6275,6 +6276,7 @@ function refreshSkillDetailTooltip(skillId) {
 function showSkillDetailTooltip(skillId, clientX, clientY) {
   const tooltip = document.getElementById("skillDetailTooltip");
   if (!tooltip || !refreshSkillDetailTooltip(skillId)) return;
+  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
 
   tooltip.classList.add("show");
   tooltip.setAttribute("aria-hidden", "false");
@@ -8003,7 +8005,14 @@ function updateInventoryUi() {
   }
 
   if (statMoveSpeed) {
-    statMoveSpeed.textContent = `${Math.round(Number(player.speed) || GAME_CONFIG.player.baseSpeed)}`;
+    const touchSpeedMultiplier = window.matchMedia(
+      "(hover: none) and (pointer: coarse)"
+    ).matches
+      ? GAME_CONFIG.player.mobileBaseSpeedMultiplier
+      : 1;
+    statMoveSpeed.textContent = `${Math.round(
+      (Number(player.speed) || GAME_CONFIG.player.baseSpeed) * touchSpeedMultiplier
+    )}`;
   }
   if (statAccuracy) {
     statAccuracy.textContent = "—";

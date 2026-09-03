@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-359";
+const BUILD_VERSION = "6-11-360";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -8574,7 +8574,7 @@ function validateSharedEnemyWandMasteryHit(
   // simulation at the instant of a melee swing. Give Wand Mastery a small
   // reconciliation grace rather than rejecting a hit that visibly connected.
   const reconciliationRangeGrace = 8;
-  if (distance > 49 + bodyRadius + reconciliationRangeGrace) {
+  if (distance > 45 + bodyRadius + reconciliationRangeGrace) {
     return false;
   }
 

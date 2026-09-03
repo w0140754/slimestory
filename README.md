@@ -1,3 +1,12 @@
+## v6-11-360 — Mobile combat and tooltip polish
+
+- Increased the mobile-only base movement reduction from 8% to **15%**, bringing touch movement to 61.2 px/s while desktop remains at 72 px/s.
+- Reduced Spellshred/Wand Mastery reach slightly from **49 px to 45 px**, including matching multiplayer validation.
+- Changed manual mobile Bow basics to a one-tap smart shot at the nearest visible monster. If no monster is visible, ATK retains the existing tap-the-battlefield fallback.
+- Restricted Bow AUTO targeting to monsters currently inside the rendered mobile view. Smart shots track their selected monster during the draw and cancel rather than firing off-screen.
+- Disabled large item and skill hover cards on coarse-pointer touch devices so tapping or levelling a skill cannot leave a description panel covering the menu. Desktop hover cards remain unchanged.
+- Incorporated and preserved the newest live editor-authored world data revision 55 without overwriting it.
+
 ## v6-11-359 — Mobile attack movement freedom
 
 - Removed the voluntary movement self-root from mobile basic attacks and tool swings, including attacks triggered by the mobile AUTO toggle.

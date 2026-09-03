@@ -15,10 +15,10 @@ const html = read('public', 'index.html');
 const pkg = JSON.parse(read('package.json'));
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-359";'), 'server build must be 6-11-359');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-359";'), 'client build must be 6-11-359');
-assert(pkg.version === '0.6.11.359', 'package version must be 0.6.11.359');
-assert(html.includes('/shared/combat-balance.js?v=359') && html.includes('/client-combat.js?v=359') && html.includes('/game.js?v=359'), 'v333 combat cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-360";'), 'server build must be 6-11-360');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-360";'), 'client build must be 6-11-360');
+assert(pkg.version === '0.6.11.360', 'package version must be 0.6.11.360');
+assert(html.includes('/shared/combat-balance.js?v=360') && html.includes('/client-combat.js?v=360') && html.includes('/game.js?v=360'), 'v333 combat cache keys missing');
 
 assert(balance.version === 27, 'combat balance version must be 27');
 assert(balance.attackSpeedTiers?.slow?.cooldown === 0.83, 'Slow tier must remain 0.83s');

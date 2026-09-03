@@ -89,12 +89,12 @@ let mobilePointTargetMode = null;
 let mobilePointTargetKey = null;
 let mobilePointTargetSuppressMouseUntil = 0;
 let mobileAutoBowTarget = null;
+let mobileTrackedBowEnemy = null;
 let mobileAutoAttackEnabled = false;
 let mobileAutoAttackBowDrawing = false;
 
 const MOBILE_COMBAT_ASSIST_MELEE_DISTANCE = 62;
-const MOBILE_COMBAT_ASSIST_BOW_DISTANCE = 150;
-const MOBILE_AUTO_ATTACK_BOW_DISTANCE = 150;
+const MOBILE_BOW_VISIBLE_TARGET_DISTANCE = 320;
 const MOBILE_POINT_TARGET_SKILLS = new Set([
   "fireball",
   "rainCloud",
@@ -161,11 +161,43 @@ function armMobilePointTarget(mode, key = null) {
 
 function clearMobileAutoBowTarget() {
   mobileAutoBowTarget = null;
+  mobileTrackedBowEnemy = null;
   mobileAutoAttackBowDrawing = false;
+}
+
+function mobileTargetIsOnScreen(target, margin = 6) {
+  if (!target) return false;
+  const screenX = target.x - currentCamX;
+  const screenY = target.y - currentCamY;
+  return (
+    screenX >= margin &&
+    screenX <= canvas.width - margin &&
+    screenY >= margin &&
+    screenY <= canvas.height - margin
+  );
 }
 
 function updateMobilePointBowShot() {
   if (!mobileControlsEnabled || !mobileAutoBowTarget) return false;
+
+  if (mobileTrackedBowEnemy) {
+    if (!mobileTrackedBowEnemy.alive) {
+      player.bowDrawing = false;
+      player.bowDrawAmount = 0;
+      player.bowReleaseTime = 0;
+      clearMobileAutoBowTarget();
+      return false;
+    }
+    const trackedTarget = enemyBodyPoint(mobileTrackedBowEnemy);
+    if (!mobileTargetIsOnScreen(trackedTarget)) {
+      player.bowDrawing = false;
+      player.bowDrawAmount = 0;
+      player.bowReleaseTime = 0;
+      clearMobileAutoBowTarget();
+      return false;
+    }
+    mobileAutoBowTarget = trackedTarget;
+  }
 
   const automatedDrawBlocked =
     inventoryOpen ||
@@ -231,6 +263,7 @@ function executeMobilePointTargetCommand(payload = {}) {
 
     handlePrimaryAttack(mobilePointerEventForCanvas(point));
     mobileAutoAttackBowDrawing = false;
+    mobileTrackedBowEnemy = null;
     mobileAutoBowTarget = player.bowDrawing ? target : null;
     return true;
   }
@@ -274,7 +307,11 @@ function handleMobilePointTargetPointerDown(event) {
   inputController.queueCommand("mobilePointTarget", payload);
 }
 
-function mobileEnemyTarget(maxDistance, requireMeleeRange = false) {
+function mobileEnemyTarget(
+  maxDistance,
+  requireMeleeRange = false,
+  visibleOnly = false
+) {
   if (!mobileControlsEnabled || player.isDead || player.hp <= 0) return null;
   if (typeof activeEnemyRecords !== "function" || typeof enemyBodyPoint !== "function") return null;
 
@@ -287,6 +324,7 @@ function mobileEnemyTarget(maxDistance, requireMeleeRange = false) {
     const dx = target.x - originX;
     const dy = target.y - originY;
     const distance = Math.hypot(dx, dy);
+    if (visibleOnly && !mobileTargetIsOnScreen(target)) continue;
     if (requireMeleeRange) {
       const horizontal = Math.abs(dx) >= Math.abs(dy);
       const bodyRadius = horizontal
@@ -295,7 +333,7 @@ function mobileEnemyTarget(maxDistance, requireMeleeRange = false) {
       if (distance > currentMeleeReach() + bodyRadius) continue;
     }
     if (distance > maxDistance || (best && distance >= best.distance)) continue;
-    best = { target, dx, dy, distance };
+    best = { enemy, profile, target, dx, dy, distance };
   }
 
   return best;
@@ -362,7 +400,7 @@ function mobileCombatAssistCanvasPoint() {
   const weapon = equippedWeapon();
   const best = mobileResourceTarget() || mobileEnemyTarget(
     weapon === "bow"
-      ? MOBILE_COMBAT_ASSIST_BOW_DISTANCE
+      ? MOBILE_BOW_VISIBLE_TARGET_DISTANCE
       : MOBILE_COMBAT_ASSIST_MELEE_DISTANCE
   );
 
@@ -374,6 +412,32 @@ function mobileCombatAssistCanvasPoint() {
     x: best.target.x - currentCamX,
     y: best.target.y - currentCamY
   };
+}
+
+function startMobileSmartBowAttack() {
+  const target = mobileEnemyTarget(
+    MOBILE_BOW_VISIBLE_TARGET_DISTANCE,
+    false,
+    true
+  );
+  if (!target) return false;
+
+  clearMobilePointTargetMode();
+  const point = {
+    x: target.target.x - currentCamX,
+    y: target.target.y - currentCamY
+  };
+  mouseCanvasX = point.x;
+  mouseCanvasY = point.y;
+  mobileAimDx = target.dx / Math.max(0.001, target.distance);
+  mobileAimDy = target.dy / Math.max(0.001, target.distance);
+  updateAttackAimFromPointer(point.x, point.y);
+  handlePrimaryAttack(mobilePointerEventForCanvas(point));
+
+  mobileAutoAttackBowDrawing = false;
+  mobileTrackedBowEnemy = player.bowDrawing ? target.enemy : null;
+  mobileAutoBowTarget = player.bowDrawing ? target.target : null;
+  return true;
 }
 
 function updateMobileAutoAttackButton() {
@@ -436,9 +500,10 @@ function updateMobileAutoAttack() {
 
   const target = mobileEnemyTarget(
     weapon === "bow"
-      ? MOBILE_AUTO_ATTACK_BOW_DISTANCE
+      ? MOBILE_BOW_VISIBLE_TARGET_DISTANCE
       : MOBILE_COMBAT_ASSIST_MELEE_DISTANCE,
-    weapon !== "bow"
+    weapon !== "bow",
+    weapon === "bow"
   );
 
   if (!target) {
@@ -470,6 +535,7 @@ function updateMobileAutoAttack() {
 
     if (player.bowDrawing) {
       if (mobileAutoAttackBowDrawing) {
+        mobileTrackedBowEnemy = target.enemy;
         mobileAutoBowTarget = target.target;
       }
       return mobileAutoAttackBowDrawing;
@@ -478,6 +544,7 @@ function updateMobileAutoAttack() {
 
     handlePrimaryAttack(mobilePointerEventForCanvas(point));
     mobileAutoAttackBowDrawing = Boolean(player.bowDrawing);
+    mobileTrackedBowEnemy = mobileAutoAttackBowDrawing ? target.enemy : null;
     mobileAutoBowTarget = mobileAutoAttackBowDrawing ? target.target : null;
     return true;
   }
@@ -610,6 +677,7 @@ function installMobileControls() {
         spawnFloatingText(player.x, player.y - 27, "NO ARROWS", "#ffe38b", 0.72);
         return;
       }
+      if (startMobileSmartBowAttack()) return;
       armMobilePointTarget("bow");
       return;
     }
