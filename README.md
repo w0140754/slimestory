@@ -1,3 +1,10 @@
+## v6-11-362 — Mobile camera smoothing
+
+- Added a mobile-only fractional camera presentation pass to smooth the uneven whole-pixel scrolling exposed by the newer 54 px/s movement speed.
+- Kept world sprites on one shared pixel grid and pinned the local player in place while the environment consumes the camera's fractional movement.
+- Left gameplay coordinates, targeting, movement speed, mobile zoom, Bow behavior, combat, HUD layout, and desktop rendering unchanged.
+- Preserved the live editor-authored world data revision 55 without overwriting it.
+
 ## v6-11-361 — Mobile HUD cleanup and arrow crafting
 
 - Increased the mobile-only base movement reduction from 15% to **25%**, bringing touch movement to 54 px/s while desktop remains at 72 px/s.

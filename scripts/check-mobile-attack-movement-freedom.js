@@ -14,10 +14,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.361");
-assert(server.includes('const BUILD_VERSION = "6-11-361";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-361";'));
-assert(html.includes('/client-combat.js?v=361') && html.includes('/client-app.js?v=361'));
+assert.strictEqual(pkg.version, "0.6.11.362");
+assert(server.includes('const BUILD_VERSION = "6-11-362";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-362";'));
+assert(html.includes('/client-combat.js?v=362') && html.includes('/client-app.js?v=362'));
 
 assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "25% mobile movement adjustment missing");
 assert(app.includes('mobileControlsEnabled\n        ? GAME_CONFIG.player.mobileBaseSpeedMultiplier\n        : 1'), "mobile-only speed multiplier missing");

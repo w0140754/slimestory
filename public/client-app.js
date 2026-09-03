@@ -1291,20 +1291,62 @@ class GameRenderer {
   render() {
     const camera = getCameraPosition();
 
+    // At the enlarged mobile world scale, 54 px/s is about 0.9 logical pixels
+    // per 60 Hz frame. A purely rounded camera therefore repeats occasional
+    // frames and reads as judder. Render from the nearest whole-pixel camera,
+    // then shift the complete world layer by its fractional remainder. This is
+    // presentation-only: targeting continues to use the exact camera below.
+    const useMobileSubpixelCamera = mobileControlsEnabled;
+    const renderCamera = useMobileSubpixelCamera
+      ? {
+          x: Math.round(camera.x),
+          y: Math.round(camera.y)
+        }
+      : camera;
+
+    mobileCameraPresentationOffsetX = useMobileSubpixelCamera
+      ? renderCamera.x - camera.x
+      : 0;
+    mobileCameraPresentationOffsetY = useMobileSubpixelCamera
+      ? renderCamera.y - camera.y
+      : 0;
+
     currentCamX = camera.x;
     currentCamY = camera.y;
 
-    if (isPrototypeIslandMap(currentMapId) || isAuthoredTerrainMap(currentMapId)) {
+    const usesTerrainBackdrop =
+      isPrototypeIslandMap(currentMapId) ||
+      isAuthoredTerrainMap(currentMapId);
+
+    if (usesTerrainBackdrop) {
       drawPrototypeIslandBackdrop();
-      drawPrototypeIslandEarthFaces(camera.x, camera.y);
-      drawPrototypeIslandGroundLayer(camera.x, camera.y);
-      drawSortedWorldLayer(camera.x, camera.y);
-      drawForegroundLayer(camera.x, camera.y);
-    } else {
-      drawGroundLayer(camera.x, camera.y);
-      drawSortedWorldLayer(camera.x, camera.y);
-      drawForegroundLayer(camera.x, camera.y);
+    } else if (useMobileSubpixelCamera) {
+      // The fractional translation can uncover less than one logical pixel at
+      // a canvas edge. Pre-fill it so no stale-frame seam can appear there.
+      ctx.fillStyle = "#6f9f52";
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     }
+
+    ctx.save();
+    ctx.translate(
+      mobileCameraPresentationOffsetX,
+      mobileCameraPresentationOffsetY
+    );
+
+    if (usesTerrainBackdrop) {
+      drawPrototypeIslandEarthFaces(renderCamera.x, renderCamera.y);
+      drawPrototypeIslandGroundLayer(renderCamera.x, renderCamera.y);
+      drawSortedWorldLayer(renderCamera.x, renderCamera.y);
+      drawForegroundLayer(renderCamera.x, renderCamera.y);
+    } else {
+      drawGroundLayer(renderCamera.x, renderCamera.y);
+      drawSortedWorldLayer(renderCamera.x, renderCamera.y);
+      drawForegroundLayer(renderCamera.x, renderCamera.y);
+    }
+
+    ctx.restore();
+    mobileCameraPresentationOffsetX = 0;
+    mobileCameraPresentationOffsetY = 0;
 
     drawMapTransitionCover();
   }

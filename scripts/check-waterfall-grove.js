@@ -62,10 +62,10 @@ assert(terrain.includes("function drawWaterfallGroveAtmosphere"), "light/mist re
 assert(app.includes("drawWaterfallGroveLandmark(currentMapId, camX, camY)"), "ground landmark hook missing");
 assert(app.includes("drawWaterfallGroveAtmosphere(currentMapId, camX, camY)"), "atmosphere hook missing");
 assert(editor.includes("function drawMapLandmarks"), "map editor landmark preview missing");
-assert.strictEqual(pkg.version, "0.6.11.361");
-assert(server.includes('const BUILD_VERSION = "6-11-361";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-361";'));
-assert(html.includes('/client-terrain.js?v=361') && html.includes('/client-app.js?v=361'));
+assert.strictEqual(pkg.version, "0.6.11.362");
+assert(server.includes('const BUILD_VERSION = "6-11-362";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-362";'));
+assert(html.includes('/client-terrain.js?v=362') && html.includes('/client-app.js?v=362'));
 
 console.log(
   `Waterfall Grove OK: ${grove.environment.trees.length} trees, ` +

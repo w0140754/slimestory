@@ -9421,6 +9421,14 @@ let worldTime = 0;
 let currentCamX = 0;
 let currentCamY = 0;
 
+// Mobile renders the world from a whole-pixel camera and applies the remaining
+// camera fraction once to the complete world layer. This keeps every sprite on
+// the same pixel grid while allowing the enlarged phone view to scroll by less
+// than one logical pixel per frame. The local player cancels this presentation
+// offset below so it remains firmly centered rather than shimmering in place.
+let mobileCameraPresentationOffsetX = 0;
+let mobileCameraPresentationOffsetY = 0;
+
 
 // -----------------------------------------------------------------------------
 // COLLISION
@@ -9622,6 +9630,23 @@ function drawGround(camX, camY) {
 
 
 function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = undefined) {
+  const pinLocalPlayerToCamera =
+    mobileControlsEnabled &&
+    !reflectionMode &&
+    arguments.length < 4 &&
+    (
+      mobileCameraPresentationOffsetX !== 0 ||
+      mobileCameraPresentationOffsetY !== 0
+    );
+
+  if (pinLocalPlayerToCamera) {
+    ctx.save();
+    ctx.translate(
+      -mobileCameraPresentationOffsetX,
+      -mobileCameraPresentationOffsetY
+    );
+  }
+
   const screenX = Math.round(player.x - camX);
   const screenY = Math.round(player.y - camY);
 
@@ -9655,6 +9680,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     ctx.drawImage(sprite.face, baseX, baseY);
     ctx.drawImage(appearance.hat, baseX, baseY);
     ctx.restore();
+    if (pinLocalPlayerToCamera) ctx.restore();
     return;
   }
 
@@ -11146,6 +11172,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   // This is especially important when drawPlayer() is reused inside the
   // water-reflection transform.
   ctx.restore();
+  if (pinLocalPlayerToCamera) ctx.restore();
 }
 
 
