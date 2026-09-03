@@ -13,10 +13,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.362");
-assert(server.includes('const BUILD_VERSION = "6-11-362";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-362";'));
-assert(html.includes('/game.js?v=362') && html.includes('/client-app.js?v=362'));
+assert.strictEqual(pkg.version, "0.6.11.363");
+assert(server.includes('const BUILD_VERSION = "6-11-363";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-363";'));
+assert(html.includes('/game.js?v=363') && html.includes('/client-app.js?v=363'));
 
 assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "mobile speed must be 54 px/s");
 assert(html.includes('left: max(1px, env(safe-area-inset-left));'), "MENU must hug the upper-left safe edge");

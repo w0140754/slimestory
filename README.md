@@ -1,3 +1,10 @@
+## v6-11-363 — Pixel-perfect mobile scaling
+
+- Replaced arbitrary exact-fit mobile stretching with the largest whole physical-pixel scale that fits the usable landscape viewport, accepting small centred gutters when needed.
+- Added a small device-aware backing grid so v362 camera motion remains smoother while every translated terrain, sprite, and canvas-text pixel lands on an integer backing pixel.
+- Kept the 224×126 logical mobile world view, 54 px/s movement, combat, targeting, controls, HUD placement, and desktop rendering unchanged.
+- Preserved the live editor-authored world data revision 55 without overwriting it.
+
 ## v6-11-362 — Mobile camera smoothing
 
 - Added a mobile-only fractional camera presentation pass to smooth the uneven whole-pixel scrolling exposed by the newer 54 px/s movement speed.

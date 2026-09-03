@@ -14,22 +14,22 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.362");
-assert(server.includes('const BUILD_VERSION = "6-11-362";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-362";'));
-assert(html.includes('/client-app.js?v=362') && html.includes('/game.js?v=362'));
+assert.strictEqual(pkg.version, "0.6.11.363");
+assert(server.includes('const BUILD_VERSION = "6-11-363";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-363";'));
+assert(html.includes('/client-app.js?v=363') && html.includes('/game.js?v=363'));
 
 assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "54 px/s mobile movement must remain");
 assert(app.includes('const useMobileSubpixelCamera = mobileControlsEnabled;'), "camera smoothing must stay mobile-only");
 assert(app.includes('x: Math.round(camera.x)') && app.includes('y: Math.round(camera.y)'), "world camera must retain a shared pixel grid");
-assert(app.includes('renderCamera.x - camera.x') && app.includes('renderCamera.y - camera.y'), "fractional camera remainder missing");
+assert(app.includes('(renderCamera.x - camera.x) * GAME_RENDER_SCALE') && app.includes('(renderCamera.y - camera.y) * GAME_RENDER_SCALE'), "pixel-grid camera remainder missing");
 assert(app.includes('currentCamX = camera.x;') && app.includes('currentCamY = camera.y;'), "targeting must retain exact camera coordinates");
 assert(game.includes('-mobileCameraPresentationOffsetX') && game.includes('-mobileCameraPresentationOffsetY'), "local player camera pin missing");
 
 const desiredCamera = 100.1;
 const renderCamera = Math.round(desiredCamera);
-const presentationOffset = renderCamera - desiredCamera;
-assert(Math.abs((200 - renderCamera + presentationOffset) - (200 - desiredCamera)) < 1e-9, "fractional camera math must preserve exact visual position");
+const presentationOffset = Math.round((renderCamera - desiredCamera) * 3) / 3;
+assert(Number.isInteger(presentationOffset * 3), "camera motion must land on a backing pixel");
 
 assert.strictEqual(adopted.version, 55, "camera smoothing must preserve authored map revision 55");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must remain intact");

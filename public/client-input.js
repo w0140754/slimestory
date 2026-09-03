@@ -171,9 +171,9 @@ function mobileTargetIsOnScreen(target, margin = 6) {
   const screenY = target.y - currentCamY;
   return (
     screenX >= margin &&
-    screenX <= canvas.width - margin &&
+    screenX <= VIEW_W - margin &&
     screenY >= margin &&
-    screenY <= canvas.height - margin
+    screenY <= VIEW_H - margin
   );
 }
 
@@ -570,8 +570,8 @@ function mobileAimCanvasPoint(distance = 64) {
   const playerScreenX = player.x - currentCamX;
   const playerScreenY = player.y - currentCamY - 8;
   return {
-    x: Math.max(0, Math.min(canvas.width, playerScreenX + mobileAimDx * distance)),
-    y: Math.max(0, Math.min(canvas.height, playerScreenY + mobileAimDy * distance))
+    x: Math.max(0, Math.min(VIEW_W, playerScreenX + mobileAimDx * distance)),
+    y: Math.max(0, Math.min(VIEW_H, playerScreenY + mobileAimDy * distance))
   };
 }
 
@@ -579,8 +579,8 @@ function mobilePointerEventForCanvas(point) {
   const rect = canvas.getBoundingClientRect();
   return {
     button: 0,
-    clientX: rect.left + point.x * (rect.width / canvas.width),
-    clientY: rect.top + point.y * (rect.height / canvas.height)
+    clientX: rect.left + point.x * (rect.width / VIEW_W),
+    clientY: rect.top + point.y * (rect.height / VIEW_H)
   };
 }
 

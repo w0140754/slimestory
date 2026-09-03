@@ -4755,16 +4755,67 @@
 <div id="gameViewport">
 <canvas id="game" width="320" height="180"></canvas>
 <script>
-  // v352: mobile world scale. Lower the logical 16:9 canvas resolution on
-  // coarse-pointer devices before game.js captures VIEW_W/VIEW_H. CSS still
-  // fills the same rendered viewport, so world sprites/distances read 25%
-  // larger without scaling the DOM HUD or changing gameplay/world units.
+  // Mobile keeps the 224x126 logical world view, but renders it through an
+  // integer backing/presentation scale. Every logical pixel therefore becomes
+  // a consistent whole number of physical screen pixels; any unused room is
+  // left as a centred gutter instead of stretching the pixel art.
   (() => {
     if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
+
+    const LOGICAL_W = 224;
+    const LOGICAL_H = 126;
     const mobileCanvas = document.getElementById("game");
-    mobileCanvas.width = 224;
-    mobileCanvas.height = 126;
+    const mobileViewport = document.getElementById("gameViewport");
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    // Use the predicted landscape bounds even if the page initially opens in
+    // portrait behind the rotate prompt. A small 2x/3x backing grid lets the
+    // camera consume fractional motion without blending logical source pixels.
+    const predictedLong = Math.max(window.innerWidth, window.innerHeight);
+    const predictedShort = Math.min(window.innerWidth, window.innerHeight);
+    const predictedW = Math.min(predictedLong, predictedShort * 16 / 9);
+    const predictedH = Math.min(predictedShort, predictedLong * 9 / 16);
+    const predictedPixelScale = Math.max(1, Math.floor(Math.min(
+      predictedW * dpr / LOGICAL_W,
+      predictedH * dpr / LOGICAL_H
+    )));
+    const renderScale = predictedPixelScale % 3 === 0
+      ? 3
+      : predictedPixelScale % 2 === 0
+        ? 2
+        : 1;
+
+    mobileCanvas.width = LOGICAL_W * renderScale;
+    mobileCanvas.height = LOGICAL_H * renderScale;
+    mobileCanvas.dataset.logicalWidth = `${LOGICAL_W}`;
+    mobileCanvas.dataset.logicalHeight = `${LOGICAL_H}`;
+    mobileCanvas.dataset.mobileRenderScale = `${renderScale}`;
     mobileCanvas.dataset.mobileWorldScale = "1.25";
+
+    const applyPixelPerfectMobileSize = () => {
+      const availableW = Math.min(window.innerWidth, window.innerHeight * 16 / 9);
+      const availableH = Math.min(window.innerHeight, window.innerWidth * 9 / 16);
+      const fittingScale = Math.max(1, Math.floor(Math.min(
+        availableW * dpr / LOGICAL_W,
+        availableH * dpr / LOGICAL_H
+      )));
+      const wholePhysicalScale = Math.max(
+        renderScale,
+        fittingScale - (fittingScale % renderScale)
+      );
+
+      mobileViewport.style.width = `${LOGICAL_W * wholePhysicalScale / dpr}px`;
+      mobileViewport.style.height = `${LOGICAL_H * wholePhysicalScale / dpr}px`;
+      mobileViewport.dataset.mobilePhysicalPixelScale = `${wholePhysicalScale}`;
+    };
+
+    applyPixelPerfectMobileSize();
+    window.addEventListener("resize", applyPixelPerfectMobileSize, { passive: true });
+    window.visualViewport?.addEventListener(
+      "resize",
+      applyPixelPerfectMobileSize,
+      { passive: true }
+    );
   })();
 </script>
 <div id="mobileControls" aria-label="Mobile game controls">
@@ -5721,33 +5772,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=362"></script>
-<script src="/shared/terrain-rules.js?v=362"></script>
-<script src="/shared/terrain-presentation.js?v=362"></script>
-<script src="/shared/combat-balance.js?v=362"></script>
-<script src="/shared/ability-scaling.js?v=362"></script>
-<script src="/shared/rain-field.js?v=362"></script>
-<script src="/shared/camouflage-rules.js?v=362"></script>
-<script src="/shared/enemy-net-protocol.js?v=362"></script>
-<script src="/shared/player-net-protocol.js?v=362"></script>
-<script src="/client-config.js?v=362"></script>
-<script src="/client-utils.js?v=362"></script>
-<script src="/client-world.js?v=362"></script>
-<script src="/client-maps.js?v=362"></script>
-<script src="/client-enemies.js?v=362"></script>
-<script src="/client-enemy-runtime.js?v=362"></script>
-<script src="/client-enemy-rendering.js?v=362"></script>
-<script src="/client-combat.js?v=362"></script>
-<script src="/client-abilities.js?v=362"></script>
-<script src="/client-magus-abilities.js?v=362"></script>
-<script src="/client-class-abilities.js?v=362"></script>
-<script src="/client-status.js?v=362"></script>
-<script src="/client-fire-environment.js?v=362"></script>
-<script src="/client-network.js?v=362"></script>
-<script src="/client-simulation-foundation.js?v=362"></script>
-<script src="/game.js?v=362"></script>
-<script src="/client-terrain.js?v=362"></script>
-<script src="/client-input.js?v=362"></script>
-<script src="/client-app.js?v=362"></script>
+<script src="/shared/world-content-runtime.js?v=363"></script>
+<script src="/shared/terrain-rules.js?v=363"></script>
+<script src="/shared/terrain-presentation.js?v=363"></script>
+<script src="/shared/combat-balance.js?v=363"></script>
+<script src="/shared/ability-scaling.js?v=363"></script>
+<script src="/shared/rain-field.js?v=363"></script>
+<script src="/shared/camouflage-rules.js?v=363"></script>
+<script src="/shared/enemy-net-protocol.js?v=363"></script>
+<script src="/shared/player-net-protocol.js?v=363"></script>
+<script src="/client-config.js?v=363"></script>
+<script src="/client-utils.js?v=363"></script>
+<script src="/client-world.js?v=363"></script>
+<script src="/client-maps.js?v=363"></script>
+<script src="/client-enemies.js?v=363"></script>
+<script src="/client-enemy-runtime.js?v=363"></script>
+<script src="/client-enemy-rendering.js?v=363"></script>
+<script src="/client-combat.js?v=363"></script>
+<script src="/client-abilities.js?v=363"></script>
+<script src="/client-magus-abilities.js?v=363"></script>
+<script src="/client-class-abilities.js?v=363"></script>
+<script src="/client-status.js?v=363"></script>
+<script src="/client-fire-environment.js?v=363"></script>
+<script src="/client-network.js?v=363"></script>
+<script src="/client-simulation-foundation.js?v=363"></script>
+<script src="/game.js?v=363"></script>
+<script src="/client-terrain.js?v=363"></script>
+<script src="/client-input.js?v=363"></script>
+<script src="/client-app.js?v=363"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // Slime Story client foundation: build identity and low-side-effect configuration.
 // Keep this file free of DOM access and mutable gameplay state.
 
-const CLIENT_BUILD_VERSION = "6-11-362";
+const CLIENT_BUILD_VERSION = "6-11-363";
 
 const CLIENT_AUTO_RELOAD_SIGNATURE_KEY = "slimeStoryAutoReloadSignature";
 

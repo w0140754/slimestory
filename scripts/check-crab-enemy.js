@@ -18,9 +18,9 @@ const balance = read('public', 'shared', 'combat-balance.js');
 const html = read('public', 'index.html');
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-362";'), 'server build must be 6-11-362');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-362";'), 'client build must be 6-11-362');
-assert(html.includes('/shared/combat-balance.js?v=362') && html.includes('/client-enemies.js?v=362') && html.includes('/client-enemy-rendering.js?v=362') && html.includes('/game.js?v=362'), 'current enemy/game/combat cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-363";'), 'server build must be 6-11-363');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-363";'), 'client build must be 6-11-363');
+assert(html.includes('/shared/combat-balance.js?v=363') && html.includes('/client-enemies.js?v=363') && html.includes('/client-enemy-rendering.js?v=363') && html.includes('/game.js?v=363'), 'current enemy/game/combat cache keys missing');
 
 assert(server.includes('crab: makeServerCrab'), 'server enemy factory registry missing Crab');
 assert(server.includes('const sharedCrabs ='), 'server Crab collection missing');

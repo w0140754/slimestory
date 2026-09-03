@@ -1305,10 +1305,14 @@ class GameRenderer {
       : camera;
 
     mobileCameraPresentationOffsetX = useMobileSubpixelCamera
-      ? renderCamera.x - camera.x
+      ? Math.round(
+          (renderCamera.x - camera.x) * GAME_RENDER_SCALE
+        ) / GAME_RENDER_SCALE
       : 0;
     mobileCameraPresentationOffsetY = useMobileSubpixelCamera
-      ? renderCamera.y - camera.y
+      ? Math.round(
+          (renderCamera.y - camera.y) * GAME_RENDER_SCALE
+        ) / GAME_RENDER_SCALE
       : 0;
 
     currentCamX = camera.x;

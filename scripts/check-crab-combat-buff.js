@@ -15,10 +15,10 @@ const html = read('public', 'index.html');
 const readme = read('README.md');
 const balance = require(path.join(root, 'public', 'shared', 'combat-balance.js'));
 
-assert(server.includes('const BUILD_VERSION = "6-11-362";'), 'server build must be v347');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-362";'), 'client build must be v347');
-assert(html.includes('/shared/combat-balance.js?v=362'), 'combat balance cache key must be v27');
-assert(html.includes('/client-enemies.js?v=362') && html.includes('/game.js?v=362'), 'v347 client cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-363";'), 'server build must be v347');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-363";'), 'client build must be v347');
+assert(html.includes('/shared/combat-balance.js?v=363'), 'combat balance cache key must be v27');
+assert(html.includes('/client-enemies.js?v=363') && html.includes('/game.js?v=363'), 'v347 client cache keys missing');
 
 const crabServerStart = server.indexOf('function makeServerCrab(spawn)');
 const crabServerEnd = server.indexOf('function resetServerCrab(crab)', crabServerStart);

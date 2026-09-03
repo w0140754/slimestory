@@ -1,9 +1,19 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const GAME_RENDER_SCALE = Math.max(
+  1,
+  Math.floor(Number(canvas.dataset.mobileRenderScale) || 1)
+);
+const VIEW_W = Math.max(
+  1,
+  Math.floor(Number(canvas.dataset.logicalWidth) || canvas.width)
+);
+const VIEW_H = Math.max(
+  1,
+  Math.floor(Number(canvas.dataset.logicalHeight) || canvas.height)
+);
+ctx.setTransform(GAME_RENDER_SCALE, 0, 0, GAME_RENDER_SCALE, 0, 0);
 ctx.imageSmoothingEnabled = false;
-
-const VIEW_W = canvas.width;
-const VIEW_H = canvas.height;
 
 // Declared before any startup/map/input code can reference it. A later const/let
 // declaration created a temporal-dead-zone crash in v6-11-147.
@@ -9409,8 +9419,8 @@ function moveWithWorldCollision(entity, nextX, nextY) {
 function getCanvasPointerPosition(event) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: (event.clientX - rect.left) * (canvas.width / rect.width),
-    y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    x: (event.clientX - rect.left) * (VIEW_W / rect.width),
+    y: (event.clientY - rect.top) * (VIEW_H / rect.height)
   };
 }
 
