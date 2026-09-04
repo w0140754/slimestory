@@ -438,6 +438,7 @@ class OnlineClient {
       if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
       if (Number.isFinite(message.beachQuestIcedCoffee)) player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
+      if (typeof message.myrtleQuestStage === "string") player.myrtleQuest.stage = message.myrtleQuestStage;
 
       updateInventoryUi();
       updateShopUi();
@@ -919,6 +920,11 @@ class OnlineClient {
 
     if (message.type === "beachQuestState") {
       applyBeachQuestState(message);
+      return;
+    }
+
+    if (message.type === "myrtleQuestState") {
+      applyMyrtleQuestState(message);
       return;
     }
 
@@ -1881,6 +1887,22 @@ class OnlineClient {
 
     this.socket.send(JSON.stringify({
       type: "beachQuestInteract",
+      action
+    }));
+    return true;
+  }
+
+  requestMyrtleQuest(action = "talk") {
+    if (
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    this.socket.send(JSON.stringify({
+      type: "myrtleQuestInteract",
       action
     }));
     return true;

@@ -1092,11 +1092,9 @@ function executePrimaryAttackCommand(payload) {
     onlineClient.syncLocalTransientReplication(true);
   }
 
-  // Desktop keeps the committed planted gesture. Touch combat stays mobile:
-  // joystick movement remains available through the attack while damage/tool
-  // interaction still lands on the normal active animation frame.
-  player.basicAttackMovementLockTime =
-    mobileControlsEnabled ? 0 : player.attackDuration;
+  // Basic weapon and tool attacks no longer plant the player on either input
+  // scheme. Damage and gathering still land on the normal active frame.
+  player.basicAttackMovementLockTime = 0;
 
   player.slashTime = 0;
   queueBasicAttackImpact(

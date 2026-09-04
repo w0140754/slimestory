@@ -1,7 +1,7 @@
 // Slime Story client foundation: build identity and low-side-effect configuration.
 // Keep this file free of DOM access and mutable gameplay state.
 
-const CLIENT_BUILD_VERSION = "6-11-366";
+const CLIENT_BUILD_VERSION = "6-11-367";
 
 const CLIENT_AUTO_RELOAD_SIGNATURE_KEY = "slimeStoryAutoReloadSignature";
 
@@ -16,8 +16,7 @@ const MAP_WORLD_DIMENSIONS = Object.freeze({
 
 const GAME_CONFIG = Object.freeze({
   player: {
-    baseSpeed: 72,
-    mobileBaseSpeedMultiplier: 0.75,
+    baseSpeed: 54,
     wetDuration: 3.0,
     wetSpeedMultiplier: 0.75
   },

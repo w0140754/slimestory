@@ -18,10 +18,10 @@ assert.strictEqual(balance.version, 28, "combat balance revision must be 28");
 const dreamcatcher = balance.weaponProfiles.find(profile => profile.id === "weapon_dreamcatcher");
 assert.strictEqual(dreamcatcher.attackPower, 20, "Dreamcatcher ATK must be 20");
 assert(balanceText.includes('id: "weapon_dreamcatcher"'), "Dreamcatcher profile missing");
-assert.strictEqual(maps.version, 59, "newest live authored map revision must be preserved");
+assert.strictEqual(maps.version, 68, "newest live authored map revision must be preserved");
 
 const beach = maps.maps.crabBeach;
 const girl = beach.npcs.find(npc => npc.type === "beachGirl");
-assert.deepStrictEqual([girl.x, girl.y], [572, 338], "live Beach Girl position must be preserved");
+assert.deepStrictEqual([girl.x, girl.y], [578, 324], "live Beach Girl position must be preserved");
 
 console.log("Mobile HUD edge refinement, Dreamcatcher buff, Beach Girl shadow, and live map preservation OK.");

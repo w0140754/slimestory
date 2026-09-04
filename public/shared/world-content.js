@@ -453,8 +453,8 @@
             id: "prototypeIsland:npc:camoGuy",
             type: "camoGuy",
             name: "Cam",
-            x: 472,
-            y: 264,
+            x: 249,
+            y: 173,
             interactionRadius: 24
           }
         ],

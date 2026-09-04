@@ -58,7 +58,7 @@ for (let y = -4; y <= height + 4; y += size / 2) {
 
 const stats = TERRAIN_RULES.terrainLookupStats(west);
 assert(stats, "terrain lookup stats missing");
-assert(stats.regionCount >= 100, "W48 Prototype Island West should exercise a region-heavy terrain map");
+assert(stats.regionCount >= 50, "current Prototype Island West should exercise a region-heavy terrain map");
 assert(stats.bucketCount > 0, "terrain spatial buckets were not built");
 assert(stats.maxBucketSize < stats.regionCount, "terrain buckets are not reducing candidate scans");
 
@@ -71,9 +71,9 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const index = read("public", "index.html");
 const readme = read("README.md");
-assert(server.includes('const BUILD_VERSION = "6-11-366";'), "server build must be v347");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-366";'), "client build must be v347");
-assert(index.includes('/shared/terrain-rules.js?v=366'), "v347 terrain-rules cache key missing");
+assert(server.includes('const BUILD_VERSION = "6-11-367";'), "server build must be v347");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-367";'), "client build must be v347");
+assert(index.includes('/shared/terrain-rules.js?v=367'), "v347 terrain-rules cache key missing");
 assert(readme.includes('## v6-11-345 — Terrain lookup cache'), "README v345 terrain-cache changelog missing");
 
 // Keep this timing informational rather than brittle: correctness + spatial

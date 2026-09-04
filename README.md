@@ -1,3 +1,12 @@
+## v6-11-367 — Myrtle quest and universal attack movement
+
+- Replaced Cam's 20×20 sprite with the revised user-drawn version while preserving his live map-editor position.
+- Reworked every character name tag into a much smaller mixed-case label with a translucent charcoal backing and subtle pale border.
+- Added Myrtle's level-3 **Petals for the Falls** quest: bring 10 White Flowers and 10 Blue Flowers, with both stacks required for NPC turn-in.
+- Myrtle removes exactly 10 of each flower on completion and rewards 50 Coins plus 10 EXP; quest progress and completion persist with the character.
+- Removed the basic-attack/tool self-root on desktop, matching mobile, and changed the shared base movement speed from 72 to 54 px/s on both input schemes.
+- Preserved the newer live editor-authored world revision 68, including Cam at 249,173 and Sunny at 578,324.
+
 ## v6-11-366 — NPC names and art refresh
 
 - Replaced the iced-coffee and Sapgem Wand visuals with the latest user-drawn artwork; the 20×20 coffee now renders at its native size.

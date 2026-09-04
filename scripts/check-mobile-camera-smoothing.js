@@ -14,12 +14,12 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.366");
-assert(server.includes('const BUILD_VERSION = "6-11-366";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-366";'));
-assert(html.includes('/client-app.js?v=366') && html.includes('/game.js?v=366'));
+assert.strictEqual(pkg.version, "0.6.11.367");
+assert(server.includes('const BUILD_VERSION = "6-11-367";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-367";'));
+assert(html.includes('/client-app.js?v=367') && html.includes('/game.js?v=367'));
 
-assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "54 px/s mobile movement must remain");
+assert(config.includes('baseSpeed: 54'), "54 px/s movement must remain");
 assert(app.includes('const useMobileSubpixelCamera = mobileControlsEnabled;'), "camera smoothing must stay mobile-only");
 assert(app.includes('x: Math.round(camera.x)') && app.includes('y: Math.round(camera.y)'), "world camera must retain a shared pixel grid");
 assert(app.includes('(renderCamera.x - camera.x) * GAME_RENDER_SCALE') && app.includes('(renderCamera.y - camera.y) * GAME_RENDER_SCALE'), "pixel-grid camera remainder missing");
@@ -31,7 +31,7 @@ const renderCamera = Math.round(desiredCamera);
 const presentationOffset = Math.round((renderCamera - desiredCamera) * 3) / 3;
 assert(Number.isInteger(presentationOffset * 3), "camera motion must land on a backing pixel");
 
-assert.strictEqual(adopted.version, 59, "camera smoothing must preserve current authored map data");
+assert.strictEqual(adopted.version, 68, "camera smoothing must preserve current authored map data");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must remain intact");
 
 console.log("Mobile fractional camera smoothing checks passed; gameplay camera and desktop rendering remain unchanged.");

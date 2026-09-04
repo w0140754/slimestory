@@ -181,10 +181,10 @@ const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
-const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=366");
-const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=366");
-const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=366");
-const camoNpcImage = loadImage("assets/camo_npc.png?v=366");
+const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=367");
+const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=367");
+const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=367");
+const camoNpcImage = loadImage("assets/camo_npc.png?v=367");
 const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
@@ -203,7 +203,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
-const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=366");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=367");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -3878,6 +3878,10 @@ const player = {
     icedCoffee: 0
   },
 
+  myrtleQuest: {
+    stage: "none"
+  },
+
   benchCraftPending: null,
   shopPurchasePending: null,
 
@@ -4814,20 +4818,17 @@ function interactWithHunterNpc(npc = hunterNpc) {
   );
 }
 
-function interactWithFlavorNpc(type, npc) {
-  const greenWitch = type === "greenWitch";
-  const image = greenWitch ? greenWitchNpcImage : camoNpcImage;
-  const name = npcDisplayName(type, npc);
-  const dialogue = greenWitch
-    ? "The waterfall remembers every spell cast beside it. Listen closely and you may hear it humming."
-    : "If you can see me, no you can't. I'm conducting an extremely secret camouflage exercise.";
-
-  showRewardToast(name, dialogue, image);
+function interactWithCamoNpc(npc) {
+  showRewardToast(
+    npcDisplayName("camoGuy", npc),
+    "If you can see me, no you can't. I'm conducting an extremely secret camouflage exercise.",
+    camoNpcImage
+  );
   spawnFloatingText(
     Number(npc?.x) || player.x,
     (Number(npc?.y) || player.y) - 30,
-    greenWitch ? "THE WATER HUMS..." : "YOU SAW NOTHING",
-    greenWitch ? "#d9b9ff" : "#c8e6a8",
+    "YOU SAW NOTHING",
+    "#c8e6a8",
     1.15
   );
 }
@@ -5148,18 +5149,32 @@ function updateBeachQuestPanel(message = beachQuestView) {
   const dialogue = document.getElementById("beachQuestDialogue");
   const objectives = document.getElementById("beachQuestObjectives");
   const action = document.getElementById("beachQuestAction");
+  const npcImage = document.getElementById("beachQuestNpc");
+  const questNpcType = message.questNpcType === "greenWitch" ? "greenWitch" : "beachGirl";
   if (title) title.textContent = message.questName || "Crab Beach";
   if (dialogue) dialogue.textContent = message.dialogue || "The surf is nice today.";
+  if (npcImage) {
+    npcImage.src = questNpcType === "greenWitch" ? greenWitchNpcImage.src : beachGirlNpcImage.src;
+    npcImage.alt = questNpcType === "greenWitch" ? "Myrtle" : "Sunny";
+  }
 
   if (objectives) {
     objectives.replaceChildren();
     for (const objective of Array.isArray(message.objectives) ? message.objectives : []) {
       const row = document.createElement("div");
       row.className = `beach-quest-objective${objective.complete ? " complete" : ""}`;
-      if (objective.icon === "coffee") {
+      if (["coffee", "whiteFlower", "blueFlower"].includes(objective.icon)) {
         const image = document.createElement("img");
-        image.src = icedCoffeeImage.src;
-        image.alt = "Iced coffee";
+        image.src = objective.icon === "coffee"
+          ? icedCoffeeImage.src
+          : objective.icon === "blueFlower"
+            ? blueFlowerImage.src
+            : flowerImage.src;
+        image.alt = objective.icon === "coffee"
+          ? "Iced coffee"
+          : objective.icon === "blueFlower"
+            ? "Blue flower"
+            : "White flower";
         row.append(image);
       }
       const copy = document.createElement("span");
@@ -5174,6 +5189,7 @@ function updateBeachQuestPanel(message = beachQuestView) {
     action.hidden = !available;
     action.disabled = !available;
     action.dataset.questAction = available ? message.action : "";
+    action.dataset.questNpcType = questNpcType;
     action.textContent = message.actionLabel || "Continue";
   }
 }
@@ -5197,12 +5213,43 @@ function applyBeachQuestState(message) {
 
 function interactWithBeachGirl() {
   updateBeachQuestPanel({
+    questNpcType: "beachGirl",
     questName: "Crab Beach",
     dialogue: "She brushes sand from her beach clothes and turns to you.",
     objectives: []
   });
   setBeachQuestOpen(true);
   return Boolean(onlineClient?.requestBeachGirlQuest("talk"));
+}
+
+function applyMyrtleQuestState(message) {
+  if (!message || message.type !== "myrtleQuestState") return;
+  player.myrtleQuest.stage = ["none", "active", "complete"].includes(message.stage)
+    ? message.stage
+    : player.myrtleQuest.stage;
+  if (Number.isFinite(message.totalWhiteFlowers)) player.whiteFlowers = Math.max(0, Math.floor(message.totalWhiteFlowers));
+  if (Number.isFinite(message.totalBlueFlowers)) player.blueFlowers = Math.max(0, Math.floor(message.totalBlueFlowers));
+  if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
+  if ((Number(message.rewardExp) || 0) > 0) awardExp(Math.floor(message.rewardExp));
+  if ((Number(message.rewardCoins) || 0) > 0) {
+    showMenuFeedback(`QUEST COMPLETE! +${Math.floor(message.rewardCoins)} COINS · +${Math.floor(message.rewardExp)} EXP`, "#d9b9ff", 1.6);
+  }
+  updateBeachQuestPanel(message);
+  setBeachQuestOpen(true);
+  updateInventoryUi();
+  updateCraftingUi();
+  saveLocalCharacterState(true);
+}
+
+function interactWithMyrtle() {
+  updateBeachQuestPanel({
+    questNpcType: "greenWitch",
+    questName: "Myrtle",
+    dialogue: "The waterfall's voice curls through the air around her.",
+    objectives: []
+  });
+  setBeachQuestOpen(true);
+  return Boolean(onlineClient?.requestMyrtleQuest("talk"));
 }
 
 function interactWithNearbyObject() {
@@ -5238,8 +5285,12 @@ function interactWithNearbyObject() {
       interactWithBeachGirl();
       return true;
     }
-    if (interaction.npcType === "greenWitch" || interaction.npcType === "camoGuy") {
-      interactWithFlavorNpc(interaction.npcType, interaction.npc);
+    if (interaction.npcType === "greenWitch") {
+      interactWithMyrtle();
+      return true;
+    }
+    if (interaction.npcType === "camoGuy") {
+      interactWithCamoNpc(interaction.npc);
       return true;
     }
     if (interaction.npcType === "craftingTable") {
@@ -8145,13 +8196,8 @@ function updateInventoryUi() {
   }
 
   if (statMoveSpeed) {
-    const touchSpeedMultiplier = window.matchMedia(
-      "(hover: none) and (pointer: coarse)"
-    ).matches
-      ? GAME_CONFIG.player.mobileBaseSpeedMultiplier
-      : 1;
     statMoveSpeed.textContent = `${Math.round(
-      (Number(player.speed) || GAME_CONFIG.player.baseSpeed) * touchSpeedMultiplier
+      Number(player.speed) || GAME_CONFIG.player.baseSpeed
     )}`;
   }
   if (statAccuracy) {
@@ -8345,6 +8391,11 @@ function buildLocalCharacterSave() {
       firstCrabKills: clampLocalSaveInteger(player.beachQuest?.firstCrabKills, 0, 10, 0),
       secondCrabKills: clampLocalSaveInteger(player.beachQuest?.secondCrabKills, 0, 25, 0),
       icedCoffee: clampLocalSaveInteger(player.beachQuest?.icedCoffee, 0, 1, 0)
+    },
+    myrtleQuest: {
+      stage: ["none", "active", "complete"].includes(player.myrtleQuest?.stage)
+        ? player.myrtleQuest.stage
+        : "none"
     }
   };
 }
@@ -8449,6 +8500,13 @@ function applyLocalCharacterSave(save) {
   player.beachQuest.firstCrabKills = clampLocalSaveInteger(savedBeachQuest.firstCrabKills, 0, 10, 0);
   player.beachQuest.secondCrabKills = clampLocalSaveInteger(savedBeachQuest.secondCrabKills, 0, 25, 0);
   player.beachQuest.icedCoffee = clampLocalSaveInteger(savedBeachQuest.icedCoffee, 0, 1, 0);
+
+  const savedMyrtleQuest = save.myrtleQuest && typeof save.myrtleQuest === "object"
+    ? save.myrtleQuest
+    : {};
+  player.myrtleQuest.stage = ["none", "active", "complete"].includes(savedMyrtleQuest.stage)
+    ? savedMyrtleQuest.stage
+    : "none";
 
   player.hatIndex = clampLocalSaveInteger(save.equipment?.hatIndex, -1, HAT_ITEM_IDS.length - 1, -1);
   player.shirtIndex = clampLocalSaveInteger(save.equipment?.shirtIndex, -1, SHIRT_ITEM_IDS.length - 1, -1);
@@ -8590,6 +8648,9 @@ function persistentServerBootstrapPayload() {
       firstCrabKills: player.beachQuest.firstCrabKills,
       secondCrabKills: player.beachQuest.secondCrabKills,
       icedCoffee: player.beachQuest.icedCoffee
+    },
+    myrtleQuest: {
+      stage: player.myrtleQuest.stage
     },
     shopPurchases: Array.isArray(player.shopPurchases)
       ? player.shopPurchases.slice(0, 64)
@@ -9163,7 +9224,12 @@ document.getElementById("beachQuestOverlay")?.addEventListener("pointerdown", ev
 
 document.getElementById("beachQuestAction")?.addEventListener("click", event => {
   const action = event.currentTarget.dataset.questAction;
-  if (!action || !onlineClient?.requestBeachGirlQuest(action)) return;
+  if (!action) return;
+  const questNpcType = event.currentTarget.dataset.questNpcType;
+  const requested = questNpcType === "greenWitch"
+    ? onlineClient?.requestMyrtleQuest(action)
+    : onlineClient?.requestBeachGirlQuest(action);
+  if (!requested) return;
   event.currentTarget.disabled = true;
   event.currentTarget.textContent = "...";
 });
@@ -11670,12 +11736,36 @@ function drawPlacedNpc(npc, camX, camY) {
         ? "!"
         : "";
     if (marker) drawStaticPixelText(marker, screenX, screenY - height - 8, "#ffe36e", 1);
+  } else if (type === "greenWitch") {
+    const stage = player.myrtleQuest?.stage || "none";
+    const ready = stage === "active" && player.whiteFlowers >= 10 && player.blueFlowers >= 10;
+    const marker = ready
+      ? "?"
+      : stage === "none" && player.level >= 3
+        ? "!"
+        : "";
+    if (marker) drawStaticPixelText(marker, screenX, screenY - height - 8, "#d9b9ff", 1);
   }
 }
 
 function drawNpcNameTag(name, screenX, screenY) {
   if (!name) return;
-  drawStaticPixelText(name, screenX, screenY + 5, "#fff0b5", 1);
+  const label = String(name).slice(0, 20);
+  ctx.save();
+  ctx.font = "5px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  const labelWidth = Math.max(10, Math.ceil(ctx.measureText(label).width) + 4);
+  const left = Math.round(screenX - labelWidth / 2);
+  const top = Math.round(screenY + 3);
+  ctx.fillStyle = "rgba(24, 24, 24, .76)";
+  ctx.fillRect(left, top, labelWidth, 7);
+  ctx.strokeStyle = "rgba(235, 235, 235, .30)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(left + 0.5, top + 0.5, labelWidth - 1, 6);
+  ctx.fillStyle = "#eeeeee";
+  ctx.fillText(label, Math.round(screenX), top + 1);
+  ctx.restore();
 }
 
 function drawWoodCraftBench(camX, camY) {

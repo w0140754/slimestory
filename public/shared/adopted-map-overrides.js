@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   return Object.freeze({
-    "version": 59,
+    "version": 68,
     "maps": {
       "prototypeIsland": {
         "name": "Prototype Island",
@@ -1461,8 +1461,8 @@
             "id": "prototypeIsland:npc:camoGuy",
             "type": "camoGuy",
             "name": "Cam",
-            "x": 472,
-            "y": 264,
+            "x": 249,
+            "y": 173,
             "interactionRadius": 24
           }
         ]
@@ -1476,8 +1476,8 @@
         "playerSpawns": [
           {
             "id": "center",
-            "x": 763,
-            "y": 363
+            "x": 563,
+            "y": 431
           },
           {
             "id": "eastBridge",
@@ -1502,10 +1502,10 @@
           },
           {
             "id": "prototypeIslandWest:portal:crabBeach",
-            "x": 782,
-            "y": 337,
-            "width": 14,
-            "height": 54,
+            "x": 539,
+            "y": 484,
+            "width": 50,
+            "height": 10,
             "targetMapId": "crabBeach",
             "targetSpawnId": "westDune"
           },
@@ -1731,8 +1731,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:28",
-              "x": 622,
-              "y": 421,
+              "x": 639,
+              "y": 418,
               "phase": 20.88000000000001,
               "fireImmune": true,
               "nonInteractive": true
@@ -1747,7 +1747,7 @@
             },
             {
               "id": "prototypeIslandWest:tree:30",
-              "x": 700,
+              "x": 698,
               "y": 420,
               "phase": 22.34000000000001,
               "fireImmune": true,
@@ -1771,8 +1771,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:34",
-              "x": 733,
-              "y": 415,
+              "x": 729,
+              "y": 418,
               "phase": 25.260000000000012,
               "fireImmune": true,
               "nonInteractive": true
@@ -1795,8 +1795,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:38",
-              "x": 762,
-              "y": 386,
+              "x": 781,
+              "y": 345,
               "phase": 28.180000000000014,
               "fireImmune": true,
               "nonInteractive": true
@@ -1963,8 +1963,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:60",
-              "x": 642,
-              "y": 366,
+              "x": 746,
+              "y": 361,
               "phase": 44.23999999999997,
               "fireImmune": true,
               "nonInteractive": true
@@ -1995,8 +1995,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:64",
-              "x": 666,
-              "y": 414,
+              "x": 780,
+              "y": 381,
               "phase": 47.159999999999954,
               "fireImmune": true,
               "nonInteractive": true
@@ -2011,8 +2011,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:66",
-              "x": 646,
-              "y": 418,
+              "x": 668,
+              "y": 413,
               "phase": 48.61999999999995,
               "fireImmune": true,
               "nonInteractive": true
@@ -2027,8 +2027,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:68",
-              "x": 759,
-              "y": 417,
+              "x": 761,
+              "y": 419,
               "phase": 50.07999999999994,
               "fireImmune": true,
               "nonInteractive": true
@@ -2043,8 +2043,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:70",
-              "x": 784,
-              "y": 415,
+              "x": 787,
+              "y": 414,
               "phase": 51.539999999999935,
               "fireImmune": true,
               "nonInteractive": true
@@ -2166,8 +2166,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:90",
-              "x": 707,
-              "y": 337,
+              "x": 705,
+              "y": 327,
               "phase": 66.13999999999989,
               "fireImmune": false,
               "nonInteractive": false,
@@ -2185,7 +2185,7 @@
             {
               "id": "prototypeIslandWest:tree:92",
               "x": 612,
-              "y": 305,
+              "y": 299,
               "phase": 67.5999999999999,
               "fireImmune": false,
               "nonInteractive": false,
@@ -2278,8 +2278,8 @@
             },
             {
               "id": "prototypeIslandWest:tree:84",
-              "x": 564,
-              "y": 226,
+              "x": 563,
+              "y": 238,
               "phase": 68.31,
               "fireImmune": false,
               "nonInteractive": false,
@@ -2287,12 +2287,20 @@
             },
             {
               "id": "prototypeIslandWest:tree:86",
-              "x": 564,
-              "y": 275,
+              "x": 563,
+              "y": 289,
               "phase": 69.04,
               "fireImmune": false,
               "nonInteractive": false,
               "canopyVariant": 0
+            },
+            {
+              "id": "prototypeIslandWest:tree:96",
+              "x": 209,
+              "y": 254,
+              "phase": 69.77,
+              "fireImmune": true,
+              "nonInteractive": true
             }
           ],
           "tallGrass": [
@@ -2627,8 +2635,8 @@
             "id": "prototypeIslandWest:slime:2",
             "type": "slime",
             "level": 1,
-            "x": 674,
-            "y": 369,
+            "x": 678,
+            "y": 365,
             "phase": 1.2,
             "wanderRadiusX": 18,
             "wanderRadiusY": 13
@@ -2913,7 +2921,7 @@
               "x": 200,
               "y": 248,
               "width": 264,
-              "height": 8
+              "height": 24
             },
             {
               "type": "dirt",
@@ -2944,27 +2952,6 @@
               "height": 8
             },
             {
-              "type": "grass",
-              "x": 200,
-              "y": 256,
-              "width": 40,
-              "height": 24
-            },
-            {
-              "type": "dirt",
-              "x": 240,
-              "y": 256,
-              "width": 32,
-              "height": 8
-            },
-            {
-              "type": "grass",
-              "x": 272,
-              "y": 256,
-              "width": 192,
-              "height": 8
-            },
-            {
               "type": "dirt",
               "x": 464,
               "y": 256,
@@ -2976,20 +2963,6 @@
               "x": 656,
               "y": 256,
               "width": 144,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 240,
-              "y": 264,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "grass",
-              "x": 280,
-              "y": 264,
-              "width": 184,
               "height": 8
             },
             {
@@ -3007,10 +2980,17 @@
               "height": 8
             },
             {
-              "type": "dirt",
-              "x": 240,
+              "type": "grass",
+              "x": 200,
               "y": 272,
-              "width": 72,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "dirt",
+              "x": 280,
+              "y": 272,
+              "width": 32,
               "height": 8
             },
             {
@@ -3207,7 +3187,7 @@
               "x": 600,
               "y": 312,
               "width": 200,
-              "height": 24
+              "height": 40
             },
             {
               "type": "grass",
@@ -3231,34 +3211,6 @@
               "height": 24
             },
             {
-              "type": "grass",
-              "x": 600,
-              "y": 336,
-              "width": 192,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 792,
-              "y": 336,
-              "width": 8,
-              "height": 8
-            },
-            {
-              "type": "grass",
-              "x": 600,
-              "y": 344,
-              "width": 176,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 776,
-              "y": 344,
-              "width": 24,
-              "height": 8
-            },
-            {
               "type": "water",
               "x": 520,
               "y": 352,
@@ -3269,15 +3221,8 @@
               "type": "grass",
               "x": 608,
               "y": 352,
-              "width": 160,
-              "height": 16
-            },
-            {
-              "type": "dirt",
-              "x": 768,
-              "y": 352,
-              "width": 32,
-              "height": 16
+              "width": 192,
+              "height": 48
             },
             {
               "type": "grass",
@@ -3309,20 +3254,6 @@
             },
             {
               "type": "grass",
-              "x": 608,
-              "y": 368,
-              "width": 168,
-              "height": 16
-            },
-            {
-              "type": "dirt",
-              "x": 776,
-              "y": 368,
-              "width": 24,
-              "height": 16
-            },
-            {
-              "type": "grass",
               "x": 200,
               "y": 376,
               "width": 336,
@@ -3334,27 +3265,6 @@
               "y": 376,
               "width": 72,
               "height": 24
-            },
-            {
-              "type": "grass",
-              "x": 608,
-              "y": 384,
-              "width": 184,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 792,
-              "y": 384,
-              "width": 8,
-              "height": 8
-            },
-            {
-              "type": "grass",
-              "x": 608,
-              "y": 392,
-              "width": 192,
-              "height": 8
             },
             {
               "type": "water",
@@ -3418,6 +3328,13 @@
               "y": 424,
               "width": 200,
               "height": 8
+            },
+            {
+              "type": "water",
+              "x": 544,
+              "y": 432,
+              "width": 40,
+              "height": 64
             }
           ]
         },
@@ -3435,17 +3352,17 @@
         "playerSpawns": [
           {
             "id": "westDune",
-            "x": 133,
-            "y": 191
+            "x": 416,
+            "y": 129
           }
         ],
         "portals": [
           {
             "id": "crabBeach:portal:west",
-            "x": 68,
-            "y": 160,
-            "width": 12,
-            "height": 60,
+            "x": 391,
+            "y": 57,
+            "width": 50,
+            "height": 20,
             "targetMapId": "prototypeIslandWest",
             "targetSpawnId": "center"
           }
@@ -3455,25 +3372,49 @@
           "tallGrass": [
             {
               "id": "crabBeach:grass:1",
-              "x": 193,
-              "y": 348,
+              "x": 243,
+              "y": 377,
               "phase": 0.4,
               "width": 13,
               "flowerType": null
             },
             {
               "id": "crabBeach:grass:2",
-              "x": 219,
-              "y": 398,
+              "x": 232,
+              "y": 396,
               "phase": 1.2,
               "width": 13,
               "flowerType": null
             },
             {
               "id": "crabBeach:grass:3",
-              "x": 221,
-              "y": 140,
+              "x": 283,
+              "y": 170,
               "phase": 2,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "crabBeach:grass:4",
+              "x": 515,
+              "y": 188,
+              "phase": 2.8,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "crabBeach:grass:5",
+              "x": 533,
+              "y": 190,
+              "phase": 3.6,
+              "width": 13,
+              "flowerType": null
+            },
+            {
+              "id": "crabBeach:grass:6",
+              "x": 563,
+              "y": 217,
+              "phase": 4.4,
               "width": 13,
               "flowerType": null
             }
@@ -3493,16 +3434,16 @@
             },
             {
               "id": "crabBeach:rock:3",
-              "x": 438,
-              "y": 206,
+              "x": 432,
+              "y": 209,
               "variant": "plain"
             }
           ],
           "sceneryRocks": [
             {
               "id": "crabBeach:sceneryRock:1",
-              "x": 197,
-              "y": 162,
+              "x": 208,
+              "y": 269,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -3510,8 +3451,8 @@
             },
             {
               "id": "crabBeach:sceneryRock:2",
-              "x": 240,
-              "y": 142,
+              "x": 308,
+              "y": 166,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -3519,8 +3460,8 @@
             },
             {
               "id": "crabBeach:sceneryRock:3",
-              "x": 516,
-              "y": 188,
+              "x": 555,
+              "y": 210,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -3564,8 +3505,8 @@
             "id": "crabBeach:crab:3",
             "type": "crab",
             "level": 4,
-            "x": 361,
-            "y": 173,
+            "x": 310,
+            "y": 226,
             "phase": 2.1,
             "wanderRadiusX": 26,
             "wanderRadiusY": 10
@@ -3574,8 +3515,8 @@
             "id": "crabBeach:crab:4",
             "type": "crab",
             "level": 4,
-            "x": 240,
-            "y": 427,
+            "x": 187,
+            "y": 346,
             "phase": 3.2,
             "wanderRadiusX": 26,
             "wanderRadiusY": 10
@@ -3584,32 +3525,32 @@
             "id": "crabBeach:slime:1",
             "type": "crab",
             "level": 1,
-            "x": 296,
-            "y": 250,
+            "x": 275,
+            "y": 276,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:5",
             "type": "crab",
             "level": 1,
-            "x": 421,
-            "y": 410,
+            "x": 412,
+            "y": 434,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:6",
             "type": "crab",
             "level": 1,
-            "x": 566,
-            "y": 261,
+            "x": 463,
+            "y": 329,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:7",
             "type": "crab",
             "level": 1,
-            "x": 252,
-            "y": 330,
+            "x": 267,
+            "y": 359,
             "phase": 3.9
           },
           {
@@ -3624,48 +3565,48 @@
             "id": "crabBeach:crab:9",
             "type": "crab",
             "level": 1,
-            "x": 524,
-            "y": 451,
+            "x": 506,
+            "y": 472,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:10",
             "type": "crab",
             "level": 1,
-            "x": 475,
-            "y": 156,
+            "x": 449,
+            "y": 257,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:11",
             "type": "crab",
             "level": 1,
-            "x": 668,
-            "y": 198,
+            "x": 628,
+            "y": 245,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:12",
             "type": "crab",
             "level": 1,
-            "x": 633,
-            "y": 437,
+            "x": 621,
+            "y": 430,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:13",
             "type": "crab",
             "level": 1,
-            "x": 681,
-            "y": 323,
+            "x": 356,
+            "y": 277,
             "phase": 3.9
           },
           {
             "id": "crabBeach:crab:14",
             "type": "crab",
             "level": 1,
-            "x": 342,
-            "y": 502,
+            "x": 234,
+            "y": 464,
             "phase": 3.9
           }
         ],
@@ -3674,1011 +3615,1256 @@
           "defaultType": "void",
           "regions": [
             {
-              "type": "sand",
-              "x": 176,
-              "y": 120,
-              "width": 464,
-              "height": 8
+              "type": "water",
+              "x": 400,
+              "y": 56,
+              "width": 32,
+              "height": 80
             },
             {
               "type": "water",
-              "x": 640,
-              "y": 120,
-              "width": 96,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 128,
-              "width": 456,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 632,
-              "y": 128,
-              "width": 104,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
+              "x": 152,
               "y": 136,
-              "width": 464,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 640,
-              "y": 136,
-              "width": 96,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 144,
-              "width": 488,
-              "height": 16
-            },
-            {
-              "type": "water",
-              "x": 664,
-              "y": 144,
-              "width": 72,
-              "height": 16
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 160,
-              "width": 536,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 600,
-              "y": 160,
-              "width": 136,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 168,
               "width": 528,
-              "height": 8
+              "height": 24
             },
             {
               "type": "water",
-              "x": 592,
-              "y": 168,
-              "width": 144,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 176,
-              "width": 504,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 568,
-              "y": 176,
-              "width": 168,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 184,
-              "width": 488,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 552,
-              "y": 184,
-              "width": 184,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 192,
-              "width": 432,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 496,
-              "y": 192,
-              "width": 240,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 200,
-              "width": 424,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 488,
-              "y": 200,
-              "width": 248,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 64,
-              "y": 208,
-              "width": 416,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 480,
-              "y": 208,
-              "width": 120,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 600,
-              "y": 208,
-              "width": 8,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 608,
-              "y": 208,
+              "x": 152,
+              "y": 160,
               "width": 128,
               "height": 8
             },
             {
               "type": "sand",
-              "x": 64,
-              "y": 216,
-              "width": 408,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 472,
-              "y": 216,
-              "width": 112,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 584,
-              "y": 216,
-              "width": 32,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 616,
-              "y": 216,
-              "width": 120,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 224,
-              "width": 296,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 472,
-              "y": 224,
-              "width": 88,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 560,
-              "y": 224,
+              "x": 280,
+              "y": 160,
               "width": 64,
               "height": 8
             },
             {
               "type": "water",
-              "x": 624,
-              "y": 224,
-              "width": 112,
-              "height": 16
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 232,
-              "width": 240,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 416,
-              "y": 232,
-              "width": 16,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 432,
-              "y": 232,
-              "width": 48,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 480,
-              "y": 232,
-              "width": 48,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 528,
-              "y": 232,
-              "width": 96,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 240,
-              "width": 224,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 400,
-              "y": 240,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 440,
-              "y": 240,
-              "width": 48,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 488,
-              "y": 240,
-              "width": 32,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 520,
-              "y": 240,
-              "width": 112,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 632,
-              "y": 240,
-              "width": 104,
-              "height": 32
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 248,
-              "width": 208,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 384,
-              "y": 248,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 448,
-              "y": 248,
-              "width": 40,
-              "height": 16
-            },
-            {
-              "type": "water",
-              "x": 488,
-              "y": 248,
-              "width": 24,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 512,
-              "y": 248,
-              "width": 120,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 256,
-              "width": 200,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 376,
-              "y": 256,
-              "width": 72,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 488,
-              "y": 256,
-              "width": 16,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 504,
-              "y": 256,
-              "width": 128,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 264,
-              "width": 192,
-              "height": 16
-            },
-            {
-              "type": "water",
-              "x": 368,
-              "y": 264,
-              "width": 80,
-              "height": 16
-            },
-            {
-              "type": "sand",
-              "x": 448,
-              "y": 264,
-              "width": 184,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 448,
-              "y": 272,
-              "width": 176,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 624,
-              "y": 272,
-              "width": 112,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 280,
-              "width": 200,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 376,
-              "y": 280,
-              "width": 72,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 448,
-              "y": 280,
-              "width": 168,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 616,
-              "y": 280,
-              "width": 120,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 288,
-              "width": 208,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 384,
-              "y": 288,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 448,
-              "y": 288,
-              "width": 104,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 552,
-              "y": 288,
-              "width": 184,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 296,
-              "width": 224,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 400,
-              "y": 296,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 440,
-              "y": 296,
-              "width": 88,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 528,
-              "y": 296,
-              "width": 208,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 304,
+              "x": 344,
+              "y": 160,
               "width": 336,
               "height": 8
             },
             {
               "type": "water",
-              "x": 512,
-              "y": 304,
-              "width": 224,
+              "x": 152,
+              "y": 168,
+              "width": 112,
               "height": 8
             },
             {
               "type": "sand",
-              "x": 176,
-              "y": 312,
-              "width": 328,
+              "x": 264,
+              "y": 168,
+              "width": 112,
               "height": 8
             },
             {
               "type": "water",
-              "x": 504,
-              "y": 312,
-              "width": 232,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 320,
-              "width": 312,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 488,
-              "y": 320,
-              "width": 248,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 328,
+              "x": 376,
+              "y": 168,
               "width": 304,
               "height": 8
             },
             {
               "type": "water",
-              "x": 480,
-              "y": 328,
-              "width": 256,
+              "x": 152,
+              "y": 176,
+              "width": 88,
               "height": 8
             },
             {
               "type": "sand",
-              "x": 176,
-              "y": 336,
-              "width": 296,
-              "height": 24
+              "x": 240,
+              "y": 176,
+              "width": 160,
+              "height": 8
             },
             {
               "type": "water",
-              "x": 472,
-              "y": 336,
+              "x": 400,
+              "y": 176,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 520,
+              "y": 176,
+              "width": 32,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 552,
+              "y": 176,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 184,
               "width": 80,
               "height": 8
             },
             {
               "type": "sand",
-              "x": 552,
-              "y": 336,
+              "x": 232,
+              "y": 184,
+              "width": 176,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 408,
+              "y": 184,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 488,
+              "y": 184,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 560,
+              "y": 184,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 192,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 216,
+              "y": 192,
+              "width": 208,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 424,
+              "y": 192,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 480,
+              "y": 192,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 568,
+              "y": 192,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 200,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 208,
+              "y": 200,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 296,
+              "y": 200,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 336,
+              "y": 200,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 440,
+              "y": 200,
+              "width": 32,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 472,
+              "y": 200,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 576,
+              "y": 200,
+              "width": 104,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 208,
               "width": 48,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 200,
+              "y": 208,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 288,
+              "y": 208,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 344,
+              "y": 208,
+              "width": 232,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 216,
+              "width": 40,
+              "height": 32
+            },
+            {
+              "type": "sand",
+              "x": 192,
+              "y": 216,
+              "width": 88,
+              "height": 24
+            },
+            {
+              "type": "water",
+              "x": 280,
+              "y": 216,
+              "width": 72,
+              "height": 24
+            },
+            {
+              "type": "sand",
+              "x": 352,
+              "y": 216,
+              "width": 232,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 584,
+              "y": 216,
+              "width": 96,
+              "height": 24
+            },
+            {
+              "type": "sand",
+              "x": 352,
+              "y": 224,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 432,
+              "y": 224,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 480,
+              "y": 224,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 352,
+              "y": 232,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 424,
+              "y": 232,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 488,
+              "y": 232,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 192,
+              "y": 240,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 288,
+              "y": 240,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 344,
+              "y": 240,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 416,
+              "y": 240,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 496,
+              "y": 240,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 576,
+              "y": 240,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 248,
+              "width": 32,
+              "height": 24
+            },
+            {
+              "type": "sand",
+              "x": 184,
+              "y": 248,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 296,
+              "y": 248,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 336,
+              "y": 248,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 408,
+              "y": 248,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 488,
+              "y": 248,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 568,
+              "y": 248,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 184,
+              "y": 256,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 304,
+              "y": 256,
+              "width": 24,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 328,
+              "y": 256,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 416,
+              "y": 256,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 496,
+              "y": 256,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 560,
+              "y": 256,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 184,
+              "y": 264,
+              "width": 240,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 424,
+              "y": 264,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 496,
+              "y": 264,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 544,
+              "y": 264,
+              "width": 136,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 272,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 192,
+              "y": 272,
+              "width": 248,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 440,
+              "y": 272,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 488,
+              "y": 272,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 528,
+              "y": 272,
+              "width": 152,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 280,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 200,
+              "y": 280,
+              "width": 248,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 448,
+              "y": 280,
+              "width": 32,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 480,
+              "y": 280,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 520,
+              "y": 280,
+              "width": 160,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 288,
+              "width": 72,
+              "height": 24
+            },
+            {
+              "type": "sand",
+              "x": 224,
+              "y": 288,
+              "width": 288,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 512,
+              "y": 288,
+              "width": 168,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 224,
+              "y": 296,
+              "width": 168,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 392,
+              "y": 296,
+              "width": 48,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 440,
+              "y": 296,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 504,
+              "y": 296,
+              "width": 176,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 224,
+              "y": 304,
+              "width": 160,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 384,
+              "y": 304,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 464,
+              "y": 304,
+              "width": 24,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 488,
+              "y": 304,
+              "width": 192,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 312,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 232,
+              "y": 312,
+              "width": 144,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 376,
+              "y": 312,
+              "width": 304,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 320,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 240,
+              "y": 320,
+              "width": 136,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 376,
+              "y": 320,
+              "width": 192,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 568,
+              "y": 320,
+              "width": 24,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 592,
+              "y": 320,
+              "width": 88,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 328,
+              "width": 96,
+              "height": 24
+            },
+            {
+              "type": "sand",
+              "x": 248,
+              "y": 328,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 376,
+              "y": 328,
+              "width": 176,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 552,
+              "y": 328,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 248,
+              "y": 336,
+              "width": 136,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 384,
+              "y": 336,
+              "width": 160,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 544,
+              "y": 336,
+              "width": 56,
               "height": 8
             },
             {
               "type": "water",
               "x": 600,
               "y": 336,
-              "width": 136,
-              "height": 16
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 248,
+              "y": 344,
+              "width": 144,
+              "height": 8
             },
             {
               "type": "water",
-              "x": 472,
+              "x": 392,
               "y": 344,
-              "width": 64,
+              "width": 144,
               "height": 8
             },
             {
               "type": "sand",
               "x": 536,
               "y": 344,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 472,
-              "y": 352,
-              "width": 56,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 528,
-              "y": 352,
-              "width": 80,
+              "width": 72,
               "height": 8
             },
             {
               "type": "water",
               "x": 608,
-              "y": 352,
-              "width": 128,
-              "height": 24
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 360,
-              "width": 304,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 480,
-              "y": 360,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 520,
-              "y": 360,
-              "width": 88,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 368,
-              "width": 216,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 392,
-              "y": 368,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 432,
-              "y": 368,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 496,
-              "y": 368,
-              "width": 8,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 504,
-              "y": 368,
-              "width": 104,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 376,
-              "width": 208,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 384,
-              "y": 376,
-              "width": 56,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 440,
-              "y": 376,
-              "width": 160,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 600,
-              "y": 376,
-              "width": 136,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 384,
-              "width": 200,
-              "height": 16
-            },
-            {
-              "type": "water",
-              "x": 376,
-              "y": 384,
+              "y": 344,
               "width": 72,
               "height": 8
             },
             {
-              "type": "sand",
-              "x": 448,
-              "y": 384,
-              "width": 128,
-              "height": 8
-            },
-            {
               "type": "water",
-              "x": 576,
-              "y": 384,
-              "width": 160,
-              "height": 24
-            },
-            {
-              "type": "water",
-              "x": 376,
-              "y": 392,
+              "x": 152,
+              "y": 352,
               "width": 88,
               "height": 8
             },
             {
               "type": "sand",
-              "x": 464,
-              "y": 392,
-              "width": 112,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 400,
-              "width": 208,
-              "height": 24
-            },
-            {
-              "type": "water",
-              "x": 384,
-              "y": 400,
-              "width": 88,
-              "height": 16
-            },
-            {
-              "type": "sand",
-              "x": 472,
-              "y": 400,
-              "width": 104,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 472,
-              "y": 408,
-              "width": 112,
+              "x": 240,
+              "y": 352,
+              "width": 176,
               "height": 8
             },
             {
               "type": "water",
-              "x": 584,
-              "y": 408,
-              "width": 152,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 384,
-              "y": 416,
+              "x": 416,
+              "y": 352,
               "width": 96,
               "height": 8
             },
             {
               "type": "sand",
+              "x": 512,
+              "y": 352,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 600,
+              "y": 352,
+              "width": 80,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 360,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 232,
+              "y": 360,
+              "width": 192,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 424,
+              "y": 360,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 488,
+              "y": 360,
+              "width": 112,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 368,
+              "width": 72,
+              "height": 32
+            },
+            {
+              "type": "sand",
+              "x": 224,
+              "y": 368,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 320,
+              "y": 368,
+              "width": 24,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 344,
+              "y": 368,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 416,
+              "y": 368,
+              "width": 64,
+              "height": 16
+            },
+            {
+              "type": "sand",
               "x": 480,
-              "y": 416,
+              "y": 368,
               "width": 112,
               "height": 8
             },
             {
               "type": "water",
               "x": 592,
-              "y": 416,
-              "width": 144,
-              "height": 24
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 424,
-              "width": 216,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 392,
-              "y": 424,
-              "width": 80,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 472,
-              "y": 424,
-              "width": 120,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 432,
-              "width": 224,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 400,
-              "y": 432,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 464,
-              "y": 432,
-              "width": 128,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 176,
-              "y": 440,
-              "width": 232,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 408,
-              "y": 440,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 448,
-              "y": 440,
-              "width": 136,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 584,
-              "y": 440,
-              "width": 152,
-              "height": 16
-            },
-            {
-              "type": "water",
-              "x": 176,
-              "y": 448,
-              "width": 8,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 184,
-              "y": 448,
-              "width": 392,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 176,
-              "y": 456,
-              "width": 16,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 192,
-              "y": 456,
-              "width": 128,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 320,
-              "y": 456,
-              "width": 40,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 368,
-              "y": 456,
-              "width": 200,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 576,
-              "y": 456,
-              "width": 160,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 176,
-              "y": 464,
-              "width": 24,
-              "height": 16
-            },
-            {
-              "type": "sand",
-              "x": 200,
-              "y": 464,
-              "width": 96,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 304,
-              "y": 464,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 376,
-              "y": 464,
-              "width": 184,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 560,
-              "y": 464,
-              "width": 176,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 200,
-              "y": 472,
-              "width": 80,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 288,
-              "y": 472,
-              "width": 96,
-              "height": 8
-            },
-            {
-              "type": "sand",
-              "x": 384,
-              "y": 472,
-              "width": 168,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 552,
-              "y": 472,
-              "width": 184,
-              "height": 8
-            },
-            {
-              "type": "water",
-              "x": 176,
-              "y": 480,
-              "width": 48,
+              "y": 368,
+              "width": 88,
               "height": 8
             },
             {
               "type": "sand",
               "x": 224,
-              "y": 480,
-              "width": 40,
+              "y": 376,
+              "width": 88,
               "height": 8
             },
             {
               "type": "water",
-              "x": 264,
-              "y": 480,
-              "width": 136,
+              "x": 312,
+              "y": 376,
+              "width": 40,
               "height": 8
             },
             {
               "type": "sand",
-              "x": 400,
-              "y": 480,
+              "x": 352,
+              "y": 376,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 480,
+              "y": 376,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 584,
+              "y": 376,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 224,
+              "y": 384,
               "width": 80,
               "height": 8
             },
             {
               "type": "water",
+              "x": 304,
+              "y": 384,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 360,
+              "y": 384,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 416,
+              "y": 384,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 472,
+              "y": 384,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 576,
+              "y": 384,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 224,
+              "y": 392,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 296,
+              "y": 392,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 368,
+              "y": 392,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 424,
+              "y": 392,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 464,
+              "y": 392,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 560,
+              "y": 392,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 400,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 232,
+              "y": 400,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 296,
+              "y": 400,
+              "width": 80,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 376,
+              "y": 400,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 432,
+              "y": 400,
+              "width": 8,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 440,
+              "y": 400,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 528,
+              "y": 400,
+              "width": 152,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 408,
+              "width": 88,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 240,
+              "y": 408,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 304,
+              "y": 408,
+              "width": 72,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 376,
+              "y": 408,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 504,
+              "y": 408,
+              "width": 176,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 416,
+              "width": 96,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 248,
+              "y": 416,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 312,
+              "y": 416,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 368,
+              "y": 416,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 496,
+              "y": 416,
+              "width": 184,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 424,
+              "width": 104,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 256,
+              "y": 424,
+              "width": 64,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 320,
+              "y": 424,
+              "width": 40,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 360,
+              "y": 424,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "water",
               "x": 480,
-              "y": 480,
+              "y": 424,
+              "width": 200,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 432,
+              "width": 120,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 272,
+              "y": 432,
+              "width": 200,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 472,
+              "y": 432,
+              "width": 208,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 440,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 280,
+              "y": 440,
+              "width": 176,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 456,
+              "y": 440,
+              "width": 224,
+              "height": 16
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 448,
+              "width": 136,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 288,
+              "y": 448,
+              "width": 168,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 456,
+              "width": 144,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 296,
+              "y": 456,
+              "width": 128,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 424,
+              "y": 456,
               "width": 256,
               "height": 8
             },
             {
               "type": "water",
-              "x": 176,
-              "y": 488,
-              "width": 560,
+              "x": 152,
+              "y": 464,
+              "width": 152,
+              "height": 8
+            },
+            {
+              "type": "sand",
+              "x": 304,
+              "y": 464,
+              "width": 56,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 360,
+              "y": 464,
+              "width": 320,
+              "height": 8
+            },
+            {
+              "type": "water",
+              "x": 152,
+              "y": 472,
+              "width": 528,
               "height": 32
             }
           ]
@@ -4691,8 +4877,8 @@
             "id": "crabBeach:npc:beachGirl",
             "type": "beachGirl",
             "name": "Sunny",
-            "x": 572,
-            "y": 338,
+            "x": 578,
+            "y": 324,
             "interactionRadius": 28
           }
         ]

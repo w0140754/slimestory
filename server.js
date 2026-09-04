@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-366";
+const BUILD_VERSION = "6-11-367";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -2740,6 +2740,7 @@ function beachQuestStatePayload(playerState, rewardExp = 0, rewardCoins = 0) {
 
   return {
     type: "beachQuestState",
+    questNpcType: "beachGirl",
     stage,
     questName,
     dialogue,
@@ -2793,6 +2794,101 @@ function handleBeachQuestInteract(playerId, socket, message) {
   }
 
   sendJson(socket, beachQuestStatePayload(playerState, rewardExp, rewardCoins));
+}
+
+const MYRTLE_QUEST_LEVEL = 3;
+const MYRTLE_QUEST_FLOWER_GOAL = 10;
+
+function myrtleQuestStage(playerState) {
+  return ["none", "active", "complete"].includes(playerState?.myrtleQuestStage)
+    ? playerState.myrtleQuestStage
+    : "none";
+}
+
+function myrtleQuestStatePayload(playerState, rewardExp = 0, rewardCoins = 0) {
+  const stage = myrtleQuestStage(playerState);
+  const level = Math.max(1, Math.floor(Number(playerState?.level) || 1));
+  const whiteFlowers = Math.max(0, Math.floor(Number(playerState?.whiteFlowers) || 0));
+  const blueFlowers = Math.max(0, Math.floor(Number(playerState?.blueFlowers) || 0));
+  const whiteProgress = Math.min(MYRTLE_QUEST_FLOWER_GOAL, whiteFlowers);
+  const blueProgress = Math.min(MYRTLE_QUEST_FLOWER_GOAL, blueFlowers);
+  const ready = whiteFlowers >= MYRTLE_QUEST_FLOWER_GOAL && blueFlowers >= MYRTLE_QUEST_FLOWER_GOAL;
+  let questName = "Myrtle";
+  let dialogue = "The waterfall remembers every spell cast beside it. Listen closely and you may hear it humming.";
+  let objectives = [];
+  let action = null;
+  let actionLabel = null;
+
+  if (stage === "none" && level >= MYRTLE_QUEST_LEVEL) {
+    questName = "Petals for the Falls";
+    dialogue = "The water is restless. Bring me ten white flowers and ten blue flowers, and we will leave it an offering together.";
+    objectives = [
+      { text: `White flowers ${whiteProgress} / ${MYRTLE_QUEST_FLOWER_GOAL}`, complete: whiteProgress >= MYRTLE_QUEST_FLOWER_GOAL, icon: "whiteFlower" },
+      { text: `Blue flowers ${blueProgress} / ${MYRTLE_QUEST_FLOWER_GOAL}`, complete: blueProgress >= MYRTLE_QUEST_FLOWER_GOAL, icon: "blueFlower" }
+    ];
+    action = "accept";
+    actionLabel = "Accept Quest";
+  } else if (stage === "active") {
+    questName = "Petals for the Falls";
+    dialogue = ready
+      ? "Perfect. The white petals will carry memory; the blue will carry dreams. Shall we give them to the falls?"
+      : "Ten white and ten blue. Keep them separate—the waterfall notices these things.";
+    objectives = [
+      { text: `White flowers ${whiteProgress} / ${MYRTLE_QUEST_FLOWER_GOAL}`, complete: whiteProgress >= MYRTLE_QUEST_FLOWER_GOAL, icon: "whiteFlower" },
+      { text: `Blue flowers ${blueProgress} / ${MYRTLE_QUEST_FLOWER_GOAL}`, complete: blueProgress >= MYRTLE_QUEST_FLOWER_GOAL, icon: "blueFlower" }
+    ];
+    if (ready) {
+      action = "turnIn";
+      actionLabel = "Give Flowers";
+    }
+  } else if (stage === "complete") {
+    dialogue = "The falls are humming more gently now. Some gifts are remembered long after their petals are gone.";
+  } else if (level < MYRTLE_QUEST_LEVEL) {
+    dialogue = "The waterfall has something to ask of you—but its voice is still a little too strong. Return when you have more experience.";
+  }
+
+  return {
+    type: "myrtleQuestState",
+    questNpcType: "greenWitch",
+    stage,
+    questName,
+    dialogue,
+    objectives,
+    action,
+    actionLabel,
+    totalWhiteFlowers: whiteFlowers,
+    totalBlueFlowers: blueFlowers,
+    totalCoins: Math.max(0, Math.floor(Number(playerState?.coins) || 0)),
+    rewardExp: Math.max(0, Math.floor(Number(rewardExp) || 0)),
+    rewardCoins: Math.max(0, Math.floor(Number(rewardCoins) || 0))
+  };
+}
+
+function handleMyrtleQuestInteract(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  if (!playerState || !playerNearPlacedInteraction(playerState, "greenWitch", 48, 16)) return;
+  const action = typeof message?.action === "string" ? message.action : "talk";
+  const stage = myrtleQuestStage(playerState);
+  let rewardExp = 0;
+  let rewardCoins = 0;
+
+  if (action === "accept" && stage === "none" && playerState.level >= MYRTLE_QUEST_LEVEL) {
+    playerState.myrtleQuestStage = "active";
+  } else if (
+    action === "turnIn" &&
+    stage === "active" &&
+    playerState.whiteFlowers >= MYRTLE_QUEST_FLOWER_GOAL &&
+    playerState.blueFlowers >= MYRTLE_QUEST_FLOWER_GOAL
+  ) {
+    playerState.whiteFlowers -= MYRTLE_QUEST_FLOWER_GOAL;
+    playerState.blueFlowers -= MYRTLE_QUEST_FLOWER_GOAL;
+    playerState.myrtleQuestStage = "complete";
+    playerState.coins += 50;
+    rewardExp = 10;
+    rewardCoins = 50;
+  }
+
+  sendJson(socket, myrtleQuestStatePayload(playerState, rewardExp, rewardCoins));
 }
 
 function pendingIcedCoffeeDropFor(playerId) {
@@ -12573,6 +12669,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? Math.max(0, Math.min(1, Math.floor(Number(previous.beachQuestIcedCoffee) || 0)))
       : 0,
 
+    myrtleQuestStage: previous
+      ? myrtleQuestStage(previous)
+      : "none",
+
     hunterSnareCharges:
       previous && Number.isFinite(previous.hunterSnareCharges)
         ? Math.max(
@@ -13738,6 +13838,13 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.beachQuestSecondCrabKills = clampInteger(beachQuest.secondCrabKills, 0, BEACH_QUEST_SECOND_CRAB_GOAL, 0);
   playerState.beachQuestIcedCoffee = clampInteger(beachQuest.icedCoffee, 0, 1, 0);
 
+  const myrtleQuest = state.myrtleQuest && typeof state.myrtleQuest === "object"
+    ? state.myrtleQuest
+    : {};
+  playerState.myrtleQuestStage = ["none", "active", "complete"].includes(myrtleQuest.stage)
+    ? myrtleQuest.stage
+    : "none";
+
   const purchases = Array.isArray(state.shopPurchases)
     ? state.shopPurchases
     : [];
@@ -13767,7 +13874,8 @@ function handlePersistentStateRestore(playerId, socket, message) {
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
     beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,
-    beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
+    beachQuestIcedCoffee: playerState.beachQuestIcedCoffee,
+    myrtleQuestStage: playerState.myrtleQuestStage
   });
 }
 
@@ -13874,6 +13982,10 @@ function handleClientMessage(playerId, socket, message) {
 
     case "beachQuestInteract":
       handleBeachQuestInteract(playerId, socket, message);
+      return;
+
+    case "myrtleQuestInteract":
+      handleMyrtleQuestInteract(playerId, socket, message);
       return;
 
     case "persistentStateRestore":

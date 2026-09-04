@@ -17,7 +17,7 @@ const checks = [
   [html.includes('id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden"'), "skill rail is hidden outside the Skills tab by default"],
   [game.includes('const itemId = player.utilityHotbarAssignments[index] || null;') && game.includes('utilityItemDisplayName(itemId)'), "top hotbar renders current assigned item"],
   [game.includes('const cooling = assigned && cooldownRemaining > 0;') && game.includes('triggerPotionFeedback(itemId, player.x, player.y);'), "existing potion cooldown/feedback behavior retained"],
-  [html.includes('/client-input.js?v=366') && html.includes('/game.js?v=366'), "323 cache keys"],
+  [html.includes('/client-input.js?v=367') && html.includes('/game.js?v=367'), "323 cache keys"],
 ];
 
 for (const [ok, label] of checks) {

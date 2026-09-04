@@ -431,7 +431,6 @@ function updatePlayerMovement(dt) {
     !player.rainCloudCasting &&
     !player.hunterSnareSetting &&
     !pvpSnareRooted &&
-    player.basicAttackMovementLockTime <= 0 &&
     movement.moving &&
     strafeMultiplier > 0;
 
@@ -459,9 +458,6 @@ function updatePlayerMovement(dt) {
 
     const moveSpeed =
       player.speed *
-      (mobileControlsEnabled
-        ? GAME_CONFIG.player.mobileBaseSpeedMultiplier
-        : 1) *
       strafeMultiplier *
       wetMovementMultiplier *
       pvpSnareMovementMultiplier;

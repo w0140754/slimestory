@@ -14,13 +14,13 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.366");
-assert(server.includes('const BUILD_VERSION = "6-11-366";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-366";'));
-assert(html.includes('/client-input.js?v=366') && html.includes('/game.js?v=366'));
+assert.strictEqual(pkg.version, "0.6.11.367");
+assert(server.includes('const BUILD_VERSION = "6-11-367";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-367";'));
+assert(html.includes('/client-input.js?v=367') && html.includes('/game.js?v=367'));
 
-assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "25% mobile movement reduction missing");
-assert(game.includes('(Number(player.speed) || GAME_CONFIG.player.baseSpeed) * touchSpeedMultiplier'), "mobile stat sheet must show effective movement speed");
+assert(config.includes('baseSpeed: 54'), "25% universal movement reduction missing");
+assert(game.includes('Number(player.speed) || GAME_CONFIG.player.baseSpeed'), "stat sheet must show effective movement speed");
 assert(game.includes('const WAND_MASTERY_REACH = 45;'), "client Spellshred reach must be 45");
 assert(server.includes('distance > 45 + bodyRadius + reconciliationRangeGrace'), "server Spellshred reach must match");
 
@@ -35,7 +35,7 @@ assert(input.includes('armMobilePointTarget("bow")'), "manual point fallback mus
 assert(game.match(/window\.matchMedia\("\(hover: none\) and \(pointer: coarse\)"\)\.matches/g)?.length >= 2, "touch hover-card guards missing");
 assert(html.includes('.item-detail-tooltip.show,\n    .skill-detail-tooltip.show'), "touch tooltip CSS suppression missing");
 
-assert.strictEqual(adopted.version, 59, "mobile polish must preserve current authored map data");
+assert.strictEqual(adopted.version, 68, "mobile polish must preserve current authored map data");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must be preserved");
 
 console.log("Mobile combat/tooltip polish checks passed: speed, reach, visible Bow targeting, and touch hover suppression.");

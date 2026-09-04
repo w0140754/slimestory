@@ -44,7 +44,7 @@ async function connectAtBeach(level, beachQuest = null) {
   await welcome;
   socket.send(JSON.stringify({
     type: "playerState",
-    player: { mapId: "crabBeach", x: 572, y: 338, level }
+    player: { mapId: "crabBeach", x: 578, y: 324, level }
   }));
   await delay(120);
   if (beachQuest) {

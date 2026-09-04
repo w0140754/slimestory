@@ -15,10 +15,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.366");
-assert(server.includes('const BUILD_VERSION = "6-11-366";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-366";'));
-assert(html.includes('/client-app.js?v=366') && html.includes('/game.js?v=366'));
+assert.strictEqual(pkg.version, "0.6.11.367");
+assert(server.includes('const BUILD_VERSION = "6-11-367";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-367";'));
+assert(html.includes('/client-app.js?v=367') && html.includes('/game.js?v=367'));
 
 assert(html.includes('const LOGICAL_W = 224;') && html.includes('const LOGICAL_H = 126;'), "mobile logical view changed");
 assert(html.includes('const wholePhysicalScale = Math.max('), "whole physical-pixel fitting missing");
@@ -41,7 +41,7 @@ for (const physicalHeight of [750, 1125, 1170]) {
   assert(126 * wholePhysicalScale <= physicalHeight);
 }
 
-assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "54 px/s movement must remain");
-assert.strictEqual(adopted.version, 59, "pixel scaling must preserve current authored map data");
+assert(config.includes('baseSpeed: 54'), "54 px/s movement must remain");
+assert.strictEqual(adopted.version, 68, "pixel scaling must preserve current authored map data");
 
 console.log("Pixel-perfect mobile viewport/backing scale checks passed with clean logical input mapping.");
