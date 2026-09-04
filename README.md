@@ -1,3 +1,12 @@
+## v6-11-366 — NPC names and art refresh
+
+- Replaced the iced-coffee and Sapgem Wand visuals with the latest user-drawn artwork; the 20×20 coffee now renders at its native size.
+- Shortened the coffee pickup callout to **FOUND IT!**, so collecting the quest item no longer flashes **ICED COFFEE** over the player.
+- Added **Myrtle**, the purple-haired green witch, beside the Waterfall Grove and gave her waterfall-themed dialogue.
+- Added **Cam**, the camouflage enthusiast, to the current starting map with a suitably evasive greeting.
+- Added small under-character name tags for Marnie, Bramble, Jinx, Sunny, Myrtle, and Cam, with editable NPC names in the map editor.
+- Advanced the live authored map data to revision 59 while preserving the existing Beach Girl and crab placements.
+
 ## v6-11-365 — Mobile HUD edge refinement and Dreamcatcher buff
 
 - Moved the mobile MENU button, skill column, movement pad, and combat controls closer to the rendered game viewport edges instead of applying the phone safe-area inset a second time inside the existing gutters.

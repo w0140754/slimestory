@@ -363,6 +363,7 @@
           { id: "westPrototype", x: 26, y: 100 }
         ],
         enemySpawns: [],
+        npcs: [],
         collision: {
           waterRects: []
         }
@@ -447,6 +448,16 @@
             { type: "water", x: 258, y: 326, width: 40, height: 48 }
           ]
         },
+        npcs: [
+          {
+            id: "prototypeIsland:npc:camoGuy",
+            type: "camoGuy",
+            name: "Cam",
+            x: 472,
+            y: 264,
+            interactionRadius: 24
+          }
+        ],
         collision: {
           waterRects: []
         }

@@ -18,7 +18,7 @@ assert.strictEqual(balance.version, 28, "combat balance revision must be 28");
 const dreamcatcher = balance.weaponProfiles.find(profile => profile.id === "weapon_dreamcatcher");
 assert.strictEqual(dreamcatcher.attackPower, 20, "Dreamcatcher ATK must be 20");
 assert(balanceText.includes('id: "weapon_dreamcatcher"'), "Dreamcatcher profile missing");
-assert.strictEqual(maps.version, 58, "newest live authored map revision must be preserved");
+assert.strictEqual(maps.version, 59, "newest live authored map revision must be preserved");
 
 const beach = maps.maps.crabBeach;
 const girl = beach.npcs.find(npc => npc.type === "beachGirl");

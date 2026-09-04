@@ -364,18 +364,21 @@ function buildClientMapRegistry() {
   // First progression/tutorial fixtures.
   // These are deterministic map fixtures, not inventory/world-state entities.
   const tutorialNpc = {
+    name: "Marnie",
     x: spawnMapX(350),
     y: spawnMapY(180),
     interactionRadius: 24
   };
 
   const hunterNpc = {
+    name: "Bramble",
     x: 311,
     y: 183,
     interactionRadius: 24
   };
 
   const jesterNpc = {
+    name: "Jinx",
     x: 338,
     y: 183,
     interactionRadius: 24

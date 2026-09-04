@@ -379,7 +379,7 @@ function buildClientEnemyFoundation() {
   // squash/stretch, tether movement, and bubble secondary motion are code-driven.
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
-  const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=365");
+  const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=366");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated
@@ -397,7 +397,9 @@ function buildClientEnemyFoundation() {
     }),
     icedCoffee: Object.freeze({
       image: icedCoffeeLootImage,
-      shadowWidth: 7
+      shadowWidth: 9,
+      drawWidth: 20,
+      drawHeight: 20
     })
   });
 
@@ -476,15 +478,18 @@ function buildClientEnemyFoundation() {
   function drawLootPickupAnimation(pickup, camX, camY) {
     const screenX = Math.round(pickup.x - camX);
     const screenY = Math.round(pickup.y - camY);
+    const profile = SPECIAL_RESOURCE_DROP_PROFILES[pickup.kind];
+    const drawWidth = profile?.drawWidth || 16;
+    const drawHeight = profile?.drawHeight || 16;
 
     ctx.save();
     ctx.globalAlpha *= Math.max(0, Math.min(1, pickup.alpha));
     ctx.drawImage(
       pickup.image,
-      screenX - 8,
-      screenY - 15,
-      16,
-      16
+      screenX - Math.floor(drawWidth / 2),
+      screenY - (drawHeight - 1),
+      drawWidth,
+      drawHeight
     );
     ctx.restore();
   }
@@ -522,6 +527,8 @@ function buildClientEnemyFoundation() {
     const screenX = Math.round(drop.x - camX);
     const screenY = Math.round(drop.y - camY);
     const shadowWidth = profile.shadowWidth || 7;
+    const drawWidth = profile.drawWidth || 16;
+    const drawHeight = profile.drawHeight || 16;
 
     ctx.fillStyle = "rgba(35, 52, 37, .28)";
     ctx.fillRect(
@@ -533,10 +540,10 @@ function buildClientEnemyFoundation() {
 
     ctx.drawImage(
       profile.image,
-      screenX - 8,
-      screenY - 15 + bob,
-      16,
-      16
+      screenX - Math.floor(drawWidth / 2),
+      screenY - (drawHeight - 1) + bob,
+      drawWidth,
+      drawHeight
     );
   }
 

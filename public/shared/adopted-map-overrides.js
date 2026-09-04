@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   return Object.freeze({
-    "version": 58,
+    "version": 59,
     "maps": {
       "prototypeIsland": {
         "name": "Prototype Island",
@@ -1438,6 +1438,7 @@
           {
             "id": "prototypeIsland:npc:1",
             "type": "shopkeeper",
+            "name": "Marnie",
             "x": 422,
             "y": 207,
             "interactionRadius": 24
@@ -1454,6 +1455,14 @@
             "type": "craftingTable",
             "x": 395,
             "y": 221,
+            "interactionRadius": 24
+          },
+          {
+            "id": "prototypeIsland:npc:camoGuy",
+            "type": "camoGuy",
+            "name": "Cam",
+            "x": 472,
+            "y": 264,
             "interactionRadius": 24
           }
         ]
@@ -4681,6 +4690,7 @@
           {
             "id": "crabBeach:npc:beachGirl",
             "type": "beachGirl",
+            "name": "Sunny",
             "x": 572,
             "y": 338,
             "interactionRadius": 28
@@ -6133,7 +6143,16 @@
           "houses": []
         },
         "enemySpawns": [],
-        "npcs": [],
+        "npcs": [
+          {
+            "id": "waterfallGrove:npc:greenWitch",
+            "type": "greenWitch",
+            "name": "Myrtle",
+            "x": 414,
+            "y": 334,
+            "interactionRadius": 24
+          }
+        ],
         "landmarks": {
           "waterfall": {
             "x": 320,

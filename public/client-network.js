@@ -2264,7 +2264,7 @@ class OnlineClient {
 
     if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
       player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
-      spawnFloatingText(player.x, player.y - 42, "ICED COFFEE FOUND!", "#e8d6b4", 1.2);
+      spawnFloatingText(player.x, player.y - 42, "FOUND IT!", "#e8d6b4", 1.2);
       saveLocalCharacterState(true);
     }
 

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "365";
+  const BUILD = "366";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -97,7 +97,11 @@
   const editorJesterNpcImage = new Image();
   editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=347";
   const editorBeachGirlNpcImage = new Image();
-  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=365";
+  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=366";
+  const editorGreenWitchNpcImage = new Image();
+  editorGreenWitchNpcImage.src = "./assets/green_witch_npc.png?v=366";
+  const editorCamoNpcImage = new Image();
+  editorCamoNpcImage.src = "./assets/camo_npc.png?v=366";
   const editorWoodBenchImage = new Image();
   editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=347";
   const editorClassResetCrystalImage = new Image();
@@ -112,6 +116,8 @@
   editorHunterNpcImage.addEventListener("load", () => requestRender());
   editorJesterNpcImage.addEventListener("load", () => requestRender());
   editorBeachGirlNpcImage.addEventListener("load", () => requestRender());
+  editorGreenWitchNpcImage.addEventListener("load", () => requestRender());
+  editorCamoNpcImage.addEventListener("load", () => requestRender());
   editorWoodBenchImage.addEventListener("load", () => requestRender());
   editorClassResetCrystalImage.addEventListener("load", () => requestRender());
 
@@ -567,6 +573,8 @@
     if (type === "hunter") return editorHunterNpcImage;
     if (type === "jester") return editorJesterNpcImage;
     if (type === "beachGirl") return editorBeachGirlNpcImage;
+    if (type === "greenWitch") return editorGreenWitchNpcImage;
+    if (type === "camoGuy") return editorCamoNpcImage;
     if (type === "craftingTable") return editorWoodBenchImage;
     if (type === "classResetCrystal") return editorClassResetCrystalImage;
     return editorShopkeeperNpcImage;
@@ -580,6 +588,10 @@
         return { label: "JESTER", color: "#e3b6ef", fallback: "#8b6299", width: 16, height: 20, shadow: true };
       case "beachGirl":
         return { label: "BEACH GIRL", color: "#ffd7a8", fallback: "#d69572", width: 13, height: 17, shadow: true };
+      case "greenWitch":
+        return { label: "MYRTLE", color: "#d9b9ff", fallback: "#6f9a54", width: 20, height: 20, shadow: true };
+      case "camoGuy":
+        return { label: "CAM", color: "#c8e6a8", fallback: "#547347", width: 20, height: 20, shadow: true };
       case "craftingTable":
         return { label: "CRAFT", color: "#ffd89b", fallback: "#9b6438", width: 18, height: 18, shadow: true };
       case "classResetCrystal":
@@ -590,7 +602,7 @@
   }
 
   function drawNpc(npc) {
-    const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "craftingTable", "classResetCrystal"];
+    const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"];
     const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
     const image = npcImageForEditorType(type);
     const config = npcDisplayConfig(type);
@@ -619,7 +631,7 @@
     ctx.textBaseline = "bottom";
     ctx.font = "bold 6px monospace";
     const labelY = type === "classResetCrystal" ? npc.y - 34 : npc.y - naturalH - 2;
-    ctx.fillText(config.label, npc.x, labelY);
+    ctx.fillText(String(npc.name || config.label).toUpperCase(), npc.x, labelY);
   }
 
   function drawEnemySpawn(spawn) {
@@ -913,6 +925,8 @@
     if (kind === "hunterNpc") return { kind: "npc", item: { x, y, type: "hunter", interactionRadius: 24 } };
     if (kind === "jesterNpc") return { kind: "npc", item: { x, y, type: "jester", interactionRadius: 24 } };
     if (kind === "beachGirlNpc") return { kind: "npc", item: { x, y, type: "beachGirl", interactionRadius: 28 } };
+    if (kind === "greenWitchNpc") return { kind: "npc", item: { x, y, type: "greenWitch", name: "Myrtle", interactionRadius: 24 } };
+    if (kind === "camoGuyNpc") return { kind: "npc", item: { x, y, type: "camoGuy", name: "Cam", interactionRadius: 24 } };
     if (kind === "craftingTableNpc") return { kind: "npc", item: { x, y, type: "craftingTable", interactionRadius: 24 } };
     if (kind === "classResetCrystalNpc") return { kind: "npc", item: { x, y, type: "classResetCrystal", interactionRadius: 28 } };
     if (kind === "enemySpawn") return { kind: "enemySpawn", item: { x, y } };
@@ -1178,6 +1192,7 @@
       draft.map.environment.houses.push(item);
     } else if (
       kind === "shopkeeperNpc" || kind === "hunterNpc" || kind === "jesterNpc" || kind === "beachGirlNpc" ||
+      kind === "greenWitchNpc" || kind === "camoGuyNpc" ||
       kind === "craftingTableNpc" || kind === "classResetCrystalNpc"
     ) {
       selectionKind = "npc";
@@ -1187,6 +1202,10 @@
           ? "jester"
           : kind === "beachGirlNpc"
             ? "beachGirl"
+          : kind === "greenWitchNpc"
+            ? "greenWitch"
+          : kind === "camoGuyNpc"
+            ? "camoGuy"
           : kind === "craftingTableNpc"
             ? "craftingTable"
             : kind === "classResetCrystalNpc"
@@ -1195,6 +1214,9 @@
       item = {
         id: nextId("npc"),
         type,
+        ...(["greenWitch", "camoGuy"].includes(type)
+          ? { name: type === "greenWitch" ? "Myrtle" : "Cam" }
+          : {}),
         x,
         y,
         interactionRadius: type === "classResetCrystal" ? 28 : 24
@@ -1559,6 +1581,16 @@
     return select;
   }
 
+  function textControl(value, onChange, options = {}) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "property-input";
+    input.maxLength = Number(options.maxLength) || 20;
+    input.value = typeof value === "string" ? value : "";
+    input.addEventListener("change", () => onChange(input.value.trim()));
+    return input;
+  }
+
   function checkboxControl(labelText, checked, onChange) {
     const label = document.createElement("label");
     label.className = "property-check";
@@ -1710,6 +1742,10 @@
         ? "Jester is visual-only for now."
         : descriptor.item.type === "beachGirl"
           ? "Beach Girl offers the Crab Beach questline."
+        : descriptor.item.type === "greenWitch"
+          ? "Myrtle uses the Waterfall Grove flavour dialogue."
+        : descriptor.item.type === "camoGuy"
+          ? "Cam uses the camouflage flavour dialogue."
         : descriptor.item.type === "hunter"
           ? "Hunter uses the existing Hunter talk interaction."
           : descriptor.item.type === "craftingTable"
@@ -1718,11 +1754,17 @@
               ? "Class Reset Crystal opens the class reset confirmation."
               : "Shopkeeper uses the existing Axe tutorial/shop interaction.";
       addGroup("NPC", [
+        makePropertyRow("Name", textControl(descriptor.item.name || npcDisplayConfig(descriptor.item.type).label, value => mutateSelected("Change NPC name", item => {
+          if (value) item.name = value;
+          else delete item.name;
+        }), { maxLength: 20 })),
         makePropertyRow("Type", selectControl(descriptor.item.type || "shopkeeper", [
           { value: "shopkeeper", label: "Shopkeeper" },
           { value: "hunter", label: "Hunter" },
           { value: "jester", label: "Jester" },
           { value: "beachGirl", label: "Beach Girl" },
+          { value: "greenWitch", label: "Green Witch" },
+          { value: "camoGuy", label: "Camo NPC" },
           { value: "craftingTable", label: "Crafting Table" },
           { value: "classResetCrystal", label: "Class Reset Crystal" }
         ], value => mutateSelected("Change NPC type", item => {
@@ -1887,6 +1929,8 @@
         hunterNpc: "HUNTER NPC",
         jesterNpc: "JESTER NPC",
         beachGirlNpc: "BEACH GIRL NPC",
+        greenWitchNpc: "GREEN WITCH NPC",
+        camoGuyNpc: "CAMO NPC",
         craftingTableNpc: "CRAFTING TABLE",
         classResetCrystalNpc: "CLASS RESET CRYSTAL",
         enemySpawn: "ENEMY SPAWN",

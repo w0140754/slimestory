@@ -14,10 +14,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.365");
-assert(server.includes('const BUILD_VERSION = "6-11-365";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-365";'));
-assert(html.includes('/client-combat.js?v=365') && html.includes('/client-app.js?v=365'));
+assert.strictEqual(pkg.version, "0.6.11.366");
+assert(server.includes('const BUILD_VERSION = "6-11-366";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-366";'));
+assert(html.includes('/client-combat.js?v=366') && html.includes('/client-app.js?v=366'));
 
 assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "25% mobile movement adjustment missing");
 assert(app.includes('mobileControlsEnabled\n        ? GAME_CONFIG.player.mobileBaseSpeedMultiplier\n        : 1'), "mobile-only speed multiplier missing");
@@ -25,7 +25,7 @@ assert(combat.includes('mobileControlsEnabled ? 0 : player.attackDuration;'), "m
 assert(app.includes('player.basicAttackMovementLockTime <= 0'), "desktop movement lock gate must remain");
 assert(combat.includes('queueBasicAttackImpact(\n    currentWeapon,'), "active-frame attack timing must remain");
 
-assert.strictEqual(adopted.version, 58, "movement tuning must preserve the newest authored world data");
+assert.strictEqual(adopted.version, 59, "movement tuning must preserve the newest authored world data");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must be preserved");
 
 console.log("Mobile attacks allow movement with a 25% mobile-only base-speed adjustment; desktop planting remains.");

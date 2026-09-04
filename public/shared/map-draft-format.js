@@ -88,8 +88,11 @@
     }
 
     for (const [index, npc] of (Array.isArray(map?.npcs) ? map.npcs : []).entries()) {
-      if (!["shopkeeper", "hunter", "jester", "beachGirl", "craftingTable", "classResetCrystal"].includes(npc?.type)) {
+      if (!["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"].includes(npc?.type)) {
         fail(`npcs[${index}] has unsupported type "${npc?.type}".`);
+      }
+      if (npc?.name != null && (typeof npc.name !== "string" || !npc.name.trim() || npc.name.trim().length > 20)) {
+        fail(`npcs[${index}].name must be 1-20 characters when provided.`);
       }
       if (npc?.interactionRadius != null && (!finite(npc.interactionRadius) || Number(npc.interactionRadius) < 8)) {
         fail(`npcs[${index}].interactionRadius must be at least 8 when provided.`);

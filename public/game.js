@@ -181,8 +181,10 @@ const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
-const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=365");
-const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=365");
+const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=366");
+const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=366");
+const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=366");
+const camoNpcImage = loadImage("assets/camo_npc.png?v=366");
 const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
@@ -201,7 +203,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
-const sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=347");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=366");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -4614,6 +4616,20 @@ function placedNpcDefinitionsForMap(mapId = currentMapId) {
   return Array.isArray(list) ? list : [];
 }
 
+const NPC_DEFAULT_NAMES = Object.freeze({
+  shopkeeper: "Marnie",
+  hunter: "Bramble",
+  jester: "Jinx",
+  beachGirl: "Sunny",
+  greenWitch: "Myrtle",
+  camoGuy: "Cam"
+});
+
+function npcDisplayName(type, npc = null) {
+  const customName = typeof npc?.name === "string" ? npc.name.trim() : "";
+  return customName || NPC_DEFAULT_NAMES[type] || "";
+}
+
 function nearbySpawnInteraction() {
   const candidates = [];
 
@@ -4655,7 +4671,7 @@ function nearbySpawnInteraction() {
 
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     const type = npc?.type;
-    if (!["shopkeeper", "hunter", "beachGirl", "craftingTable", "classResetCrystal"].includes(type)) continue;
+    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"].includes(type)) continue;
     candidates.push({
       kind: "placedNpc",
       npcType: type,
@@ -4784,7 +4800,7 @@ function interactWithTutorialNpc(npc = tutorialNpc) {
 function interactWithHunterNpc(npc = hunterNpc) {
   const sourceNpc = npc || hunterNpc;
   showRewardToast(
-    "Hunter",
+    npcDisplayName("hunter", sourceNpc),
     "Come talk to me when you're ready to become a real hunter.",
     hunterNpcImage
   );
@@ -4795,6 +4811,24 @@ function interactWithHunterNpc(npc = hunterNpc) {
     "REAL HUNTER?",
     "#fff1b0",
     1.0
+  );
+}
+
+function interactWithFlavorNpc(type, npc) {
+  const greenWitch = type === "greenWitch";
+  const image = greenWitch ? greenWitchNpcImage : camoNpcImage;
+  const name = npcDisplayName(type, npc);
+  const dialogue = greenWitch
+    ? "The waterfall remembers every spell cast beside it. Listen closely and you may hear it humming."
+    : "If you can see me, no you can't. I'm conducting an extremely secret camouflage exercise.";
+
+  showRewardToast(name, dialogue, image);
+  spawnFloatingText(
+    Number(npc?.x) || player.x,
+    (Number(npc?.y) || player.y) - 30,
+    greenWitch ? "THE WATER HUMS..." : "YOU SAW NOTHING",
+    greenWitch ? "#d9b9ff" : "#c8e6a8",
+    1.15
   );
 }
 
@@ -5202,6 +5236,10 @@ function interactWithNearbyObject() {
     }
     if (interaction.npcType === "beachGirl") {
       interactWithBeachGirl();
+      return true;
+    }
+    if (interaction.npcType === "greenWitch" || interaction.npcType === "camoGuy") {
+      interactWithFlavorNpc(interaction.npcType, interaction.npc);
       return true;
     }
     if (interaction.npcType === "craftingTable") {
@@ -11506,6 +11544,7 @@ function drawTutorialNpc(camX, camY) {
   );
 
   drawNpcRoleMarker(screenX, screenY);
+  drawNpcNameTag(npcDisplayName("shopkeeper", tutorialNpc), screenX, screenY);
 }
 
 function drawHunterNpc(camX, camY) {
@@ -11533,6 +11572,8 @@ function drawHunterNpc(camX, camY) {
     screenX - 8 + swayOffset,
     screenY - 19
   );
+
+  drawNpcNameTag(npcDisplayName("hunter", hunterNpc), screenX, screenY);
 }
 
 function drawJesterNpc(camX, camY) {
@@ -11560,11 +11601,13 @@ function drawJesterNpc(camX, camY) {
     screenX - 8 + swayOffset,
     screenY - 19
   );
+
+  drawNpcNameTag(npcDisplayName("jester", jesterNpc), screenX, screenY);
 }
 
 function drawPlacedNpc(npc, camX, camY) {
   if (!npc) return;
-  const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "craftingTable", "classResetCrystal"];
+  const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"];
   const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
   const screenX = Math.round((Number(npc.x) || 0) - camX);
   const screenY = Math.round((Number(npc.y) || 0) - camY);
@@ -11596,9 +11639,13 @@ function drawPlacedNpc(npc, camX, camY) {
       ? jesterNpcImage
       : type === "beachGirl"
         ? beachGirlNpcImage
+        : type === "greenWitch"
+          ? greenWitchNpcImage
+          : type === "camoGuy"
+            ? camoNpcImage
         : tutorialNpcImage;
   const height = type === "shopkeeper" ? 16 : type === "beachGirl" ? 17 : 20;
-  const width = type === "hunter" ? 17 : type === "beachGirl" ? 13 : 16;
+  const width = type === "hunter" ? 17 : type === "beachGirl" ? 13 : ["greenWitch", "camoGuy"].includes(type) ? 20 : 16;
 
   ctx.fillStyle = type === "shopkeeper"
     ? "rgba(34, 46, 28, .32)"
@@ -11612,6 +11659,7 @@ function drawPlacedNpc(npc, camX, camY) {
   ctx.drawImage(image, screenX - Math.floor(width / 2) + swayOffset, screenY - height);
 
   if (type === "shopkeeper") drawNpcRoleMarker(screenX, screenY);
+  drawNpcNameTag(npcDisplayName(type, npc), screenX, screenY);
   if (type === "beachGirl") {
     const quest = player.beachQuest || {};
     const firstReady = quest.stage === "firstActive" && quest.firstCrabKills >= 10 && quest.icedCoffee >= 1;
@@ -11623,6 +11671,11 @@ function drawPlacedNpc(npc, camX, camY) {
         : "";
     if (marker) drawStaticPixelText(marker, screenX, screenY - height - 8, "#ffe36e", 1);
   }
+}
+
+function drawNpcNameTag(name, screenX, screenY) {
+  if (!name) return;
+  drawStaticPixelText(name, screenX, screenY + 5, "#fff0b5", 1);
 }
 
 function drawWoodCraftBench(camX, camY) {
