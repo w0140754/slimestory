@@ -103,7 +103,15 @@ const sprite = {
   arcanistLeftArm: loadImage("assets/arcanist_leftarm_v1.png"),
   arcanistRightArm: loadImage("assets/arcanist_rightarm_v1.png"),
   arcanistLeftLeg: loadImage("assets/arcanist_leftleg_v1.png"),
-  arcanistRightLeg: loadImage("assets/arcanist_rightleg_v1.png")
+  arcanistRightLeg: loadImage("assets/arcanist_rightleg_v1.png"),
+
+  // User-drawn Greencap common armor set.
+  greencapHat: loadImage("assets/greencap_cap_v1.png"),
+  greencapTorso: loadImage("assets/greencap_torso_v1.png"),
+  greencapLeftArm: loadImage("assets/greencap_leftarm_v1.png"),
+  greencapRightArm: loadImage("assets/greencap_rightarm_v1.png"),
+  greencapLeftLeg: loadImage("assets/greencap_leftleg_v1.png"),
+  greencapRightLeg: loadImage("assets/greencap_rightleg_v1.png")
 };
 
 const woodRingImage = loadImage("assets/wood_ring_v3.png");
@@ -120,7 +128,8 @@ const armorPreviewImages = Object.freeze({
     loadImage("assets/ui/knight_shirt_preview.png"),
     loadImage("assets/ui/ranger_shirt_preview.png"),
     loadImage("assets/ui/wood_shirt_preview.png"),
-    loadImage("assets/ui/arcanist_shirt_preview.png")
+    loadImage("assets/ui/arcanist_shirt_preview.png"),
+    loadImage("assets/ui/greencap_shirt_preview.png")
   ]),
   pants: Object.freeze([
     loadImage("assets/ui/base_pants_preview.png"),
@@ -130,7 +139,8 @@ const armorPreviewImages = Object.freeze({
     loadImage("assets/ui/knight_pants_preview.png"),
     loadImage("assets/ui/ranger_pants_preview.png"),
     loadImage("assets/ui/wood_pants_preview.png"),
-    loadImage("assets/ui/arcanist_pants_preview.png")
+    loadImage("assets/ui/arcanist_pants_preview.png"),
+    loadImage("assets/ui/greencap_pants_preview.png")
   ])
 });
 
@@ -181,10 +191,10 @@ const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
-const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=369");
-const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=369");
-const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=369");
-const camoNpcImage = loadImage("assets/camo_npc.png?v=369");
+const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=370");
+const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=370");
+const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=370");
+const camoNpcImage = loadImage("assets/camo_npc.png?v=370");
 const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
@@ -203,7 +213,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
-const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=369");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=370");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -3657,9 +3667,9 @@ const player = {
   // Cosmetic equipment can be mixed independently.
   // -1 means the armor slot is empty. The new base artwork is the
   // underlying appearance shown in that case.
-  hatIndex: -1,   // -1 none/base, 0 Hat, 1 Blue Cap, 2 Wizard, 3 Jester, 4 Ninja, 5 Knight, 6 Bandana, 7 Ranger, 8 Wood Helm, 9 Arcanist Hat
-  shirtIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger, 5 Wood Chest, 6 Arcanist Robe
-  pantsIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger, 5 Wood Greaves, 6 Arcanist Skirt
+  hatIndex: -1,   // -1 none/base, 0 Hat, 1 Blue Cap, 2 Wizard, 3 Jester, 4 Ninja, 5 Knight, 6 Bandana, 7 Ranger, 8 Wood Helm, 9 Arcanist Hat, 10 Greencap Cap
+  shirtIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger, 5 Wood Chest, 6 Arcanist Robe, 7 Greencap Tunic
+  pantsIndex: -1, // -1 none/base, 0 Traveler, 1 Jester, 2 Ninja, 3 Knight, 4 Ranger, 5 Wood Greaves, 6 Arcanist Skirt, 7 Greencap Pants
   charmIndex: -1, // -1 none, 0 Wood Ring
   walkTime: 0,
   wasMoving: false,
@@ -3938,9 +3948,9 @@ const HOTBAR_SLOT_COUNT = 5;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
 const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
-const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat"];
-const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist"];
-const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist"];
+const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
+const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
+const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
 
 const WEAPON_ITEM_IDS = [
   "weapon_sword",
@@ -3968,7 +3978,8 @@ const HAT_ITEM_IDS = [
   "hat_bandana",
   "hat_ranger",
   "hat_wood",
-  "hat_arcanist"
+  "hat_arcanist",
+  "hat_greencap"
 ];
 
 const SHIRT_ITEM_IDS = [
@@ -3978,7 +3989,8 @@ const SHIRT_ITEM_IDS = [
   "shirt_knight",
   "shirt_ranger",
   "shirt_wood",
-  "shirt_arcanist"
+  "shirt_arcanist",
+  "shirt_greencap"
 ];
 
 const PANTS_ITEM_IDS = [
@@ -3988,7 +4000,8 @@ const PANTS_ITEM_IDS = [
   "pants_knight",
   "pants_ranger",
   "pants_wood",
-  "pants_arcanist"
+  "pants_arcanist",
+  "pants_greencap"
 ];
 
 const CHARM_ITEM_IDS = [
@@ -4177,6 +4190,7 @@ const SHOP_ITEMS = [
   { id: "hat_ranger", name: "Ranger Hat" },
   { id: "hat_wood", name: "Wood Helm" },
   { id: "hat_arcanist", name: "Arcanist Hat" },
+  { id: "hat_greencap", name: "Greencap Cap" },
 
   { id: "shirt_traveler", name: "Traveler Shirt" },
   { id: "shirt_jester", name: "Jester Shirt" },
@@ -4185,6 +4199,7 @@ const SHOP_ITEMS = [
   { id: "shirt_ranger", name: "Ranger Shirt" },
   { id: "shirt_wood", name: "Wood Chest" },
   { id: "shirt_arcanist", name: "Arcanist Robe" },
+  { id: "shirt_greencap", name: "Greencap Tunic" },
 
   { id: "pants_traveler", name: "Traveler Pants" },
   { id: "pants_jester", name: "Jester Pants" },
@@ -4192,7 +4207,8 @@ const SHOP_ITEMS = [
   { id: "pants_knight", name: "Knight Greaves" },
   { id: "pants_ranger", name: "Ranger Pants" },
   { id: "pants_wood", name: "Wood Greaves" },
-  { id: "pants_arcanist", name: "Arcanist Skirt" }
+  { id: "pants_arcanist", name: "Arcanist Skirt" },
+  { id: "pants_greencap", name: "Greencap Pants" }
 ];
 
 function shopImageForItemId(itemId) {
@@ -5544,7 +5560,11 @@ const EQUIPMENT_ATTRIBUTE_REQUIREMENTS = Object.freeze({
   pants_jester: Object.freeze({ level: 10, luck: 10 }),
   hat_arcanist: Object.freeze({ level: 10, luck: 10 }),
   shirt_arcanist: Object.freeze({ level: 10, luck: 10 }),
-  pants_arcanist: Object.freeze({ level: 10, luck: 10 })
+  pants_arcanist: Object.freeze({ level: 10, luck: 10 }),
+
+  hat_greencap: Object.freeze({ level: 5 }),
+  shirt_greencap: Object.freeze({ level: 5 }),
+  pants_greencap: Object.freeze({ level: 5 })
 });
 
 const WEAPON_CLASS_REQUIREMENTS = Object.freeze({
@@ -7506,6 +7526,7 @@ function hatDisplayName(style) {
   if (style === "rangerHat") return "Ranger Hat";
   if (style === "woodHat") return "Wood Helm";
   if (style === "arcanistHat") return "Arcanist Hat";
+  if (style === "greencapHat") return "Greencap Cap";
   return "Hat";
 }
 
@@ -7517,6 +7538,7 @@ function shirtDisplayName(style) {
   if (style === "ranger") return "Ranger Shirt";
   if (style === "wood") return "Wood Chest";
   if (style === "arcanist") return "Arcanist Robe";
+  if (style === "greencap") return "Greencap Tunic";
   return "Traveler";
 }
 
@@ -7528,6 +7550,7 @@ function pantsDisplayName(style) {
   if (style === "ranger") return "Ranger Pants";
   if (style === "wood") return "Wood Greaves";
   if (style === "arcanist") return "Arcanist Skirt";
+  if (style === "greencap") return "Greencap Pants";
   return "Traveler";
 }
 
@@ -7558,6 +7581,7 @@ function hatImageForIndex(index) {
   if (index === 7) return sprite.rangerHat;
   if (index === 8) return sprite.woodHat;
   if (index === 9) return sprite.arcanistHat;
+  if (index === 10) return sprite.greencapHat;
   return sprite.hat;
 }
 
@@ -7585,12 +7609,14 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
   const rangerShirt = shirtStyle === "ranger";
   const woodShirt = shirtStyle === "wood";
   const arcanistShirt = shirtStyle === "arcanist";
+  const greencapShirt = shirtStyle === "greencap";
   const jesterPants = pantsStyle === "jester";
   const ninjaPants = pantsStyle === "ninja";
   const knightPants = pantsStyle === "knight";
   const rangerPants = pantsStyle === "ranger";
   const woodPants = pantsStyle === "wood";
   const arcanistPants = pantsStyle === "arcanist";
+  const greencapPants = pantsStyle === "greencap";
 
   return {
     leftLeg: jesterPants
@@ -7605,7 +7631,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
               ? sprite.woodLeftLeg
               : arcanistPants
                 ? sprite.arcanistLeftLeg
-                : pantsStyle === "traveler"
+                : greencapPants
+                  ? sprite.greencapLeftLeg
+                  : pantsStyle === "traveler"
             ? sprite.leftLeg
             : sprite.baseLeftLeg,
 
@@ -7621,7 +7649,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
               ? sprite.woodRightLeg
               : arcanistPants
                 ? sprite.arcanistRightLeg
-                : pantsStyle === "traveler"
+                : greencapPants
+                  ? sprite.greencapRightLeg
+                  : pantsStyle === "traveler"
             ? sprite.rightLeg
             : sprite.baseRightLeg,
 
@@ -7637,7 +7667,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
               ? sprite.woodTorso
               : arcanistShirt
                 ? sprite.arcanistTorso
-                : shirtStyle === "traveler"
+                : greencapShirt
+                  ? sprite.greencapTorso
+                  : shirtStyle === "traveler"
             ? sprite.torso
             : sprite.baseTorso,
 
@@ -7653,7 +7685,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
               ? sprite.woodLeftArm
               : arcanistShirt
                 ? sprite.arcanistLeftArm
-                : shirtStyle === "traveler"
+                : greencapShirt
+                  ? sprite.greencapLeftArm
+                  : shirtStyle === "traveler"
             ? sprite.leftArm
             : sprite.baseLeftArm,
 
@@ -7669,7 +7703,9 @@ function playerAppearanceForIndices(hatIndex, shirtIndex, pantsIndex) {
               ? sprite.woodRightArm
               : arcanistShirt
                 ? sprite.arcanistRightArm
-                : shirtStyle === "traveler"
+                : greencapShirt
+                  ? sprite.greencapRightArm
+                  : shirtStyle === "traveler"
             ? sprite.rightArm
             : sprite.baseRightArm,
 

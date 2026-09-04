@@ -22,8 +22,8 @@ const authored = JSON.parse(read("content", "adopted-map-overrides.json"));
 const authoredMirror = require(path.join(root, "public", "shared", "adopted-map-overrides.js"));
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-369";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-369";'));
+assert(server.includes('const BUILD_VERSION = "6-11-370";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-370";'));
 assert.strictEqual(authored.version, 68);
 assert.deepStrictEqual(authoredMirror, authored, "browser and server authored-map copies must match");
 
@@ -41,8 +41,8 @@ for (const [file, [width, height, sha]] of Object.entries(expectedAssets)) {
   assert.strictEqual(hash(png), sha, `${file} is not the supplied artwork`);
 }
 
-assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=369")'));
-assert(enemies.includes('icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=369")'));
+assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=370")'));
+assert(enemies.includes('icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=370")'));
 assert(enemies.includes("drawWidth: 20") && enemies.includes("drawHeight: 20"), "coffee must render at its native size");
 assert(network.includes('"FOUND IT!"') && !network.includes('"ICED COFFEE FOUND!"'), "coffee pickup label must not spell out its item name");
 
@@ -64,6 +64,6 @@ assert(game.includes("I'm conducting an extremely secret camouflage exercise."))
 assert(draftFormat.includes('"greenWitch", "camoGuy"'));
 assert(editor.includes('type: "greenWitch", name: "Myrtle"') && editor.includes('type: "camoGuy", name: "Cam"'));
 assert(editor.includes('makePropertyRow("Name", textControl('), "NPC names should be editable");
-assert(editorHtml.includes("green_witch_npc.png?v=369") && editorHtml.includes("camo_npc.png?v=369"));
+assert(editorHtml.includes("green_witch_npc.png?v=370") && editorHtml.includes("camo_npc.png?v=370"));
 
 console.log("NPC names, dialogue, placements, and refreshed user artwork OK.");

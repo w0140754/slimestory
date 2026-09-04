@@ -18,9 +18,9 @@ const balance = read('public', 'shared', 'combat-balance.js');
 const html = read('public', 'index.html');
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-369";'), 'server build must be 6-11-369');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-369";'), 'client build must be 6-11-369');
-assert(html.includes('/shared/combat-balance.js?v=369') && html.includes('/client-enemies.js?v=369') && html.includes('/client-enemy-rendering.js?v=369') && html.includes('/game.js?v=369'), 'current enemy/game/combat cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-370";'), 'server build must be 6-11-370');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-370";'), 'client build must be 6-11-370');
+assert(html.includes('/shared/combat-balance.js?v=370') && html.includes('/client-enemies.js?v=370') && html.includes('/client-enemy-rendering.js?v=370') && html.includes('/game.js?v=370'), 'current enemy/game/combat cache keys missing');
 
 assert(server.includes('crab: makeServerCrab'), 'server enemy factory registry missing Crab');
 assert(server.includes('const sharedCrabs ='), 'server Crab collection missing');
@@ -41,7 +41,7 @@ assert(rendering.includes('effect.enemyType === "crab"'), 'Crab death presentati
 assert(editor.includes('{ value: "crab", label: "Crab" }'), 'map editor Crab species option missing');
 assert(editor.includes('label: "C"'), 'map editor Crab marker missing');
 assert(draftFormat.includes('["slime", "mushroom", "crab", "goblin", "ghost", "bigGoldSlime"]'), 'map draft validation does not accept Crab');
-assert(balance.includes('const VERSION = 28;') && balance.includes('crab: Object.freeze({'), 'combat balance v28 Crab monster defaults missing');
+assert(balance.includes('const VERSION = 29;') && balance.includes('crab: Object.freeze({'), 'combat balance v28 Crab monster defaults missing');
 assert(readme.includes('## v6-11-337 — Crab enemy'), 'README v337 changelog missing');
 
 for (const name of ['crab_v2.png', 'crab_back_v1.png', 'crab_front_v1.png']) {

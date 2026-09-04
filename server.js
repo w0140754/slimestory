@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-369";
+const BUILD_VERSION = "6-11-370";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -3124,6 +3124,7 @@ const SHOP_ITEM_IDS = new Set([
   "hat_ranger",
   "hat_wood",
   "hat_arcanist",
+  "hat_greencap",
 
   "shirt_traveler",
   "shirt_jester",
@@ -3132,6 +3133,7 @@ const SHOP_ITEM_IDS = new Set([
   "shirt_ranger",
   "shirt_wood",
   "shirt_arcanist",
+  "shirt_greencap",
 
   "pants_traveler",
   "pants_jester",
@@ -3139,7 +3141,8 @@ const SHOP_ITEM_IDS = new Set([
   "pants_knight",
   "pants_ranger",
   "pants_wood",
-  "pants_arcanist"
+  "pants_arcanist",
+  "pants_greencap"
 ]);
 
 // Fire/Rain Wands are retired from sale in v334, but old browser saves that
@@ -11832,9 +11835,9 @@ function startServerHallucination(ownerId, mapId, payload) {
     x: sanitizeVisualPoint(payload.startX, mapId, "x"),
     y: sanitizeVisualPoint(payload.startY, mapId, "y"),
     startedAtMs,
-    hatIndex: clampInteger(payload.hatIndex, -1, 9, -1),
-    shirtIndex: clampInteger(payload.shirtIndex, -1, 6, -1),
-    pantsIndex: clampInteger(payload.pantsIndex, -1, 6, -1),
+    hatIndex: clampInteger(payload.hatIndex, -1, 10, -1),
+    shirtIndex: clampInteger(payload.shirtIndex, -1, 7, -1),
+    pantsIndex: clampInteger(payload.pantsIndex, -1, 7, -1),
     duration,
     expiresAtMs: startedAtMs + duration * 1000,
     redirectedEnemyIds: new Set(),
@@ -12404,21 +12407,21 @@ function sanitizeVisualEffectPayload(
       hatIndex: clampInteger(
         payload.hatIndex,
         -1,
-        9,
+        10,
         -1
       ),
 
       shirtIndex: clampInteger(
         payload.shirtIndex,
         -1,
-        6,
+        7,
         -1
       ),
 
       pantsIndex: clampInteger(
         payload.pantsIndex,
         -1,
-        6,
+        7,
         -1
       )
     };
@@ -12773,9 +12776,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
             mapWorldDimensions(mapId).height / 2
           ),
 
-    hatIndex: clampInteger(source.hatIndex, -1, 9, -1),
-    shirtIndex: clampInteger(source.shirtIndex, -1, 6, -1),
-    pantsIndex: clampInteger(source.pantsIndex, -1, 6, -1),
+    hatIndex: clampInteger(source.hatIndex, -1, 10, -1),
+    shirtIndex: clampInteger(source.shirtIndex, -1, 7, -1),
+    pantsIndex: clampInteger(source.pantsIndex, -1, 7, -1),
     charmIndex: clampInteger(source.charmIndex, -1, 0, -1),
     weaponIndex: clampInteger(source.weaponIndex, -1, 12, -1),
 

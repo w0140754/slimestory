@@ -1,3 +1,11 @@
+## v6-11-370 — Greencap armor
+
+- Added the user-drawn **Greencap** armor set: Greencap Cap, Greencap Tunic, and Greencap Pants.
+- Made all three pieces **Common** equipment with a **Level 5** equip requirement and no class lock.
+- Added balanced Greencap defense/resist values (2/2 head, 3/2 torso, 2/2 legs) and advanced shared combat-balance revision to 29.
+- Added Greencap to the shop, inventory, equipment menus, local saves, multiplayer appearance syncing, and Hallucination appearance snapshots.
+- Preserved every existing equipment index by appending Greencap after the current sets, and preserved live editor-authored world revision 68 unchanged.
+
 ## v6-11-369 — Subtle nameplates and NPC shadow anchors
 
 - Added a very transparent charcoal backing behind the crisp screen-resolution NPC labels, with no border or decorative frame.

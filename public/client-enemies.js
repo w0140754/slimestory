@@ -148,6 +148,9 @@ function buildClientEnemyFoundation() {
   document.getElementById("inventoryArcanistHatImg").src = sprite.arcanistHat.src;
   document.getElementById("inventoryArcanistShirtImg").src = shirtImageForIndex(6).src;
   document.getElementById("inventoryArcanistPantsImg").src = pantsImageForIndex(6).src;
+  document.getElementById("inventoryGreencapHatImg").src = sprite.greencapHat.src;
+  document.getElementById("inventoryGreencapShirtImg").src = shirtImageForIndex(7).src;
+  document.getElementById("inventoryGreencapPantsImg").src = pantsImageForIndex(7).src;
 
   document.getElementById("equipBaseHatImg").src = sprite.baseHat.src;
   document.getElementById("equipHatImg").src = sprite.hat.src;
@@ -160,6 +163,7 @@ function buildClientEnemyFoundation() {
   document.getElementById("equipRangerHatImg").src = sprite.rangerHat.src;
   document.getElementById("equipWoodHatImg").src = sprite.woodHat.src;
   document.getElementById("equipArcanistHatImg").src = sprite.arcanistHat.src;
+  document.getElementById("equipGreencapHatImg").src = sprite.greencapHat.src;
   document.getElementById("equipBaseShirtImg").src = shirtImageForIndex(-1).src;
   document.getElementById("equipTravelerShirtImg").src = shirtImageForIndex(0).src;
   document.getElementById("equipJesterShirtImg").src = shirtImageForIndex(1).src;
@@ -168,6 +172,7 @@ function buildClientEnemyFoundation() {
   document.getElementById("equipRangerShirtImg").src = shirtImageForIndex(4).src;
   document.getElementById("equipWoodShirtImg").src = shirtImageForIndex(5).src;
   document.getElementById("equipArcanistShirtImg").src = shirtImageForIndex(6).src;
+  document.getElementById("equipGreencapShirtImg").src = shirtImageForIndex(7).src;
   document.getElementById("equipBasePantsImg").src = pantsImageForIndex(-1).src;
   document.getElementById("equipTravelerPantsImg").src = pantsImageForIndex(0).src;
   document.getElementById("equipJesterPantsImg").src = pantsImageForIndex(1).src;
@@ -176,6 +181,7 @@ function buildClientEnemyFoundation() {
   document.getElementById("equipRangerPantsImg").src = pantsImageForIndex(4).src;
   document.getElementById("equipWoodPantsImg").src = pantsImageForIndex(5).src;
   document.getElementById("equipArcanistPantsImg").src = pantsImageForIndex(6).src;
+  document.getElementById("equipGreencapPantsImg").src = pantsImageForIndex(7).src;
   const equipBaseCharmImg = document.getElementById("equipBaseCharmImg");
   if (equipBaseCharmImg) equipBaseCharmImg.src = emptyCharmImage.src;
   const equipWoodRingImg = document.getElementById("equipWoodRingImg");
@@ -379,7 +385,7 @@ function buildClientEnemyFoundation() {
   // squash/stretch, tether movement, and bubble secondary motion are code-driven.
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
-  const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=369");
+  const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=370");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated

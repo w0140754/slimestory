@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 28;
+    const VERSION = 29;
     const MIN_DAMAGE = 1;
     const ELEMENT_TYPES = Object.freeze(["neutral", "fire", "water", "air", "earth"]);
     const LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL = 0.05;
@@ -286,15 +286,15 @@
 
     const ARMOR_VALUES = Object.freeze({
       armor: Object.freeze({
-        hats: Object.freeze([1, 1, 2, 2, 2, 4, 1, 2, 3, 2]),
-        shirts: Object.freeze([2, 3, 3, 6, 3, 5, 3]),
-        pants: Object.freeze([1, 2, 2, 5, 2, 4, 2]),
+        hats: Object.freeze([1, 1, 2, 2, 2, 4, 1, 2, 3, 2, 2]),
+        shirts: Object.freeze([2, 3, 3, 6, 3, 5, 3, 3]),
+        pants: Object.freeze([1, 2, 2, 5, 2, 4, 2, 2]),
         charms: Object.freeze([1])
       }),
       resist: Object.freeze({
-        hats: Object.freeze([0, 0, 2, 2, 1, 1, 0, 1, 1, 2]),
-        shirts: Object.freeze([0, 3, 2, 1, 2, 1, 3]),
-        pants: Object.freeze([0, 2, 1, 1, 1, 1, 2]),
+        hats: Object.freeze([0, 0, 2, 2, 1, 1, 0, 1, 1, 2, 2]),
+        shirts: Object.freeze([0, 3, 2, 1, 2, 1, 3, 2]),
+        pants: Object.freeze([0, 2, 1, 1, 1, 1, 2, 2]),
         charms: Object.freeze([0])
       })
     });
