@@ -379,7 +379,7 @@ function buildClientEnemyFoundation() {
   // squash/stretch, tether movement, and bubble secondary motion are code-driven.
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
-  const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=368");
+  const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=369");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated

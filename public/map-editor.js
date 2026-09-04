@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "368";
+  const BUILD = "369";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -97,11 +97,11 @@
   const editorJesterNpcImage = new Image();
   editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=347";
   const editorBeachGirlNpcImage = new Image();
-  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=368";
+  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=369";
   const editorGreenWitchNpcImage = new Image();
-  editorGreenWitchNpcImage.src = "./assets/green_witch_npc.png?v=368";
+  editorGreenWitchNpcImage.src = "./assets/green_witch_npc.png?v=369";
   const editorCamoNpcImage = new Image();
-  editorCamoNpcImage.src = "./assets/camo_npc.png?v=368";
+  editorCamoNpcImage.src = "./assets/camo_npc.png?v=369";
   const editorWoodBenchImage = new Image();
   editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=347";
   const editorClassResetCrystalImage = new Image();

@@ -1,3 +1,10 @@
+## v6-11-369 — Subtle nameplates and NPC shadow anchors
+
+- Added a very transparent charcoal backing behind the crisp screen-resolution NPC labels, with no border or decorative frame.
+- Anchored Myrtle's and Cam's shadows directly beneath their opaque bottom rows instead of using the generic two-pixel gap.
+- Sized Myrtle's shadow to her wider robe base and Cam's shadow to his narrower stance.
+- Preserved every NPC position, interaction, quest, movement rule, and the live editor-authored world revision 68 unchanged.
+
 ## v6-11-368 — Crisp NPC labels
 
 - Replaced the five-pixel canvas-rendered NPC name tags with ordinary screen-resolution text that stays sharp after the game canvas is enlarged.

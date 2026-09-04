@@ -13,7 +13,7 @@ const maps = JSON.parse(read("content/adopted-map-overrides.json"));
 assert(html.includes("translateX(-50%) scale(.84)"), "mobile top toolbar scale must be .84");
 assert(html.includes("translateX(-50%) scale(.54)"), "mobile bottom toolbar scale must be .54");
 assert(html.includes("right: 3px !important") && html.includes("left: 2px"), "mobile edge anchors missing");
-assert(game.includes('type === "beachGirl"\n    ? screenY - 1'), "Beach Girl shadow must move up 2px");
+assert(game.includes('["beachGirl", "greenWitch", "camoGuy"].includes(type)\n    ? screenY - 1'), "Beach Girl shadow must remain moved up 2px");
 assert.strictEqual(balance.version, 28, "combat balance revision must be 28");
 const dreamcatcher = balance.weaponProfiles.find(profile => profile.id === "weapon_dreamcatcher");
 assert.strictEqual(dreamcatcher.attackPower, 20, "Dreamcatcher ATK must be 20");

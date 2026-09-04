@@ -29,7 +29,7 @@ const cam = fs.readFileSync(path.join(root, "public", "assets", "camo_npc.png"))
 assert.strictEqual(cam.readUInt32BE(16), 20);
 assert.strictEqual(cam.readUInt32BE(20), 20);
 assert.strictEqual(crypto.createHash("sha256").update(cam).digest("hex"), "b67bc97de6c7e7f00df50fb70b848d82e8e52deb37dc8ffe54ae02e8d791a727");
-assert(game.includes('camoNpcImage = loadImage("assets/camo_npc.png?v=368")'));
+assert(game.includes('camoNpcImage = loadImage("assets/camo_npc.png?v=369")'));
 
 assert(game.includes('document.getElementById("npcNameLayer")'));
 assert(game.includes('node.className = "npc-name-label"'));

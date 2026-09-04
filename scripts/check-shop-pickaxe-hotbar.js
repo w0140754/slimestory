@@ -11,7 +11,7 @@ const checks = [
   [/#slot4\s*\{\s*margin-left:\s*24px;/.test(html), "enlarged item/equipment hotbar separation"],
   [game.includes('const pickaxeImage = loadImage("assets/pickaxe_v6.png");'), "pickaxe v6 cache-safe asset path"],
   [sha === "b6e22064a84dd6feffd19ca5dd30232334769e2a4d2910f9de86ae67a8f409cc", "new supplied pickaxe art"],
-  [html.includes('/game.js?v=368'), "325 cache key"],
+  [html.includes('/game.js?v=369'), "325 cache key"],
   [/\.hotbar-slot\s*\{[\s\S]*?width:\s*58px;[\s\S]*?height:\s*58px;/.test(html), "desktop top hotbar roughly 30 percent larger"],
   [/\.hotbar-slot img\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/.test(html), "desktop hotbar icons scale with slots"],
 ];

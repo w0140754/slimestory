@@ -14,10 +14,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.368");
-assert(server.includes('const BUILD_VERSION = "6-11-368";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-368";'));
-assert(html.includes('/client-app.js?v=368') && html.includes('/game.js?v=368'));
+assert.strictEqual(pkg.version, "0.6.11.369");
+assert(server.includes('const BUILD_VERSION = "6-11-369";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-369";'));
+assert(html.includes('/client-app.js?v=369') && html.includes('/game.js?v=369'));
 
 assert(config.includes('baseSpeed: 54'), "54 px/s movement must remain");
 assert(app.includes('const useMobileSubpixelCamera = mobileControlsEnabled;'), "camera smoothing must stay mobile-only");

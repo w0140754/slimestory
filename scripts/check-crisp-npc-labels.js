@@ -14,7 +14,9 @@ const app = read("public", "client-app.js");
 assert(html.includes('<div id="npcNameLayer" aria-hidden="true"></div>'));
 assert(html.includes(".npc-name-label"));
 assert(html.includes("font: 600 11px/1 Arial, sans-serif;"));
-assert(html.includes("text-shadow:") && !html.includes(".npc-name-label {\n    background:"));
+assert(html.includes("text-shadow:"));
+assert(html.includes("background: rgba(18, 18, 18, .34);"));
+assert(!/\.npc-name-label\s*\{[^}]*border:\s*1px/.test(html));
 
 assert(game.includes('document.getElementById("npcNameLayer")'));
 assert(game.includes('document.createElement("span")'));
