@@ -181,10 +181,10 @@ const tutorialNpcImage = new Image();
 tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
 const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
 const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
-const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=367");
-const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=367");
-const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=367");
-const camoNpcImage = loadImage("assets/camo_npc.png?v=367");
+const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=368");
+const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=368");
+const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=368");
+const camoNpcImage = loadImage("assets/camo_npc.png?v=368");
 const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
@@ -203,7 +203,7 @@ rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
-const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=367");
+const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=368");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -11610,7 +11610,7 @@ function drawTutorialNpc(camX, camY) {
   );
 
   drawNpcRoleMarker(screenX, screenY);
-  drawNpcNameTag(npcDisplayName("shopkeeper", tutorialNpc), screenX, screenY);
+  drawNpcNameTag(npcDisplayName("shopkeeper", tutorialNpc), screenX, screenY, "tutorialNpc");
 }
 
 function drawHunterNpc(camX, camY) {
@@ -11639,7 +11639,7 @@ function drawHunterNpc(camX, camY) {
     screenY - 19
   );
 
-  drawNpcNameTag(npcDisplayName("hunter", hunterNpc), screenX, screenY);
+  drawNpcNameTag(npcDisplayName("hunter", hunterNpc), screenX, screenY, "hunterNpc");
 }
 
 function drawJesterNpc(camX, camY) {
@@ -11668,7 +11668,7 @@ function drawJesterNpc(camX, camY) {
     screenY - 19
   );
 
-  drawNpcNameTag(npcDisplayName("jester", jesterNpc), screenX, screenY);
+  drawNpcNameTag(npcDisplayName("jester", jesterNpc), screenX, screenY, "jesterNpc");
 }
 
 function drawPlacedNpc(npc, camX, camY) {
@@ -11725,7 +11725,7 @@ function drawPlacedNpc(npc, camX, camY) {
   ctx.drawImage(image, screenX - Math.floor(width / 2) + swayOffset, screenY - height);
 
   if (type === "shopkeeper") drawNpcRoleMarker(screenX, screenY);
-  drawNpcNameTag(npcDisplayName(type, npc), screenX, screenY);
+  drawNpcNameTag(npcDisplayName(type, npc), screenX, screenY, npc.id || type);
   if (type === "beachGirl") {
     const quest = player.beachQuest || {};
     const firstReady = quest.stage === "firstActive" && quest.firstCrabKills >= 10 && quest.icedCoffee >= 1;
@@ -11748,24 +11748,49 @@ function drawPlacedNpc(npc, camX, camY) {
   }
 }
 
-function drawNpcNameTag(name, screenX, screenY) {
-  if (!name) return;
+const npcNameLayer = document.getElementById("npcNameLayer");
+const npcNameLabelNodes = new Map();
+const activeNpcNameLabelKeys = new Set();
+
+function beginNpcNameTagFrame() {
+  activeNpcNameLabelKeys.clear();
+}
+
+function drawNpcNameTag(name, screenX, screenY, key = name) {
+  if (!name || !npcNameLayer) return;
   const label = String(name).slice(0, 20);
-  ctx.save();
-  ctx.font = "5px Arial, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  const labelWidth = Math.max(10, Math.ceil(ctx.measureText(label).width) + 4);
-  const left = Math.round(screenX - labelWidth / 2);
-  const top = Math.round(screenY + 3);
-  ctx.fillStyle = "rgba(24, 24, 24, .76)";
-  ctx.fillRect(left, top, labelWidth, 7);
-  ctx.strokeStyle = "rgba(235, 235, 235, .30)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(left + 0.5, top + 0.5, labelWidth - 1, 6);
-  ctx.fillStyle = "#eeeeee";
-  ctx.fillText(label, Math.round(screenX), top + 1);
-  ctx.restore();
+  const labelKey = String(key || label);
+  let node = npcNameLabelNodes.get(labelKey);
+
+  if (!node) {
+    node = document.createElement("span");
+    node.className = "npc-name-label";
+    npcNameLayer.appendChild(node);
+    npcNameLabelNodes.set(labelKey, node);
+  }
+
+  if (node.textContent !== label) node.textContent = label;
+
+  const presentationX = screenX + mobileCameraPresentationOffsetX;
+  const presentationY = screenY + mobileCameraPresentationOffsetY + 3;
+  const onScreen =
+    presentationX >= -24 &&
+    presentationX <= VIEW_W + 24 &&
+    presentationY >= 0 &&
+    presentationY <= VIEW_H;
+
+  node.hidden = !onScreen;
+  if (onScreen) {
+    node.style.left = `${presentationX / VIEW_W * 100}%`;
+    node.style.top = `${presentationY / VIEW_H * 100}%`;
+  }
+  activeNpcNameLabelKeys.add(labelKey);
+}
+
+function endNpcNameTagFrame() {
+  for (const [key, node] of npcNameLabelNodes) {
+    if (!activeNpcNameLabelKeys.has(key)) node.hidden = true;
+  }
 }
 
 function drawWoodCraftBench(camX, camY) {

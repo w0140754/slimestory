@@ -41,8 +41,8 @@ assert(server.includes('type: "beachQuestProgress"'), "server quest progress upd
 assert(game.includes("function interactWithBeachGirl()") && game.includes("function applyBeachQuestState(message)"), "client quest interaction missing");
 assert(network.includes('type: "beachQuestInteract"') && network.includes('message.type === "beachQuestProgress"'), "quest networking missing");
 assert(network.includes('"FOUND IT!"') && !network.includes('"ICED COFFEE FOUND!"'), "coffee pickup copy must stay compact");
-assert(enemies.includes("icedCoffee: Object.freeze") && enemies.includes("assets/iced_coffee.png?v=367"), "coffee world-drop rendering missing");
-assert(html.includes('id="beachQuestOverlay"') && html.includes('assets/beach_girl_npc.png?v=367'), "quest dialogue UI missing");
+assert(enemies.includes("icedCoffee: Object.freeze") && enemies.includes("assets/iced_coffee.png?v=368"), "coffee world-drop rendering missing");
+assert(html.includes('id="beachQuestOverlay"') && html.includes('assets/beach_girl_npc.png?v=368'), "quest dialogue UI missing");
 assert(editor.includes('type: "beachGirl"') && draftFormat.includes('"beachGirl"'), "map editor Beach Girl support missing");
 
 console.log("Beach Girl questline regression checks passed.");

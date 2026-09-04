@@ -29,11 +29,12 @@ const cam = fs.readFileSync(path.join(root, "public", "assets", "camo_npc.png"))
 assert.strictEqual(cam.readUInt32BE(16), 20);
 assert.strictEqual(cam.readUInt32BE(20), 20);
 assert.strictEqual(crypto.createHash("sha256").update(cam).digest("hex"), "b67bc97de6c7e7f00df50fb70b848d82e8e52deb37dc8ffe54ae02e8d791a727");
-assert(game.includes('camoNpcImage = loadImage("assets/camo_npc.png?v=367")'));
+assert(game.includes('camoNpcImage = loadImage("assets/camo_npc.png?v=368")'));
 
-assert(game.includes('ctx.font = "5px Arial, sans-serif"'));
-assert(game.includes('ctx.fillStyle = "rgba(24, 24, 24, .76)"'));
-assert(game.includes('ctx.fillStyle = "#eeeeee"'));
+assert(game.includes('document.getElementById("npcNameLayer")'));
+assert(game.includes('node.className = "npc-name-label"'));
+assert(!game.includes('ctx.font = "5px Arial, sans-serif"'));
+assert(!game.includes('ctx.fillStyle = "rgba(24, 24, 24, .76)"'));
 assert(!/function drawNpcNameTag[\s\S]{0,220}drawStaticPixelText/.test(game), "NPC labels must not use the oversized pixel glyph renderer");
 
 assert(config.includes("baseSpeed: 54"), "54 px/s must apply to every input scheme");
@@ -54,4 +55,4 @@ assert(game.includes("function applyMyrtleQuestState") && game.includes("functio
 assert(network.includes('message.type === "myrtleQuestState"') && network.includes('type: "myrtleQuestInteract"'));
 assert(game.includes('icon === "blueFlower"') && game.includes("blueFlowerImage.src") && game.includes("flowerImage.src"));
 
-console.log("Myrtle quest, compact NPC labels, Cam redraw, and universal movement/attack tuning OK.");
+console.log("Myrtle quest, crisp NPC labels, Cam redraw, and universal movement/attack tuning OK.");

@@ -1,3 +1,9 @@
+## v6-11-368 — Crisp NPC labels
+
+- Replaced the five-pixel canvas-rendered NPC name tags with ordinary screen-resolution text that stays sharp after the game canvas is enlarged.
+- Removed the label box and retained only simple light text with a crisp one-pixel dark outline for readability over varied terrain.
+- Kept every existing NPC name, placement, interaction, quest, movement rule, and the live editor-authored world revision 68 unchanged.
+
 ## v6-11-367 — Myrtle quest and universal attack movement
 
 - Replaced Cam's 20×20 sprite with the revised user-drawn version while preserving his live map-editor position.

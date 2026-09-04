@@ -17,7 +17,7 @@ const checks = [
   [/@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?#inventoryOverlay\s*\{[\s\S]*?1120px/.test(html), "desktop Escape workspace enlarged"],
   [/\.item-detail-tooltip\s*\{[\s\S]*?width:\s*440px;/.test(html), "item hover card enlarged"],
   [/\.skill-detail-tooltip\s*\{[\s\S]*?width:\s*460px;/.test(html), "skill hover card enlarged"],
-  [html.includes('/client-input.js?v=367') && html.includes('/game.js?v=367'), "323 client cache keys"],
+  [html.includes('/client-input.js?v=368') && html.includes('/game.js?v=368'), "323 client cache keys"],
 ];
 
 for (const [ok, label] of checks) {

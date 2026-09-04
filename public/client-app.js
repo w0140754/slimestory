@@ -1286,6 +1286,10 @@ class GameRenderer {
   }
 
   render() {
+    if (typeof beginNpcNameTagFrame === "function") {
+      beginNpcNameTagFrame();
+    }
+
     const camera = getCameraPosition();
 
     // At the enlarged mobile world scale, 54 px/s is about 0.9 logical pixels
@@ -1348,6 +1352,10 @@ class GameRenderer {
     ctx.restore();
     mobileCameraPresentationOffsetX = 0;
     mobileCameraPresentationOffsetY = 0;
+
+    if (typeof endNpcNameTagFrame === "function") {
+      endNpcNameTagFrame();
+    }
 
     drawMapTransitionCover();
   }
