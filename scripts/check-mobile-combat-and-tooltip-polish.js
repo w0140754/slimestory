@@ -14,10 +14,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.364");
-assert(server.includes('const BUILD_VERSION = "6-11-364";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-364";'));
-assert(html.includes('/client-input.js?v=364') && html.includes('/game.js?v=364'));
+assert.strictEqual(pkg.version, "0.6.11.365");
+assert(server.includes('const BUILD_VERSION = "6-11-365";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-365";'));
+assert(html.includes('/client-input.js?v=365') && html.includes('/game.js?v=365'));
 
 assert(config.includes('mobileBaseSpeedMultiplier: 0.75'), "25% mobile movement reduction missing");
 assert(game.includes('(Number(player.speed) || GAME_CONFIG.player.baseSpeed) * touchSpeedMultiplier'), "mobile stat sheet must show effective movement speed");
@@ -35,7 +35,7 @@ assert(input.includes('armMobilePointTarget("bow")'), "manual point fallback mus
 assert(game.match(/window\.matchMedia\("\(hover: none\) and \(pointer: coarse\)"\)\.matches/g)?.length >= 2, "touch hover-card guards missing");
 assert(html.includes('.item-detail-tooltip.show,\n    .skill-detail-tooltip.show'), "touch tooltip CSS suppression missing");
 
-assert.strictEqual(adopted.version, 56, "mobile polish must preserve live authored map revision 56");
+assert.strictEqual(adopted.version, 58, "mobile polish must preserve live authored map revision 58");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must be preserved");
 
 console.log("Mobile combat/tooltip polish checks passed: speed, reach, visible Bow targeting, and touch hover suppression.");

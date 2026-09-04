@@ -12,15 +12,15 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-364";'), "server build must be v355");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-364";'), "client build must be v355");
-assert.strictEqual(pkg.version, "0.6.11.364", "package version must be v355");
-assert(html.includes('/game.js?v=364') && html.includes('/client-combat.js?v=364'), "v355 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-365";'), "server build must be v355");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-365";'), "client build must be v355");
+assert.strictEqual(pkg.version, "0.6.11.365", "package version must be v355");
+assert(html.includes('/game.js?v=365') && html.includes('/client-combat.js?v=365'), "v355 cache keys missing");
 
-assert(html.includes('translateX(-50%) scale(.78)'), "wide mobile top toolbar scale missing");
+assert(html.includes('translateX(-50%) scale(.84)'), "wide mobile top toolbar scale missing");
 assert(html.includes('translateX(-50%) scale(.70)'), "compact mobile top toolbar scale missing");
-assert(html.includes('left: max(1px, env(safe-area-inset-left));') && html.includes('top: max(2px, env(safe-area-inset-top));'), "mobile MENU corner placement missing");
-assert(html.includes('top: max(5px, calc(env(safe-area-inset-top) + 5px)) !important;') && html.includes('grid-template-rows: repeat(4, 38px) !important;'), "mobile skill column is not upper-right aligned");
+assert(html.includes('left: 2px;') && html.includes('top: 3px;'), "mobile MENU corner placement missing");
+assert(html.includes('top: 4px !important;') && html.includes('grid-template-rows: repeat(4, 38px) !important;'), "mobile skill column is not upper-right aligned");
 
 assert(game.includes('const SWORD_REACH = 26;'), "standard melee reach must be 26");
 assert(game.includes('const WAND_MASTERY_REACH = 45;'), "Wand Mastery reach must be 45");

@@ -36,7 +36,7 @@ const editorJs = read("public/map-editor.js");
 const clientTerrain = read("public/client-terrain.js");
 const readme = read("README.md");
 
-assert.ok(indexHtml.includes('/client-terrain.js?v=364') && indexHtml.includes('/shared/terrain-presentation.js?v=364'), "v343 terrain cache keys missing");
+assert.ok(indexHtml.includes('/client-terrain.js?v=365') && indexHtml.includes('/shared/terrain-presentation.js?v=365'), "v343 terrain cache keys missing");
 assert.ok(editorHtml.includes('data-terrain="sand"') && editorHtml.includes('<kbd>5</kbd>'), "sand/void terrain tools missing from editor");
 assert.ok(read("public/map-editor.css").includes(".swatch.sand"), "sand editor swatch style missing");
 assert.ok(!editorJs.includes('{ value: "sand", label: "Sand" }'), "sand must not appear as a throwable-rock variant");

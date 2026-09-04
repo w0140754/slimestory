@@ -4399,14 +4399,14 @@
 
     #bottomUi {
       top: 5px !important;
-      transform: translateX(-50%) scale(.78) !important;
+      transform: translateX(-50%) scale(.84) !important;
       transform-origin: top center !important;
     }
 
     #hpBarWrap {
       bottom: 3px !important;
       width: 320px !important;
-      transform: translateX(-50%) scale(.48) !important;
+      transform: translateX(-50%) scale(.54) !important;
       transform-origin: bottom center !important;
     }
 
@@ -4416,8 +4416,8 @@
     }
 
     #abilityBar {
-      right: max(5px, calc(env(safe-area-inset-right) + 5px)) !important;
-      top: max(5px, calc(env(safe-area-inset-top) + 5px)) !important;
+      right: 3px !important;
+      top: 4px !important;
       transform: none !important;
       grid-template-columns: 38px !important;
       grid-template-rows: repeat(4, 38px) !important;
@@ -4444,6 +4444,7 @@
     }
 
     #mobileMovePad {
+      left: 4px;
       bottom: max(24px, calc(env(safe-area-inset-bottom) + 24px));
       width: 82px;
       height: 82px;
@@ -4456,25 +4457,27 @@
     }
 
     #mobileAttackButton {
+      right: 4px;
       width: 60px;
       height: 60px;
     }
 
     #mobileAutoAttackButton {
-      bottom: max(82px, calc(env(safe-area-inset-bottom) + 82px));
+      right: 6px;
+      bottom: max(76px, calc(env(safe-area-inset-bottom) + 76px));
       width: 54px;
       height: 30px;
     }
 
     #mobileInteractButton {
-      right: max(86px, calc(env(safe-area-inset-right) + 86px));
+      right: 72px;
       width: 46px;
       height: 46px;
     }
 
     #mobileMenuButton {
-      left: max(1px, env(safe-area-inset-left));
-      top: max(2px, env(safe-area-inset-top));
+      left: 2px;
+      top: 3px;
       min-width: 56px;
       height: 36px;
       font-size: 9px;
@@ -5878,7 +5881,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=364" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=365" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -5899,33 +5902,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=364"></script>
-<script src="/shared/terrain-rules.js?v=364"></script>
-<script src="/shared/terrain-presentation.js?v=364"></script>
-<script src="/shared/combat-balance.js?v=364"></script>
-<script src="/shared/ability-scaling.js?v=364"></script>
-<script src="/shared/rain-field.js?v=364"></script>
-<script src="/shared/camouflage-rules.js?v=364"></script>
-<script src="/shared/enemy-net-protocol.js?v=364"></script>
-<script src="/shared/player-net-protocol.js?v=364"></script>
-<script src="/client-config.js?v=364"></script>
-<script src="/client-utils.js?v=364"></script>
-<script src="/client-world.js?v=364"></script>
-<script src="/client-maps.js?v=364"></script>
-<script src="/client-enemies.js?v=364"></script>
-<script src="/client-enemy-runtime.js?v=364"></script>
-<script src="/client-enemy-rendering.js?v=364"></script>
-<script src="/client-combat.js?v=364"></script>
-<script src="/client-abilities.js?v=364"></script>
-<script src="/client-magus-abilities.js?v=364"></script>
-<script src="/client-class-abilities.js?v=364"></script>
-<script src="/client-status.js?v=364"></script>
-<script src="/client-fire-environment.js?v=364"></script>
-<script src="/client-network.js?v=364"></script>
-<script src="/client-simulation-foundation.js?v=364"></script>
-<script src="/game.js?v=364"></script>
-<script src="/client-terrain.js?v=364"></script>
-<script src="/client-input.js?v=364"></script>
-<script src="/client-app.js?v=364"></script>
+<script src="/shared/world-content-runtime.js?v=365"></script>
+<script src="/shared/terrain-rules.js?v=365"></script>
+<script src="/shared/terrain-presentation.js?v=365"></script>
+<script src="/shared/combat-balance.js?v=365"></script>
+<script src="/shared/ability-scaling.js?v=365"></script>
+<script src="/shared/rain-field.js?v=365"></script>
+<script src="/shared/camouflage-rules.js?v=365"></script>
+<script src="/shared/enemy-net-protocol.js?v=365"></script>
+<script src="/shared/player-net-protocol.js?v=365"></script>
+<script src="/client-config.js?v=365"></script>
+<script src="/client-utils.js?v=365"></script>
+<script src="/client-world.js?v=365"></script>
+<script src="/client-maps.js?v=365"></script>
+<script src="/client-enemies.js?v=365"></script>
+<script src="/client-enemy-runtime.js?v=365"></script>
+<script src="/client-enemy-rendering.js?v=365"></script>
+<script src="/client-combat.js?v=365"></script>
+<script src="/client-abilities.js?v=365"></script>
+<script src="/client-magus-abilities.js?v=365"></script>
+<script src="/client-class-abilities.js?v=365"></script>
+<script src="/client-status.js?v=365"></script>
+<script src="/client-fire-environment.js?v=365"></script>
+<script src="/client-network.js?v=365"></script>
+<script src="/client-simulation-foundation.js?v=365"></script>
+<script src="/game.js?v=365"></script>
+<script src="/client-terrain.js?v=365"></script>
+<script src="/client-input.js?v=365"></script>
+<script src="/client-app.js?v=365"></script>
 </body>
 </html>

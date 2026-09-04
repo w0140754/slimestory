@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   return Object.freeze({
-    "version": 56,
+    "version": 58,
     "maps": {
       "prototypeIsland": {
         "name": "Prototype Island",
@@ -3535,8 +3535,8 @@
             "id": "crabBeach:crab:1",
             "type": "crab",
             "level": 3,
-            "x": 408,
-            "y": 268,
+            "x": 520,
+            "y": 220,
             "phase": 0.4,
             "wanderRadiusX": 24,
             "wanderRadiusY": 10
@@ -3647,8 +3647,8 @@
             "id": "crabBeach:crab:13",
             "type": "crab",
             "level": 1,
-            "x": 629,
-            "y": 324,
+            "x": 681,
+            "y": 323,
             "phase": 3.9
           },
           {
@@ -4681,8 +4681,8 @@
           {
             "id": "crabBeach:npc:beachGirl",
             "type": "beachGirl",
-            "x": 214,
-            "y": 194,
+            "x": 572,
+            "y": 338,
             "interactionRadius": 28
           }
         ]

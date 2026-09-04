@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 27;
+    const VERSION = 28;
     const MIN_DAMAGE = 1;
     const ELEMENT_TYPES = Object.freeze(["neutral", "fire", "water", "air", "earth"]);
     const LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL = 0.05;
@@ -129,7 +129,7 @@
         id: "weapon_dreamcatcher",
         name: "Dreamcatcher",
         damageType: "physical",
-        attackPower: 10,
+        attackPower: 20,
         magicPower: 0,
         strengthScale: 0.20,
         dexScale: 1.05,
@@ -742,4 +742,3 @@
     });
   }
 );
-

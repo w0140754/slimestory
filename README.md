@@ -1,3 +1,11 @@
+## v6-11-365 — Mobile HUD edge refinement and Dreamcatcher buff
+
+- Moved the mobile MENU button, skill column, movement pad, and combat controls closer to the rendered game viewport edges instead of applying the phone safe-area inset a second time inside the existing gutters.
+- Increased the mobile top item/equipment toolbar from 78% to 84% scale and the bottom HP/EXP toolbar from 48% to 54% scale.
+- Increased Dreamcatcher attack power from 10 to **20** and advanced the shared combat-balance revision to 28.
+- Moved the Beach Girl's shadow up 2 pixels so it meets her visible feet.
+- Preserved the newest live editor-authored world revision 58, including the moved Beach Girl and two repositioned beach crabs.
+
 ## v6-11-364 — Beach Girl questline
 
 - Added the user-drawn Beach Girl to the western side of Crab Beach, with matching map-editor support and a mobile-safe dialogue panel.

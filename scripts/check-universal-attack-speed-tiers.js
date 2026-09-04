@@ -15,12 +15,12 @@ const html = read('public', 'index.html');
 const pkg = JSON.parse(read('package.json'));
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-364";'), 'server build must be 6-11-364');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-364";'), 'client build must be 6-11-364');
-assert(pkg.version === '0.6.11.364', 'package version must be 0.6.11.364');
-assert(html.includes('/shared/combat-balance.js?v=364') && html.includes('/client-combat.js?v=364') && html.includes('/game.js?v=364'), 'v333 combat cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-365";'), 'server build must be 6-11-365');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-365";'), 'client build must be 6-11-365');
+assert(pkg.version === '0.6.11.365', 'package version must be 0.6.11.365');
+assert(html.includes('/shared/combat-balance.js?v=365') && html.includes('/client-combat.js?v=365') && html.includes('/game.js?v=365'), 'v333 combat cache keys missing');
 
-assert(balance.version === 27, 'combat balance version must be 27');
+assert(balance.version === 28, 'combat balance version must be 28');
 assert(balance.attackSpeedTiers?.slow?.cooldown === 0.83, 'Slow tier must remain 0.83s');
 assert(balance.attackSpeedTiers?.normal?.cooldown === 0.75, 'Normal tier must remain 0.75s');
 assert(balance.attackSpeedTiers?.quick?.cooldown === 0.65, 'Quick tier must remain 0.65s');

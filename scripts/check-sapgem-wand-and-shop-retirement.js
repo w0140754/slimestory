@@ -12,10 +12,10 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = require(path.join(root, "package.json"));
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-364";'), "server build must be 6-11-364");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-364";'), "client build must be 6-11-364");
-assert(pkg.version === "0.6.11.364", "package version must be 0.6.11.364");
-assert(html.includes('/shared/combat-balance.js?v=364') && html.includes('/game.js?v=364'), "v336 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-365";'), "server build must be 6-11-365");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-365";'), "client build must be 6-11-365");
+assert(pkg.version === "0.6.11.365", "package version must be 0.6.11.365");
+assert(html.includes('/shared/combat-balance.js?v=365') && html.includes('/game.js?v=365'), "v336 cache keys missing");
 assert(fs.existsSync(path.join(root, "public", "assets", "sapgem_wand_v3.png")), "Sapgem sprite missing");
 assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v3.png?v=347")'), "Sapgem asset is not loaded with v336 key");
 assert(game.includes('"weapon_sapgemWand"') && game.includes('"sapgemWand"'), "Sapgem weapon id/style missing");
@@ -34,7 +34,7 @@ const sapgem = balance.weaponProfiles.find(x => x.id === "weapon_sapgemWand");
 assert(sapgem.attackSpeed === "normal", "Sapgem attack speed must be Normal");
 assert(balance.weaponAttackSpeedLabel(12) === "Normal", "Sapgem shared attack-speed label must be Normal");
 assert(balance.isWandWeaponIndex(12), "Sapgem index 12 must be treated as a wand");
-assert(balanceText.includes('const VERSION = 27;'), "combat balance version must be 27");
+assert(balanceText.includes('const VERSION = 28;'), "combat balance version must be 28");
 
 const shopBlock = game.match(/const SHOP_ITEMS = \[([\s\S]*?)\n\];/);
 assert(shopBlock, "client SHOP_ITEMS missing");

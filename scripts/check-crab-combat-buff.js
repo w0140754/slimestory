@@ -15,10 +15,10 @@ const html = read('public', 'index.html');
 const readme = read('README.md');
 const balance = require(path.join(root, 'public', 'shared', 'combat-balance.js'));
 
-assert(server.includes('const BUILD_VERSION = "6-11-364";'), 'server build must be v347');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-364";'), 'client build must be v347');
-assert(html.includes('/shared/combat-balance.js?v=364'), 'combat balance cache key must be v27');
-assert(html.includes('/client-enemies.js?v=364') && html.includes('/game.js?v=364'), 'v347 client cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-365";'), 'server build must be v347');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-365";'), 'client build must be v347');
+assert(html.includes('/shared/combat-balance.js?v=365'), 'combat balance cache key must be v27');
+assert(html.includes('/client-enemies.js?v=365') && html.includes('/game.js?v=365'), 'v347 client cache keys missing');
 
 const crabServerStart = server.indexOf('function makeServerCrab(spawn)');
 const crabServerEnd = server.indexOf('function resetServerCrab(crab)', crabServerStart);
@@ -42,7 +42,7 @@ assert(contactStart >= 0 && contactEnd > contactStart, 'Crab contact-damage bloc
 const contact = server.slice(contactStart, contactEnd);
 assert(contact.includes('9 + Math.floor(Math.random() * 5)'), 'Crab contact damage must roll 9-13');
 
-assert(balanceText.includes('const VERSION = 27;'), 'combat balance version must be 27');
+assert(balanceText.includes('const VERSION = 28;'), 'combat balance version must be 28');
 assert(balance.monsterDefaults.crab.physicalDefense === 18, 'Crab physical Defense must be 18');
 assert(balance.monsterDefaults.crab.magicResist === 0, 'Crab magic Resist should remain unchanged');
 
