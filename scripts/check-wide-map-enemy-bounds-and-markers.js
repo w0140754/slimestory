@@ -24,7 +24,7 @@ const checks = [
   [server.includes("const ghostDimensions = mapWorldDimensions(ghost.mapId);") && server.includes("ghostDimensions.width - 8") && server.includes("ghostDimensions.height - 5"), "ghost movement clamp uses map dimensions"],
   [!server.includes("Math.min(628, slime.homeX") && !server.includes("Math.min(628,\n        goblin.homeX") && !server.includes("Math.min(630, ghost.homeX") && !server.includes("Math.min(632, ghost.x"), "legacy 640x400 enemy clamps removed"],
   [game.includes("const bubbleWidth = 18;") && game.includes("const bubbleHeight = 18;") && game.includes("const bubbleY = screenY - 42;") && game.includes("rgba(248, 244, 221, 0.78)"), "role bubbles compact, raised, and translucent"],
-  [game.includes("ctx.drawImage(coinImage, left, top);") && game.includes("ctx.drawImage(craftRoleAxeImage, left, top);"), "shop/craft icons draw at native size"],
+  [game.includes("ctx.drawImage(woodImage, left, top);") && game.includes("ctx.drawImage(craftRoleAxeImage, left, top);"), "Marnie/craft icons draw at native size"],
   [!game.includes("ctx.drawImage(coinImage, left - 1, top - 2, 12, 12)") && !game.includes("ctx.drawImage(craftRoleAxeImage, left, top - 1, 10, 10)"), "scaled marker icons removed"],
 ];
 

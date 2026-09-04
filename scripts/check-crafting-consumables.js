@@ -7,7 +7,7 @@ const html = fs.readFileSync("public/index.html", "utf8");
 
 const checks = [
   [server.includes('ingredients: Object.freeze({ wood: 5, stone: 1 })') && server.includes("outputCount: 50"), "arrow recipe"],
-  [server.includes('woodRing: Object.freeze({') && server.includes('stateKey: "woodRingCrafted"') && game.includes('itemId: "charm_woodRing"') && game.includes('cost: 2'), "wood ring recipe"],
+  [server.includes('woodRing: Object.freeze({') && server.includes('stateKey: "woodRingCrafted"') && game.includes('itemId: "charm_woodRing"') && game.includes('ingredients: Object.freeze({ wood: 5 })'), "wood ring recipe"],
   [server.includes('ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 })'), "Healing Potion recipe"],
   [server.includes('ingredients: Object.freeze({ whiteFlowers: 2 })'), "Attack Potion recipe"],
   [server.includes('ingredients: Object.freeze({ blueFlowers: 2 })'), "Magic Potion recipe"],

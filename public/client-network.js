@@ -374,6 +374,18 @@ class OnlineClient {
       return;
     }
 
+    if (message.type === "marnieQuestResult") {
+      if (Number.isFinite(message.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
+      if (message.success) {
+        completeMarniePickaxeReward(tutorialNpc);
+      } else if (message.reason === "needWood") {
+        spawnFloatingText(player.x, player.y - 30, `WOOD ${player.wood} / 10`, "#fff1b0", 1.0);
+      }
+      updateInventoryUi();
+      saveLocalCharacterState(true);
+      return;
+    }
+
     if (message.type === "shopPurchaseResult") {
       this.handleShopPurchaseResult(
         message
@@ -439,6 +451,7 @@ class OnlineClient {
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
       if (Number.isFinite(message.beachQuestIcedCoffee)) player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
       if (typeof message.myrtleQuestStage === "string") player.myrtleQuest.stage = message.myrtleQuestStage;
+      if (typeof message.marniePickaxeReceived === "boolean") player.story.marniePickaxeReceived = message.marniePickaxeReceived;
 
       updateInventoryUi();
       updateShopUi();
@@ -2012,9 +2025,16 @@ class OnlineClient {
     return true;
   }
 
-  requestShopPurchase(itemId) {
+  requestMarnieWoodTurnIn() {
+    if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "marnieQuestInteract", action: "turnInWood" }));
+    return true;
+  }
+
+  requestShopPurchase(itemId, vendor) {
     if (
       !itemId ||
+      !vendor ||
       !this.connected ||
       !this.socket ||
       this.socket.readyState !== WebSocket.OPEN
@@ -2024,92 +2044,45 @@ class OnlineClient {
 
     this.socket.send(JSON.stringify({
       type: "shopPurchase",
-      itemId
+      itemId,
+      vendor
     }));
 
     return true;
   }
 
   handleShopPurchaseResult(message) {
-    const itemId =
-      typeof message.itemId === "string"
-        ? message.itemId
-        : null;
-
+    const itemId = typeof message.itemId === "string" ? message.itemId : null;
     player.shopPurchasePending = null;
+    if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
+    if (Number.isFinite(message.totalArrows)) player.arrows = Math.max(0, Math.floor(message.totalArrows));
 
-    if (Number.isFinite(message.totalCoins)) {
-      player.coins =
-        message.totalCoins;
-    }
-
-    if (
-      message.success &&
-      itemId &&
-      ALL_EQUIPMENT_ITEM_IDS.has(itemId)
-    ) {
-      if (!Array.isArray(player.shopPurchases)) {
-        player.shopPurchases = [];
+    if (message.success && itemId) {
+      if (ALL_EQUIPMENT_ITEM_IDS.has(itemId)) {
+        if (!Array.isArray(player.shopPurchases)) player.shopPurchases = [];
+        if (!player.shopPurchases.includes(itemId)) player.shopPurchases.push(itemId);
+        if (!playerOwnsItem(itemId)) grantInventoryItem(itemId, 1);
       }
-      if (!player.shopPurchases.includes(itemId)) {
-        player.shopPurchases.push(itemId);
-      }
-
-      if (!playerOwnsItem(itemId)) {
-        grantInventoryItem(
-          itemId,
-          1
-        );
-      }
-
-      spawnFloatingText(
-        tutorialNpc.x,
-        tutorialNpc.y - 26,
-        "PURCHASED!",
-        "#ffe38b",
-        0.85
-      );
-
+      spawnFloatingText(player.x, player.y - 30, "PURCHASED!", "#ffe38b", 0.85);
       updateShopUi();
       updateInventoryUi();
       updateHotbar();
+      saveLocalCharacterState(true);
       return;
     }
 
     if (message.reason === "needCoin") {
-      spawnFloatingText(
-        tutorialNpc.x,
-        tutorialNpc.y - 26,
-        "NEED 1 COIN",
-        "#ffe38b",
-        0.85
-      );
+      const need = Math.max(1, Number(message.price) || 1);
+      spawnFloatingText(player.x, player.y - 30, `NEED ${need} COINS`, "#ffe38b", 0.85);
+    } else if (message.reason === "needLevel") {
+      spawnFloatingText(player.x, player.y - 30, `REQUIRES LV ${Math.max(1, Number(message.level) || 1)}`, "#ffe38b", 0.85);
     } else if (message.reason === "tooFar") {
-      spawnFloatingText(
-        tutorialNpc.x,
-        tutorialNpc.y - 26,
-        "MOVE CLOSER",
-        "#ffe38b",
-        0.85
-      );
+      spawnFloatingText(player.x, player.y - 30, "MOVE CLOSER", "#ffe38b", 0.85);
     } else if (message.reason === "alreadyOwned") {
-      spawnFloatingText(
-        tutorialNpc.x,
-        tutorialNpc.y - 26,
-        "ALREADY OWNED",
-        "#ffe38b",
-        0.85
-      );
+      spawnFloatingText(player.x, player.y - 30, "ALREADY OWNED", "#ffe38b", 0.85);
     } else if (!message.success) {
-      spawnFloatingText(
-        tutorialNpc.x,
-        tutorialNpc.y - 26,
-        "PURCHASE FAILED",
-        "#ffe38b",
-        0.85
-      );
+      spawnFloatingText(player.x, player.y - 30, "PURCHASE FAILED", "#ffe38b", 0.85);
     }
-
     updateShopUi();
   }
 

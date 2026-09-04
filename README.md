@@ -1,3 +1,15 @@
+# Slime Story
+
+## v6-11-373 — Crafting categories, Marnie progression, and class shops
+
+- Reorganized the crafting table into **Consumables / Weapons / Armor** categories, opening on Consumables and displaying three recipes per row.
+- Increased Wood equipment costs; Wood Helm/Chest/Greaves now also require Stone, while Wood Sword, Wood Bow, Wood Ring, and Shepherd Staff remain Wood-only.
+- Extended Marnie's tutorial: she still gives the Axe first, now asks for **10 Wood**, consumes the 10 Wood on turn-in, and rewards the **Pickaxe**. Marnie no longer opens a shop.
+- Moved the currently accessible class shop stock to **Cam (Ranger)** and **Myrtle (Magus)**. Myrtle's quest conversation now includes a separate Shop button.
+- Cam sells Ranger Hat/Shirt/Pants (Lv10), Dreamcatcher (Lv20), and repeatable bundles of 50 Arrows.
+- Myrtle sells Sapgem Wand (Lv10), Tournesol (Lv15), Tabatha's Key (Lv20), and the Jester set (Lv20). Other former shop stock is intentionally unavailable for now.
+- Replaced the one-coin placeholder pricing with item-specific prices and server-authoritative vendor, level, proximity, coin, repeat-purchase, and Arrow-bundle validation.
+
 ## v6-11-372 — New-map portal runtime fix
 
 - Fixed portals into editor-created maps by dynamically creating a normal client runtime map state for every shared `WORLD_CONTENT` map that is not one of the older hard-coded maps.

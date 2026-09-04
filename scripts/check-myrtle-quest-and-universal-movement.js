@@ -16,9 +16,9 @@ const network = read("public", "client-network.js");
 const maps = JSON.parse(read("content", "adopted-map-overrides.json"));
 
 assert.ok(maps.version >= 68, "newest live authored maps must be preserved");
-const authoredCam = maps.maps.prototypeIsland.npcs.find(npc => npc.type === "camoGuy");
+const authoredCam = Object.values(maps.maps).flatMap(map => map.npcs || []).find(npc => npc.type === "camoGuy");
 const authoredSunny = maps.maps.crabBeach.npcs.find(npc => npc.type === "beachGirl");
-assert(authoredCam && authoredCam.name === "Cam" && authoredCam.interactionRadius === 24 && Number.isFinite(authoredCam.x) && Number.isFinite(authoredCam.y));
+assert(authoredCam && (!authoredCam.name || authoredCam.name === "Cam") && authoredCam.interactionRadius === 24 && Number.isFinite(authoredCam.x) && Number.isFinite(authoredCam.y));
 assert(authoredSunny && authoredSunny.name === "Sunny" && authoredSunny.interactionRadius === 28 && Number.isFinite(authoredSunny.x) && Number.isFinite(authoredSunny.y));
 
 const cam = fs.readFileSync(path.join(root, "public", "assets", "camo_npc.png"));

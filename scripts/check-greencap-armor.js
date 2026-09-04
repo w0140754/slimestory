@@ -13,10 +13,10 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = JSON.parse(read("package.json"));
 const mapOverride = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-372";'), "server build must be 6-11-372");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-372";'), "client build must be 6-11-372");
-assert.strictEqual(pkg.version, "0.6.11.372", "package version must be 0.6.11.372");
-assert(html.includes('/game.js?v=372') && html.includes('/client-enemies.js?v=372'), "Greencap build cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-373";'), "server build must be 6-11-373");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'), "client build must be 6-11-373");
+assert.strictEqual(pkg.version, "0.6.11.373", "package version must be 0.6.11.373");
+assert(html.includes('/game.js?v=373') && html.includes('/client-enemies.js?v=373'), "Greencap build cache keys missing");
 
 for (const file of [
   "greencap_cap_v1.png",
@@ -42,9 +42,11 @@ for (const id of ["hat_greencap", "shirt_greencap", "pants_greencap"]) {
   assert(html.includes(`data-owned-item="${id}"`), `${id} must appear in inventory/equipment UI`);
 }
 
-assert(game.includes('{ id: "hat_greencap", name: "Greencap Cap" }'), "Greencap Cap shop entry missing");
-assert(game.includes('{ id: "shirt_greencap", name: "Greencap Tunic" }'), "Greencap Tunic shop entry missing");
-assert(game.includes('{ id: "pants_greencap", name: "Greencap Pants" }'), "Greencap Pants shop entry missing");
+assert(game.includes('if (style === "greencapHat") return "Greencap Cap";'), "Greencap Cap display name missing");
+assert(game.includes('if (style === "greencap") return "Greencap Tunic";'), "Greencap Tunic display name missing");
+assert(game.includes('if (style === "greencap") return "Greencap Pants";'), "Greencap Pants display name missing");
+const shopItemsBlock = (game.match(/const SHOP_ITEMS = \[([\s\S]*?)\n\];/) || ["", ""])[1];
+assert(!shopItemsBlock.includes("greencap"), "Greencap must remain unavailable from current class shops");
 assert(game.includes('if (index === 10) return sprite.greencapHat;'), "Greencap head rendering missing");
 assert(game.includes('? sprite.greencapTorso'), "Greencap torso rendering missing");
 assert(game.includes('? sprite.greencapLeftLeg') && game.includes('? sprite.greencapRightLeg'), "Greencap leg rendering missing");

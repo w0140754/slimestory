@@ -22,8 +22,8 @@ const authored = JSON.parse(read("content", "adopted-map-overrides.json"));
 const authoredMirror = require(path.join(root, "public", "shared", "adopted-map-overrides.js"));
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-372";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-372";'));
+assert(server.includes('const BUILD_VERSION = "6-11-373";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'));
 assert.ok(authored.version >= 68, "authored map revision must not regress below 68");
 assert.deepStrictEqual(authoredMirror, authored, "browser and server authored-map copies must match");
 
@@ -46,21 +46,23 @@ assert(enemies.includes('icedCoffeeLootImage = loadImage("assets/iced_coffee.png
 assert(enemies.includes("drawWidth: 20") && enemies.includes("drawHeight: 20"), "coffee must render at its native size");
 assert(network.includes('"FOUND IT!"') && !network.includes('"ICED COFFEE FOUND!"'), "coffee pickup label must not spell out its item name");
 
-const cam = authored.maps.prototypeIsland.npcs.find(npc => npc.type === "camoGuy");
+const camMapEntry = Object.entries(authored.maps).find(([, map]) => (map.npcs || []).some(npc => npc.type === "camoGuy"));
+const cam = camMapEntry?.[1]?.npcs?.find(npc => npc.type === "camoGuy");
 const myrtle = authored.maps.waterfallGrove.npcs.find(npc => npc.type === "greenWitch");
 const sunny = authored.maps.crabBeach.npcs.find(npc => npc.type === "beachGirl");
-assert(cam && cam.id === "prototypeIsland:npc:camoGuy" && cam.name === "Cam" && cam.interactionRadius === 24 && Number.isFinite(cam.x) && Number.isFinite(cam.y), "Cam authored NPC data missing");
+assert(cam && cam.interactionRadius === 24 && Number.isFinite(cam.x) && Number.isFinite(cam.y), "Cam authored NPC data missing");
+assert(!cam.name || cam.name === "Cam", "Cam authored name must be omitted/default or Cam");
 assert(myrtle && myrtle.id === "waterfallGrove:npc:greenWitch" && myrtle.name === "Myrtle" && myrtle.interactionRadius === 24 && Number.isFinite(myrtle.x) && Number.isFinite(myrtle.y), "Myrtle authored NPC data missing");
 assert.strictEqual(sunny.name, "Sunny");
 assert.strictEqual(world.defaultPlayerLoad.mapId, "prototypeIsland");
-assert(world.maps.prototypeIsland.npcs.some(npc => npc.type === "camoGuy" && npc.name === "Cam"));
+assert(Object.values(world.maps).some(map => (map.npcs || []).some(npc => npc.type === "camoGuy")), "runtime world content must include Cam wherever the editor placed him");
 
 for (const [type, name] of Object.entries({ shopkeeper: "Marnie", hunter: "Bramble", jester: "Jinx", beachGirl: "Sunny", greenWitch: "Myrtle", camoGuy: "Cam" })) {
   assert(game.includes(`${type}: "${name}"`), `${name} default name missing`);
 }
 assert(game.includes("function drawNpcNameTag") && game.includes("drawNpcNameTag(npcDisplayName(type, npc)"));
 assert(server.includes("The waterfall remembers every spell cast beside it."));
-assert(game.includes("I'm conducting an extremely secret camouflage exercise."));
+assert(game.includes("Ranger supplies. Keep your arrows dry and your footsteps quiet.") && game.includes('openVendorShop("cam")'));
 assert(draftFormat.includes('"greenWitch", "camoGuy"'));
 assert(editor.includes('NPC_CHARACTER_TYPES') && editor.includes('"greenWitch"') && editor.includes('"camoGuy"') && editor.includes('label: "MYRTLE"') && editor.includes('label: "CAM"'), "combined NPC editor support missing Myrtle/Cam");
 assert(editor.includes('makePropertyRow("Name", textControl('), "NPC names should be editable");

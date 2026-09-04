@@ -1460,7 +1460,7 @@
   }
 
   #craftPanel {
-    width: min(420px, calc(100vw - 36px));
+    width: min(560px, calc(100vw - 36px));
     background: #202820;
     border: 3px solid #9a8756;
     box-shadow:
@@ -1499,11 +1499,34 @@
     cursor: pointer;
   }
 
+  #craftTabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #5f573d;
+    background: #242d24;
+  }
+
+  .craft-tab {
+    appearance: none;
+    flex: 1 1 0;
+    min-height: 30px;
+    border: 0;
+    border-right: 1px solid #5f573d;
+    background: #242d24;
+    color: #bdb58f;
+    font: 9px/1 monospace;
+    cursor: pointer;
+  }
+
+  .craft-tab:last-child { border-right: 0; }
+  .craft-tab.active { background: #3b4938; color: #fff2b5; }
+  .craft-tab:hover { filter: brightness(1.12); }
+
   #craftGrid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
   }
 
   .craft-recipe {
@@ -4656,7 +4679,7 @@
     #craftGrid {
       flex: 1 1 auto;
       min-height: 0;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 4px;
       padding: 5px;
       overflow-y: auto;
@@ -5826,81 +5849,30 @@
 <div id="craftOverlay" aria-hidden="true">
   <div id="craftPanel">
     <div id="craftTop">
-      <div id="craftTitle">Woodworking Bench</div>
+      <div id="craftTitle">Crafting Table</div>
       <button id="craftClose" aria-label="Close crafting menu">×</button>
     </div>
-    <div id="craftGrid">
-      <button class="craft-recipe" type="button" data-craft-recipe="woodSword">
-        <img id="craftWoodSwordImg" alt="Wood Sword" />
-        <span class="craft-recipe-name">Wood Sword</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftSwordWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodBow">
-        <img id="craftWoodBowImg" alt="Wood Bow" />
-        <span class="craft-recipe-name">Wood Bow</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="arrows">
-        <img id="craftArrowsImg" alt="Arrows" />
-        <span class="craft-recipe-name">Arrows ×50</span>
-        <span class="craft-recipe-cost">
-          <span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span>
-          <span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span>
-        </span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="healingPotion">
-        <img id="craftHealingPotionImg" alt="Healing Potion" />
-        <span class="craft-recipe-name">Healing Potion</span>
-        <span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftHealingWhiteIcon" alt="White Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftHealingBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="attackPotion">
-        <img id="craftAttackPotionImg" alt="Attack Potion" />
-        <span class="craft-recipe-name">Attack Potion</span>
-        <span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftAttackWhiteIcon" alt="White Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="magicPotion">
-        <img id="craftMagicPotionImg" alt="Magic Potion" />
-        <span class="craft-recipe-name">Magic Potion</span>
-        <span class="craft-recipe-cost"><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftMagicBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="shepherdStaff">
-        <img id="craftShepherdStaffImg" alt="Shepherd Staff" />
-        <span class="craft-recipe-name">Shepherd Staff</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftStaffWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodHelm">
-        <img id="craftWoodHelmImg" alt="Wood Helm" />
-        <span class="craft-recipe-name">Wood Helm</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftHelmWoodIcon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodChest">
-        <img id="craftWoodChestImg" alt="Wood Chest" />
-        <span class="craft-recipe-name">Wood Chest</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftChestWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodGreaves">
-        <img id="craftWoodGreavesImg" alt="Wood Greaves" />
-        <span class="craft-recipe-name">Wood Greaves</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftGreavesWoodIcon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodRing">
-        <img id="craftWoodRingImg" alt="Wood Ring" />
-        <span class="craft-recipe-name">Wood Ring</span>
-        <span class="craft-recipe-cost"><img class="craft-ingredient-icon" id="craftRingWoodIcon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check" aria-label="Ingredient status">✓</span></span>
-        <span class="craft-recipe-status">CRAFT</span>
-      </button>
+    <div id="craftTabs" role="tablist" aria-label="Crafting categories">
+      <button type="button" class="craft-tab active" data-craft-filter="consumables">Consumables</button>
+      <button type="button" class="craft-tab" data-craft-filter="weapons">Weapons</button>
+      <button type="button" class="craft-tab" data-craft-filter="armor">Armor</button>
     </div>
-    <div id="craftFooter">Choose a recipe · Esc to close</div>
+    <div id="craftGrid">
+      <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="healingPotion"><img id="craftHealingPotionImg" alt="Healing Potion" /><span class="craft-recipe-name">Healing Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftHealingWhiteIcon" alt="White Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftHealingBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="attackPotion"><img id="craftAttackPotionImg" alt="Attack Potion" /><span class="craft-recipe-name">Attack Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftAttackWhiteIcon" alt="White Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="magicPotion"><img id="craftMagicPotionImg" alt="Magic Potion" /><span class="craft-recipe-name">Magic Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftMagicBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+
+      <button class="craft-recipe" type="button" data-craft-recipe="woodSword"><img id="craftWoodSwordImg" alt="Wood Sword" /><span class="craft-recipe-name">Wood Sword</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftSwordWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodBow"><img id="craftWoodBowImg" alt="Wood Bow" /><span class="craft-recipe-name">Wood Bow</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="shepherdStaff"><img id="craftShepherdStaffImg" alt="Shepherd Staff" /><span class="craft-recipe-name">Shepherd Staff</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftStaffWoodIcon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+
+      <button class="craft-recipe" type="button" data-craft-recipe="woodHelm"><img id="craftWoodHelmImg" alt="Wood Helm" /><span class="craft-recipe-name">Wood Helm</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftHelmWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodChest"><img id="craftWoodChestImg" alt="Wood Chest" /><span class="craft-recipe-name">Wood Chest</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftChestWoodIcon" alt="Wood" /><span class="craft-cost-value">12</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodGreaves"><img id="craftWoodGreavesImg" alt="Wood Greaves" /><span class="craft-recipe-name">Wood Greaves</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftGreavesWoodIcon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodRing"><img id="craftWoodRingImg" alt="Wood Ring" /><span class="craft-recipe-name">Wood Ring</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftRingWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+    </div>
+    <div id="craftFooter">Choose a category and recipe · Esc to close</div>
   </div>
 </div>
 
@@ -5919,7 +5891,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=372" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=373" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -5928,6 +5900,7 @@
       <div id="beachQuestObjectives"></div>
       <div id="beachQuestButtons">
         <button id="beachQuestAction" type="button" hidden>Continue</button>
+        <button id="beachQuestShop" type="button" hidden>Shop</button>
       </div>
     </div>
   </div>
@@ -5940,33 +5913,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=372"></script>
-<script src="/shared/terrain-rules.js?v=372"></script>
-<script src="/shared/terrain-presentation.js?v=372"></script>
-<script src="/shared/combat-balance.js?v=372"></script>
-<script src="/shared/ability-scaling.js?v=372"></script>
-<script src="/shared/rain-field.js?v=372"></script>
-<script src="/shared/camouflage-rules.js?v=372"></script>
-<script src="/shared/enemy-net-protocol.js?v=372"></script>
-<script src="/shared/player-net-protocol.js?v=372"></script>
-<script src="/client-config.js?v=372"></script>
-<script src="/client-utils.js?v=372"></script>
-<script src="/client-world.js?v=372"></script>
-<script src="/client-maps.js?v=372"></script>
-<script src="/client-enemies.js?v=372"></script>
-<script src="/client-enemy-runtime.js?v=372"></script>
-<script src="/client-enemy-rendering.js?v=372"></script>
-<script src="/client-combat.js?v=372"></script>
-<script src="/client-abilities.js?v=372"></script>
-<script src="/client-magus-abilities.js?v=372"></script>
-<script src="/client-class-abilities.js?v=372"></script>
-<script src="/client-status.js?v=372"></script>
-<script src="/client-fire-environment.js?v=372"></script>
-<script src="/client-network.js?v=372"></script>
-<script src="/client-simulation-foundation.js?v=372"></script>
-<script src="/game.js?v=372"></script>
-<script src="/client-terrain.js?v=372"></script>
-<script src="/client-input.js?v=372"></script>
-<script src="/client-app.js?v=372"></script>
+<script src="/shared/world-content-runtime.js?v=373"></script>
+<script src="/shared/terrain-rules.js?v=373"></script>
+<script src="/shared/terrain-presentation.js?v=373"></script>
+<script src="/shared/combat-balance.js?v=373"></script>
+<script src="/shared/ability-scaling.js?v=373"></script>
+<script src="/shared/rain-field.js?v=373"></script>
+<script src="/shared/camouflage-rules.js?v=373"></script>
+<script src="/shared/enemy-net-protocol.js?v=373"></script>
+<script src="/shared/player-net-protocol.js?v=373"></script>
+<script src="/client-config.js?v=373"></script>
+<script src="/client-utils.js?v=373"></script>
+<script src="/client-world.js?v=373"></script>
+<script src="/client-maps.js?v=373"></script>
+<script src="/client-enemies.js?v=373"></script>
+<script src="/client-enemy-runtime.js?v=373"></script>
+<script src="/client-enemy-rendering.js?v=373"></script>
+<script src="/client-combat.js?v=373"></script>
+<script src="/client-abilities.js?v=373"></script>
+<script src="/client-magus-abilities.js?v=373"></script>
+<script src="/client-class-abilities.js?v=373"></script>
+<script src="/client-status.js?v=373"></script>
+<script src="/client-fire-environment.js?v=373"></script>
+<script src="/client-network.js?v=373"></script>
+<script src="/client-simulation-foundation.js?v=373"></script>
+<script src="/game.js?v=373"></script>
+<script src="/client-terrain.js?v=373"></script>
+<script src="/client-input.js?v=373"></script>
+<script src="/client-app.js?v=373"></script>
 </body>
 </html>

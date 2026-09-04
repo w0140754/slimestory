@@ -22,7 +22,7 @@ const checks = [
   [editorJs.includes('draft.map.npcs.push(item)') && editorJs.includes('kind === "npc"') && editorJs.includes('descriptor.kind === "npc"') && editorJs.includes('value: "craftingTable", label: "Crafting Table"') && editorJs.includes('value: "classResetCrystal", label: "Class Reset Crystal"'), "NPC placement and inspector"],
   [game.includes('function placedNpcDefinitionsForMap') && game.includes('function drawPlacedNpc') && game.includes('interaction.npcType === "craftingTable"') && game.includes('interaction.npcType === "classResetCrystal"'), "NPC runtime rendering/interaction"],
   [app.includes('for (const npc of placedNpcDefinitionsForMap(currentMapId))') && app.includes('drawPlacedNpc(npc, camX, camY)'), "NPC drawable integration"],
-  [server.includes('function playerNearAuthorizedShopkeeper') && server.includes('playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16)'), "server shopkeeper authorization"],
+  [server.includes('function playerNearMarnie') && server.includes('playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16)') && server.includes('npcType: "camoGuy"') && server.includes('npcType: "greenWitch"'), "server Marnie/vendor authorization"],
   [shopkeeperAsset.length > 100 && craftBubbleAsset.length > 100 && crypto.createHash("sha256").update(shopkeeperAsset).digest("hex").length === 64, "required editor assets"],
   [editorHtml.includes('/map-editor.js?v=372') && editorHtml.includes('/shared/map-draft-format.js?v=372'), "326 editor cache keys"],
 ];

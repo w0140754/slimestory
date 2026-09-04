@@ -3872,6 +3872,7 @@ const player = {
   // for now these flags live for the current browser session.
   story: {
     axeReceived: false,
+    marniePickaxeReceived: false,
     woodSwordCrafted: false,
     woodBowCrafted: false,
     shepherdStaffCrafted: false,
@@ -4022,7 +4023,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "weapon_sword",
     equipType: "weapon",
     equipIndex: 0,
-    cost: 5,
+    category: "weapons",
+    ingredients: Object.freeze({ wood: 8 }),
     storyKey: "woodSwordCrafted",
     repeatable: false
   }),
@@ -4031,7 +4033,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "weapon_bow",
     equipType: "weapon",
     equipIndex: 6,
-    cost: 5,
+    category: "weapons",
+    ingredients: Object.freeze({ wood: 8 }),
     storyKey: "woodBowCrafted",
     repeatable: false
   }),
@@ -4040,7 +4043,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "weapon_shepherdStaff",
     equipType: "weapon",
     equipIndex: 8,
-    cost: 5,
+    category: "weapons",
+    ingredients: Object.freeze({ wood: 10 }),
     storyKey: "shepherdStaffCrafted",
     repeatable: false
   }),
@@ -4049,7 +4053,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "hat_wood",
     equipType: "hat",
     equipIndex: 8,
-    cost: 3,
+    category: "armor",
+    ingredients: Object.freeze({ wood: 8, stone: 2 }),
     storyKey: "woodHelmCrafted",
     repeatable: false
   }),
@@ -4058,7 +4063,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "shirt_wood",
     equipType: "shirt",
     equipIndex: 5,
-    cost: 5,
+    category: "armor",
+    ingredients: Object.freeze({ wood: 12, stone: 3 }),
     storyKey: "woodChestCrafted",
     repeatable: false
   }),
@@ -4067,7 +4073,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "pants_wood",
     equipType: "pants",
     equipIndex: 5,
-    cost: 4,
+    category: "armor",
+    ingredients: Object.freeze({ wood: 10, stone: 2 }),
     storyKey: "woodGreavesCrafted",
     repeatable: false
   }),
@@ -4076,7 +4083,8 @@ const CRAFT_RECIPES = Object.freeze({
     itemId: "charm_woodRing",
     equipType: "charm",
     equipIndex: 0,
-    cost: 2,
+    category: "armor",
+    ingredients: Object.freeze({ wood: 5 }),
     storyKey: "woodRingCrafted",
     repeatable: false
   }),
@@ -4084,6 +4092,7 @@ const CRAFT_RECIPES = Object.freeze({
     name: "50 Arrows",
     resourceKey: "arrows",
     outputCount: 50,
+    category: "consumables",
     ingredients: Object.freeze({ wood: 5, stone: 1 }),
     repeatable: true
   }),
@@ -4091,6 +4100,7 @@ const CRAFT_RECIPES = Object.freeze({
     name: "Healing Potion",
     resourceKey: "healingPotions",
     outputCount: 1,
+    category: "consumables",
     ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }),
     repeatable: true
   }),
@@ -4098,6 +4108,7 @@ const CRAFT_RECIPES = Object.freeze({
     name: "Attack Potion",
     resourceKey: "attackPotions",
     outputCount: 1,
+    category: "consumables",
     ingredients: Object.freeze({ whiteFlowers: 2 }),
     repeatable: true
   }),
@@ -4105,6 +4116,7 @@ const CRAFT_RECIPES = Object.freeze({
     name: "Magic Potion",
     resourceKey: "magicPotions",
     outputCount: 1,
+    category: "consumables",
     ingredients: Object.freeze({ blueFlowers: 2 }),
     repeatable: true
   })
@@ -4168,50 +4180,25 @@ function useConsumable(itemId) {
 }
 
 const SHOP_ITEMS = [
-  { id: "weapon_sword", name: "Wood Sword" },
-  { id: "weapon_axe", name: "Axe" },
-  { id: "weapon_katana", name: "Katana" },
-  { id: "weapon_oldSword", name: "Sword" },
-  { id: "weapon_bow", name: "Wood Bow" },
-  { id: "weapon_dreamcatcher", name: "Dreamcatcher" },
-  { id: "weapon_shepherdStaff", name: "Shepherd Staff" },
-  { id: "weapon_lostKey", name: "Tournesol" },
-  { id: "weapon_hugeSunflower", name: "Tabatha's Key" },
-  { id: "weapon_sapgemWand", name: "Sapgem Wand" },
-  { id: "weapon_pickaxe", name: "Pickaxe" },
+  // Cam — Ranger gear
+  { id: "arrows", name: "Arrows ×50", vendor: "cam", category: "common", price: 5, repeatable: true, resourceKey: "arrows", outputCount: 50 },
+  { id: "hat_ranger", name: "Ranger Hat", vendor: "cam", price: 20 },
+  { id: "shirt_ranger", name: "Ranger Shirt", vendor: "cam", price: 30 },
+  { id: "pants_ranger", name: "Ranger Pants", vendor: "cam", price: 25 },
+  { id: "weapon_dreamcatcher", name: "Dreamcatcher", vendor: "cam", price: 60 },
 
-  { id: "hat_original", name: "Hat" },
-  { id: "hat_blueCap", name: "Blue Cap" },
-  { id: "hat_wizard", name: "Wizard Hat" },
-  { id: "hat_jester", name: "Jester Hat" },
-  { id: "hat_ninja", name: "Ninja Hat" },
-  { id: "hat_knight", name: "Knight Helm" },
-  { id: "hat_bandana", name: "Bandana" },
-  { id: "hat_ranger", name: "Ranger Hat" },
-  { id: "hat_wood", name: "Wood Helm" },
-  { id: "hat_arcanist", name: "Arcanist Hat" },
-  { id: "hat_greencap", name: "Greencap Cap" },
-
-  { id: "shirt_traveler", name: "Traveler Shirt" },
-  { id: "shirt_jester", name: "Jester Shirt" },
-  { id: "shirt_ninja", name: "Ninja Shirt" },
-  { id: "shirt_knight", name: "Knight Chest" },
-  { id: "shirt_ranger", name: "Ranger Shirt" },
-  { id: "shirt_wood", name: "Wood Chest" },
-  { id: "shirt_arcanist", name: "Arcanist Robe" },
-  { id: "shirt_greencap", name: "Greencap Tunic" },
-
-  { id: "pants_traveler", name: "Traveler Pants" },
-  { id: "pants_jester", name: "Jester Pants" },
-  { id: "pants_ninja", name: "Ninja Pants" },
-  { id: "pants_knight", name: "Knight Greaves" },
-  { id: "pants_ranger", name: "Ranger Pants" },
-  { id: "pants_wood", name: "Wood Greaves" },
-  { id: "pants_arcanist", name: "Arcanist Skirt" },
-  { id: "pants_greencap", name: "Greencap Pants" }
+  // Myrtle — Magus gear
+  { id: "weapon_sapgemWand", name: "Sapgem Wand", vendor: "myrtle", price: 20 },
+  { id: "weapon_lostKey", name: "Tournesol", vendor: "myrtle", price: 35 },
+  { id: "weapon_hugeSunflower", name: "Tabatha's Key", vendor: "myrtle", price: 60 },
+  { id: "hat_jester", name: "Jester Hat", vendor: "myrtle", price: 30 },
+  { id: "shirt_jester", name: "Jester Shirt", vendor: "myrtle", price: 45 },
+  { id: "pants_jester", name: "Jester Pants", vendor: "myrtle", price: 35 }
 ];
 
 function shopImageForItemId(itemId) {
+  if (itemId === "arrows") return arrowResourceImage;
+
   const weaponIndex =
     WEAPON_ITEM_IDS.indexOf(itemId);
 
@@ -4781,40 +4768,71 @@ function showRewardToast(title, detail, imageObject) {
   }, 2800);
 }
 
+function completeMarniePickaxeReward(sourceNpc = tutorialNpc) {
+  player.story.marniePickaxeReceived = true;
+  if (!playerOwnsItem("weapon_pickaxe")) grantInventoryItem("weapon_pickaxe", 1);
+  showRewardToast(
+    "PICKAXE RECEIVED!",
+    "Marnie took 10 Wood · Pickaxe added to Inventory",
+    pickaxeImage
+  );
+  spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, "PICKAXE RECEIVED!", "#fff1b0", 1.25);
+  updateInventoryUi();
+  updateHotbar();
+  saveLocalCharacterState(true);
+}
+
 function interactWithTutorialNpc(npc = tutorialNpc) {
   const sourceNpc = npc || tutorialNpc;
+
+  if (playerOwnsItem("weapon_pickaxe")) {
+    player.story.marniePickaxeReceived = true;
+  }
+
   if (!player.story.axeReceived) {
     player.story.axeReceived = true;
-
-    if (!playerOwnsItem("weapon_axe")) {
-      grantInventoryItem(
-        "weapon_axe",
-        1
-      );
-    }
-
+    if (!playerOwnsItem("weapon_axe")) grantInventoryItem("weapon_axe", 1);
     showRewardToast(
       "AXE RECEIVED!",
-      "Added to Inventory · Equip it and gather 5 Wood",
+      "Added to Inventory · Gather 10 Wood and return to Marnie",
       axeImage
     );
-
-    spawnFloatingText(
-      sourceNpc.x,
-      sourceNpc.y - 34,
-      "BRING ME 5 WOOD",
-      "#fff1b0",
-      1.35
-    );
-
+    spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, "BRING ME 10 WOOD", "#fff1b0", 1.35);
     updateInventoryUi();
     updateHotbar();
+    saveLocalCharacterState(true);
     return;
   }
 
-  // Once the NPC has handed over the Axe, their shop is immediately
-  // available. Crafting progression is handled separately at the bench.
-  setShopOpen(true);
+  if (!player.story.marniePickaxeReceived) {
+    const wood = Math.max(0, Math.floor(Number(player.wood) || 0));
+    if (wood < 10) {
+      showRewardToast(
+        npcDisplayName("shopkeeper", sourceNpc),
+        `Bring me 10 Wood for a Pickaxe · ${wood} / 10`,
+        axeImage
+      );
+      spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, `WOOD ${wood} / 10`, "#fff1b0", 1.1);
+      return;
+    }
+
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      if (onlineClient.requestMarnieWoodTurnIn()) {
+        spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, "TURNING IN...", "#fff1b0", 0.9);
+      }
+      return;
+    }
+
+    player.wood = Math.max(0, wood - 10);
+    completeMarniePickaxeReward(sourceNpc);
+    return;
+  }
+
+  showRewardToast(
+    npcDisplayName("shopkeeper", sourceNpc),
+    "That pickaxe should open up plenty of new paths. Good luck out there!",
+    pickaxeImage
+  );
 }
 
 function interactWithHunterNpc(npc = hunterNpc) {
@@ -4837,16 +4855,10 @@ function interactWithHunterNpc(npc = hunterNpc) {
 function interactWithCamoNpc(npc) {
   showRewardToast(
     npcDisplayName("camoGuy", npc),
-    "If you can see me, no you can't. I'm conducting an extremely secret camouflage exercise.",
+    "Ranger supplies. Keep your arrows dry and your footsteps quiet.",
     camoNpcImage
   );
-  spawnFloatingText(
-    Number(npc?.x) || player.x,
-    (Number(npc?.y) || player.y) - 30,
-    "YOU SAW NOTHING",
-    "#c8e6a8",
-    1.15
-  );
+  openVendorShop("cam");
 }
 
 function equipCraftedRecipe(recipe) {
@@ -4987,6 +4999,8 @@ function tryCraftRecipe(recipeId) {
   craftRecipeOffline(recipeId);
 }
 
+let craftCategoryFilter = "consumables";
+
 function updateCraftingUi() {
   for (const [recipeId, recipe] of
     Object.entries(CRAFT_RECIPES)) {
@@ -4996,6 +5010,8 @@ function updateCraftingUi() {
       );
 
     if (!button) continue;
+
+    button.hidden = (recipe.category || "weapons") !== craftCategoryFilter;
 
     const owned =
       !recipe.repeatable &&
@@ -5166,12 +5182,17 @@ function updateBeachQuestPanel(message = beachQuestView) {
   const objectives = document.getElementById("beachQuestObjectives");
   const action = document.getElementById("beachQuestAction");
   const npcImage = document.getElementById("beachQuestNpc");
+  const shopButton = document.getElementById("beachQuestShop");
   const questNpcType = message.questNpcType === "greenWitch" ? "greenWitch" : "beachGirl";
   if (title) title.textContent = message.questName || "Crab Beach";
   if (dialogue) dialogue.textContent = message.dialogue || "The surf is nice today.";
   if (npcImage) {
     npcImage.src = questNpcType === "greenWitch" ? greenWitchNpcImage.src : beachGirlNpcImage.src;
     npcImage.alt = questNpcType === "greenWitch" ? "Myrtle" : "Sunny";
+  }
+  if (shopButton) {
+    shopButton.hidden = questNpcType !== "greenWitch";
+    shopButton.dataset.shopVendor = questNpcType === "greenWitch" ? "myrtle" : "";
   }
 
   if (objectives) {
@@ -5257,7 +5278,7 @@ function applyMyrtleQuestState(message) {
   saveLocalCharacterState(true);
 }
 
-function interactWithMyrtle() {
+function interactWithMyrtle(npc = null) {
   updateBeachQuestPanel({
     questNpcType: "greenWitch",
     questName: "Myrtle",
@@ -5302,7 +5323,7 @@ function interactWithNearbyObject() {
       return true;
     }
     if (interaction.npcType === "greenWitch") {
-      interactWithMyrtle();
+      interactWithMyrtle(interaction.npc);
       return true;
     }
     if (interaction.npcType === "camoGuy") {
@@ -5555,12 +5576,21 @@ const ARMOR_CLASS_REQUIREMENTS = Object.freeze({
 });
 
 const EQUIPMENT_ATTRIBUTE_REQUIREMENTS = Object.freeze({
-  hat_jester: Object.freeze({ level: 10, luck: 10 }),
-  shirt_jester: Object.freeze({ level: 10, luck: 10 }),
-  pants_jester: Object.freeze({ level: 10, luck: 10 }),
+  hat_jester: Object.freeze({ level: 20, luck: 10 }),
+  shirt_jester: Object.freeze({ level: 20, luck: 10 }),
+  pants_jester: Object.freeze({ level: 20, luck: 10 }),
   hat_arcanist: Object.freeze({ level: 10, luck: 10 }),
   shirt_arcanist: Object.freeze({ level: 10, luck: 10 }),
   pants_arcanist: Object.freeze({ level: 10, luck: 10 }),
+
+  hat_ranger: Object.freeze({ level: 10 }),
+  shirt_ranger: Object.freeze({ level: 10 }),
+  pants_ranger: Object.freeze({ level: 10 }),
+
+  weapon_sapgemWand: Object.freeze({ level: 10 }),
+  weapon_lostKey: Object.freeze({ level: 15 }),
+  weapon_hugeSunflower: Object.freeze({ level: 20 }),
+  weapon_dreamcatcher: Object.freeze({ level: 20 }),
 
   hat_greencap: Object.freeze({ level: 5 }),
   shirt_greencap: Object.freeze({ level: 5 }),
@@ -5639,7 +5669,7 @@ function showArmorClassRestriction(itemId) {
 }
 
 function shopCategoryForItem(item) {
-  return equipmentRequiredClass(item?.id) || "common";
+  return item?.category || equipmentRequiredClass(item?.id) || "common";
 }
 
 function weaponTypeForShopItem(itemId) {
@@ -5871,6 +5901,7 @@ document.addEventListener("focusout", event => {
 
 function shopItemMetadata(item) {
   if (!item?.id) return "";
+  if (item.id === "arrows") return "Ammo · 50 arrows per purchase";
 
   const requiredClass = equipmentRequiredClass(item.id);
   const armor = armorRatingForItemId(item.id);
@@ -8320,6 +8351,7 @@ function buildLocalCharacterSave() {
   const story = {};
   for (const key of [
     "axeReceived",
+    "marniePickaxeReceived",
     "woodSwordCrafted",
     "woodBowCrafted",
     "shepherdStaffCrafted",
@@ -8671,6 +8703,7 @@ function persistentServerBootstrapPayload() {
       magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
     },
     story: {
+      marniePickaxeReceived: Boolean(player.story.marniePickaxeReceived),
       woodSwordCrafted: Boolean(player.story.woodSwordCrafted),
       woodBowCrafted: Boolean(player.story.woodBowCrafted),
       shepherdStaffCrafted: Boolean(player.story.shepherdStaffCrafted),
@@ -8717,242 +8750,149 @@ window.addEventListener("pagehide", () => {
 });
 
 let shopCategoryFilter = "all";
+let activeShopVendor = null;
+
+function activeVendorShopItems() {
+  return SHOP_ITEMS.filter(item => item.vendor === activeShopVendor);
+}
+
+function shopVendorTitle(vendor = activeShopVendor) {
+  if (vendor === "cam") return "Cam's Ranger Shop";
+  if (vendor === "myrtle") return "Myrtle's Magus Shop";
+  return "Shop";
+}
+
+function openVendorShop(vendor) {
+  if (!["cam", "myrtle"].includes(vendor)) return false;
+  activeShopVendor = vendor;
+  shopCategoryFilter = "all";
+  document.querySelectorAll(".shop-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.shopFilter === "all");
+  });
+  setShopOpen(true);
+  return true;
+}
 
 function updateShopUi() {
-  const grid =
-    document.getElementById(
-      "shopGrid"
-    );
+  const grid = document.getElementById("shopGrid");
+  const coinText = document.getElementById("shopCoinCount");
+  const title = document.getElementById("shopTitle");
+  const footer = document.getElementById("shopFooter");
 
-  const coinText =
-    document.getElementById(
-      "shopCoinCount"
-    );
-
-  if (coinText) {
-    coinText.textContent =
-      `Coins ${player.coins}`;
-  }
-
+  if (coinText) coinText.textContent = `Coins ${player.coins}`;
+  if (title) title.textContent = shopVendorTitle();
+  if (footer) footer.textContent = "Prices vary by item · Level/class requirements apply · Esc to close";
   if (!grid) return;
 
   grid.innerHTML = "";
 
-  for (const item of SHOP_ITEMS) {
+  for (const item of activeVendorShopItems()) {
     const itemCategory = shopCategoryForItem(item);
-    if (
-      shopCategoryFilter !== "all" &&
-      itemCategory !== shopCategoryFilter
-    ) {
-      continue;
-    }
+    if (shopCategoryFilter !== "all" && itemCategory !== shopCategoryFilter) continue;
 
-    const owned =
-      playerOwnsItem(item.id);
+    const owned = !item.repeatable && playerOwnsItem(item.id);
+    const pending = player.shopPurchasePending === item.id;
+    const requiredLevel = Math.max(0, Number(equipmentAttributeRequirements(item.id)?.level) || 0);
+    const levelLocked = requiredLevel > 0 && Number(player.level) < requiredLevel;
 
-    const pending =
-      player.shopPurchasePending ===
-      item.id;
-
-    const button =
-      document.createElement(
-        "button"
-      );
-
+    const button = document.createElement("button");
     button.type = "button";
-    button.className =
-      `shop-item${owned ? " owned" : ""}`;
+    button.className = `shop-item${owned ? " owned" : ""}`;
+    button.dataset.shopItemId = item.id;
+    button.disabled = owned || pending || levelLocked;
 
-    button.dataset.shopItemId =
-      item.id;
-
-    const questLocked =
-      Boolean(item.questOnly) &&
-      !owned;
-
-    button.disabled =
-      owned ||
-      pending ||
-      questLocked;
-
-    const image =
-      document.createElement("img");
-
-    const imageObject =
-      shopImageForItemId(
-        item.id
-      );
-
-    if (imageObject) {
-      image.src =
-        imageObject.src;
-    }
-
+    const image = document.createElement("img");
+    const imageObject = shopImageForItemId(item.id);
+    if (imageObject) image.src = imageObject.src;
     image.alt = item.name;
 
-    const name =
-      document.createElement("span");
+    const name = document.createElement("span");
+    name.className = "shop-item-name";
+    name.textContent = item.name;
 
-    name.className =
-      "shop-item-name";
+    const meta = document.createElement("span");
+    meta.className = "shop-item-meta";
+    meta.textContent = shopItemMetadata(item);
 
-    name.textContent =
-      item.name;
+    const price = document.createElement("span");
+    price.className = "shop-item-price";
+    price.textContent = owned
+      ? "OWNED"
+      : levelLocked
+        ? `LV ${requiredLevel}`
+        : pending
+          ? "..."
+          : `${item.price} COINS`;
 
-    const meta =
-      document.createElement("span");
-
-    meta.className =
-      "shop-item-meta";
-
-    meta.textContent =
-      shopItemMetadata(item);
-
-    const price =
-      document.createElement("span");
-
-    price.className =
-      "shop-item-price";
-
-    price.textContent =
-      owned
-        ? "OWNED"
-        : questLocked
-          ? "QUEST"
-          : pending
-            ? "..."
-            : "1 COIN";
-
-    button.append(
-      image,
-      name,
-      meta,
-      price
-    );
-
+    button.append(image, name, meta, price);
     grid.appendChild(button);
   }
 }
 
 function setShopOpen(open) {
-  shopOpen = open;
-  if (!open) hideItemDetailTooltip();
+  shopOpen = Boolean(open && activeShopVendor);
+  if (!shopOpen) hideItemDetailTooltip();
 
-  if (open && player.hunterSnareSetting) {
-    cancelHunterSnarePlacement(false);
-  }
+  if (shopOpen && player.hunterSnareSetting) cancelHunterSnarePlacement(false);
+  if (shopOpen && focusFireIsCasting()) cancelFocusFire();
+  if (shopOpen && fireballIsAiming()) cancelFireballAim();
 
-  if (open && focusFireIsCasting()) {
-    cancelFocusFire();
-  }
-
-  if (open && fireballIsAiming()) {
-    cancelFireballAim();
-  }
-
-  const overlay =
-    document.getElementById(
-      "shopOverlay"
-    );
-
+  const overlay = document.getElementById("shopOverlay");
   if (!overlay) return;
 
-  if (open && inventoryOpen) {
-    setInventoryOpen(false);
-  }
+  if (shopOpen && inventoryOpen) setInventoryOpen(false);
+  if (shopOpen && craftingOpen) setCraftingOpen(false);
+  if (shopOpen && beachQuestOpen) setBeachQuestOpen(false);
 
-  if (open && craftingOpen) {
-    setCraftingOpen(false);
-  }
-
-  overlay.classList.toggle(
-    "open",
-    open
-  );
-
-  overlay.setAttribute(
-    "aria-hidden",
-    open ? "false" : "true"
-  );
-
+  overlay.classList.toggle("open", shopOpen);
+  overlay.setAttribute("aria-hidden", shopOpen ? "false" : "true");
   inputController.clearKeys();
 
-  if (open) {
+  if (shopOpen) {
     inputController.clearCommands();
-
-    // Keep server position fresh if the player immediately clicks Buy.
-    if (
-      typeof onlineClient !== "undefined" &&
-      onlineClient?.connected
-    ) {
-      onlineClient.sendLocalState(true);
-    }
-
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) onlineClient.sendLocalState(true);
     updateShopUi();
+  } else {
+    activeShopVendor = null;
   }
 }
 
 function tryPurchaseShopItem(itemId) {
-  if (
-    !shopOpen ||
-    !ALL_EQUIPMENT_ITEM_IDS.has(
-      itemId
-    ) ||
-    playerOwnsItem(itemId) ||
-    player.shopPurchasePending
-  ) {
+  const item = activeVendorShopItems().find(entry => entry.id === itemId);
+  if (!shopOpen || !item || player.shopPurchasePending) return;
+  if (!item.repeatable && playerOwnsItem(itemId)) return;
+
+  const requiredLevel = Math.max(0, Number(equipmentAttributeRequirements(itemId)?.level) || 0);
+  if (requiredLevel > 0 && Number(player.level) < requiredLevel) {
+    spawnFloatingText(player.x, player.y - 30, `REQUIRES LV ${requiredLevel}`, "#ffe38b", 0.85);
     return;
   }
 
-  if (player.coins < 1) {
-    spawnFloatingText(
-      tutorialNpc.x,
-      tutorialNpc.y - 26,
-      "NEED 1 COIN",
-      "#ffe38b",
-      0.85
-    );
+  const price = Math.max(1, Number(item.price) || 1);
+  if (player.coins < price) {
+    spawnFloatingText(player.x, player.y - 30, `NEED ${price} COINS`, "#ffe38b", 0.85);
     return;
   }
 
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    player.shopPurchasePending =
-      itemId;
-
-    if (
-      !onlineClient.requestShopPurchase(
-        itemId
-      )
-    ) {
-      player.shopPurchasePending =
-        null;
-    }
-
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+    player.shopPurchasePending = itemId;
+    if (!onlineClient.requestShopPurchase(itemId, activeShopVendor)) player.shopPurchasePending = null;
     updateShopUi();
     return;
   }
 
-  player.coins -= 1;
-
-  grantInventoryItem(
-    itemId,
-    1
-  );
-
-  spawnFloatingText(
-    tutorialNpc.x,
-    tutorialNpc.y - 26,
-    "PURCHASED!",
-    "#ffe38b",
-    0.85
-  );
-
+  player.coins -= price;
+  if (item.resourceKey === "arrows") {
+    player.arrows += Math.max(1, Number(item.outputCount) || 1);
+  } else {
+    if (!player.shopPurchases.includes(itemId)) player.shopPurchases.push(itemId);
+    grantInventoryItem(itemId, 1);
+  }
+  spawnFloatingText(player.x, player.y - 30, "PURCHASED!", "#ffe38b", 0.85);
   updateShopUi();
   updateInventoryUi();
   updateHotbar();
+  saveLocalCharacterState(true);
 }
 
 function setInventoryOpen(open) {
@@ -9233,6 +9173,16 @@ document.getElementById("shopGrid").addEventListener("click", event => {
 });
 
 
+document.getElementById("craftTabs")?.addEventListener("click", event => {
+  const button = event.target.closest("[data-craft-filter]");
+  if (!button) return;
+  craftCategoryFilter = button.dataset.craftFilter || "consumables";
+  document.querySelectorAll(".craft-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.craftFilter === craftCategoryFilter);
+  });
+  updateCraftingUi();
+});
+
 document.getElementById("craftClose").addEventListener("click", () => {
   setCraftingOpen(false);
 });
@@ -9252,6 +9202,11 @@ document.getElementById("classResetNo").addEventListener("click", () => {
 
 document.getElementById("beachQuestClose")?.addEventListener("click", () => {
   setBeachQuestOpen(false);
+});
+
+document.getElementById("beachQuestShop")?.addEventListener("click", () => {
+  setBeachQuestOpen(false);
+  openVendorShop("myrtle");
 });
 
 document.getElementById("beachQuestOverlay")?.addEventListener("pointerdown", event => {
@@ -11592,9 +11547,7 @@ function drawBubbleMarker(screenX, anchorY, drawIcon) {
 }
 
 function drawNpcRoleMarker(screenX, screenY) {
-  // Raised enough that the bubble tail clears the NPC sprite instead of hugging it.
   const bubbleY = screenY - 42;
-
   if (!player.story.axeReceived) {
     drawBubbleMarker(screenX, bubbleY, (left, top) => {
       const midX = left + 8;
@@ -11604,10 +11557,11 @@ function drawNpcRoleMarker(screenX, screenY) {
     });
     return;
   }
-
-  drawBubbleMarker(screenX, bubbleY, (left, top) => {
-    ctx.drawImage(coinImage, left, top);
-  });
+  if (!player.story.marniePickaxeReceived) {
+    drawBubbleMarker(screenX, bubbleY, (left, top) => {
+      ctx.drawImage(woodImage, left, top);
+    });
+  }
 }
 
 function drawCraftRoleMarker(screenX, screenY) {

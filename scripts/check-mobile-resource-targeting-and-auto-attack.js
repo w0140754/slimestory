@@ -14,10 +14,10 @@ const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.372");
-assert(server.includes('const BUILD_VERSION = "6-11-372";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-372";'));
-assert(html.includes('/client-input.js?v=372') && html.includes('/client-app.js?v=372'));
+assert.strictEqual(pkg.version, "0.6.11.373");
+assert(server.includes('const BUILD_VERSION = "6-11-373";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'));
+assert(html.includes('/client-input.js?v=373') && html.includes('/client-app.js?v=373'));
 
 assert(html.includes('id="mobileAutoAttackButton"'), "AUTO control missing");
 assert(html.includes('aria-pressed="false">AUTO</button>'), "AUTO toggle semantics missing");

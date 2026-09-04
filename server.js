@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-372";
+const BUILD_VERSION = "6-11-373";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -2593,65 +2593,17 @@ const FIRST_BENCH_X = 216;
 const FIRST_BENCH_Y = 101;
 
 const CRAFT_RECIPES = Object.freeze({
-  woodSword: Object.freeze({
-    cost: 5,
-    stateKey: "woodSwordCrafted",
-    repeatable: false
-  }),
-  woodBow: Object.freeze({
-    cost: 5,
-    stateKey: "woodBowCrafted",
-    repeatable: false
-  }),
-  shepherdStaff: Object.freeze({
-    cost: 5,
-    stateKey: "shepherdStaffCrafted",
-    repeatable: false
-  }),
-  woodHelm: Object.freeze({
-    cost: 3,
-    stateKey: "woodHelmCrafted",
-    repeatable: false
-  }),
-  woodChest: Object.freeze({
-    cost: 5,
-    stateKey: "woodChestCrafted",
-    repeatable: false
-  }),
-  woodGreaves: Object.freeze({
-    cost: 4,
-    stateKey: "woodGreavesCrafted",
-    repeatable: false
-  }),
-  woodRing: Object.freeze({
-    cost: 2,
-    stateKey: "woodRingCrafted",
-    repeatable: false
-  }),
-  arrows: Object.freeze({
-    repeatable: true,
-    resourceKey: "arrows",
-    outputCount: 50,
-    ingredients: Object.freeze({ wood: 5, stone: 1 })
-  }),
-  healingPotion: Object.freeze({
-    repeatable: true,
-    resourceKey: "healingPotions",
-    outputCount: 1,
-    ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 })
-  }),
-  attackPotion: Object.freeze({
-    repeatable: true,
-    resourceKey: "attackPotions",
-    outputCount: 1,
-    ingredients: Object.freeze({ whiteFlowers: 2 })
-  }),
-  magicPotion: Object.freeze({
-    repeatable: true,
-    resourceKey: "magicPotions",
-    outputCount: 1,
-    ingredients: Object.freeze({ blueFlowers: 2 })
-  })
+  woodSword: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodSwordCrafted", repeatable: false }),
+  woodBow: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodBowCrafted", repeatable: false }),
+  shepherdStaff: Object.freeze({ ingredients: Object.freeze({ wood: 10 }), stateKey: "shepherdStaffCrafted", repeatable: false }),
+  woodHelm: Object.freeze({ ingredients: Object.freeze({ wood: 8, stone: 2 }), stateKey: "woodHelmCrafted", repeatable: false }),
+  woodChest: Object.freeze({ ingredients: Object.freeze({ wood: 12, stone: 3 }), stateKey: "woodChestCrafted", repeatable: false }),
+  woodGreaves: Object.freeze({ ingredients: Object.freeze({ wood: 10, stone: 2 }), stateKey: "woodGreavesCrafted", repeatable: false }),
+  woodRing: Object.freeze({ ingredients: Object.freeze({ wood: 5 }), stateKey: "woodRingCrafted", repeatable: false }),
+  arrows: Object.freeze({ repeatable: true, resourceKey: "arrows", outputCount: 50, ingredients: Object.freeze({ wood: 5, stone: 1 }) }),
+  healingPotion: Object.freeze({ repeatable: true, resourceKey: "healingPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }) }),
+  attackPotion: Object.freeze({ repeatable: true, resourceKey: "attackPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 2 }) }),
+  magicPotion: Object.freeze({ repeatable: true, resourceKey: "magicPotions", outputCount: 1, ingredients: Object.freeze({ blueFlowers: 2 }) })
 });
 
 function playerNearPlacedInteraction(playerState, type, minimumAuthorityRadius, cushion = 16) {
@@ -3099,152 +3051,117 @@ function handleArrowUse(playerId, socket) {
 
 const FIRST_NPC_X = 190;
 const FIRST_NPC_Y = 100;
-const SHOP_PRICE = 1;
+const MARNIE_WOOD_GOAL = 10;
 
-const SHOP_ITEM_IDS = new Set([
-  "weapon_sword",
-  "weapon_axe",
-  "weapon_katana",
-  "weapon_oldSword",
-  "weapon_bow",
-  "weapon_dreamcatcher",
-  "weapon_shepherdStaff",
-  "weapon_lostKey",
-  "weapon_hugeSunflower",
-  "weapon_sapgemWand",
-  "weapon_pickaxe",
+const SHOP_VENDOR_CATALOGS = Object.freeze({
+  cam: Object.freeze({
+    npcType: "camoGuy",
+    items: Object.freeze({
+      arrows: Object.freeze({ price: 5, repeatable: true, resourceKey: "arrows", outputCount: 50, level: 1 }),
+      hat_ranger: Object.freeze({ price: 20, level: 10 }),
+      shirt_ranger: Object.freeze({ price: 30, level: 10 }),
+      pants_ranger: Object.freeze({ price: 25, level: 10 }),
+      weapon_dreamcatcher: Object.freeze({ price: 60, level: 20 })
+    })
+  }),
+  myrtle: Object.freeze({
+    npcType: "greenWitch",
+    items: Object.freeze({
+      weapon_sapgemWand: Object.freeze({ price: 20, level: 10 }),
+      weapon_lostKey: Object.freeze({ price: 35, level: 15 }),
+      weapon_hugeSunflower: Object.freeze({ price: 60, level: 20 }),
+      hat_jester: Object.freeze({ price: 30, level: 20 }),
+      shirt_jester: Object.freeze({ price: 45, level: 20 }),
+      pants_jester: Object.freeze({ price: 35, level: 20 })
+    })
+  })
+});
 
-  "hat_original",
-  "hat_blueCap",
-  "hat_wizard",
-  "hat_jester",
-  "hat_ninja",
-  "hat_knight",
-  "hat_bandana",
-  "hat_ranger",
-  "hat_wood",
-  "hat_arcanist",
-  "hat_greencap",
+const SHOP_ITEM_IDS = new Set(
+  Object.values(SHOP_VENDOR_CATALOGS).flatMap(vendor => Object.keys(vendor.items)).filter(itemId => itemId !== "arrows")
+);
 
-  "shirt_traveler",
-  "shirt_jester",
-  "shirt_ninja",
-  "shirt_knight",
-  "shirt_ranger",
-  "shirt_wood",
-  "shirt_arcanist",
-  "shirt_greencap",
-
-  "pants_traveler",
-  "pants_jester",
-  "pants_ninja",
-  "pants_knight",
-  "pants_ranger",
-  "pants_wood",
-  "pants_arcanist",
-  "pants_greencap"
-]);
-
-// Fire/Rain Wands are retired from sale in v334, but old browser saves that
-// legitimately purchased them keep that purchase history/ownership.
+// Keep historical purchase IDs valid in old character saves even though Marnie
+// no longer sells them and most are intentionally unavailable for now.
 const SHOP_PURCHASE_HISTORY_ITEM_IDS = new Set([
-  ...SHOP_ITEM_IDS,
-  "weapon_wand",
-  "weapon_rainWand"
+  "weapon_sword", "weapon_axe", "weapon_katana", "weapon_oldSword", "weapon_bow", "weapon_dreamcatcher",
+  "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand", "weapon_pickaxe",
+  "weapon_wand", "weapon_rainWand",
+  "hat_original", "hat_blueCap", "hat_wizard", "hat_jester", "hat_ninja", "hat_knight", "hat_bandana", "hat_ranger", "hat_wood", "hat_arcanist", "hat_greencap",
+  "shirt_traveler", "shirt_jester", "shirt_ninja", "shirt_knight", "shirt_ranger", "shirt_wood", "shirt_arcanist", "shirt_greencap",
+  "pants_traveler", "pants_jester", "pants_ninja", "pants_knight", "pants_ranger", "pants_wood", "pants_arcanist", "pants_greencap"
 ]);
 
-function playerNearAuthorizedShopkeeper(playerState) {
+function playerNearMarnie(playerState) {
   if (!playerState) return false;
-
-  // Preserve the original Spawn Clearing shopkeeper authorization.
-  if (
-    playerState.mapId === "spawn" &&
-    Math.hypot(
-      playerState.x - FIRST_NPC_X,
-      playerState.y - FIRST_NPC_Y
-    ) <= 48
-  ) {
-    return true;
-  }
-
-  // Editor-authored shopkeepers are authorized from their actual saved position.
-  // A small authority cushion prevents latency from rejecting a purchase
-  // immediately after the client opens the nearby shop UI.
+  if (playerState.mapId === "spawn" && Math.hypot(playerState.x - FIRST_NPC_X, playerState.y - FIRST_NPC_Y) <= 48) return true;
   return playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16);
 }
 
-function handleShopPurchase(
-  playerId,
-  socket,
-  message
-) {
-  const playerState =
-    players.get(playerId);
+function handleMarnieQuestInteract(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  if (!playerState || !playerNearMarnie(playerState)) return;
+  if (message?.action !== "turnInWood") return;
 
-  const itemId =
-    typeof message.itemId === "string"
-      ? message.itemId
-      : "";
-
-  if (
-    !playerState ||
-    !SHOP_ITEM_IDS.has(itemId)
-  ) {
+  if (playerState.marniePickaxeReceived) {
+    sendJson(socket, { type: "marnieQuestResult", success: true, alreadyComplete: true, totalWood: playerState.wood });
     return;
   }
+  if ((Number(playerState.wood) || 0) < MARNIE_WOOD_GOAL) {
+    sendJson(socket, { type: "marnieQuestResult", success: false, reason: "needWood", totalWood: playerState.wood, goal: MARNIE_WOOD_GOAL });
+    return;
+  }
+  playerState.wood -= MARNIE_WOOD_GOAL;
+  playerState.marniePickaxeReceived = true;
+  sendJson(socket, { type: "marnieQuestResult", success: true, totalWood: playerState.wood, goal: MARNIE_WOOD_GOAL });
+}
 
-  const validShop =
-    playerNearAuthorizedShopkeeper(playerState);
+function handleShopPurchase(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  const itemId = typeof message.itemId === "string" ? message.itemId : "";
+  const vendorId = typeof message.vendor === "string" ? message.vendor : "";
+  const vendor = SHOP_VENDOR_CATALOGS[vendorId];
+  const item = vendor?.items?.[itemId];
+  if (!playerState || !vendor || !item) return;
 
+  const validShop = playerNearPlacedInteraction(playerState, vendor.npcType, 48, 16);
   if (!validShop) {
-    sendJson(socket, {
-      type: "shopPurchaseResult",
-      itemId,
-      success: false,
-      reason: "tooFar",
-      totalCoins: playerState.coins
-    });
+    sendJson(socket, { type: "shopPurchaseResult", itemId, vendor: vendorId, success: false, reason: "tooFar", totalCoins: playerState.coins, price: item.price });
     return;
   }
 
-  // The Axe remains a tutorial-only item and is never sold.
-  if (
-    itemId === "weapon_axe" ||
-    playerState.shopPurchases.includes(itemId)
-  ) {
-    sendJson(socket, {
-      type: "shopPurchaseResult",
-      itemId,
-      success: false,
-      reason: "alreadyOwned",
-      totalCoins: playerState.coins
-    });
+  const requiredLevel = Math.max(1, Number(item.level) || 1);
+  if (playerState.level < requiredLevel) {
+    sendJson(socket, { type: "shopPurchaseResult", itemId, vendor: vendorId, success: false, reason: "needLevel", level: requiredLevel, totalCoins: playerState.coins, price: item.price });
     return;
   }
 
-  if (playerState.coins < SHOP_PRICE) {
-    sendJson(socket, {
-      type: "shopPurchaseResult",
-      itemId,
-      success: false,
-      reason: "needCoin",
-      totalCoins: playerState.coins
-    });
+  if (!item.repeatable && playerState.shopPurchases.includes(itemId)) {
+    sendJson(socket, { type: "shopPurchaseResult", itemId, vendor: vendorId, success: false, reason: "alreadyOwned", totalCoins: playerState.coins, price: item.price });
     return;
   }
 
-  playerState.coins -=
-    SHOP_PRICE;
+  const price = Math.max(1, Number(item.price) || 1);
+  if (playerState.coins < price) {
+    sendJson(socket, { type: "shopPurchaseResult", itemId, vendor: vendorId, success: false, reason: "needCoin", totalCoins: playerState.coins, price });
+    return;
+  }
 
-  playerState.shopPurchases.push(
-    itemId
-  );
+  playerState.coins -= price;
+  if (item.repeatable && item.resourceKey === "arrows") {
+    playerState.arrows += Math.max(1, Number(item.outputCount) || 1);
+  } else {
+    playerState.shopPurchases.push(itemId);
+  }
 
   sendJson(socket, {
     type: "shopPurchaseResult",
     itemId,
+    vendor: vendorId,
     success: true,
-    totalCoins: playerState.coins
+    price,
+    totalCoins: playerState.coins,
+    totalArrows: playerState.arrows
   });
 }
 
@@ -12729,6 +12646,11 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? Boolean(previous.woodRingCrafted)
         : false,
 
+    marniePickaxeReceived:
+      previous
+        ? Boolean(previous.marniePickaxeReceived)
+        : false,
+
     shopPurchases:
       previous &&
       Array.isArray(previous.shopPurchases)
@@ -13830,6 +13752,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.woodChestCrafted = Boolean(story.woodChestCrafted);
   playerState.woodGreavesCrafted = Boolean(story.woodGreavesCrafted);
   playerState.woodRingCrafted = Boolean(story.woodRingCrafted);
+  playerState.marniePickaxeReceived = Boolean(story.marniePickaxeReceived);
 
   const beachQuest = state.beachQuest && typeof state.beachQuest === "object"
     ? state.beachQuest
@@ -13878,7 +13801,8 @@ function handlePersistentStateRestore(playerId, socket, message) {
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
     beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee,
-    myrtleQuestStage: playerState.myrtleQuestStage
+    myrtleQuestStage: playerState.myrtleQuestStage,
+    marniePickaxeReceived: Boolean(playerState.marniePickaxeReceived)
   });
 }
 
@@ -14005,6 +13929,10 @@ function handleClientMessage(playerId, socket, message) {
 
     case "consumableUse":
       handleConsumableUse(playerId, socket, message);
+      return;
+
+    case "marnieQuestInteract":
+      handleMarnieQuestInteract(playerId, socket, message);
       return;
 
     case "shopPurchase":

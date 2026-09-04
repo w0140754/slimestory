@@ -13,10 +13,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.372");
-assert(server.includes('const BUILD_VERSION = "6-11-372";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-372";'));
-assert(html.includes('/game.js?v=372') && html.includes('/client-app.js?v=372'));
+assert.strictEqual(pkg.version, "0.6.11.373");
+assert(server.includes('const BUILD_VERSION = "6-11-373";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'));
+assert(html.includes('/game.js?v=373') && html.includes('/client-app.js?v=373'));
 
 assert(config.includes('baseSpeed: 54'), "shared speed must be 54 px/s");
 assert(html.includes('left: 2px;'), "MENU must hug the upper-left game edge");
@@ -27,7 +27,7 @@ assert(html.includes('body:has(#inventoryOverlay.open) #onlineStatus'), "status 
 assert(/#onlineStatus\s*\{[\s\S]*?display:\s*none;[\s\S]*?bottom:\s*max\(3px, env\(safe-area-inset-bottom\)\)/.test(html), "mobile gameplay status must be hidden and menu status bottom-left");
 
 assert(game.includes('name: "50 Arrows"') && game.includes('outputCount: 50'), "client arrow output must be 50");
-assert(server.includes('resourceKey: "arrows",\n    outputCount: 50'), "server arrow output must be 50");
+assert(/arrows:\s*Object\.freeze\(\{[\s\S]*?resourceKey:\s*"arrows"[\s\S]*?outputCount:\s*50/.test(server), "server arrow output must be 50");
 assert(html.includes('<span class="craft-recipe-name">Arrows ×50</span>'), "arrow recipe label must show 50");
 assert.ok(adopted.version >= 68, "HUD cleanup must preserve current authored map data");
 
