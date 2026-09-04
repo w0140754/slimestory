@@ -869,6 +869,17 @@ function buildClientMapRegistry() {
     ghostGrove: ghostGroveMap
   };
 
+  // Editor-authored maps are not known when this client registry source is
+  // written, so create ordinary runtime map states for any shared map that
+  // does not already have a legacy/specialized state above. Without this,
+  // WORLD_CONTENT can contain a newly applied map and valid portals can point
+  // to it, but requestMapTransition() rejects the destination because
+  // mapStates[targetMapId] does not exist.
+  for (const mapId of Object.keys(WORLD_CONTENT?.maps || {})) {
+    if (mapStates[mapId]) continue;
+    mapStates[mapId] = buildSharedEnvironmentMapState(mapId);
+  }
+
   return {
     houseImage,
     spawnMapX,

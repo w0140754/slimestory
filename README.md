@@ -1,3 +1,18 @@
+## v6-11-372 — New-map portal runtime fix
+
+- Fixed portals into editor-created maps by dynamically creating a normal client runtime map state for every shared `WORLD_CONTENT` map that is not one of the older hard-coded maps.
+- This removes the v371 failure where a newly authored map existed in canonical world data, but `requestMapTransition()` rejected its portal because the destination was missing from the client `mapStates` registry.
+- Validated the current editor-authored `forestPathWest` map and both of its live portal links/spawn targets.
+- Preserved the newer live editor-authored world content version **81** captured from Drive before this build; the canonical map JSON was not rewritten by the code update.
+
+## v6-11-372 — New map authoring
+
+- Added a **+ New Map** workflow to the visual map editor with map name/ID, width, height, starting terrain, and an automatically created center player spawn.
+- New maps can be exported or applied into the canonical adopted-map store; after server restart they become ordinary runtime/editor maps and can be targeted by portals.
+- Added **Purple Slime** to the editor's slime variant list and gave Purple Slime spawns a distinct purple editor marker.
+- Consolidated character NPC placement into one **NPC** button with a dropdown for Shopkeeper, Hunter, Jester, Beach Girl, Myrtle, and Cam; Crafting Table and Class Reset Crystal remain separate interactions.
+- Preserved the newer live editor-authored world data revision **72** captured from Drive before this build, rather than overwriting it with v370's older revision 68 snapshot.
+
 ## v6-11-370 — Greencap armor
 
 - Added the user-drawn **Greencap** armor set: Greencap Cap, Greencap Tunic, and Greencap Pants.

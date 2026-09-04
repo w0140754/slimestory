@@ -233,3 +233,25 @@ input[type="number"].property-input { appearance: textfield; }
   .inspector-panel { grid-column: 1 / -1; border-left: 0; border-top: 2px solid #3b4538; max-height: 260px; }
 }
 
+
+.new-map-panel {
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid #4b5747;
+  background: #181d17;
+}
+.new-map-size-grid { margin-top: 2px; }
+.new-map-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 9px; }
+.palette-combo {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 5px;
+  align-items: stretch;
+}
+.palette-combo .palette-tool { width: 100%; }
+.palette-select {
+  min-height: 34px;
+  padding: 4px 5px;
+  font-size: 10px;
+}
+.npc-object { border: 1px solid #869376; background: #374334; color: #e2edd9; }

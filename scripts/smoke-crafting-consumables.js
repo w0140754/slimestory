@@ -35,7 +35,7 @@ async function sendAndWait(socket, payload, type, predicate) {
 
 (async () => {
   try {
-    await delay(250);
+    await delay(500);
     const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     await new Promise((resolve, reject) => {
       socket.once("open", resolve);

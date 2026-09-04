@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Slime Story Map Editor</title>
-  <link rel="stylesheet" href="/map-editor.css?v=370">
+  <link rel="stylesheet" href="/map-editor.css?v=372">
 </head>
 <body>
   <div class="editor-shell">
     <header class="editor-header">
       <div>
         <div class="eyebrow">SLIME STORY • DEV TOOL</div>
-        <h1>Map Editor <span>v365</span></h1>
+        <h1>Map Editor <span>v372</span></h1>
       </div>
       <div class="header-actions">
         <a class="button secondary" href="/">Play Game</a>
@@ -28,6 +28,36 @@
         <section>
           <label class="field-label" for="mapSelect">Map</label>
           <select id="mapSelect"></select>
+          <button id="newMapButton" class="button secondary compact full" type="button">+ New Map</button>
+          <div id="newMapPanel" class="new-map-panel hidden">
+            <label class="field-label" for="newMapName">Map name</label>
+            <input id="newMapName" class="property-input" type="text" maxlength="40" value="New Map">
+            <label class="field-label spaced" for="newMapId">Map ID</label>
+            <input id="newMapId" class="property-input" type="text" maxlength="64" value="newMap" spellcheck="false">
+            <div class="property-grid new-map-size-grid">
+              <div>
+                <label class="field-label spaced" for="newMapWidth">Width</label>
+                <input id="newMapWidth" class="property-input" type="number" min="64" max="4096" step="8" value="640">
+              </div>
+              <div>
+                <label class="field-label spaced" for="newMapHeight">Height</label>
+                <input id="newMapHeight" class="property-input" type="number" min="64" max="4096" step="8" value="480">
+              </div>
+            </div>
+            <label class="field-label spaced" for="newMapTerrain">Starting terrain</label>
+            <select id="newMapTerrain">
+              <option value="grass">Grass</option>
+              <option value="dirt">Dirt</option>
+              <option value="sand">Sand</option>
+              <option value="water">Water</option>
+              <option value="void">Void / empty</option>
+            </select>
+            <div class="hint">A center player spawn is added automatically. The new map is not part of the game until you Apply Draft to Game.</div>
+            <div class="new-map-actions">
+              <button id="createMapButton" class="button compact" type="button">Create Map</button>
+              <button id="cancelNewMapButton" class="button secondary compact" type="button">Cancel</button>
+            </div>
+          </div>
         </section>
 
         <section>
@@ -76,12 +106,17 @@
             <button type="button" class="palette-tool" data-place="sceneryRock"><span class="palette-icon scenery-rock">■</span><span>Scenery rock</span></button>
             <button type="button" class="palette-tool" data-place="harvestFlower"><span class="palette-icon flower-object">✿</span><span>Harvest flower</span></button>
             <button type="button" class="palette-tool" data-place="house"><span class="palette-icon house-object">⌂</span><span>House</span></button>
-            <button type="button" class="palette-tool" data-place="shopkeeperNpc"><img class="palette-sprite" src="/assets/shopkeeper_npc_v1.png?v=347" alt=""><span>Shopkeeper NPC</span></button>
-            <button type="button" class="palette-tool" data-place="hunterNpc"><img class="palette-sprite" src="/assets/hunter_npc_v1.png?v=347" alt=""><span>Hunter NPC</span></button>
-            <button type="button" class="palette-tool" data-place="jesterNpc"><img class="palette-sprite" src="/assets/jester_npc_v1.png?v=347" alt=""><span>Jester NPC</span></button>
-            <button type="button" class="palette-tool" data-place="beachGirlNpc"><img class="palette-sprite" src="/assets/beach_girl_npc.png?v=370" alt=""><span>Beach Girl NPC</span></button>
-            <button type="button" class="palette-tool" data-place="greenWitchNpc"><img class="palette-sprite" src="/assets/green_witch_npc.png?v=370" alt=""><span>Green Witch NPC</span></button>
-            <button type="button" class="palette-tool" data-place="camoGuyNpc"><img class="palette-sprite" src="/assets/camo_npc.png?v=370" alt=""><span>Camo NPC</span></button>
+            <div class="palette-combo">
+              <button id="npcPaletteButton" type="button" class="palette-tool" data-place="npc"><span class="palette-icon npc-object">N</span><span>NPC</span></button>
+              <select id="npcTypeSelect" class="palette-select" aria-label="NPC type">
+                <option value="shopkeeper">Shopkeeper</option>
+                <option value="hunter">Hunter</option>
+                <option value="jester">Jester</option>
+                <option value="beachGirl">Beach Girl</option>
+                <option value="greenWitch">Green Witch / Myrtle</option>
+                <option value="camoGuy">Camo NPC / Cam</option>
+              </select>
+            </div>
             <button type="button" class="palette-tool" data-place="craftingTableNpc"><img class="palette-sprite" src="/assets/wood_bench_v2.png?v=347" alt=""><span>Crafting Table</span></button>
             <button type="button" class="palette-tool" data-place="classResetCrystalNpc"><img class="palette-sprite" src="/assets/class_reset_crystal.png?v=347" alt=""><span>Class Reset Crystal</span></button>
             <button type="button" class="palette-tool" data-place="enemySpawn"><span class="palette-icon enemy-object">E</span><span>Enemy spawn</span></button>
@@ -135,7 +170,7 @@
           <span id="statusDirty">source map</span>
         </footer>
         <div class="draft-note">
-          <strong>v324 expands placeable interactions: Shopkeeper, Hunter, Jester, Crafting Table, and Class Reset Crystal.</strong> Apply is intentionally local-development only; after a successful apply, restart the server and reload before testing new placements in-game.
+          <strong>v372 can create brand-new maps, includes Purple Slime authoring, and groups character NPC placement into one dropdown.</strong> Apply is intentionally local-development only; after a successful apply, restart the server and reload before testing new placements in-game.
         </div>
       </section>
 
@@ -158,10 +193,10 @@
       </aside>
     </main>
   </div>
-<script src="/shared/world-content-runtime.js?v=370"></script>
-  <script src="/shared/terrain-rules.js?v=370"></script>
-  <script src="/shared/terrain-presentation.js?v=370"></script>
-  <script src="/shared/map-draft-format.js?v=370"></script>
-  <script src="/map-editor.js?v=370"></script>
+<script src="/shared/world-content-runtime.js?v=372"></script>
+  <script src="/shared/terrain-rules.js?v=372"></script>
+  <script src="/shared/terrain-presentation.js?v=372"></script>
+  <script src="/shared/map-draft-format.js?v=372"></script>
+  <script src="/map-editor.js?v=372"></script>
 </body>
 </html>

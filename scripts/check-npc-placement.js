@@ -17,14 +17,14 @@ const shopkeeperAsset = fs.readFileSync(path.join(root, "public", "assets", "sho
 const craftBubbleAsset = fs.readFileSync(path.join(root, "public", "assets", "crafting_bubble_axe_v1.png"));
 
 const checks = [
-  [editorHtml.includes('data-place="shopkeeperNpc"') && editorHtml.includes('data-place="hunterNpc"') && editorHtml.includes('data-place="jesterNpc"') && editorHtml.includes('data-place="craftingTableNpc"') && editorHtml.includes('data-place="classResetCrystalNpc"'), "editor palette entries"],
+  [editorHtml.includes('data-place="npc"') && editorHtml.includes('id="npcTypeSelect"') && editorHtml.includes('<option value="shopkeeper">Shopkeeper</option>') && editorHtml.includes('<option value="camoGuy">Camo NPC / Cam</option>') && editorHtml.includes('data-place="craftingTableNpc"') && editorHtml.includes('data-place="classResetCrystalNpc"'), "editor palette entries"],
   [editorJs.includes('if (!Array.isArray(map.npcs)) map.npcs = [];') && editorJs.includes('npc: { layer: "entities", label: "NPC"'), "NPC editor collection"],
-  [editorJs.includes('draft.map.npcs.push(item)') && editorJs.includes('descriptor.kind === "npc"') && editorJs.includes('value: "craftingTable", label: "Crafting Table"') && editorJs.includes('value: "classResetCrystal", label: "Class Reset Crystal"'), "NPC placement and inspector"],
+  [editorJs.includes('draft.map.npcs.push(item)') && editorJs.includes('kind === "npc"') && editorJs.includes('descriptor.kind === "npc"') && editorJs.includes('value: "craftingTable", label: "Crafting Table"') && editorJs.includes('value: "classResetCrystal", label: "Class Reset Crystal"'), "NPC placement and inspector"],
   [game.includes('function placedNpcDefinitionsForMap') && game.includes('function drawPlacedNpc') && game.includes('interaction.npcType === "craftingTable"') && game.includes('interaction.npcType === "classResetCrystal"'), "NPC runtime rendering/interaction"],
   [app.includes('for (const npc of placedNpcDefinitionsForMap(currentMapId))') && app.includes('drawPlacedNpc(npc, camX, camY)'), "NPC drawable integration"],
   [server.includes('function playerNearAuthorizedShopkeeper') && server.includes('playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16)'), "server shopkeeper authorization"],
   [shopkeeperAsset.length > 100 && craftBubbleAsset.length > 100 && crypto.createHash("sha256").update(shopkeeperAsset).digest("hex").length === 64, "required editor assets"],
-  [editorHtml.includes('/map-editor.js?v=370') && editorHtml.includes('/shared/map-draft-format.js?v=370'), "326 editor cache keys"],
+  [editorHtml.includes('/map-editor.js?v=372') && editorHtml.includes('/shared/map-draft-format.js?v=372'), "326 editor cache keys"],
 ];
 
 for (const [ok, label] of checks) {

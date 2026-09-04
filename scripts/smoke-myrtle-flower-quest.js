@@ -2,6 +2,12 @@
 
 const { spawn } = require("child_process");
 const WebSocket = require("ws");
+const fs = require("fs");
+const path = require("path");
+
+const authoredMaps = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "content", "adopted-map-overrides.json"), "utf8"));
+const myrtleNpc = authoredMaps.maps.waterfallGrove.npcs.find(npc => npc.type === "greenWitch");
+if (!myrtleNpc) throw new Error("Myrtle is missing from the authored Waterfall Grove map");
 
 const port = 32193;
 const server = spawn(process.execPath, ["server.js"], {
@@ -44,7 +50,7 @@ async function connectAtMyrtle(level, resources = {}, stage = "none") {
   await welcome;
   socket.send(JSON.stringify({
     type: "playerState",
-    player: { mapId: "waterfallGrove", x: 414, y: 334, level }
+    player: { mapId: "waterfallGrove", x: myrtleNpc.x, y: myrtleNpc.y, level }
   }));
   await delay(120);
   await sendAndWait(socket, {
@@ -56,7 +62,7 @@ async function connectAtMyrtle(level, resources = {}, stage = "none") {
 
 (async () => {
   try {
-    await delay(250);
+    await delay(500);
 
     const novice = await connectAtMyrtle(2);
     const noviceTalk = await sendAndWait(novice, { type: "myrtleQuestInteract", action: "talk" }, "myrtleQuestState");

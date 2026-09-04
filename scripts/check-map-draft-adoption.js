@@ -51,4 +51,34 @@ const second = adoptDraftPayload(secondPayload, { worldContent: WORLD_CONTENT, d
 assert.strictEqual(second.changed, false);
 assert.strictEqual(second.version, first.version);
 assert.strictEqual(second.warnings.some(warning => /world content/i.test(warning)), false);
-console.log("Map draft adoption OK: canonical JSON persisted, browser runtime resolves the same map, and idempotent re-apply stays version-clean.");
+
+
+const newMapId = "adoptionNewMapTest";
+const newMapPayload = {
+  editorBuild: "372-test",
+  worldContentVersion: second.version,
+  schemaVersion: WORLD_CONTENT.schemaVersion,
+  createNewMap: true,
+  mapId: newMapId,
+  map: {
+    name: "Adoption New Map Test",
+    dimensions: { width: 320, height: 240 },
+    playerSpawns: [{ id: "center", x: 160, y: 120 }],
+    portals: [],
+    environment: { trees: [], tallGrass: [], rocks: [], sceneryRocks: [], harvestFlowers: [], houses: [] },
+    npcs: [],
+    enemySpawns: [{ id: `${newMapId}:slime:1`, type: "slime", variant: "purple", level: 4, x: 185, y: 120 }],
+    terrain: { cellSize: 8, defaultType: "grass", regions: [] },
+    collision: { waterRects: [] }
+  }
+};
+const created = adoptDraftPayload(newMapPayload, { worldContent: WORLD_CONTENT, dataPath, browserPath });
+assert.strictEqual(created.ok, true);
+assert.strictEqual(created.changed, true);
+const storeWithNewMap = loadStore(dataPath);
+assert(storeWithNewMap.maps[newMapId], "new map was not persisted into adopted-map-overrides.json");
+assert.strictEqual(storeWithNewMap.maps[newMapId].enemySpawns[0].variant, "purple");
+const newMapReapply = adoptDraftPayload({ ...newMapPayload, createNewMap: false, worldContentVersion: created.version }, { worldContent: WORLD_CONTENT, dataPath, browserPath });
+assert.strictEqual(newMapReapply.changed, false, "a newly created map should re-apply cleanly after it exists in the canonical store");
+
+console.log("Map draft adoption OK: existing maps remain idempotent and brand-new editor maps persist safely.");

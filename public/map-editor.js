@@ -1,12 +1,22 @@
 (() => {
   "use strict";
 
-  const BUILD = "370";
+  const BUILD = "372";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
 
   const mapSelect = document.getElementById("mapSelect");
+  const newMapButton = document.getElementById("newMapButton");
+  const newMapPanel = document.getElementById("newMapPanel");
+  const newMapName = document.getElementById("newMapName");
+  const newMapId = document.getElementById("newMapId");
+  const newMapWidth = document.getElementById("newMapWidth");
+  const newMapHeight = document.getElementById("newMapHeight");
+  const newMapTerrain = document.getElementById("newMapTerrain");
+  const createMapButton = document.getElementById("createMapButton");
+  const cancelNewMapButton = document.getElementById("cancelNewMapButton");
+  const npcTypeSelect = document.getElementById("npcTypeSelect");
   const brushSizeSelect = document.getElementById("brushSize");
   const terrainTools = Array.from(document.querySelectorAll(".terrain-tool"));
   const paletteTools = Array.from(document.querySelectorAll(".palette-tool"));
@@ -60,7 +70,10 @@
 
   const clone = value => JSON.parse(JSON.stringify(value));
   const drafts = new Map();
+  const createdMapSources = new Map();
+  const NPC_CHARACTER_TYPES = Object.freeze(["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy"]);
   let mapId = editableMapIds.includes("prototypeIsland") ? "prototypeIsland" : editableMapIds[0];
+  let newMapIdTouched = false;
   let draft = null;
   let activeTerrain = "grass";
   let brushSize = 1;
@@ -97,11 +110,11 @@
   const editorJesterNpcImage = new Image();
   editorJesterNpcImage.src = "./assets/jester_npc_v1.png?v=347";
   const editorBeachGirlNpcImage = new Image();
-  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=370";
+  editorBeachGirlNpcImage.src = "./assets/beach_girl_npc.png?v=372";
   const editorGreenWitchNpcImage = new Image();
-  editorGreenWitchNpcImage.src = "./assets/green_witch_npc.png?v=370";
+  editorGreenWitchNpcImage.src = "./assets/green_witch_npc.png?v=372";
   const editorCamoNpcImage = new Image();
-  editorCamoNpcImage.src = "./assets/camo_npc.png?v=370";
+  editorCamoNpcImage.src = "./assets/camo_npc.png?v=372";
   const editorWoodBenchImage = new Image();
   editorWoodBenchImage.src = "./assets/wood_bench_v2.png?v=347";
   const editorClassResetCrystalImage = new Image();
@@ -121,16 +134,120 @@
   editorWoodBenchImage.addEventListener("load", () => requestRender());
   editorClassResetCrystalImage.addEventListener("load", () => requestRender());
 
-  for (const id of editableMapIds) {
+  function addMapOption(id, definition) {
+    if (Array.from(mapSelect.options).some(option => option.value === id)) return;
     const option = document.createElement("option");
     option.value = id;
-    option.textContent = WORLD_CONTENT.maps[id].name || id;
+    option.textContent = definition?.name || id;
     mapSelect.append(option);
   }
+
+  for (const id of editableMapIds) addMapOption(id, WORLD_CONTENT.maps[id]);
   mapSelect.value = mapId;
 
   function sourceMapDefinition(id = mapId) {
-    return WORLD_CONTENT.maps[id];
+    return createdMapSources.get(id) || WORLD_CONTENT.maps[id];
+  }
+
+  function editorMapDefinition(id) {
+    if (drafts.has(id)) return drafts.get(id).map;
+    return sourceMapDefinition(id);
+  }
+
+  function editorMapEntries() {
+    return editableMapIds
+      .map(id => [id, editorMapDefinition(id)])
+      .filter(([, definition]) => Boolean(definition));
+  }
+
+  function suggestedMapId(name) {
+    const words = String(name || "")
+      .normalize("NFKD")
+      .replace(/[^A-Za-z0-9]+/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!words.length) return "newMap";
+    let id = words[0].toLowerCase() + words.slice(1).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join("");
+    if (!/^[A-Za-z]/.test(id)) id = `map${id}`;
+    return id.slice(0, 64) || "newMap";
+  }
+
+  function showNewMapPanel(show) {
+    newMapPanel.classList.toggle("hidden", !show);
+    if (!show) return;
+    newMapName.value = "New Map";
+    newMapId.value = "newMap";
+    newMapWidth.value = "640";
+    newMapHeight.value = "480";
+    newMapTerrain.value = "grass";
+    newMapIdTouched = false;
+    newMapName.focus();
+    newMapName.select();
+  }
+
+  function normalizedNewMapDimension(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    return Math.max(64, Math.min(4096, Math.round(numeric / 8) * 8));
+  }
+
+  function blankMapDefinition(id, name, width, height, terrainType) {
+    return {
+      name,
+      dimensions: { width, height },
+      playerSpawns: [{ id: "center", x: Math.round(width / 2), y: Math.round(height / 2) }],
+      portals: [],
+      environment: {
+        trees: [],
+        tallGrass: [],
+        rocks: [],
+        sceneryRocks: [],
+        harvestFlowers: [],
+        houses: []
+      },
+      npcs: [],
+      enemySpawns: [],
+      terrain: { cellSize: 8, defaultType: terrainType, regions: [] },
+      collision: { waterRects: [] }
+    };
+  }
+
+  function createNewMapFromForm() {
+    const name = String(newMapName.value || "").trim();
+    const id = String(newMapId.value || "").trim();
+    const width = normalizedNewMapDimension(newMapWidth.value);
+    const height = normalizedNewMapDimension(newMapHeight.value);
+    const terrainType = TERRAIN_RULES.TYPES[newMapTerrain.value] ? newMapTerrain.value : "grass";
+
+    if (!name) {
+      window.alert("Give the new map a name.");
+      newMapName.focus();
+      return;
+    }
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id)) {
+      window.alert("Map ID must start with a letter and use only letters, numbers, _ or - (maximum 64 characters).");
+      newMapId.focus();
+      return;
+    }
+    if (WORLD_CONTENT.maps[id] || createdMapSources.has(id) || drafts.has(id)) {
+      window.alert(`A map with ID "${id}" already exists. Choose a different Map ID.`);
+      newMapId.focus();
+      return;
+    }
+    if (!width || !height) {
+      window.alert("Map width and height must be valid numbers between 64 and 4096.");
+      return;
+    }
+
+    const definition = blankMapDefinition(id, name, width, height, terrainType);
+    createdMapSources.set(id, clone(definition));
+    editableMapIds.push(id);
+    addMapOption(id, definition);
+    showNewMapPanel(false);
+    setMap(id, true);
+    refreshDirty();
+    updateUI();
   }
 
   function ensureMapCollections(map) {
@@ -205,7 +322,9 @@
       sourceSignature: stateSignature(sourceState),
       undo: [],
       redo: [],
-      dirty: false,
+      isNew: !WORLD_CONTENT.maps[id],
+      hasEdits: false,
+      dirty: !WORLD_CONTENT.maps[id],
       importedFrom: null
     };
   }
@@ -215,8 +334,10 @@
     return drafts.get(id);
   }
 
-  function refreshDirty() {
-    draft.dirty = stateSignature(captureState()) !== draft.sourceSignature;
+  function refreshDirty(targetDraft = draft) {
+    if (!targetDraft) return;
+    targetDraft.hasEdits = stateSignature(captureState(targetDraft)) !== targetDraft.sourceSignature;
+    targetDraft.dirty = Boolean(targetDraft.isNew || targetDraft.hasEdits);
   }
 
   function restoreState(state) {
@@ -647,7 +768,7 @@
           : type === "bigGoldSlime"
             ? { fill: "#e0bd43", text: "#2b2107", label: "B" }
             : {
-                fill: spawn.variant === "blue" ? "#64c7df" : "#9bdc81",
+                fill: spawn.variant === "purple" ? "#a77bd6" : spawn.variant === "blue" ? "#64c7df" : spawn.variant === "goldBaby" ? "#e0bd43" : "#9bdc81",
                 text: "#102010",
                 label: "S"
               };
@@ -921,12 +1042,17 @@
     if (kind === "sceneryRock") return { kind: "sceneryRock", item: { x, y } };
     if (kind === "harvestFlower") return { kind: "harvestFlower", item: { x, y, type: "white" } };
     if (kind === "house") return { kind: "house", item: { x, y, variant: "default" } };
-    if (kind === "shopkeeperNpc") return { kind: "npc", item: { x, y, type: "shopkeeper", interactionRadius: 24 } };
-    if (kind === "hunterNpc") return { kind: "npc", item: { x, y, type: "hunter", interactionRadius: 24 } };
-    if (kind === "jesterNpc") return { kind: "npc", item: { x, y, type: "jester", interactionRadius: 24 } };
-    if (kind === "beachGirlNpc") return { kind: "npc", item: { x, y, type: "beachGirl", interactionRadius: 28 } };
-    if (kind === "greenWitchNpc") return { kind: "npc", item: { x, y, type: "greenWitch", name: "Myrtle", interactionRadius: 24 } };
-    if (kind === "camoGuyNpc") return { kind: "npc", item: { x, y, type: "camoGuy", name: "Cam", interactionRadius: 24 } };
+    if (kind === "npc") {
+      const type = NPC_CHARACTER_TYPES.includes(npcTypeSelect.value) ? npcTypeSelect.value : "shopkeeper";
+      return {
+        kind: "npc",
+        item: {
+          x, y, type,
+          ...(["greenWitch", "camoGuy"].includes(type) ? { name: type === "greenWitch" ? "Myrtle" : "Cam" } : {}),
+          interactionRadius: type === "beachGirl" ? 28 : 24
+        }
+      };
+    }
     if (kind === "craftingTableNpc") return { kind: "npc", item: { x, y, type: "craftingTable", interactionRadius: 24 } };
     if (kind === "classResetCrystalNpc") return { kind: "npc", item: { x, y, type: "classResetCrystal", interactionRadius: 28 } };
     if (kind === "enemySpawn") return { kind: "enemySpawn", item: { x, y } };
@@ -1133,7 +1259,7 @@
   }
 
   function defaultPortalTarget() {
-    const candidates = Object.entries(WORLD_CONTENT.maps)
+    const candidates = editorMapEntries()
       .filter(([id, map]) => id !== mapId && Array.isArray(map.playerSpawns) && map.playerSpawns.length > 0);
     const preferred = candidates.find(([id]) => mapId === "prototypeIslandWest" ? id === "prototypeIsland" : id === "spawn") || candidates[0];
     if (!preferred) return { targetMapId: mapId, targetSpawnId: draft.map.playerSpawns[0]?.id || "center" };
@@ -1190,27 +1316,13 @@
         collision: { width: HOUSE_COLLISION_WIDTH, height: HOUSE_COLLISION_HEIGHT }
       };
       draft.map.environment.houses.push(item);
-    } else if (
-      kind === "shopkeeperNpc" || kind === "hunterNpc" || kind === "jesterNpc" || kind === "beachGirlNpc" ||
-      kind === "greenWitchNpc" || kind === "camoGuyNpc" ||
-      kind === "craftingTableNpc" || kind === "classResetCrystalNpc"
-    ) {
+    } else if (kind === "npc" || kind === "craftingTableNpc" || kind === "classResetCrystalNpc") {
       selectionKind = "npc";
-      const type = kind === "hunterNpc"
-        ? "hunter"
-        : kind === "jesterNpc"
-          ? "jester"
-          : kind === "beachGirlNpc"
-            ? "beachGirl"
-          : kind === "greenWitchNpc"
-            ? "greenWitch"
-          : kind === "camoGuyNpc"
-            ? "camoGuy"
-          : kind === "craftingTableNpc"
-            ? "craftingTable"
-            : kind === "classResetCrystalNpc"
-              ? "classResetCrystal"
-              : "shopkeeper";
+      const type = kind === "npc"
+        ? (NPC_CHARACTER_TYPES.includes(npcTypeSelect.value) ? npcTypeSelect.value : "shopkeeper")
+        : kind === "craftingTableNpc"
+          ? "craftingTable"
+          : "classResetCrystal";
       item = {
         id: nextId("npc"),
         type,
@@ -1219,7 +1331,7 @@
           : {}),
         x,
         y,
-        interactionRadius: type === "classResetCrystal" ? 28 : 24
+        interactionRadius: type === "classResetCrystal" || type === "beachGirl" ? 28 : 24
       };
       draft.map.npcs.push(item);
     } else if (kind === "enemySpawn") {
@@ -1281,7 +1393,7 @@
 
   function portalsTargetingSpawn(spawnId) {
     const hits = [];
-    for (const [otherMapId, source] of Object.entries(WORLD_CONTENT.maps)) {
+    for (const [otherMapId, source] of editorMapEntries()) {
       const map = drafts.has(otherMapId) ? drafts.get(otherMapId).map : source;
       for (const portal of map.portals || []) {
         if (portal.targetMapId === mapId && portal.targetSpawnId === spawnId) hits.push(`${otherMapId}:${portal.id}`);
@@ -1331,8 +1443,8 @@
     ensureMapCollections(draft.map);
     draft.undo.length = 0;
     draft.redo.length = 0;
-    draft.dirty = false;
     draft.importedFrom = null;
+    refreshDirty();
     selectionKey = null;
     updateUI();
     requestRender();
@@ -1392,13 +1504,23 @@
     }
 
     const targetId = result.mapId;
+    const importedMap = clone(result.map);
+    if (!sourceMapDefinition(targetId)) {
+      if (!result.createNewMap) {
+        window.alert(`Could not import ${fileName}: map ${targetId} is not available in this build.`);
+        return false;
+      }
+      createdMapSources.set(targetId, clone(importedMap));
+      editableMapIds.push(targetId);
+      addMapOption(targetId, importedMap);
+    }
+
     const targetDraft = getDraft(targetId);
-    if (targetDraft.dirty) {
-      const okay = window.confirm(`${WORLD_CONTENT.maps[targetId].name || targetId} already has unsaved editor changes. Replace that working draft with ${fileName}?`);
+    if (targetDraft.hasEdits) {
+      const okay = window.confirm(`${targetDraft.map.name || targetId} already has unsaved editor changes. Replace that working draft with ${fileName}?`);
       if (!okay) return false;
     }
 
-    const importedMap = clone(result.map);
     ensureMapCollections(importedMap);
     const terrain = terrainCellsFromMap(importedMap);
     targetDraft.cellSize = terrain.cellSize;
@@ -1460,6 +1582,7 @@
       editorBuild: BUILD,
       worldContentVersion: canonicalWorldContentVersion,
       schemaVersion: WORLD_CONTENT.schemaVersion,
+      createNewMap: Boolean(draft.isNew || !WORLD_CONTENT.maps[mapId]),
       mapId,
       map: exportedMap
     };
@@ -1513,7 +1636,10 @@
       const appliedState = captureState();
       draft.sourceState = { cells: appliedState.cells.slice(), map: clone(appliedState.map) };
       draft.sourceSignature = stateSignature(draft.sourceState);
+      draft.isNew = false;
+      draft.hasEdits = false;
       draft.dirty = false;
+      createdMapSources.set(mapId, clone(appliedState.map));
       updateStatus();
 
       const warningText = body.warnings?.length
@@ -1623,8 +1749,7 @@
   }
 
   function targetMapDefinition(targetMapId) {
-    if (drafts.has(targetMapId)) return drafts.get(targetMapId).map;
-    return WORLD_CONTENT.maps[targetMapId];
+    return editorMapDefinition(targetMapId);
   }
 
   function updateInspector(rebuild = true) {
@@ -1810,7 +1935,9 @@
         enemyFields.splice(1, 0,
           makePropertyRow("Variant", selectControl(descriptor.item.variant || "", [
             { value: "", label: "Default slime" },
-            { value: "blue", label: "Blue slime" }
+            { value: "blue", label: "Blue slime" },
+            { value: "purple", label: "Purple slime" },
+            { value: "goldBaby", label: "Gold baby slime" }
           ], value => mutateSelected("Change enemy variant", item => {
             if (value) item.variant = value;
             else delete item.variant;
@@ -1868,7 +1995,7 @@
         makePropertyRow("Height", numberControl(descriptor.item.height, value => mutateSelected("Change portal height", item => { item.height = Math.max(1, Math.round(value)); }), { min: 1, max: 500 }))
       );
 
-      const mapOptions = Object.entries(WORLD_CONTENT.maps)
+      const mapOptions = editorMapEntries()
         .filter(([, map]) => Array.isArray(map.playerSpawns) && map.playerSpawns.length > 0)
         .map(([id, map]) => ({ value: id, label: map.name || id }));
       const targetMapSelect = selectControl(descriptor.item.targetMapId, mapOptions, value => mutateSelected("Change portal target map", item => {
@@ -1904,7 +2031,8 @@
       statusTerrain.textContent = "terrain —";
     }
     const importedLabel = draft.importedFrom ? `imported ${draft.importedFrom.fileName}` : null;
-    statusDirty.textContent = draft.dirty ? (importedLabel ? `${importedLabel} • unsaved` : "unsaved map draft") : (importedLabel || "source map");
+    if (draft.isNew) statusDirty.textContent = importedLabel ? `${importedLabel} • new map • unsaved` : "new map • unsaved";
+    else statusDirty.textContent = draft.dirty ? (importedLabel ? `${importedLabel} • unsaved` : "unsaved map draft") : (importedLabel || "source map");
     statusDirty.classList.toggle("dirty", draft.dirty);
   }
 
@@ -1912,7 +2040,7 @@
     if (!draft) return;
     undoButton.disabled = draft.undo.length === 0;
     redoButton.disabled = draft.redo.length === 0;
-    resetButton.disabled = !draft.dirty;
+    resetButton.disabled = !draft.hasEdits;
 
     if (editorMode === "paint") {
       modeBadge.textContent = `PAINT ${activeTerrain.toUpperCase()} • ${brushSize} CELL${brushSize === 1 ? "" : "S"}`;
@@ -1925,12 +2053,7 @@
         sceneryRock: "SCENERY ROCK",
         harvestFlower: "HARVEST FLOWER",
         house: "HOUSE",
-        shopkeeperNpc: "SHOPKEEPER NPC",
-        hunterNpc: "HUNTER NPC",
-        jesterNpc: "JESTER NPC",
-        beachGirlNpc: "BEACH GIRL NPC",
-        greenWitchNpc: "GREEN WITCH NPC",
-        camoGuyNpc: "CAMO NPC",
+        npc: `${String(npcDisplayConfig(npcTypeSelect.value).label || "NPC").toUpperCase()} NPC`,
         craftingTableNpc: "CRAFTING TABLE",
         classResetCrystalNpc: "CLASS RESET CRYSTAL",
         enemySpawn: "ENEMY SPAWN",
@@ -2093,6 +2216,20 @@
     if (event.code === "Space") spaceHeld = false;
   });
   window.addEventListener("blur", () => { spaceHeld = false; });
+
+  newMapButton.addEventListener("click", () => showNewMapPanel(newMapPanel.classList.contains("hidden")));
+  cancelNewMapButton.addEventListener("click", () => showNewMapPanel(false));
+  createMapButton.addEventListener("click", createNewMapFromForm);
+  newMapName.addEventListener("input", () => {
+    if (!newMapIdTouched) newMapId.value = suggestedMapId(newMapName.value);
+  });
+  newMapId.addEventListener("input", () => { newMapIdTouched = true; });
+  npcTypeSelect.addEventListener("change", () => {
+    if (editorMode === "place" && placeKind === "npc") {
+      updateUI();
+      requestRender();
+    }
+  });
 
   mapSelect.addEventListener("change", () => setMap(mapSelect.value, true));
   brushSizeSelect.addEventListener("change", () => {

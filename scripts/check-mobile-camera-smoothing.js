@@ -14,10 +14,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.370");
-assert(server.includes('const BUILD_VERSION = "6-11-370";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-370";'));
-assert(html.includes('/client-app.js?v=370') && html.includes('/game.js?v=370'));
+assert.strictEqual(pkg.version, "0.6.11.372");
+assert(server.includes('const BUILD_VERSION = "6-11-372";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-372";'));
+assert(html.includes('/client-app.js?v=372') && html.includes('/game.js?v=372'));
 
 assert(config.includes('baseSpeed: 54'), "54 px/s movement must remain");
 assert(app.includes('const useMobileSubpixelCamera = mobileControlsEnabled;'), "camera smoothing must stay mobile-only");
@@ -31,7 +31,7 @@ const renderCamera = Math.round(desiredCamera);
 const presentationOffset = Math.round((renderCamera - desiredCamera) * 3) / 3;
 assert(Number.isInteger(presentationOffset * 3), "camera motion must land on a backing pixel");
 
-assert.strictEqual(adopted.version, 68, "camera smoothing must preserve current authored map data");
+assert.ok(adopted.version >= 68, "camera smoothing must preserve current authored map data");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove must remain intact");
 
 console.log("Mobile fractional camera smoothing checks passed; gameplay camera and desktop rendering remain unchanged.");

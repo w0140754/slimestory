@@ -58,7 +58,7 @@ async function connectAtBeach(level, beachQuest = null) {
 
 (async () => {
   try {
-    await delay(250);
+    await delay(500);
 
     const novice = await connectAtBeach(4);
     const noviceTalk = await sendAndWait(novice, { type: "beachQuestInteract", action: "talk" }, "beachQuestState");

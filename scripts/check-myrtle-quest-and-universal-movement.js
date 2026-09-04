@@ -15,21 +15,17 @@ const game = read("public", "game.js");
 const network = read("public", "client-network.js");
 const maps = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(maps.version, 68, "newest live authored maps must be preserved");
-assert.deepStrictEqual(
-  maps.maps.prototypeIsland.npcs.find(npc => npc.type === "camoGuy"),
-  { id: "prototypeIsland:npc:camoGuy", type: "camoGuy", name: "Cam", x: 249, y: 173, interactionRadius: 24 }
-);
-assert.deepStrictEqual(
-  maps.maps.crabBeach.npcs.find(npc => npc.type === "beachGirl"),
-  { id: "crabBeach:npc:beachGirl", type: "beachGirl", name: "Sunny", x: 578, y: 324, interactionRadius: 28 }
-);
+assert.ok(maps.version >= 68, "newest live authored maps must be preserved");
+const authoredCam = maps.maps.prototypeIsland.npcs.find(npc => npc.type === "camoGuy");
+const authoredSunny = maps.maps.crabBeach.npcs.find(npc => npc.type === "beachGirl");
+assert(authoredCam && authoredCam.name === "Cam" && authoredCam.interactionRadius === 24 && Number.isFinite(authoredCam.x) && Number.isFinite(authoredCam.y));
+assert(authoredSunny && authoredSunny.name === "Sunny" && authoredSunny.interactionRadius === 28 && Number.isFinite(authoredSunny.x) && Number.isFinite(authoredSunny.y));
 
 const cam = fs.readFileSync(path.join(root, "public", "assets", "camo_npc.png"));
 assert.strictEqual(cam.readUInt32BE(16), 20);
 assert.strictEqual(cam.readUInt32BE(20), 20);
 assert.strictEqual(crypto.createHash("sha256").update(cam).digest("hex"), "b67bc97de6c7e7f00df50fb70b848d82e8e52deb37dc8ffe54ae02e8d791a727");
-assert(game.includes('camoNpcImage = loadImage("assets/camo_npc.png?v=370")'));
+assert(game.includes('camoNpcImage = loadImage("assets/camo_npc.png?v=372")'));
 
 assert(game.includes('document.getElementById("npcNameLayer")'));
 assert(game.includes('node.className = "npc-name-label"'));

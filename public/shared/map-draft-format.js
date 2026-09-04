@@ -16,10 +16,16 @@
 
     if (!plainObject(payload)) return { ok: false, errors: ["Draft root must be a JSON object."], warnings };
     const mapId = typeof payload.mapId === "string" ? payload.mapId.trim() : "";
+    const createNewMap = payload.createNewMap === true;
     if (!mapId) fail("Draft is missing mapId.");
+    else if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(mapId)) {
+      fail("mapId must start with a letter and use only letters, numbers, _ or - (maximum 64 characters).");
+    }
 
     const sourceMap = mapId ? worldContent?.maps?.[mapId] : null;
-    if (mapId && !sourceMap) fail(`Map \"${mapId}\" is not available in this build.`);
+    if (mapId && !sourceMap && !createNewMap) {
+      fail(`Map \"${mapId}\" is not available in this build. Mark the draft createNewMap=true to create it.`);
+    }
 
     if (Number(payload.schemaVersion) !== Number(worldContent?.schemaVersion)) {
       fail(`Schema ${payload.schemaVersion ?? "?"} is incompatible with this editor (schema ${worldContent?.schemaVersion ?? "?"}).`);
@@ -85,6 +91,9 @@
       if (enemy?.level != null && (!finite(enemy.level) || Number(enemy.level) < 1)) {
         fail(`enemySpawns[${index}].level must be at least 1 when provided.`);
       }
+      if (enemy?.type === "slime" && enemy?.variant != null && !["blue", "purple", "goldBaby"].includes(enemy.variant)) {
+        fail(`enemySpawns[${index}].variant has unsupported slime variant "${enemy.variant}".`);
+      }
     }
 
     for (const [index, npc] of (Array.isArray(map?.npcs) ? map.npcs : []).entries()) {
@@ -131,7 +140,7 @@
       }
     }
 
-    return { ok: errors.length === 0, errors, warnings, mapId, map, editorBuild: payload.editorBuild ?? null };
+    return { ok: errors.length === 0, errors, warnings, mapId, map, createNewMap, editorBuild: payload.editorBuild ?? null };
   }
 
   return Object.freeze({ validate });

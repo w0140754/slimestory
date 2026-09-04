@@ -11,5 +11,5 @@ assert(enemies.includes('mushroom_flash_v1.png?v=347'), 'flash mushroom asset mu
 assert(rendering.includes('image.naturalWidth > 0') && rendering.includes('image.naturalHeight > 0'), 'mushroom base image must be decode-guarded');
 assert(rendering.includes('mushroomFlashImage.naturalWidth > 0') && rendering.includes('mushroomFlashImage.naturalHeight > 0'), 'mushroom flash image must be decode-guarded');
 assert(rendering.includes('Never let a still-loading/failed mushroom asset abort the entire render loop'), 'fallback render guard missing');
-assert(index.includes('/client-enemy-rendering.js?v=370') && index.includes('/client-enemies.js?v=370'), 'client cache keys must be v332');
+assert(index.includes('/client-enemy-rendering.js?v=372') && index.includes('/client-enemies.js?v=372'), 'client cache keys must be v332');
 console.log('[PASS] Mushroom image loading is render-safe and cache-busted for v332.');
