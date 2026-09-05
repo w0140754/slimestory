@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   return Object.freeze({
-    "version": 87,
+    "version": 88,
     "maps": {
       "prototypeIsland": {
         "name": "Prototype Island",
@@ -21,8 +21,8 @@
           },
           {
             "id": "eastBridge",
-            "x": 564,
-            "y": 280
+            "x": 461,
+            "y": 266
           },
           {
             "id": "westBridge",
@@ -33,8 +33,8 @@
         "portals": [
           {
             "id": "prototypeIsland:portal:east",
-            "x": 568,
-            "y": 254,
+            "x": 483,
+            "y": 131,
             "width": 12,
             "height": 52,
             "targetMapId": "spawn",
@@ -149,14 +149,6 @@
               "nonInteractive": true
             },
             {
-              "id": "prototypeIsland:tree:17",
-              "x": 464,
-              "y": 154,
-              "phase": 12.100000000000005,
-              "fireImmune": true,
-              "nonInteractive": true
-            },
-            {
               "id": "prototypeIsland:tree:18",
               "x": 487,
               "y": 423,
@@ -190,8 +182,8 @@
             },
             {
               "id": "prototypeIsland:tree:23",
-              "x": 485,
-              "y": 247,
+              "x": 480,
+              "y": 252,
               "phase": 16.480000000000008,
               "fireImmune": true,
               "nonInteractive": true
@@ -222,8 +214,8 @@
             },
             {
               "id": "prototypeIsland:tree:27",
-              "x": 489,
-              "y": 264,
+              "x": 482,
+              "y": 290,
               "phase": 19.40000000000001,
               "fireImmune": true,
               "nonInteractive": true
@@ -270,16 +262,16 @@
             },
             {
               "id": "prototypeIsland:tree:36",
-              "x": 482,
-              "y": 157,
+              "x": 474,
+              "y": 165,
               "phase": 25.970000000000013,
               "fireImmune": true,
               "nonInteractive": true
             },
             {
               "id": "prototypeIsland:tree:38",
-              "x": 485,
-              "y": 178,
+              "x": 490,
+              "y": 194,
               "phase": 27.430000000000014,
               "fireImmune": true,
               "nonInteractive": true
@@ -873,8 +865,8 @@
             },
             {
               "id": "prototypeIsland:sceneryRock:7",
-              "x": 476,
-              "y": 194,
+              "x": 471,
+              "y": 192,
               "collision": {
                 "width": 10,
                 "height": 6
@@ -1027,28 +1019,7 @@
               "x": 200,
               "y": 200,
               "width": 296,
-              "height": 48
-            },
-            {
-              "type": "grass",
-              "x": 200,
-              "y": 248,
-              "width": 80,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 280,
-              "y": 248,
-              "width": 112,
-              "height": 8
-            },
-            {
-              "type": "grass",
-              "x": 392,
-              "y": 248,
-              "width": 104,
-              "height": 8
+              "height": 56
             },
             {
               "type": "grass",
@@ -1061,14 +1032,14 @@
               "type": "dirt",
               "x": 240,
               "y": 256,
-              "width": 176,
+              "width": 40,
               "height": 8
             },
             {
               "type": "grass",
-              "x": 416,
+              "x": 280,
               "y": 256,
-              "width": 80,
+              "width": 216,
               "height": 8
             },
             {
@@ -1089,21 +1060,7 @@
               "type": "grass",
               "x": 296,
               "y": 264,
-              "width": 80,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 376,
-              "y": 264,
-              "width": 64,
-              "height": 8
-            },
-            {
-              "type": "grass",
-              "x": 440,
-              "y": 264,
-              "width": 136,
+              "width": 200,
               "height": 8
             },
             {
@@ -1117,14 +1074,7 @@
               "type": "grass",
               "x": 264,
               "y": 272,
-              "width": 136,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 400,
-              "y": 272,
-              "width": 176,
+              "width": 232,
               "height": 8
             },
             {
@@ -1138,21 +1088,14 @@
               "type": "grass",
               "x": 232,
               "y": 280,
-              "width": 200,
-              "height": 8
-            },
-            {
-              "type": "dirt",
-              "x": 432,
-              "y": 280,
-              "width": 144,
+              "width": 264,
               "height": 8
             },
             {
               "type": "grass",
               "x": 120,
               "y": 288,
-              "width": 456,
+              "width": 376,
               "height": 8
             },
             {

@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-373";
+const BUILD_VERSION = "6-11-374";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -2593,13 +2593,13 @@ const FIRST_BENCH_X = 216;
 const FIRST_BENCH_Y = 101;
 
 const CRAFT_RECIPES = Object.freeze({
-  woodSword: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodSwordCrafted", repeatable: false }),
-  woodBow: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodBowCrafted", repeatable: false }),
-  shepherdStaff: Object.freeze({ ingredients: Object.freeze({ wood: 10 }), stateKey: "shepherdStaffCrafted", repeatable: false }),
-  woodHelm: Object.freeze({ ingredients: Object.freeze({ wood: 8, stone: 2 }), stateKey: "woodHelmCrafted", repeatable: false }),
-  woodChest: Object.freeze({ ingredients: Object.freeze({ wood: 12, stone: 3 }), stateKey: "woodChestCrafted", repeatable: false }),
-  woodGreaves: Object.freeze({ ingredients: Object.freeze({ wood: 10, stone: 2 }), stateKey: "woodGreavesCrafted", repeatable: false }),
-  woodRing: Object.freeze({ ingredients: Object.freeze({ wood: 5 }), stateKey: "woodRingCrafted", repeatable: false }),
+  woodSword: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodSwordCrafted", repeatable: true }),
+  woodBow: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodBowCrafted", repeatable: true }),
+  shepherdStaff: Object.freeze({ ingredients: Object.freeze({ wood: 10 }), stateKey: "shepherdStaffCrafted", repeatable: true }),
+  woodHelm: Object.freeze({ ingredients: Object.freeze({ wood: 8, stone: 2 }), stateKey: "woodHelmCrafted", repeatable: true }),
+  woodChest: Object.freeze({ ingredients: Object.freeze({ wood: 12, stone: 3 }), stateKey: "woodChestCrafted", repeatable: true }),
+  woodGreaves: Object.freeze({ ingredients: Object.freeze({ wood: 10, stone: 2 }), stateKey: "woodGreavesCrafted", repeatable: true }),
+  woodRing: Object.freeze({ ingredients: Object.freeze({ wood: 5 }), stateKey: "woodRingCrafted", repeatable: true }),
   arrows: Object.freeze({ repeatable: true, resourceKey: "arrows", outputCount: 50, ingredients: Object.freeze({ wood: 5, stone: 1 }) }),
   healingPotion: Object.freeze({ repeatable: true, resourceKey: "healingPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }) }),
   attackPotion: Object.freeze({ repeatable: true, resourceKey: "attackPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 2 }) }),
@@ -3070,6 +3070,9 @@ const SHOP_VENDOR_CATALOGS = Object.freeze({
       weapon_sapgemWand: Object.freeze({ price: 20, level: 10 }),
       weapon_lostKey: Object.freeze({ price: 35, level: 15 }),
       weapon_hugeSunflower: Object.freeze({ price: 60, level: 20 }),
+      hat_arcanist: Object.freeze({ price: 25, level: 10 }),
+      shirt_arcanist: Object.freeze({ price: 40, level: 10 }),
+      pants_arcanist: Object.freeze({ price: 30, level: 10 }),
       hat_jester: Object.freeze({ price: 30, level: 20 }),
       shirt_jester: Object.freeze({ price: 45, level: 20 }),
       pants_jester: Object.freeze({ price: 35, level: 20 })
@@ -3136,11 +3139,6 @@ function handleShopPurchase(playerId, socket, message) {
     return;
   }
 
-  if (!item.repeatable && playerState.shopPurchases.includes(itemId)) {
-    sendJson(socket, { type: "shopPurchaseResult", itemId, vendor: vendorId, success: false, reason: "alreadyOwned", totalCoins: playerState.coins, price: item.price });
-    return;
-  }
-
   const price = Math.max(1, Number(item.price) || 1);
   if (playerState.coins < price) {
     sendJson(socket, { type: "shopPurchaseResult", itemId, vendor: vendorId, success: false, reason: "needCoin", totalCoins: playerState.coins, price });
@@ -3151,7 +3149,7 @@ function handleShopPurchase(playerId, socket, message) {
   if (item.repeatable && item.resourceKey === "arrows") {
     playerState.arrows += Math.max(1, Number(item.outputCount) || 1);
   } else {
-    playerState.shopPurchases.push(itemId);
+    if (!playerState.shopPurchases.includes(itemId)) playerState.shopPurchases.push(itemId);
   }
 
   sendJson(socket, {
@@ -4476,6 +4474,13 @@ function handleEnvironmentAction(
     entity.cut = true;
     entity.burnTime = 0;
     scheduleFlowerRegrow(entity);
+
+    sendToPlayer(playerId, {
+      type: "environmentReward",
+      targetId: playerId,
+      reward: "flowerHarvestingExp",
+      amount: 1
+    });
 
     if (!entity.looted) {
       entity.looted = true;
@@ -12534,6 +12539,30 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.mapId
       : requestedMapId;
 
+  const sanitizedLevel = clampInteger(
+    source.level,
+    1,
+    99,
+    previous?.level || 1
+  );
+  const hasClassField = Object.prototype.hasOwnProperty.call(source, "classId");
+  const previousClassId = ["might", "arcana", "precision", "guile"].includes(previous?.classId)
+    ? previous.classId
+    : null;
+  let sanitizedClassId = previousClassId;
+  if (hasClassField) {
+    if (source.classId === null) {
+      sanitizedClassId = null;
+    } else if (previousClassId && source.classId !== previousClassId) {
+      // A chosen class cannot silently switch. The reset crystal clears it first.
+      sanitizedClassId = previousClassId;
+    } else if (!previousClassId && ["might", "arcana", "precision", "guile"].includes(source.classId)) {
+      // Client UI owns the temporary Level-10 / available-class gate. Accept
+      // legacy saved Bruiser/Rogue characters here so this patch does not erase them.
+      sanitizedClassId = source.classId;
+    }
+  }
+
 
   return {
     id,
@@ -12706,17 +12735,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
-    level: clampInteger(
-      source.level,
-      1,
-      99,
-      previous?.level || 1
-    ),
+    level: sanitizedLevel,
 
-    classId:
-      ["might", "arcana", "precision", "guile"].includes(source.classId)
-        ? source.classId
-        : previous?.classId || null,
+    classId: sanitizedClassId,
 
     stats: {
       strength: clampInteger(

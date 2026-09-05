@@ -3845,8 +3845,8 @@ const player = {
   // New players intentionally start with no gear or weapons.
   items: {},
 
-  // Shop ownership is mirrored locally so browser persistence can restore the
-  // server's one-purchase-per-item bookkeeping after a reconnect/reload.
+  // Historical vendor-purchase IDs are retained for backwards-compatible saves.
+  // Item quantities live in player.items and are no longer unique.
   shopPurchases: [],
 
   // Independent, player-arranged hotbar.
@@ -3942,6 +3942,11 @@ const player = {
     level: 1,
     exp: 0,
     expToNext: 5
+  },
+  flowerHarvesting: {
+    level: 1,
+    exp: 0,
+    expToNext: 5
   }
 };
 
@@ -4026,7 +4031,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "weapons",
     ingredients: Object.freeze({ wood: 8 }),
     storyKey: "woodSwordCrafted",
-    repeatable: false
+    repeatable: true
   }),
   woodBow: Object.freeze({
     name: "Wood Bow",
@@ -4036,7 +4041,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "weapons",
     ingredients: Object.freeze({ wood: 8 }),
     storyKey: "woodBowCrafted",
-    repeatable: false
+    repeatable: true
   }),
   shepherdStaff: Object.freeze({
     name: "Shepherd Staff",
@@ -4046,7 +4051,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "weapons",
     ingredients: Object.freeze({ wood: 10 }),
     storyKey: "shepherdStaffCrafted",
-    repeatable: false
+    repeatable: true
   }),
   woodHelm: Object.freeze({
     name: "Wood Helm",
@@ -4056,7 +4061,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "armor",
     ingredients: Object.freeze({ wood: 8, stone: 2 }),
     storyKey: "woodHelmCrafted",
-    repeatable: false
+    repeatable: true
   }),
   woodChest: Object.freeze({
     name: "Wood Chest",
@@ -4066,7 +4071,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "armor",
     ingredients: Object.freeze({ wood: 12, stone: 3 }),
     storyKey: "woodChestCrafted",
-    repeatable: false
+    repeatable: true
   }),
   woodGreaves: Object.freeze({
     name: "Wood Greaves",
@@ -4076,7 +4081,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "armor",
     ingredients: Object.freeze({ wood: 10, stone: 2 }),
     storyKey: "woodGreavesCrafted",
-    repeatable: false
+    repeatable: true
   }),
   woodRing: Object.freeze({
     name: "Wood Ring",
@@ -4086,7 +4091,7 @@ const CRAFT_RECIPES = Object.freeze({
     category: "armor",
     ingredients: Object.freeze({ wood: 5 }),
     storyKey: "woodRingCrafted",
-    repeatable: false
+    repeatable: true
   }),
   arrows: Object.freeze({
     name: "50 Arrows",
@@ -4191,6 +4196,9 @@ const SHOP_ITEMS = [
   { id: "weapon_sapgemWand", name: "Sapgem Wand", vendor: "myrtle", price: 20 },
   { id: "weapon_lostKey", name: "Tournesol", vendor: "myrtle", price: 35 },
   { id: "weapon_hugeSunflower", name: "Tabatha's Key", vendor: "myrtle", price: 60 },
+  { id: "hat_arcanist", name: "Arcanist Hat", vendor: "myrtle", price: 25 },
+  { id: "shirt_arcanist", name: "Arcanist Robe", vendor: "myrtle", price: 40 },
+  { id: "pants_arcanist", name: "Arcanist Skirt", vendor: "myrtle", price: 30 },
   { id: "hat_jester", name: "Jester Hat", vendor: "myrtle", price: 30 },
   { id: "shirt_jester", name: "Jester Shirt", vendor: "myrtle", price: 45 },
   { id: "pants_jester", name: "Jester Pants", vendor: "myrtle", price: 35 }
@@ -4883,24 +4891,6 @@ function craftRecipeOffline(recipeId) {
 
   if (!recipe) return;
 
-  const alreadyOwned =
-    !recipe.repeatable &&
-    (
-      player.story[recipe.storyKey] ||
-      playerOwnsItem(recipe.itemId)
-    );
-
-  if (alreadyOwned) {
-    spawnFloatingText(
-      woodCraftBench.x,
-      woodCraftBench.y - 24,
-      "ALREADY CRAFTED",
-      "#ffe38b",
-      0.9
-    );
-    return;
-  }
-
   const ingredients = recipe.ingredients || { wood: recipe.cost };
   const hasIngredients = Object.entries(ingredients).every(
     ([key, amount]) => (Number(player[key]) || 0) >= amount
@@ -4955,14 +4945,7 @@ function tryCraftRecipe(recipeId) {
   if (
     !recipe ||
     !craftingOpen ||
-    player.benchCraftPending ||
-    (
-      !recipe.repeatable &&
-      (
-        player.story[recipe.storyKey] ||
-        playerOwnsItem(recipe.itemId)
-      )
-    )
+    player.benchCraftPending
   ) {
     return;
   }
@@ -5011,14 +4994,11 @@ function updateCraftingUi() {
 
     if (!button) continue;
 
-    button.hidden = (recipe.category || "weapons") !== craftCategoryFilter;
-
-    const owned =
-      !recipe.repeatable &&
-      (
-        player.story[recipe.storyKey] ||
-        playerOwnsItem(recipe.itemId)
-      );
+    const categoryVisible = (recipe.category || "weapons") === craftCategoryFilter;
+    button.hidden = !categoryVisible;
+    // Do not rely on the browser's UA [hidden] rule: .craft-recipe is explicitly
+    // display:grid in our stylesheet, so force the category filter at runtime too.
+    button.style.display = categoryVisible ? "" : "none";
 
     const pending =
       player.benchCraftPending ===
@@ -5033,7 +5013,7 @@ function updateCraftingUi() {
     );
 
     button.disabled =
-      owned || anyPending || !hasIngredients;
+      anyPending || !hasIngredients;
 
     const image =
       button.querySelector("img");
@@ -5076,17 +5056,24 @@ function updateCraftingUi() {
 
     if (status) {
       status.textContent =
-        owned
-          ? "CRAFTED"
-          : pending
-            ? "CRAFTING..."
-            : "CRAFT";
+        pending
+          ? "CRAFTING..."
+          : "CRAFT";
     }
   }
 }
 
 function setCraftingOpen(open) {
   craftingOpen = open;
+
+  if (open) {
+    craftCategoryFilter = "consumables";
+    document.querySelectorAll(".craft-tab").forEach(tab => {
+      const active = tab.dataset.craftFilter === craftCategoryFilter;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+    });
+  }
 
   if (open && player.hunterSnareSetting) {
     cancelHunterSnarePlacement(false);
@@ -5553,6 +5540,9 @@ const PLAYER_CLASSES = Object.freeze({
   precision: Object.freeze({ name: "Ranger" }),
   guile: Object.freeze({ name: "Rogue" })
 });
+
+const CLASS_SELECTION_LEVEL = 10;
+const SELECTABLE_CLASS_IDS = new Set(["arcana", "precision"]);
 
 const ARMOR_CLASS_REQUIREMENTS = Object.freeze({
   hat_jester: "arcana",
@@ -6036,6 +6026,16 @@ function choosePlayerClass(classId) {
   if (playerHasChosenClass()) return false;
   if (!PLAYER_CLASSES[classId]) return false;
 
+  if (Number(player.level) < CLASS_SELECTION_LEVEL) {
+    showMenuFeedback(`CLASSES UNLOCK AT LV ${CLASS_SELECTION_LEVEL}`, "#ffe38b", 1.2);
+    return false;
+  }
+
+  if (!SELECTABLE_CLASS_IDS.has(classId)) {
+    showMenuFeedback(`${PLAYER_CLASSES[classId].name.toUpperCase()} COMING SOON`, "#c9c2bc", 1.2);
+    return false;
+  }
+
   player.classId = classId;
 
   // Any test bindings made before choosing a class are cleared if they point
@@ -6071,8 +6071,30 @@ function updateClassSelectionUi() {
     skillsPage.classList.toggle("class-selected", chosen);
   }
 
+  document.querySelectorAll("[data-class-choice]").forEach(button => {
+    const classId = button.dataset.classChoice;
+    const available = SELECTABLE_CLASS_IDS.has(classId);
+    const levelReady = Number(player.level) >= CLASS_SELECTION_LEVEL;
+    button.disabled = chosen || !available || !levelReady;
+    button.classList.toggle("class-coming-soon", !available);
+    button.classList.toggle("class-level-locked", !chosen && available && !levelReady);
+
+    let status = button.querySelector(".class-selection-status");
+    if (!status) {
+      status = document.createElement("span");
+      status.className = "class-selection-status";
+      button.append(status);
+    }
+    status.textContent = !available
+      ? "Coming soon"
+      : !levelReady
+        ? `Requires Lv ${CLASS_SELECTION_LEVEL}`
+        : "Available";
+  });
+
   document.querySelectorAll(".skill-category-tab").forEach(tab => {
-    const locked = chosen && tab.dataset.skillCategory !== player.classId;
+    const unavailableTree = !SELECTABLE_CLASS_IDS.has(tab.dataset.skillCategory);
+    const locked = (chosen && tab.dataset.skillCategory !== player.classId) || (!chosen && unavailableTree);
     tab.disabled = locked;
     tab.classList.toggle("class-locked", locked);
     tab.setAttribute("aria-disabled", locked ? "true" : "false");
@@ -7210,6 +7232,29 @@ function awardMiningExp(amount) {
   }
 }
 
+function flowerHarvestingExpNeeded(level) {
+  return 5 + (Math.max(1, Number(level) || 1) - 1) * 3;
+}
+
+function awardFlowerHarvestingExp(amount) {
+  const skill = player.flowerHarvesting;
+  const gained = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!skill || gained <= 0) return;
+
+  skill.exp += gained;
+  spawnFloatingText(player.x, player.y - 39, `+${gained} HARV`, "#f0b6ff", 1.0);
+
+  while (skill.exp >= skill.expToNext) {
+    skill.exp -= skill.expToNext;
+    skill.level += 1;
+    skill.expToNext = flowerHarvestingExpNeeded(skill.level);
+    spawnFloatingText(player.x, player.y - 48, "HARVESTING UP!", "#f7d5ff", 1.25);
+  }
+
+  updateInventoryUi();
+  saveLocalCharacterState(false);
+}
+
 const MAX_PLAYER_STAT = 10;
 
 function spendSkillPoint(stat) {
@@ -8016,8 +8061,20 @@ function updateInventoryUi() {
 
     let visibleEntries = 0;
     grid.querySelectorAll("[data-owned-item]").forEach(element => {
-      const visible = playerOwnsItem(element.dataset.ownedItem);
+      const itemId = element.dataset.ownedItem;
+      const count = inventoryItemCount(itemId);
+      const visible = count > 0;
       element.style.display = visible ? "" : "none";
+
+      let stackCount = element.querySelector(".inventory-stack-count");
+      if (!stackCount) {
+        stackCount = document.createElement("span");
+        stackCount.className = "inventory-stack-count";
+        element.append(stackCount);
+      }
+      stackCount.textContent = count > 1 ? `×${count}` : "";
+      stackCount.hidden = count <= 1;
+
       if (visible) visibleEntries += 1;
     });
 
@@ -8113,6 +8170,20 @@ function updateInventoryUi() {
   }
   if (miningLevelText) {
     miningLevelText.textContent = `LV ${player.mining.level}`;
+  }
+
+  const flowerHarvestingFill = document.getElementById("flowerHarvestingFill");
+  const flowerHarvestingBarText = document.getElementById("flowerHarvestingBarText");
+  const flowerHarvestingLevelText = document.getElementById("flowerHarvestingLevelText");
+  if (flowerHarvestingFill) {
+    const pct = Math.max(0, Math.min(1, player.flowerHarvesting.exp / player.flowerHarvesting.expToNext));
+    flowerHarvestingFill.style.width = `${pct * 100}%`;
+  }
+  if (flowerHarvestingBarText) {
+    flowerHarvestingBarText.textContent = `${player.flowerHarvesting.exp} / ${player.flowerHarvesting.expToNext} EXP`;
+  }
+  if (flowerHarvestingLevelText) {
+    flowerHarvestingLevelText.textContent = `LV ${player.flowerHarvesting.level}`;
   }
 
   const hatStyle = currentHatStyle();
@@ -8340,9 +8411,8 @@ function validSavedItemIds(items) {
   if (!items || typeof items !== "object") return output;
 
   for (const itemId of ALL_EQUIPMENT_ITEM_IDS) {
-    if ((Number(items[itemId]) || 0) > 0) {
-      output[itemId] = 1;
-    }
+    const count = Math.max(0, Math.min(999999, Math.floor(Number(items[itemId]) || 0)));
+    if (count > 0) output[itemId] = count;
   }
   return output;
 }
@@ -8405,6 +8475,11 @@ function buildLocalCharacterSave() {
     mining: {
       level: clampLocalSaveInteger(player.mining?.level, 1, 99, 1),
       exp: Math.max(0, Math.floor(Number(player.mining?.exp) || 0))
+    },
+
+    flowerHarvesting: {
+      level: clampLocalSaveInteger(player.flowerHarvesting?.level, 1, 99, 1),
+      exp: Math.max(0, Math.floor(Number(player.flowerHarvesting?.exp) || 0))
     },
 
     resources: {
@@ -8518,6 +8593,14 @@ function applyLocalCharacterSave(save) {
     Math.max(0, player.mining.expToNext - 1),
     0
   );
+  player.flowerHarvesting.level = clampLocalSaveInteger(save.flowerHarvesting?.level, 1, 99, 1);
+  player.flowerHarvesting.expToNext = flowerHarvestingExpNeeded(player.flowerHarvesting.level);
+  player.flowerHarvesting.exp = clampLocalSaveInteger(
+    save.flowerHarvesting?.exp,
+    0,
+    Math.max(0, player.flowerHarvesting.expToNext - 1),
+    0
+  );
 
   player.coins = clampLocalSaveInteger(save.resources?.coins, 0, 999999, 0);
   player.wood = clampLocalSaveInteger(save.resources?.wood, 0, 999999, 0);
@@ -8550,7 +8633,7 @@ function applyLocalCharacterSave(save) {
   // A persisted purchase always implies ownership, even if an older save
   // happened to omit the parallel item dictionary entry.
   for (const itemId of player.shopPurchases) {
-    player.items[itemId] = 1;
+    player.items[itemId] = Math.max(1, inventoryItemCount(itemId));
   }
 
   for (const key of Object.keys(player.story)) {
@@ -8790,16 +8873,20 @@ function updateShopUi() {
     const itemCategory = shopCategoryForItem(item);
     if (shopCategoryFilter !== "all" && itemCategory !== shopCategoryFilter) continue;
 
-    const owned = !item.repeatable && playerOwnsItem(item.id);
+    const ownedCount = item.resourceKey === "arrows"
+      ? Math.max(0, Math.floor(Number(player.arrows) || 0))
+      : inventoryItemCount(item.id);
     const pending = player.shopPurchasePending === item.id;
     const requiredLevel = Math.max(0, Number(equipmentAttributeRequirements(item.id)?.level) || 0);
     const levelLocked = requiredLevel > 0 && Number(player.level) < requiredLevel;
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `shop-item${owned ? " owned" : ""}`;
+    button.className = "shop-item";
     button.dataset.shopItemId = item.id;
-    button.disabled = owned || pending || levelLocked;
+    // Level-locked items stay clickable so the player gets a clear requirement
+    // message instead of a dead-looking shop button.
+    button.disabled = pending;
 
     const image = document.createElement("img");
     const imageObject = shopImageForItemId(item.id);
@@ -8812,17 +8899,15 @@ function updateShopUi() {
 
     const meta = document.createElement("span");
     meta.className = "shop-item-meta";
-    meta.textContent = shopItemMetadata(item);
+    meta.textContent = `${shopItemMetadata(item)} · Owned ${ownedCount}`;
 
     const price = document.createElement("span");
     price.className = "shop-item-price";
-    price.textContent = owned
-      ? "OWNED"
-      : levelLocked
-        ? `LV ${requiredLevel}`
-        : pending
-          ? "..."
-          : `${item.price} COINS`;
+    price.textContent = levelLocked
+      ? `REQUIRES LV ${requiredLevel}`
+      : pending
+        ? "..."
+        : `${item.price} COINS`;
 
     button.append(image, name, meta, price);
     grid.appendChild(button);
@@ -8860,7 +8945,6 @@ function setShopOpen(open) {
 function tryPurchaseShopItem(itemId) {
   const item = activeVendorShopItems().find(entry => entry.id === itemId);
   if (!shopOpen || !item || player.shopPurchasePending) return;
-  if (!item.repeatable && playerOwnsItem(itemId)) return;
 
   const requiredLevel = Math.max(0, Number(equipmentAttributeRequirements(itemId)?.level) || 0);
   if (requiredLevel > 0 && Number(player.level) < requiredLevel) {
@@ -9178,7 +9262,9 @@ document.getElementById("craftTabs")?.addEventListener("click", event => {
   if (!button) return;
   craftCategoryFilter = button.dataset.craftFilter || "consumables";
   document.querySelectorAll(".craft-tab").forEach(tab => {
-    tab.classList.toggle("active", tab.dataset.craftFilter === craftCategoryFilter);
+    const active = tab.dataset.craftFilter === craftCategoryFilter;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
   });
   updateCraftingUi();
 });

@@ -2061,7 +2061,7 @@ class OnlineClient {
       if (ALL_EQUIPMENT_ITEM_IDS.has(itemId)) {
         if (!Array.isArray(player.shopPurchases)) player.shopPurchases = [];
         if (!player.shopPurchases.includes(itemId)) player.shopPurchases.push(itemId);
-        if (!playerOwnsItem(itemId)) grantInventoryItem(itemId, 1);
+        grantInventoryItem(itemId, 1);
       }
       spawnFloatingText(player.x, player.y - 30, "PURCHASED!", "#ffe38b", 0.85);
       updateShopUi();
@@ -2124,14 +2124,12 @@ class OnlineClient {
             Math.max(1, Number(recipe.outputCount) || 1);
         }
       } else {
-        player.story[recipe.storyKey] = true;
+        if (recipe.storyKey) player.story[recipe.storyKey] = true;
 
-        if (!playerOwnsItem(recipe.itemId)) {
-          grantInventoryItem(
-            recipe.itemId,
-            1
-          );
-        }
+        grantInventoryItem(
+          recipe.itemId,
+          1
+        );
 
         equipCraftedRecipe(recipe);
       }
@@ -2294,6 +2292,19 @@ class OnlineClient {
       "miningExp"
     ) {
       awardMiningExp(
+        Math.max(
+          0,
+          Number(message.amount) || 0
+        )
+      );
+      return;
+    }
+
+    if (
+      message.reward ===
+      "flowerHarvestingExp"
+    ) {
+      awardFlowerHarvestingExp(
         Math.max(
           0,
           Number(message.amount) || 0

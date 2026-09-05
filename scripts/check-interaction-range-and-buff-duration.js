@@ -14,7 +14,7 @@ const checks = [
   [server.includes('function playerNearAuthorizedCraftingTable(playerState)') && server.includes('playerNearPlacedInteraction(playerState, "craftingTable", 40, 12)') && server.includes('const validBench =\n    playerNearAuthorizedCraftingTable(playerState);'), "editor crafting-table server authorization"],
   [server.includes('playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16)'), "editor shopkeeper server authorization"],
   [game.includes('const bubbleWidth = 18;') && game.includes('const bubbleHeight = 18;') && game.includes('rgba(248, 244, 221, 0.78)') && game.includes('drawIcon(left + 1, anchorY + 1);'), "compact translucent native-icon bubbles"],
-  [html.includes('/game.js?v=373') && html.includes('/client-config.js?v=373'), "326 cache keys"]
+  [html.includes('/game.js?v=374') && html.includes('/client-config.js?v=374'), "326 cache keys"]
 ];
 for (const [ok, label] of checks) {
   if (!ok) throw new Error(`Interaction/buff regression: ${label}`);

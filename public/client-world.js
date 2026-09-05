@@ -2059,6 +2059,7 @@ function tryCutHarvestFlowers() {
 
       // Offline fallback.
       flower.cut = true;
+      awardFlowerHarvestingExp(1);
 
       if (!flower.looted) {
         flower.looted = true;

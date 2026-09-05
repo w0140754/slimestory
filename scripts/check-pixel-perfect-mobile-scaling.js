@@ -15,10 +15,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.373");
-assert(server.includes('const BUILD_VERSION = "6-11-373";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'));
-assert(html.includes('/client-app.js?v=373') && html.includes('/game.js?v=373'));
+assert.strictEqual(pkg.version, "0.6.11.374");
+assert(server.includes('const BUILD_VERSION = "6-11-374";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-374";'));
+assert(html.includes('/client-app.js?v=374') && html.includes('/game.js?v=374'));
 
 assert(html.includes('const LOGICAL_W = 224;') && html.includes('const LOGICAL_H = 126;'), "mobile logical view changed");
 assert(html.includes('const wholePhysicalScale = Math.max('), "whole physical-pixel fitting missing");

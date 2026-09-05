@@ -1529,6 +1529,10 @@
     padding: 12px;
   }
 
+  .craft-recipe[hidden] {
+    display: none !important;
+  }
+
   .craft-recipe {
     appearance: none;
     min-height: 96px;
@@ -1949,6 +1953,25 @@
     text-align: center;
     box-sizing: border-box;
   }
+
+  .menu-item {
+    position: relative;
+  }
+
+  .inventory-stack-count {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    min-width: 18px;
+    padding: 2px 3px;
+    border: 1px solid #8d815c;
+    background: #1d241d;
+    color: #fff2b5;
+    font: 8px/1 monospace;
+    box-sizing: border-box;
+  }
+
+  .inventory-stack-count[hidden] { display: none !important; }
 
   button.menu-item,
   button.equip-choice {
@@ -2862,6 +2885,28 @@
   .class-selection-button:hover {
     border-color: #9b8650;
     background: #354132;
+  }
+
+  .class-selection-button:disabled {
+    cursor: not-allowed;
+    opacity: .48;
+    filter: saturate(.55);
+  }
+
+  .class-selection-button:disabled:hover {
+    border-color: #5d563e;
+    background: #273027;
+  }
+
+  .class-selection-status {
+    margin-top: 6px;
+    color: #e4cf83 !important;
+    font: 8px/1.2 monospace !important;
+    text-transform: uppercase;
+  }
+
+  .class-selection-button.class-coming-soon .class-selection-status {
+    color: #aaa38f !important;
   }
 
   .class-selection-button strong {
@@ -5388,7 +5433,7 @@
       <div id="classSelectionGate" class="class-selection-gate">
         <div class="class-selection-title">Choose Your Class</div>
         <div class="class-selection-copy">
-          Your choice locks this character to one skill tree. Other class arts cannot be unlocked or equipped afterward.
+          Classes unlock at Level 10. Magus and Ranger are currently available; Bruiser and Rogue are coming soon. Your choice locks this character to one skill tree.
         </div>
         <div class="class-selection-grid">
           <button type="button" class="class-selection-button" data-class-choice="might">
@@ -5708,10 +5753,11 @@
       <div class="skill-card" style="margin-top:10px;">
         <div class="skill-card-top">
           <span>Flower Harvesting</span>
-          <span>Soon</span>
+          <span id="flowerHarvestingLevelText">LV 1</span>
         </div>
-        <div class="talent-panel-note">
-          Reserved for future flower gathering and other collection talents.
+        <div class="skill-bar">
+          <div class="skill-fill" id="flowerHarvestingFill"></div>
+          <div class="skill-bar-text" id="flowerHarvestingBarText">0 / 5 EXP</div>
         </div>
       </div>
     </div>
@@ -5840,7 +5886,7 @@
       <button type="button" class="shop-tab" data-shop-filter="guile">Rogue</button>
     </div>
     <div id="shopGrid"></div>
-    <div id="shopFooter">Everything costs 1 Coin · Class restrictions apply when equipping armor · Esc to close</div>
+    <div id="shopFooter">Prices vary by item · Level/class requirements apply · Esc to close</div>
   </div>
 </div>
 
@@ -5891,7 +5937,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=373" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=374" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -5913,33 +5959,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=373"></script>
-<script src="/shared/terrain-rules.js?v=373"></script>
-<script src="/shared/terrain-presentation.js?v=373"></script>
-<script src="/shared/combat-balance.js?v=373"></script>
-<script src="/shared/ability-scaling.js?v=373"></script>
-<script src="/shared/rain-field.js?v=373"></script>
-<script src="/shared/camouflage-rules.js?v=373"></script>
-<script src="/shared/enemy-net-protocol.js?v=373"></script>
-<script src="/shared/player-net-protocol.js?v=373"></script>
-<script src="/client-config.js?v=373"></script>
-<script src="/client-utils.js?v=373"></script>
-<script src="/client-world.js?v=373"></script>
-<script src="/client-maps.js?v=373"></script>
-<script src="/client-enemies.js?v=373"></script>
-<script src="/client-enemy-runtime.js?v=373"></script>
-<script src="/client-enemy-rendering.js?v=373"></script>
-<script src="/client-combat.js?v=373"></script>
-<script src="/client-abilities.js?v=373"></script>
-<script src="/client-magus-abilities.js?v=373"></script>
-<script src="/client-class-abilities.js?v=373"></script>
-<script src="/client-status.js?v=373"></script>
-<script src="/client-fire-environment.js?v=373"></script>
-<script src="/client-network.js?v=373"></script>
-<script src="/client-simulation-foundation.js?v=373"></script>
-<script src="/game.js?v=373"></script>
-<script src="/client-terrain.js?v=373"></script>
-<script src="/client-input.js?v=373"></script>
-<script src="/client-app.js?v=373"></script>
+<script src="/shared/world-content-runtime.js?v=374"></script>
+<script src="/shared/terrain-rules.js?v=374"></script>
+<script src="/shared/terrain-presentation.js?v=374"></script>
+<script src="/shared/combat-balance.js?v=374"></script>
+<script src="/shared/ability-scaling.js?v=374"></script>
+<script src="/shared/rain-field.js?v=374"></script>
+<script src="/shared/camouflage-rules.js?v=374"></script>
+<script src="/shared/enemy-net-protocol.js?v=374"></script>
+<script src="/shared/player-net-protocol.js?v=374"></script>
+<script src="/client-config.js?v=374"></script>
+<script src="/client-utils.js?v=374"></script>
+<script src="/client-world.js?v=374"></script>
+<script src="/client-maps.js?v=374"></script>
+<script src="/client-enemies.js?v=374"></script>
+<script src="/client-enemy-runtime.js?v=374"></script>
+<script src="/client-enemy-rendering.js?v=374"></script>
+<script src="/client-combat.js?v=374"></script>
+<script src="/client-abilities.js?v=374"></script>
+<script src="/client-magus-abilities.js?v=374"></script>
+<script src="/client-class-abilities.js?v=374"></script>
+<script src="/client-status.js?v=374"></script>
+<script src="/client-fire-environment.js?v=374"></script>
+<script src="/client-network.js?v=374"></script>
+<script src="/client-simulation-foundation.js?v=374"></script>
+<script src="/game.js?v=374"></script>
+<script src="/client-terrain.js?v=374"></script>
+<script src="/client-input.js?v=374"></script>
+<script src="/client-app.js?v=374"></script>
 </body>
 </html>

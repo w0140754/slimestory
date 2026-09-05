@@ -1,5 +1,15 @@
 # Slime Story
 
+## v6-11-374 — Multi-item progression, shop/crafting fixes, and Flower Harvesting
+
+- Fixed the crafting-table category tabs so **Consumables / Weapons / Armor** actually hide/show their own recipes; Consumables remains the default and the grid stays three recipes wide.
+- Fixed the shop UX that made level-gated Myrtle stock feel unbuyable: locked items remain clickable and now explain their required level. Myrtle's server/client catalog was also expanded with **Arcanist Hat / Robe / Skirt** at Lv10.
+- Locked new class selection until **Level 10**. For now only **Magus** and **Ranger** can be newly selected; **Bruiser** and **Rogue** are shown as coming soon while legacy already-selected characters remain load-safe.
+- Removed unique-ownership behavior from normal equipment acquisition: equipment quantities persist as counts, repeated shop purchases and equipment crafting are allowed, and inventory entries display stack counts when more than one copy is owned.
+- Added **Flower Harvesting** as a real talent. Cutting an intact harvestable flower grants 1 Harvesting EXP both online (server-authoritative environment reward) and offline; level/progress is shown in Talents and saved with the character.
+- Added focused regression coverage plus a WebSocket smoke test proving repeat Myrtle purchases work, including buying the same Arcanist piece and Sapgem Wand more than once.
+- Preserved the current map-editor-authored world content **v88** unchanged during this code build.
+
 ## v6-11-373 — Crafting categories, Marnie progression, and class shops
 
 - Reorganized the crafting table into **Consumables / Weapons / Armor** categories, opening on Consumables and displaying three recipes per row.

@@ -13,10 +13,10 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = JSON.parse(read("package.json"));
 const mapOverride = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-373";'), "server build must be 6-11-373");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'), "client build must be 6-11-373");
-assert.strictEqual(pkg.version, "0.6.11.373", "package version must be 0.6.11.373");
-assert(html.includes('/game.js?v=373') && html.includes('/client-enemies.js?v=373'), "Greencap build cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-374";'), "server build must be 6-11-374");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-374";'), "client build must be 6-11-374");
+assert.strictEqual(pkg.version, "0.6.11.374", "package version must be 0.6.11.374");
+assert(html.includes('/game.js?v=374') && html.includes('/client-enemies.js?v=374'), "Greencap build cache keys missing");
 
 for (const file of [
   "greencap_cap_v1.png",

@@ -22,8 +22,8 @@ const authored = JSON.parse(read("content", "adopted-map-overrides.json"));
 const authoredMirror = require(path.join(root, "public", "shared", "adopted-map-overrides.js"));
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-373";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-373";'));
+assert(server.includes('const BUILD_VERSION = "6-11-374";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-374";'));
 assert.ok(authored.version >= 68, "authored map revision must not regress below 68");
 assert.deepStrictEqual(authoredMirror, authored, "browser and server authored-map copies must match");
 

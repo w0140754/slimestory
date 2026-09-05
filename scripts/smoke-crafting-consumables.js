@@ -47,7 +47,7 @@ async function sendAndWait(socket, payload, type, predicate) {
       type: "persistentStateRestore",
       state: {
         resources: {
-          wood: 10,
+          wood: 20,
           stone: 1,
           whiteFlowers: 6,
           blueFlowers: 3
@@ -75,22 +75,22 @@ async function sendAndWait(socket, payload, type, predicate) {
     const arrows = await sendAndWait(socket, {
       type: "craftRequest", recipe: "arrows"
     }, "craftResult", message => message.recipe === "arrows");
-    if (!arrows.success || arrows.totalArrows !== 50 || arrows.totalWood !== 5 || arrows.totalStone !== 0) {
+    if (!arrows.success || arrows.totalArrows !== 50 || arrows.totalWood !== 15 || arrows.totalStone !== 0) {
       throw new Error("authoritative arrow recipe failed");
     }
 
     const woodRing = await sendAndWait(socket, {
       type: "craftRequest", recipe: "woodRing"
     }, "craftResult", message => message.recipe === "woodRing");
-    if (!woodRing.success || woodRing.totalWood !== 0) {
+    if (!woodRing.success || woodRing.totalWood !== 10) {
       throw new Error("authoritative wood ring recipe failed");
     }
 
     const duplicateWoodRing = await sendAndWait(socket, {
       type: "craftRequest", recipe: "woodRing"
     }, "craftResult", message => message.recipe === "woodRing");
-    if (duplicateWoodRing.success || duplicateWoodRing.reason !== "alreadyCrafted") {
-      throw new Error("wood ring duplicate-craft guard failed");
+    if (!duplicateWoodRing.success || duplicateWoodRing.totalWood !== 5) {
+      throw new Error("wood ring repeat-crafting failed");
     }
 
     const attackOne = await sendAndWait(socket, {
