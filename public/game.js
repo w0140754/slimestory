@@ -2218,7 +2218,11 @@ function completePlayerRespawn(serverState = null) {
   player.shadowHidden = false;
   player.shadowHideRevealTime = 0;
 
-  activateMap("spawn", "center");
+  const respawnMapId = typeof serverState?.mapId === "string" && mapStates[serverState.mapId]
+    ? serverState.mapId
+    : (WORLD_CONTENT?.defaultPlayerLoad?.mapId || WORLD_CONTENT?.worldGrid?.startMapId || "spawn");
+  const respawnSpawnId = WORLD_CONTENT?.defaultPlayerLoad?.spawnId || "center";
+  activateMap(respawnMapId, respawnSpawnId);
 
   if (serverState) {
     if (Number.isFinite(serverState.x)) player.x = serverState.x;
@@ -2288,15 +2292,92 @@ let pendingMapEnemySyncId = null;
 let suppressedEnemyRenderMapId = null;
 let mapEnemySyncFallbackTimer = null;
 
-// Map changes are presented as one atomic scene load:
-// old map -> quick cover -> authoritative enemy snapshot -> quick reveal.
-// The cover/reveal are intentionally short presentation transitions; there is
-// no arbitrary network wait beyond the actual snapshot synchronization.
-const MAP_TRANSITION_COVER_DURATION = 0.08;
-const MAP_TRANSITION_REVEAL_DURATION = 0.10;
+// v378: coordinate-world map changes keep the outgoing scene visible while
+// the destination snapshot is synchronized, then slide both scenes across the
+// viewport in the direction the player travelled. This avoids the old black
+// cover without pre-activating adjacent maps or their enemies.
+const MAP_TRANSITION_SLIDE_DURATION = 0.34;
 let mapTransitionPhase = "idle";
-let mapTransitionAlpha = 0;
+let mapTransitionProgress = 0;
 let pendingMapTransition = null;
+let mapTransitionOutgoingFrame = null;
+let mapTransitionIncomingFrame = null;
+let mapTransitionDirectionX = 0;
+let mapTransitionDirectionY = 0;
+let mapTransitionOutgoingPlayerScreenX = VIEW_W / 2;
+let mapTransitionOutgoingPlayerScreenY = VIEW_H / 2;
+let mapTransitionIncomingPlayerScreenX = VIEW_W / 2;
+let mapTransitionIncomingPlayerScreenY = VIEW_H / 2;
+let forceSuppressLocalPlayerRendering = false;
+
+function shouldSuppressLocalPlayerForMapTransition() {
+  return forceSuppressLocalPlayerRendering || mapTransitionPhase !== "idle";
+}
+
+function captureMapTransitionFrame() {
+  const frame = document.createElement("canvas");
+  frame.width = canvas.width;
+  frame.height = canvas.height;
+  const frameCtx = frame.getContext("2d");
+  frameCtx.imageSmoothingEnabled = false;
+  frameCtx.drawImage(canvas, 0, 0);
+  return frame;
+}
+
+function ensureMapTransitionIncomingFrame() {
+  if (
+    !mapTransitionIncomingFrame ||
+    mapTransitionIncomingFrame.width !== canvas.width ||
+    mapTransitionIncomingFrame.height !== canvas.height
+  ) {
+    mapTransitionIncomingFrame = document.createElement("canvas");
+    mapTransitionIncomingFrame.width = canvas.width;
+    mapTransitionIncomingFrame.height = canvas.height;
+  }
+  return mapTransitionIncomingFrame;
+}
+
+function setMapTransitionNpcLayerHidden(hidden) {
+  const layer = document.getElementById("npcNameLayer");
+  if (layer) layer.style.visibility = hidden ? "hidden" : "";
+}
+
+function mapTransitionDirectionForTarget(mapId, entrySide) {
+  const sourceGrid = worldGridMapMeta(currentMapId);
+  const targetGrid = worldGridMapMeta(mapId);
+  if (sourceGrid && targetGrid) {
+    return {
+      x: Math.sign(targetGrid.x - sourceGrid.x),
+      y: Math.sign(targetGrid.y - sourceGrid.y)
+    };
+  }
+
+  // Legacy/fallback directional hints use the side on which the player appears
+  // inside the destination map.
+  if (entrySide === "west" || entrySide === "spawnWest") return { x: 1, y: 0 };
+  if (entrySide === "east" || entrySide === "spawnEast") return { x: -1, y: 0 };
+  if (entrySide === "north") return { x: 0, y: 1 };
+  if (entrySide === "south") return { x: 0, y: -1 };
+  return { x: 0, y: 0 };
+}
+
+function beginMapTransitionSlide() {
+  const camera = getCameraPosition();
+  mapTransitionIncomingPlayerScreenX = player.x - camera.x;
+  mapTransitionIncomingPlayerScreenY = player.y - camera.y;
+  mapTransitionPhase = "sliding";
+  mapTransitionProgress = 0;
+}
+
+function finishMapTransitionPresentation() {
+  mapTransitionPhase = "idle";
+  mapTransitionProgress = 0;
+  mapTransitionOutgoingFrame = null;
+  mapTransitionIncomingFrame = null;
+  mapTransitionDirectionX = 0;
+  mapTransitionDirectionY = 0;
+  setMapTransitionNpcLayerHidden(false);
+}
 
 function beginMapEnemySync(mapId) {
   if (!onlineClient?.connected) {
@@ -2313,8 +2394,8 @@ function beginMapEnemySync(mapId) {
   }
 
   // Normal release comes from the server's snapshot-batch completion marker.
-  // This safety valve only prevents the transition from remaining covered
-  // forever if the connection drops halfway through a map change.
+  // The outgoing screenshot remains visible during this wait, so a slow packet
+  // never exposes a half-populated destination or a black transition screen.
   mapEnemySyncFallbackTimer = setTimeout(() => {
     finishMapEnemySync(mapId);
   }, 1200);
@@ -2338,8 +2419,7 @@ function finishMapEnemySync(mapId) {
     mapTransitionPhase === "syncing" &&
     currentMapId === mapId
   ) {
-    mapTransitionPhase = "revealing";
-    mapTransitionAlpha = 1;
+    beginMapTransitionSlide();
   }
 }
 
@@ -2352,12 +2432,11 @@ function cancelPendingMapEnemySync() {
     mapEnemySyncFallbackTimer = null;
   }
 
-  // A disconnect during the covered sync phase must never strand the player
-  // behind a permanent dark screen. Reveal the locally initialized scene; the
-  // normal reconnect path will resume authoritative synchronization afterward.
+  // If authority disappears mid-transition, reveal the locally initialized
+  // destination by completing the same directional slide instead of dropping
+  // to a black screen.
   if (mapTransitionPhase === "syncing") {
-    mapTransitionPhase = "revealing";
-    mapTransitionAlpha = 1;
+    beginMapTransitionSlide();
   }
 }
 
@@ -2403,6 +2482,137 @@ function sharedDefaultPlayerLoadTarget() {
   return { mapId: "spawn", spawnId: "center" };
 }
 
+function worldGridMapMeta(mapId = currentMapId) {
+  const grid = WORLD_CONTENT?.maps?.[mapId]?.grid;
+  if (!grid || !Number.isFinite(Number(grid.x)) || !Number.isFinite(Number(grid.y))) return null;
+  return {
+    x: Number(grid.x),
+    y: Number(grid.y),
+    distance: Math.max(0, Number(grid.distance) || 0),
+    biome: String(grid.biome || "plains"),
+    seed: Number(grid.seed) || 0
+  };
+}
+
+function worldGridMapIdAt(x, y) {
+  for (const [mapId, definition] of Object.entries(WORLD_CONTENT?.maps || {})) {
+    if (Number(definition?.grid?.x) === Number(x) && Number(definition?.grid?.y) === Number(y)) {
+      return mapId;
+    }
+  }
+  return null;
+}
+
+function worldGridBiomeLabel(biome) {
+  if (biome === "spawn-plains") return "Spawn Plains";
+  if (biome === "rocky-plains") return "Rocky Plains";
+  if (biome === "forest") return "Forest";
+  return "Plains";
+}
+
+const worldGridDiscoveredCells = new Set();
+
+function worldGridCellKey(x, y) {
+  return `${Math.trunc(Number(x) || 0)},${Math.trunc(Number(y) || 0)}`;
+}
+
+function worldGridBiomeIconClass(biome) {
+  if (biome === "forest") return "biome-forest";
+  if (biome === "rocky-plains") return "biome-rocky";
+  return "biome-plains";
+}
+
+function markWorldGridDiscovered(mapId = currentMapId) {
+  const grid = worldGridMapMeta(mapId);
+  if (!grid) return false;
+  const key = worldGridCellKey(grid.x, grid.y);
+  const changed = !worldGridDiscoveredCells.has(key);
+  worldGridDiscoveredCells.add(key);
+  return changed;
+}
+
+function updateWorldMiniMap() {
+  const miniMap = document.getElementById("worldMiniMap");
+  if (!miniMap) return;
+
+  const current = worldGridMapMeta();
+  if (!current) {
+    miniMap.style.display = "none";
+    return;
+  }
+
+  const radius = Math.max(0, Number(WORLD_CONTENT?.worldGrid?.radius) || 0);
+  miniMap.style.display = "grid";
+  miniMap.replaceChildren();
+  miniMap.setAttribute(
+    "aria-label",
+    `Local world map. Current ${current.x},${current.y}, ${worldGridBiomeLabel(current.biome)}.`
+  );
+
+  for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+    for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+      const x = current.x + offsetX;
+      const y = current.y + offsetY;
+      const cell = document.createElement("div");
+      cell.className = "world-mini-cell";
+
+      const outsideWorld = Math.max(Math.abs(x), Math.abs(y)) > radius;
+      const mapId = outsideWorld ? null : worldGridMapIdAt(x, y);
+      const definition = mapId ? WORLD_CONTENT?.maps?.[mapId] : null;
+      const discovered = Boolean(mapId) && worldGridDiscoveredCells.has(worldGridCellKey(x, y));
+
+      if (outsideWorld || !mapId) {
+        cell.classList.add("outside-world");
+        cell.title = "World edge";
+      } else if (!discovered) {
+        cell.classList.add("undiscovered");
+        cell.title = `Undiscovered · ${x},${y}`;
+      } else {
+        cell.classList.add("discovered");
+        const biome = String(definition?.grid?.biome || "plains");
+        const icon = document.createElement("span");
+        icon.className = `world-mini-biome-icon ${worldGridBiomeIconClass(biome)}`;
+        icon.setAttribute("aria-hidden", "true");
+        cell.appendChild(icon);
+        cell.title = `${worldGridBiomeLabel(biome)} · ${x},${y}`;
+      }
+
+      if (x === 0 && y === 0 && !outsideWorld) {
+        const spawnMarker = document.createElement("span");
+        spawnMarker.className = "world-mini-spawn-marker";
+        spawnMarker.setAttribute("aria-hidden", "true");
+        cell.appendChild(spawnMarker);
+        cell.classList.add("spawn-cell");
+      }
+
+      if (offsetX === 0 && offsetY === 0) {
+        cell.classList.add("current-cell");
+        const playerMarker = document.createElement("span");
+        playerMarker.className = "world-mini-player-marker";
+        playerMarker.setAttribute("aria-hidden", "true");
+        cell.appendChild(playerMarker);
+      }
+
+      miniMap.appendChild(cell);
+    }
+  }
+}
+
+function updateWorldGridStatus() {
+  const status = document.getElementById("worldGridStatus");
+  if (!status) return;
+  const grid = worldGridMapMeta();
+  if (!grid) {
+    status.style.display = "none";
+    updateWorldMiniMap();
+    return;
+  }
+  const radius = Math.max(0, Number(WORLD_CONTENT?.worldGrid?.radius) || 0);
+  status.style.display = "block";
+  status.textContent = `${worldGridBiomeLabel(grid.biome)} · ${grid.x},${grid.y} · Distance ${grid.distance} · Radius ${radius}`;
+  updateWorldMiniMap();
+}
+
 function requestMapTransition(mapId, entrySide) {
   if (!mapStates[mapId]) return false;
   if (mapTransitionPhase !== "idle") return false;
@@ -2414,9 +2624,35 @@ function requestMapTransition(mapId, entrySide) {
     return false;
   }
 
-  pendingMapTransition = { mapId, entrySide };
-  mapTransitionPhase = "covering";
-  mapTransitionAlpha = 0;
+  const direction = mapTransitionDirectionForTarget(mapId, entrySide);
+  mapTransitionDirectionX = direction.x;
+  mapTransitionDirectionY = direction.y;
+
+  const outgoingCamera = getCameraPosition();
+  mapTransitionOutgoingPlayerScreenX = player.x - outgoingCamera.x;
+  mapTransitionOutgoingPlayerScreenY = player.y - outgoingCamera.y;
+
+  // Capture the outgoing scene without the local player. The transition then
+  // draws one player sprite over the composite, eliminating the v379 double
+  // sprite where both map screenshots contained their own copy.
+  forceSuppressLocalPlayerRendering = true;
+  if (typeof gameRenderer !== "undefined") {
+    gameRenderer.render();
+  }
+  mapTransitionOutgoingFrame = captureMapTransitionFrame();
+  forceSuppressLocalPlayerRendering = false;
+
+  mapTransitionIncomingFrame = null;
+  pendingMapTransition = {
+    mapId,
+    entrySide,
+    sourceX: player.x,
+    sourceY: player.y,
+    sourceMapId: currentMapId
+  };
+  mapTransitionPhase = "starting";
+  mapTransitionProgress = 0;
+  setMapTransitionNpcLayerHidden(true);
   inputController.clearCommands();
   player.walkTime = 0;
   player.wasMoving = false;
@@ -2464,73 +2700,104 @@ function updateSharedMapPortalConnection() {
 function updateMapTransition(dt) {
   if (mapTransitionPhase === "idle") return false;
 
-  if (mapTransitionPhase === "covering") {
-    mapTransitionAlpha = Math.min(
-      1,
-      mapTransitionAlpha + dt / MAP_TRANSITION_COVER_DURATION
-    );
+  if (mapTransitionPhase === "starting") {
+    const target = pendingMapTransition;
+    pendingMapTransition = null;
 
-    if (mapTransitionAlpha >= 1) {
-      const target = pendingMapTransition;
-      pendingMapTransition = null;
-
-      // A transition may have started a fraction of a second before the
-      // socket closed. Do not complete it locally after authority is lost.
-      if (!onlineClient?.connected) {
-        mapTransitionPhase = "revealing";
-        mapTransitionAlpha = 1;
-        return true;
-      }
-
-      mapTransitionPhase = "syncing";
-
-      if (target) {
-        activateMap(target.mapId, target.entrySide);
-      }
-
-      if (pendingMapEnemySyncId === null) {
-        mapTransitionPhase = "revealing";
-      }
+    // Do not complete a queued map change locally after authority disappears.
+    if (!target || !onlineClient?.connected) {
+      finishMapTransitionPresentation();
+      return true;
     }
 
+    mapTransitionPhase = "syncing";
+    // Load the destination behind the frozen outgoing frame. The authoritative
+    // snapshot completes before the slide begins, so adjacent maps never need
+    // to be simulated or streamed merely for presentation.
+    activateMap(target.mapId, target.entrySide, target);
+    if (pendingMapEnemySyncId === null) beginMapTransitionSlide();
     return true;
   }
 
   if (mapTransitionPhase === "syncing") {
-    mapTransitionAlpha = 1;
     return true;
   }
 
-  if (mapTransitionPhase === "revealing") {
-    mapTransitionAlpha = Math.max(
-      0,
-      mapTransitionAlpha - dt / MAP_TRANSITION_REVEAL_DURATION
+  if (mapTransitionPhase === "sliding") {
+    mapTransitionProgress = Math.min(
+      1,
+      mapTransitionProgress + dt / MAP_TRANSITION_SLIDE_DURATION
     );
 
-    if (mapTransitionAlpha <= 0) {
-      mapTransitionAlpha = 0;
-      mapTransitionPhase = "idle";
+    if (mapTransitionProgress >= 1) {
+      finishMapTransitionPresentation();
     }
-
     return true;
   }
 
-  mapTransitionPhase = "idle";
-  mapTransitionAlpha = 0;
+  finishMapTransitionPresentation();
   return false;
 }
 
+// Historical name retained so existing render plumbing does not need an
+// overlay-only patch. v378 now composites a directional slide, never a black
+// cover, and keeps the outgoing frame stationary while the server syncs.
 function drawMapTransitionCover() {
-  if (mapTransitionAlpha <= 0) return;
+  if (mapTransitionPhase === "idle" || !mapTransitionOutgoingFrame) return;
 
   ctx.save();
-  ctx.globalAlpha = Math.max(0, Math.min(1, mapTransitionAlpha));
-  ctx.fillStyle = "#101510";
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+
+  if (mapTransitionPhase === "syncing" || mapTransitionPhase === "starting") {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(mapTransitionOutgoingFrame, 0, 0);
+    drawPlayer(
+      player.x - mapTransitionOutgoingPlayerScreenX,
+      player.y - mapTransitionOutgoingPlayerScreenY
+    );
+    drawPvpMarker(
+      player,
+      player.x - mapTransitionOutgoingPlayerScreenX,
+      player.y - mapTransitionOutgoingPlayerScreenY
+    );
+    ctx.restore();
+    return;
+  }
+
+  const incomingFrame = ensureMapTransitionIncomingFrame();
+  const incomingCtx = incomingFrame.getContext("2d");
+  incomingCtx.setTransform(1, 0, 0, 1, 0, 0);
+  incomingCtx.imageSmoothingEnabled = false;
+  incomingCtx.clearRect(0, 0, incomingFrame.width, incomingFrame.height);
+  incomingCtx.drawImage(canvas, 0, 0);
+
+  const rawProgress = Math.max(0, Math.min(1, mapTransitionProgress));
+  const progress = rawProgress * rawProgress * (3 - 2 * rawProgress);
+  const outX = Math.round(-mapTransitionDirectionX * progress * canvas.width);
+  const outY = Math.round(-mapTransitionDirectionY * progress * canvas.height);
+  const inX = Math.round(mapTransitionDirectionX * (1 - progress) * canvas.width);
+  const inY = Math.round(mapTransitionDirectionY * (1 - progress) * canvas.height);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(mapTransitionOutgoingFrame, outX, outY);
+  ctx.drawImage(incomingFrame, inX, inY);
+
+  const playerScreenX =
+    mapTransitionOutgoingPlayerScreenX +
+    (mapTransitionIncomingPlayerScreenX - mapTransitionOutgoingPlayerScreenX) * progress;
+  const playerScreenY =
+    mapTransitionOutgoingPlayerScreenY +
+    (mapTransitionIncomingPlayerScreenY - mapTransitionOutgoingPlayerScreenY) * progress;
+  const playerCamX = player.x - playerScreenX;
+  const playerCamY = player.y - playerScreenY;
+  drawPlayer(playerCamX, playerCamY);
+  drawPvpMarker(player, playerCamX, playerCamY);
+
   ctx.restore();
 }
 
-function activateMap(mapId, entrySide) {
+function activateMap(mapId, entrySide, transitionContext = null) {
   const state = mapStates[mapId];
   if (!state) return;
 
@@ -2541,6 +2808,8 @@ function activateMap(mapId, entrySide) {
 
   currentMapId = mapId;
   activeWorldDimensionMapId = mapId;
+  markWorldGridDiscovered(mapId);
+  updateWorldGridStatus();
   clearCamouflageState(false);
 
   // Ensure this map's natural enemy objects exactly match the shared registry
@@ -2583,54 +2852,77 @@ function activateMap(mapId, entrySide) {
   player.knockbackY = 0;
   player.contactCooldown = Math.max(player.contactCooldown, 0.35);
 
-  // Editor-authored maps name their entry points explicitly. Legacy maps still
-  // fall through to the historical side-based entry rules below.
-  const sharedSpawn = sharedPlayerSpawnPoint(mapId, entrySide);
+  // Coordinate-grid travel preserves the perpendicular world coordinate.
+  // Crossing east/west keeps Y; crossing north/south keeps X. This makes the
+  // maps read as adjacent pieces of one world instead of teleporting the
+  // player back to the centre line on every boundary crossing.
+  const previousGrid = worldGridMapMeta(previousMapId);
+  const targetGrid = worldGridMapMeta(mapId);
+  const gridTravel = Boolean(
+    transitionContext &&
+    previousGrid &&
+    targetGrid &&
+    transitionContext.sourceMapId === previousMapId
+  );
 
-  // Enter just inside the opposite side so one movement frame cannot
-  // immediately bounce the player back through the connection.
-  if (sharedSpawn) {
-    player.x = Number(sharedSpawn.x) || 0;
-    player.y = Number(sharedSpawn.y) || 0;
-  } else if (entrySide === "center") {
-    player.x = world.width / 2;
-    player.y = world.height / 2;
-  } else if (entrySide === "west") {
-    player.x = 26;
-    player.y = 200;
-  } else if (entrySide === "spawnWest") {
-    player.x = 26;
-    player.y = spawnMapY(200);
-  } else if (entrySide === "spawnEast") {
-    player.x = world.width - 30;
-    player.y = spawnMapY(200);
-  } else if (entrySide === "prototypeEast") {
-    const layout = getPrototypeIslandLayout(mapId);
-    if (layout?.eastBridge) {
-      player.x = layout.eastBridge.x + layout.eastBridge.width - 14;
-      player.y = layout.eastBridge.y + Math.round(layout.eastBridge.height / 2);
+  if (gridTravel) {
+    const dx = Math.sign(targetGrid.x - previousGrid.x);
+    const dy = Math.sign(targetGrid.y - previousGrid.y);
+    if (dx !== 0) {
+      player.x = dx > 0 ? 9 : world.width - 9;
+      player.y = clampToWorld(Number(transitionContext.sourceY), 15, world.height - 1);
+    } else if (dy !== 0) {
+      player.x = clampToWorld(Number(transitionContext.sourceX), 8, world.width - 8);
+      player.y = dy > 0 ? 16 : world.height - 2;
+    }
+  } else {
+    // Editor-authored maps name their entry points explicitly. Legacy maps
+    // retain their historical side-based entry rules.
+    const sharedSpawn = sharedPlayerSpawnPoint(mapId, entrySide);
+
+    if (sharedSpawn) {
+      player.x = Number(sharedSpawn.x) || 0;
+      player.y = Number(sharedSpawn.y) || 0;
+    } else if (entrySide === "center") {
+      player.x = world.width / 2;
+      player.y = world.height / 2;
+    } else if (entrySide === "west") {
+      player.x = 26;
+      player.y = 200;
+    } else if (entrySide === "spawnWest") {
+      player.x = 26;
+      player.y = spawnMapY(200);
+    } else if (entrySide === "spawnEast") {
+      player.x = world.width - 30;
+      player.y = spawnMapY(200);
+    } else if (entrySide === "prototypeEast") {
+      const layout = getPrototypeIslandLayout(mapId);
+      if (layout?.eastBridge) {
+        player.x = layout.eastBridge.x + layout.eastBridge.width - 14;
+        player.y = layout.eastBridge.y + Math.round(layout.eastBridge.height / 2);
+      } else {
+        player.x = world.width - 26;
+        player.y = 200;
+      }
+    } else if (entrySide === "prototypeWest") {
+      const layout = getPrototypeIslandLayout(mapId);
+      if (layout?.westBridge) {
+        player.x = layout.westBridge.x + 14;
+        player.y = layout.westBridge.y + Math.round(layout.westBridge.height / 2);
+      } else {
+        player.x = 26;
+        player.y = 200;
+      }
+    } else if (entrySide === "north") {
+      player.x = world.width / 2;
+      player.y = 26;
+    } else if (entrySide === "south") {
+      player.x = world.width / 2;
+      player.y = world.height - 26;
     } else {
       player.x = world.width - 26;
       player.y = 200;
     }
-  } else if (entrySide === "prototypeWest") {
-    const layout = getPrototypeIslandLayout(mapId);
-    if (layout?.westBridge) {
-      player.x = layout.westBridge.x + 14;
-      player.y = layout.westBridge.y + Math.round(layout.westBridge.height / 2);
-    } else {
-      player.x = 26;
-      player.y = 200;
-    }
-  } else if (entrySide === "north") {
-    player.x = world.width / 2;
-    player.y = 26;
-  } else if (entrySide === "south") {
-    player.x = world.width / 2;
-    player.y = world.height - 26;
-  } else {
-    player.x = world.width - 26;
-    player.y = 200;
   }
 
   // Map entry is latency-sensitive because the transition stays covered until
@@ -2641,7 +2933,53 @@ function activateMap(mapId, entrySide) {
   }
 }
 
+function updateWorldGridMapConnection() {
+  const grid = worldGridMapMeta();
+  if (!grid) return false;
+
+  const radius = Math.max(0, Number(WORLD_CONTENT?.worldGrid?.radius) || 0);
+  let targetX = grid.x;
+  let targetY = grid.y;
+  let targetSpawnId = null;
+
+  if (player.x <= 8) {
+    targetX -= 1;
+    targetSpawnId = "east";
+  } else if (player.x >= world.width - 8) {
+    targetX += 1;
+    targetSpawnId = "west";
+  } else if (player.y <= 15) {
+    targetY -= 1;
+    targetSpawnId = "south";
+  } else if (player.y >= world.height - 1) {
+    targetY += 1;
+    targetSpawnId = "north";
+  } else {
+    return true;
+  }
+
+  // Radius is deliberately a square/"ring" limit: radius 1 = 3x3,
+  // radius 2 = 5x5, etc. At the current edge the player simply remains in
+  // the map until a future world-expansion mechanic increases the radius.
+  if (Math.max(Math.abs(targetX), Math.abs(targetY)) > radius) {
+    return true;
+  }
+
+  const targetMapId = worldGridMapIdAt(targetX, targetY);
+  if (!targetMapId || !targetSpawnId) return true;
+
+  requestMapTransition(targetMapId, targetSpawnId);
+  return true;
+}
+
 function updateMapConnection() {
+  // v377 coordinate-world maps connect on all four edges instead of using
+  // authored portal rectangles. Legacy maps stay intact for rollback/tools.
+  if (worldGridMapMeta()) {
+    updateWorldGridMapConnection();
+    return;
+  }
+
   // Maps that define explicit portal rectangles own their connections entirely
   // through shared map data. This is the path the visual editor will author.
   if (updateSharedMapPortalConnection()) {
@@ -2798,6 +3136,9 @@ function updateMapConnection() {
 }
 
 function drawMapConnection(camX, camY) {
+  // Coordinate-world maps use the entire map edge as the connection.
+  if (worldGridMapMeta()) return;
+
   const gateY = currentMapId === "spawn" ? spawnMapY(200) : 200;
   const screenY = Math.round(gateY - camY);
 
@@ -3840,6 +4181,8 @@ const player = {
   magicPotionUntil: 0,
   goldSlimeBubbles: 0,
   arrows: 0,
+  woodFloors: 0,
+  woodWalls: 0,
 
   // Count-based item ownership. Missing/zero means not owned.
   // New players intentionally start with no gear or weapons.
@@ -3849,18 +4192,13 @@ const player = {
   // Item quantities live in player.items and are no longer unique.
   shopPurchases: [],
 
-  // Independent, player-arranged hotbar.
+  // v377 unified player-arranged weapon/tool belt (physical keys 1-9).
   hotbarAssignments: [
-    null,
-    null,
-    null,
-    null,
-    null
+    null, null, null, null, null, null, null, null, null
   ],
 
-  // Player-arranged consumable/item hotkeys (physical keys 1-3).
-  // Slots intentionally start empty and are assigned by dragging consumables
-  // from Inventory into the contextual Items rail.
+  // Legacy v376 consumable-hotkey fields are retained only so old saves can
+  // still be read without losing data. Consumables are no longer number-key slots.
   utilityHotbarAssignments: [
     null,
     null,
@@ -3950,9 +4288,10 @@ const player = {
   }
 };
 
-const HOTBAR_SLOT_COUNT = 5;
+const HOTBAR_SLOT_COUNT = 9;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall"]);
 const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -4093,6 +4432,22 @@ const CRAFT_RECIPES = Object.freeze({
     storyKey: "woodRingCrafted",
     repeatable: true
   }),
+  woodFloor: Object.freeze({
+    name: "Wood Floor ×4",
+    resourceKey: "woodFloors",
+    outputCount: 4,
+    category: "building",
+    ingredients: Object.freeze({ wood: 2 }),
+    repeatable: true
+  }),
+  woodWall: Object.freeze({
+    name: "Wood Wall ×2",
+    resourceKey: "woodWalls",
+    outputCount: 2,
+    category: "building",
+    ingredients: Object.freeze({ wood: 3 }),
+    repeatable: true
+  }),
   arrows: Object.freeze({
     name: "50 Arrows",
     resourceKey: "arrows",
@@ -4205,6 +4560,8 @@ const SHOP_ITEMS = [
 ];
 
 function shopImageForItemId(itemId) {
+  if (itemId === "woodFloor") return document.getElementById("inventoryWoodFloorImg");
+  if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
   if (itemId === "arrows") return arrowResourceImage;
 
   const weaponIndex =
@@ -4406,16 +4763,39 @@ function hotkeyImageForItemId(itemId) {
 }
 
 function isHotbarAssignableItem(itemId) {
-  return WEAPON_ITEM_IDS.includes(itemId);
+  return WEAPON_ITEM_IDS.includes(itemId) || BUILD_HOTBAR_ITEMS.includes(itemId);
+}
+
+function hotbarItemInventoryCount(itemId) {
+  if (WEAPON_ITEM_IDS.includes(itemId)) return inventoryItemCount(itemId);
+  if (itemId === "woodFloor") return Math.max(0, Math.floor(Number(player.woodFloors) || 0));
+  if (itemId === "woodWall") return Math.max(0, Math.floor(Number(player.woodWalls) || 0));
+  return 0;
+}
+
+function hotbarItemDisplayName(itemId) {
+  if (itemId === "woodFloor") return "Wood Floor";
+  if (itemId === "woodWall") return "Wood Wall";
+  const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
+  if (weaponIndex >= 0) return weaponDisplayName(weaponIndex);
+  return itemId || "Item";
 }
 
 function hotbarItemCanBeAssigned(itemId) {
-  return Boolean(
-    itemId &&
-    isHotbarAssignableItem(itemId) &&
-    playerOwnsItem(itemId) &&
-    equipmentItemCanBeEquipped(itemId)
-  );
+  if (!itemId || !isHotbarAssignableItem(itemId) || hotbarItemInventoryCount(itemId) <= 0) {
+    return false;
+  }
+  return !WEAPON_ITEM_IDS.includes(itemId) || equipmentItemCanBeEquipped(itemId);
+}
+
+function hotbarAssignmentCanPersist(itemId) {
+  if (!itemId || !isHotbarAssignableItem(itemId)) return false;
+  if (WEAPON_ITEM_IDS.includes(itemId)) {
+    return playerOwnsItem(itemId) && equipmentItemCanBeEquipped(itemId);
+  }
+  // Consumable/placeable-style actions may remain assigned at zero so crafting
+  // another copy immediately makes the existing hotkey useful again.
+  return true;
 }
 
 function showHotbarAssignmentRestriction(itemId) {
@@ -4453,9 +4833,7 @@ function sanitizeHotbarAssignments() {
 
         if (
           !itemId ||
-          !isHotbarAssignableItem(itemId) ||
-          !playerOwnsItem(itemId) ||
-          !equipmentItemCanBeEquipped(itemId) ||
+          !hotbarAssignmentCanPersist(itemId) ||
           seen.has(itemId)
         ) {
           return null;
@@ -4491,14 +4869,14 @@ function assignItemToHotbar(itemId, slotIndex) {
 
   if (
     !isHotbarAssignableItem(itemId) ||
-    !playerOwnsItem(itemId) ||
+    hotbarItemInventoryCount(itemId) <= 0 ||
     slotIndex < 0 ||
     slotIndex >= HOTBAR_SLOT_COUNT
   ) {
     return false;
   }
 
-  if (!equipmentItemCanBeEquipped(itemId)) {
+  if (WEAPON_ITEM_IDS.includes(itemId) && !equipmentItemCanBeEquipped(itemId)) {
     showHotbarAssignmentRestriction(itemId);
     return false;
   }
@@ -5606,7 +5984,11 @@ function weaponRequiredClass(itemId) {
 }
 
 function equipmentRequiredClass(itemId) {
-  return armorRequiredClass(itemId) || weaponRequiredClass(itemId);
+  // v377 pivot: classes are retired. Historical class-lock tables are kept
+  // above so old data remains understandable, but equipment is now governed
+  // only by its level/stat requirements.
+  void itemId;
+  return null;
 }
 
 function equipmentAttributeRequirements(itemId) {
@@ -7131,7 +7513,8 @@ function awardExp(amount) {
     player.exp -= player.expToNext;
     player.level += 1;
     player.skillPoints += 5;
-    player.abilityPoints += 3;
+    // Active abilities now belong to equipment, so level-ups no longer award AP.
+    player.abilityPoints = 0;
     player.expToNext = expNeededForLevel(player.level);
     levelsGained += 1;
   }
@@ -7175,30 +7558,9 @@ function awardExp(amount) {
 }
 
 function awardWoodcuttingExp(amount) {
-  const skill = player.woodcutting;
-  skill.exp += amount;
-
-  spawnFloatingText(
-    player.x,
-    player.y - 39,
-    `+${amount} WC`,
-    "#b9ef8d",
-    1.0
-  );
-
-  while (skill.exp >= skill.expToNext) {
-    skill.exp -= skill.expToNext;
-    skill.level += 1;
-    skill.expToNext = woodcuttingExpNeeded(skill.level);
-
-    spawnFloatingText(
-      player.x,
-      player.y - 48,
-      "WC UP!",
-      "#ddff9e",
-      1.25
-    );
-  }
+  // v377: gathering talents are retired. Resource harvesting remains intact.
+  void amount;
+  return false;
 }
 
 function miningExpNeeded(level) {
@@ -7206,30 +7568,9 @@ function miningExpNeeded(level) {
 }
 
 function awardMiningExp(amount) {
-  const skill = player.mining;
-  skill.exp += amount;
-
-  spawnFloatingText(
-    player.x,
-    player.y - 39,
-    `+${amount} MIN`,
-    "#c9c2bc",
-    1.0
-  );
-
-  while (skill.exp >= skill.expToNext) {
-    skill.exp -= skill.expToNext;
-    skill.level += 1;
-    skill.expToNext = miningExpNeeded(skill.level);
-
-    spawnFloatingText(
-      player.x,
-      player.y - 48,
-      "MINING UP!",
-      "#e4ddd7",
-      1.25
-    );
-  }
+  // v377: gathering talents are retired. Resource harvesting remains intact.
+  void amount;
+  return false;
 }
 
 function flowerHarvestingExpNeeded(level) {
@@ -7237,22 +7578,9 @@ function flowerHarvestingExpNeeded(level) {
 }
 
 function awardFlowerHarvestingExp(amount) {
-  const skill = player.flowerHarvesting;
-  const gained = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!skill || gained <= 0) return;
-
-  skill.exp += gained;
-  spawnFloatingText(player.x, player.y - 39, `+${gained} HARV`, "#f0b6ff", 1.0);
-
-  while (skill.exp >= skill.expToNext) {
-    skill.exp -= skill.expToNext;
-    skill.level += 1;
-    skill.expToNext = flowerHarvestingExpNeeded(skill.level);
-    spawnFloatingText(player.x, player.y - 48, "HARVESTING UP!", "#f7d5ff", 1.25);
-  }
-
-  updateInventoryUi();
-  saveLocalCharacterState(false);
+  // v377: gathering talents are retired. Resource harvesting remains intact.
+  void amount;
+  return false;
 }
 
 const MAX_PLAYER_STAT = 10;
@@ -7346,10 +7674,15 @@ function selectHotbarSlot(slotIndex) {
   const itemId =
     player.hotbarAssignments[slotIndex];
 
-  if (!itemId) {
+  if (!itemId || hotbarItemInventoryCount(itemId) <= 0) {
     return false;
   }
 
+  if (BUILD_HOTBAR_ITEMS.includes(itemId)) {
+    return beginBuildPlacement(itemId);
+  }
+
+  if (selectedBuildPiece) cancelBuildPlacement(true);
   return equipWeaponIndex(
     weaponIndexForItemId(itemId)
   );
@@ -7361,7 +7694,7 @@ function nextOccupiedHotbarSlot(direction) {
   const occupied = [];
   for (let i = 0; i < HOTBAR_SLOT_COUNT; i++) {
     const itemId = player.hotbarAssignments[i];
-    if (itemId && playerOwnsItem(itemId)) {
+    if (itemId && hotbarItemInventoryCount(itemId) > 0) {
       occupied.push(i);
     }
   }
@@ -7402,23 +7735,26 @@ function updateMenuItemHotkeyRail() {
   document.querySelectorAll("[data-menu-hotbar-slot]").forEach(slot => {
     const slotIndex = Number(slot.dataset.menuHotbarSlot);
     const itemId = player.hotbarAssignments?.[slotIndex] || null;
-    const valid = Boolean(itemId && hotbarItemCanBeAssigned(itemId));
+    const assigned = Boolean(itemId && hotbarAssignmentCanPersist(itemId));
+    const available = assigned && hotbarItemInventoryCount(itemId) > 0;
     const image = slot.querySelector("img");
     const name = slot.querySelector(".menu-hotkey-item-name");
 
-    slot.classList.toggle("empty", !valid);
-    slot.classList.toggle("active", valid && itemId === equippedItemId);
-    slot.draggable = valid;
+    slot.classList.toggle("empty", !assigned);
+    slot.classList.toggle("active", available && (itemId === equippedItemId || itemId === selectedBuildPiece));
+    slot.draggable = assigned;
 
-    if (valid) {
-      const itemImage = shopImageForItemId(itemId);
+    if (assigned) {
+      const itemImage = hotkeyImageForItemId(itemId);
       if (image && itemImage) {
         image.src = itemImage.src;
-        image.alt = SHOP_ITEMS.find(item => item.id === itemId)?.name || itemId;
+        image.alt = hotbarItemDisplayName(itemId);
       }
-      if (name) name.textContent = SHOP_ITEMS.find(item => item.id === itemId)?.name || itemId;
-      slot.title = `${name?.textContent || itemId} · key ${slotIndex + 4} · drag to move/swap · right-click to clear`;
+      if (name) name.textContent = hotbarItemDisplayName(itemId);
+      slot.style.opacity = available ? "1" : "0.55";
+      slot.title = `${hotbarItemDisplayName(itemId)} · key ${slotIndex + 1} · drag to move/swap · right-click to clear`;
     } else {
+      slot.style.opacity = "";
       if (image) {
         image.removeAttribute("src");
         image.alt = "";
@@ -7465,122 +7801,69 @@ function updateMenuUtilityHotkeyRail() {
 function updateHotbar() {
   sanitizeHotbarAssignments();
 
-  const equippedItemId =
-    weaponItemIdForIndex(
-      player.weaponIndex
-    );
+  const equippedItemId = weaponItemIdForIndex(player.weaponIndex);
 
-  for (
-    let slotIndex = 0;
-    slotIndex < HOTBAR_SLOT_COUNT;
-    slotIndex++
-  ) {
-    const slot =
-      document.getElementById(
-        `slot${slotIndex + 4}`
-      );
-
+  for (let slotIndex = 0; slotIndex < HOTBAR_SLOT_COUNT; slotIndex++) {
+    const slot = document.getElementById(`slot${slotIndex + 1}`);
     if (!slot) continue;
 
-    const itemId =
-      player.hotbarAssignments[slotIndex];
-
-    const valid =
-      Boolean(
-        itemId &&
-        isHotbarAssignableItem(itemId) &&
-        playerOwnsItem(itemId)
-      );
-
-    const image =
-      slot.querySelector(
-        ".hotbar-item-img"
-      );
-
-    slot.classList.toggle(
-      "active",
-      valid &&
-      equippedItemId === itemId
-    );
-
-    if (image) {
-      if (valid) {
-        const itemImage =
-          shopImageForItemId(itemId);
-
-        if (itemImage) {
-          image.src = itemImage.src;
-        }
-
-        const shopItem =
-          SHOP_ITEMS.find(
-            item => item.id === itemId
-          );
-
-        image.alt =
-          shopItem?.name || itemId;
-
-        image.style.visibility =
-          "visible";
-
-        slot.title = `${shopItem?.name || itemId} · key ${slotIndex + 4} · click to equip`;
-      } else {
-        image.removeAttribute("src");
-        image.alt = "";
-        image.style.visibility =
-          "hidden";
-        slot.title = `Empty equipment hotkey ${slotIndex + 4}`;
-      }
-    }
-
-    slot.style.opacity =
-      valid ? "1" : "0.48";
-  }
-
-  sanitizeUtilityHotbarAssignments();
-  for (let index = 0; index < UTILITY_HOTBAR_SLOT_COUNT; index++) {
-    const itemId = player.utilityHotbarAssignments[index] || null;
-    const slot = document.getElementById(`slot${index + 1}`);
-    if (!slot) continue;
-    const assigned = utilityHotbarItemCanBeAssigned(itemId);
-    const count = assigned ? consumableCount(itemId) : 0;
+    const itemId = player.hotbarAssignments[slotIndex];
+    const assigned = Boolean(itemId && hotbarAssignmentCanPersist(itemId));
+    const available = assigned && hotbarItemInventoryCount(itemId) > 0;
     const image = slot.querySelector(".hotbar-item-img");
-    const countElement = slot.querySelector(".utility-count");
-    const cooldownMask = slot.querySelector(".utility-cooldown-mask");
-    const cooldownText = slot.querySelector(".utility-cooldown-text");
-    const itemImage = assigned ? potionImageForItem(itemId) : null;
+
+    slot.classList.toggle("active", available && (equippedItemId === itemId || selectedBuildPiece === itemId));
+    slot.classList.remove("cooling-down", "buff-active");
 
     if (image) {
-      if (assigned && itemImage) {
-        image.src = itemImage.src;
-        image.alt = utilityItemDisplayName(itemId);
+      if (assigned) {
+        const itemImage = hotkeyImageForItemId(itemId);
+        if (itemImage) image.src = itemImage.src;
+        image.alt = hotbarItemDisplayName(itemId);
         image.style.visibility = "visible";
+        slot.title = `${hotbarItemDisplayName(itemId)} · key ${slotIndex + 1} · ${BUILD_HOTBAR_ITEMS.includes(itemId) ? "click to build" : "click to equip"}`;
       } else {
         image.removeAttribute("src");
         image.alt = "";
         image.style.visibility = "hidden";
+        slot.title = `Empty weapon/tool hotkey ${slotIndex + 1}`;
       }
     }
-    if (countElement) countElement.textContent = assigned ? `${count}` : "";
 
-    const cooldownRemaining = assigned ? Math.max(0, consumableCooldownUntil(itemId) - Date.now()) : 0;
-    const cooldownDuration = assigned ? consumableCooldownDurationMs(itemId) : 1;
-    const cooling = assigned && cooldownRemaining > 0;
-    const buffActive = itemId === "attackPotion"
-      ? Date.now() < (Number(player.attackPotionUntil) || 0)
-      : itemId === "magicPotion"
-        ? Date.now() < (Number(player.magicPotionUntil) || 0)
-        : false;
-    slot.classList.toggle("cooling-down", cooling);
-    slot.classList.toggle("buff-active", buffActive);
-    slot.style.opacity = assigned && count > 0 ? "1" : "0.48";
-    slot.title = assigned ? `${utilityItemDisplayName(itemId)} · key ${index + 1} · click to use` : `Empty item hotkey ${index + 1}`;
-    if (cooldownMask) cooldownMask.style.height = cooling ? `${Math.min(100, cooldownRemaining / cooldownDuration * 100)}%` : "0%";
-    if (cooldownText) cooldownText.textContent = cooling ? (cooldownRemaining / 1000).toFixed(1) : "";
+    const countBadge = slot.querySelector(".utility-count");
+    if (countBadge) {
+      countBadge.textContent = assigned && BUILD_HOTBAR_ITEMS.includes(itemId)
+        ? String(hotbarItemInventoryCount(itemId))
+        : "";
+    }
+    const cooldownMask = slot.querySelector(".utility-cooldown-mask");
+    const cooldownText = slot.querySelector(".utility-cooldown-text");
+    const itemAbilityId = itemId === "weapon_wand"
+      ? "fireball"
+      : itemId === "weapon_rainWand"
+        ? "rainCloud"
+        : null;
+    const cooldownRemaining = available && itemAbilityId
+      ? Math.max(0, skillCooldownRemaining(itemAbilityId))
+      : 0;
+    const cooldownDuration = itemAbilityId
+      ? Math.max(0.001, skillCooldownDuration(itemAbilityId))
+      : 1;
+    if (cooldownMask) {
+      cooldownMask.style.height = cooldownRemaining > 0
+        ? `${Math.min(100, cooldownRemaining / cooldownDuration * 100)}%`
+        : "0%";
+    }
+    if (cooldownText) {
+      cooldownText.textContent = cooldownRemaining > 0
+        ? cooldownRemaining.toFixed(1)
+        : "";
+    }
+    slot.classList.toggle("cooling-down", cooldownRemaining > 0);
+    slot.style.opacity = assigned ? (available ? "1" : "0.5") : "0.48";
   }
 
   updateMenuItemHotkeyRail();
-  updateMenuUtilityHotkeyRail();
 }
 
 let inventoryOpen = false;
@@ -7826,8 +8109,8 @@ function updateHotbarAssignmentUi() {
     selectedHotbarInventoryItemId;
 
   const equipmentSelection = Boolean(itemId && hotbarItemCanBeAssigned(itemId));
-  const utilitySelection = Boolean(itemId && utilityHotbarItemCanBeAssigned(itemId));
-  const validSelection = equipmentSelection || utilitySelection;
+  const utilitySelection = false; // v377: consumables are used from Inventory, not number-key slots.
+  const validSelection = equipmentSelection;
 
   const image =
     document.getElementById(
@@ -7846,9 +8129,7 @@ function updateHotbarAssignmentUi() {
   if (equipmentButtons) equipmentButtons.style.display = equipmentSelection ? "flex" : "none";
   if (utilityButtons) utilityButtons.style.display = utilitySelection ? "flex" : "none";
   if (assignHelp) {
-    assignHelp.textContent = utilitySelection
-      ? "Choose an item hotkey (1–3)"
-      : "Choose an equipment hotkey (4–8)";
+    assignHelp.textContent = "Choose an action hotkey (1–9)";
   }
 
   document
@@ -7906,7 +8187,7 @@ function updateHotbarAssignmentUi() {
       const combatProfile = typeof COMBAT_BALANCE !== "undefined"
         ? COMBAT_BALANCE.weaponProfiles[weaponIndex]
         : null;
-      const itemDisplayName = shopItem?.name || combatProfile?.name || (itemId === "weapon_bow" ? "Wood Bow" : itemId);
+      const itemDisplayName = shopItem?.name || combatProfile?.name || hotbarItemDisplayName(itemId);
 
       if (combatProfile) {
         const powerBits = [];
@@ -8002,6 +8283,8 @@ function updateInventoryUi() {
   const magicPotionCount = document.getElementById("inventoryMagicPotionCount");
   const goldSlimeBubbleCount = document.getElementById("inventoryGoldSlimeBubbleCount");
   const arrowCount = document.getElementById("inventoryArrowCount");
+  const woodFloorCount = document.getElementById("inventoryWoodFloorCount");
+  const woodWallCount = document.getElementById("inventoryWoodWallCount");
   const arrowHud = document.getElementById("arrowHud");
   const arrowHudCount = document.getElementById("arrowHudCount");
 
@@ -8015,6 +8298,8 @@ function updateInventoryUi() {
   if (magicPotionCount) magicPotionCount.textContent = `${player.magicPotions}`;
   if (goldSlimeBubbleCount) goldSlimeBubbleCount.textContent = `${player.goldSlimeBubbles}`;
   if (arrowCount) arrowCount.textContent = `${player.arrows}`;
+  if (woodFloorCount) woodFloorCount.textContent = `${player.woodFloors}`;
+  if (woodWallCount) woodWallCount.textContent = `${player.woodWalls}`;
   if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
   if (arrowHud) {
     arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
@@ -8043,16 +8328,17 @@ function updateInventoryUi() {
 
   updateInventoryResourceGroup("inventoryResourcesGrid", "inventoryResourcesEmpty");
   updateInventoryResourceGroup("inventoryConsumablesGrid", "inventoryConsumablesEmpty");
+  updateInventoryResourceGroup("inventoryBuildingGrid", "inventoryBuildingEmpty");
 
   document.querySelectorAll('#inventoryPage [data-utility-hotbar-assignable="true"]').forEach(element => {
     const itemId = element.dataset.utilityItem;
-    const eligible = utilityHotbarItemCanBeAssigned(itemId) && consumableCount(itemId) > 0;
-    element.classList.toggle("hotbar-selected", itemId === selectedHotbarInventoryItemId);
+    const eligible = consumableCount(itemId) > 0;
+    element.classList.remove("hotbar-selected");
     element.classList.toggle("hotbar-ineligible", !eligible);
-    element.draggable = eligible;
-    if (eligible) {
-      element.title = `${utilityItemDisplayName(itemId)} · drag, or tap then choose Items 1–3`;
-    }
+    element.draggable = false;
+    element.title = eligible
+      ? `${utilityItemDisplayName(itemId)} · click/tap to use`
+      : `${utilityItemDisplayName(itemId)} · none owned`;
   });
 
   function updateOwnedInventoryGroup(gridId, emptyId) {
@@ -8310,7 +8596,7 @@ function updateInventoryUi() {
   const statMasteryLabel = document.getElementById("statMasteryLabel");
 
   if (skillPointText) {
-    skillPointText.textContent = `Skill Points ${player.skillPoints}`;
+    skillPointText.textContent = `Stat Points ${player.skillPoints}`;
   }
 
   if (statStrength) statStrength.textContent = `${player.stats.strength}`;
@@ -8449,11 +8735,12 @@ function buildLocalCharacterSave() {
   return {
     version: LOCAL_CHARACTER_SAVE_VERSION,
     savedAt: Date.now(),
+    worldGridDiscovery: Array.from(worldGridDiscoveredCells).sort(),
 
     level: clampLocalSaveInteger(player.level, 1, 99, 1),
     exp: Math.max(0, Math.floor(Number(player.exp) || 0)),
     skillPoints: Math.max(0, Math.floor(Number(player.skillPoints) || 0)),
-    abilityPoints: Math.max(0, Math.floor(Number(player.abilityPoints) || 0)),
+    abilityPoints: 0,
 
     classId: PLAYER_CLASSES[player.classId] ? player.classId : null,
     abilities,
@@ -8492,7 +8779,9 @@ function buildLocalCharacterSave() {
       attackPotions: Math.max(0, Math.floor(Number(player.attackPotions) || 0)),
       magicPotions: Math.max(0, Math.floor(Number(player.magicPotions) || 0)),
       goldSlimeBubbles: Math.max(0, Math.floor(Number(player.goldSlimeBubbles) || 0)),
-      arrows: Math.max(0, Math.floor(Number(player.arrows) || 0))
+      arrows: Math.max(0, Math.floor(Number(player.arrows) || 0)),
+      woodFloors: Math.max(0, Math.floor(Number(player.woodFloors) || 0)),
+      woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0))
     },
 
     items: validSavedItemIds(player.items),
@@ -8548,21 +8837,27 @@ function applyLocalCharacterSave(save) {
     return false;
   }
 
+  worldGridDiscoveredCells.clear();
+  for (const key of Array.isArray(save.worldGridDiscovery) ? save.worldGridDiscovery : []) {
+    if (/^-?\d+,-?\d+$/.test(String(key))) {
+      worldGridDiscoveredCells.add(String(key));
+    }
+  }
+  // Spawn is always known even for saves created before the v378 minimap.
+  worldGridDiscoveredCells.add(worldGridCellKey(0, 0));
+
   player.level = clampLocalSaveInteger(save.level, 1, 99, 1);
   player.expToNext = expNeededForLevel(player.level);
   player.exp = clampLocalSaveInteger(save.exp, 0, Math.max(0, player.expToNext - 1), 0);
   player.skillPoints = clampLocalSaveInteger(save.skillPoints, 0, 9999, 0);
-  player.abilityPoints = clampLocalSaveInteger(save.abilityPoints, 0, 9999, 0);
+  player.abilityPoints = 0;
 
-  player.classId = PLAYER_CLASSES[save.classId] ? save.classId : null;
+  // v377 migration: classes/talent-style active skills are retired. Keep old
+  // save fields readable, but do not reactivate them in the new item-driven game.
+  player.classId = null;
 
-  for (const [skillId, skill] of Object.entries(ACTIVE_SKILLS)) {
-    player.abilities[skillId] = clampLocalSaveInteger(
-      save.abilities?.[skillId],
-      0,
-      Math.max(0, Number(skill.maxLevel) || 0),
-      0
-    );
+  for (const skillId of Object.keys(ACTIVE_SKILLS)) {
+    player.abilities[skillId] = 0;
   }
 
   player.enhancementToggles = {};
@@ -8623,6 +8918,8 @@ function applyLocalCharacterSave(save) {
   player.magicPotionCooldownUntil = saveNow + Math.min(BUFF_POTION_COOLDOWN_MS, clampLocalSaveInteger(save.buffs?.magicPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   player.goldSlimeBubbles = clampLocalSaveInteger(save.resources?.goldSlimeBubbles, 0, 999999, 0);
   player.arrows = clampLocalSaveInteger(save.resources?.arrows, 0, 999999, 0);
+  player.woodFloors = clampLocalSaveInteger(save.resources?.woodFloors, 0, 999999, 0);
+  player.woodWalls = clampLocalSaveInteger(save.resources?.woodWalls, 0, 999999, 0);
 
   player.items = validSavedItemIds(save.items);
   player.shopPurchases = Array.from(new Set(
@@ -8681,10 +8978,17 @@ function applyLocalCharacterSave(save) {
     player.weaponIndex = -1;
   }
 
+  const savedHotbarAssignments = Array.isArray(save.hotbarAssignments)
+    ? save.hotbarAssignments
+    : [];
+  const legacyFiveSlotHotbar = savedHotbarAssignments.length > 0 && savedHotbarAssignments.length <= 5;
   player.hotbarAssignments = Array.from(
     { length: HOTBAR_SLOT_COUNT },
     (_, index) => {
-      const itemId = save.hotbarAssignments?.[index];
+      // v376 equipment lived on physical keys 4-8. Preserve those physical
+      // positions during the one-time migration into the new 1-9 belt.
+      const sourceIndex = legacyFiveSlotHotbar ? index - 3 : index;
+      const itemId = sourceIndex >= 0 ? savedHotbarAssignments[sourceIndex] : null;
       return itemId && isHotbarAssignableItem(itemId) && playerOwnsItem(itemId)
         ? itemId
         : null;
@@ -8700,13 +9004,7 @@ function applyLocalCharacterSave(save) {
   sanitizeUtilityHotbarAssignments();
 
   for (const key of Object.keys(skillBindings)) {
-    const skillId = save.skillBindings?.[key];
-    skillBindings[key] = (
-      skillId &&
-      ACTIVE_SKILLS[skillId] &&
-      ACTIVE_SKILLS[skillId].classId === player.classId &&
-      abilityLevel(skillId) > 0
-    ) ? skillId : null;
+    skillBindings[key] = null;
   }
 
   return true;
@@ -8776,7 +9074,9 @@ function persistentServerBootstrapPayload() {
       attackPotions: player.attackPotions,
       magicPotions: player.magicPotions,
       goldSlimeBubbles: player.goldSlimeBubbles,
-      arrows: player.arrows
+      arrows: player.arrows,
+      woodFloors: player.woodFloors,
+      woodWalls: player.woodWalls
     },
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
@@ -9023,10 +9323,9 @@ function setInventoryOpen(open) {
 
 function updateMenuHotkeyRailVisibility(pageId) {
   const inventoryContext = pageId === "inventoryPage";
-  const skillsContext = pageId === "skillsPage";
   document.getElementById("menuItemHotkeyRail")?.classList.toggle("context-hidden", !inventoryContext);
-  document.getElementById("menuUtilityHotkeyRail")?.classList.toggle("context-hidden", !inventoryContext);
-  document.getElementById("menuSkillHotkeyRail")?.classList.toggle("context-hidden", !skillsContext);
+  document.getElementById("menuUtilityHotkeyRail")?.classList.add("context-hidden");
+  document.getElementById("menuSkillHotkeyRail")?.classList.add("context-hidden");
 }
 
 function showInventoryPage(pageId) {
@@ -9085,16 +9384,9 @@ topHotbar?.addEventListener("click", event => {
   const slotNumber = Number(String(slot.id || "").replace("slot", ""));
   if (!Number.isInteger(slotNumber)) return;
 
-  if (slotNumber >= 1 && slotNumber <= 3) {
-    sanitizeUtilityHotbarAssignments();
-    const itemId = player.utilityHotbarAssignments?.[slotNumber - 1] || null;
-    if (itemId) useConsumable(itemId);
-    return;
-  }
-
-  if (slotNumber >= 4 && slotNumber <= 8) {
+  if (slotNumber >= 1 && slotNumber <= HOTBAR_SLOT_COUNT) {
     inputController.queueCommand("equipWeapon", {
-      index: slotNumber - 4
+      index: slotNumber - 1
     });
   }
 });
@@ -9330,13 +9622,20 @@ document.getElementById("craftGrid").addEventListener("click", event => {
 });
 
 document.getElementById("inventoryPage").addEventListener("click", event => {
-  const utilityElement = event.target.closest('[data-utility-hotbar-assignable="true"]');
+  const utilityElement = event.target.closest('[data-consumable-item]');
   if (utilityElement) {
-    const utilityItemId = utilityElement.dataset.utilityItem;
-    if (!utilityHotbarItemCanBeAssigned(utilityItemId) || consumableCount(utilityItemId) <= 0) {
-      return;
-    }
-    selectedHotbarInventoryItemId = utilityItemId;
+    const utilityItemId = utilityElement.dataset.consumableItem;
+    if (consumableCount(utilityItemId) <= 0) return;
+    useConsumable(utilityItemId);
+    updateInventoryUi();
+    return;
+  }
+
+  const buildElement = event.target.closest('[data-build-item]');
+  if (buildElement) {
+    const buildItemId = buildElement.dataset.buildItem;
+    if (hotbarItemInventoryCount(buildItemId) <= 0) return;
+    selectedHotbarInventoryItemId = buildItemId;
     updateInventoryUi();
     return;
   }
@@ -9370,18 +9669,9 @@ document.getElementById("inventoryPage").addEventListener("click", event => {
 });
 
 document.getElementById("inventoryPage").addEventListener("dragstart", event => {
-  const utilityElement = event.target.closest('[data-utility-hotbar-assignable="true"]');
+  const utilityElement = event.target.closest('[data-consumable-item]');
   if (utilityElement) {
-    const itemId = utilityElement.dataset.utilityItem;
-    if (!utilityHotbarItemCanBeAssigned(itemId) || consumableCount(itemId) <= 0) {
-      event.preventDefault();
-      return;
-    }
-    selectedHotbarInventoryItemId = null;
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/x-slime-utility-item", itemId);
-    event.dataTransfer.setData("text/plain", itemId);
-    utilityElement.classList.add("dragging");
+    event.preventDefault();
     return;
   }
 
@@ -9709,6 +9999,150 @@ document.querySelectorAll(".stat-plus").forEach(button => {
 
 
 // -----------------------------------------------------------------------------
+// PLAYER BUILDING (v379)
+// -----------------------------------------------------------------------------
+const placedStructuresByMap = new Map();
+let selectedBuildPiece = null;
+const BUILD_GRID_SIZE = 16;
+
+function currentMapStructures() {
+  return placedStructuresByMap.get(currentMapId) || [];
+}
+
+function applyStructureSnapshot(mapId, structures) {
+  if (typeof mapId !== "string") return;
+  placedStructuresByMap.set(mapId, Array.isArray(structures) ? structures.map(item => ({ ...item })) : []);
+}
+
+function applyStructurePlaced(structure) {
+  if (!structure?.id || !structure?.mapId) return;
+  const list = placedStructuresByMap.get(structure.mapId) || [];
+  if (!list.some(item => item.id === structure.id)) list.push({ ...structure });
+  placedStructuresByMap.set(structure.mapId, list);
+}
+
+function applyStructureRemoved(mapId, structureId) {
+  if (!mapId || !structureId) return false;
+  const list = placedStructuresByMap.get(mapId) || [];
+  const next = list.filter(item => item.id !== structureId);
+  if (next.length === list.length) return false;
+  placedStructuresByMap.set(mapId, next);
+  return true;
+}
+
+function drawWoodFloor(structure, camX, camY, alpha = 1) {
+  const x = Math.round(structure.x - camX - 8);
+  const y = Math.round(structure.y - camY - 8);
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#8f6338"; ctx.fillRect(x, y, 16, 16);
+  ctx.fillStyle = "#b27b45"; ctx.fillRect(x + 1, y + 1, 14, 3); ctx.fillRect(x + 1, y + 9, 14, 2);
+  ctx.fillStyle = "#5e4127"; ctx.fillRect(x, y + 7, 16, 1); ctx.fillRect(x + 5, y, 1, 7); ctx.fillRect(x + 11, y + 8, 1, 8);
+  ctx.restore();
+}
+
+function drawWoodWall(structure, camX, camY, alpha = 1) {
+  const x = Math.round(structure.x - camX - 8);
+  const y = Math.round(structure.y - camY - 12);
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#50351f"; ctx.fillRect(x, y, 16, 20);
+  ctx.fillStyle = "#956238"; ctx.fillRect(x + 1, y + 1, 14, 17);
+  ctx.fillStyle = "#b67943"; ctx.fillRect(x + 2, y + 2, 5, 15); ctx.fillRect(x + 9, y + 2, 4, 15);
+  ctx.fillStyle = "#5c3b24"; ctx.fillRect(x + 7, y + 1, 2, 17); ctx.fillRect(x, y + 17, 16, 3);
+  ctx.restore();
+}
+
+function drawPlayerStructureFloors(camX, camY) {
+  for (const structure of currentMapStructures()) if (structure.kind === "woodFloor") drawWoodFloor(structure, camX, camY);
+}
+
+function addPlayerStructureDrawables(drawables, camX, camY) {
+  for (const structure of currentMapStructures()) {
+    if (structure.kind !== "woodWall") continue;
+    addDrawable(drawables, structure.y + 7, () => drawWoodWall(structure, camX, camY));
+  }
+}
+
+function hitsPlayerStructureObstacle(x, y, playerRadius = 4) {
+  for (const structure of currentMapStructures()) {
+    if (structure.kind !== "woodWall") continue;
+    if (circleRectCollision(x, y, playerRadius, structure.x - 8, structure.y - 8, 16, 16)) return true;
+  }
+  return false;
+}
+
+function tryHitPlayerStructure() {
+  const originX = player.x;
+  const originY = player.y - 8;
+  let best = null;
+  let bestDistance = Infinity;
+
+  for (const structure of currentMapStructures()) {
+    if (!structure?.id || !["woodFloor", "woodWall"].includes(structure.kind)) continue;
+    const dx = structure.x - originX;
+    const dy = structure.y - originY;
+    const distance = Math.hypot(dx, dy);
+    const targetAngle = Math.atan2(dy, dx);
+    const insideAngle = Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= 0.92;
+    const insideRange = distance <= currentMeleeReach() + 10;
+    if (insideAngle && insideRange && distance < bestDistance) {
+      best = structure;
+      bestDistance = distance;
+    }
+  }
+
+  if (!best) return false;
+  return Boolean(
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.requestStructureDestroy(best.id)
+  );
+}
+
+function buildPieceCount(kind) {
+  return kind === "woodFloor" ? Math.max(0, Number(player.woodFloors) || 0) : kind === "woodWall" ? Math.max(0, Number(player.woodWalls) || 0) : 0;
+}
+
+function beginBuildPlacement(kind) {
+  if (!['woodFloor','woodWall'].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  selectedBuildPiece = kind;
+  setInventoryOpen(false);
+  spawnFloatingText(player.x, player.y - 34, kind === "woodFloor" ? "PLACE WOOD FLOOR" : "PLACE WOOD WALL", "#f0d59a", 0.95);
+  updateCanvasCursor();
+  return true;
+}
+
+function cancelBuildPlacement(quiet = false) {
+  if (!selectedBuildPiece) return false;
+  selectedBuildPiece = null;
+  if (!quiet) spawnFloatingText(player.x, player.y - 30, "BUILD CANCELLED", "#d9c9a0", 0.65);
+  updateCanvasCursor();
+  return true;
+}
+
+function tryPlaceSelectedBuildPiece(event) {
+  if (!selectedBuildPiece) return false;
+  if (event.button !== 0) return true;
+  if (buildPieceCount(selectedBuildPiece) <= 0) { cancelBuildPlacement(true); return true; }
+  const pointer = getCanvasPointerPosition(event);
+  const x = Math.round((currentCamX + pointer.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round((currentCamY + pointer.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+    onlineClient.requestStructurePlacement(selectedBuildPiece, x, y);
+  } else {
+    spawnFloatingText(player.x, player.y - 30, "CONNECT TO BUILD", "#ffe38b", 0.8);
+  }
+  return true;
+}
+
+function drawBuildPlacementPreview(camX, camY) {
+  if (!selectedBuildPiece) return;
+  const x = Math.round((camX + mouseCanvasX) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round((camY + mouseCanvasY) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const preview = { kind: selectedBuildPiece, x, y };
+  if (selectedBuildPiece === "woodFloor") drawWoodFloor(preview, camX, camY, 0.55);
+  else drawWoodWall(preview, camX, camY, 0.55);
+}
+
+// -----------------------------------------------------------------------------
 // RUNTIME HELPERS / SYSTEM UTILITIES
 // -----------------------------------------------------------------------------
 
@@ -9759,6 +10193,7 @@ let mobileCameraPresentationOffsetY = 0;
 
 function hitsTreeObstacle(x, y, playerRadius = 4) {
   for (const tree of trees) {
+    if (tree.removed) continue;
     const width = tree.isStump ? 8 : tree.collision.width;
     const height = tree.isStump ? 4 : tree.collision.height;
     const boxX = tree.x - width / 2;
@@ -9924,6 +10359,7 @@ function hitsSolidObstacle(x, y) {
     hitsTreeObstacle(x, y) ||
     hitsSceneryRockObstacle(x, y) ||
     hitsHouseObstacle(x, y) ||
+    hitsPlayerStructureObstacle(x, y) ||
     hitsSpawnFixtureObstacle(x, y)
   );
 }

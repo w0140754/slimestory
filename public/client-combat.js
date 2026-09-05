@@ -986,7 +986,9 @@ function executeWeaponAttack(weapon) {
   if (weapon === "pickaxe") {
     tryHitEnemies();
     tryHitPvpPlayers();
-    tryHitRock();
+    if (!tryHitPlayerStructure()) {
+      tryHitRock();
+    }
     return;
   }
 
@@ -1062,6 +1064,31 @@ function executePrimaryAttackCommand(payload) {
   const currentWeapon = equippedWeapon();
 
   if (!currentWeapon) {
+    player.shadowCritAttack = false;
+    return;
+  }
+
+  // v377 item-driven actions: active abilities belong to the equipped item
+  // rather than a class/skill binding. Fire Wand uses Fireball as its primary
+  // press/aim/release action; Rain Wand begins the existing Rain Cloud cast.
+  if (currentWeapon === "wand") {
+    const target = {
+      x: currentCamX + Number(payload.pointerX || 0),
+      y: currentCamY + Number(payload.pointerY || 0)
+    };
+    updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
+    beginFireballAim(null, target);
+    player.shadowCritAttack = false;
+    return;
+  }
+
+  if (currentWeapon === "rainWand") {
+    const target = {
+      x: currentCamX + Number(payload.pointerX || 0),
+      y: currentCamY + Number(payload.pointerY || 0)
+    };
+    updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
+    beginRainCloudCast(target);
     player.shadowCritAttack = false;
     return;
   }
@@ -1199,6 +1226,7 @@ function executeBowMeleeAttack() {
 }
 
 function handlePrimaryAttack(event) {
+  if (typeof tryPlaceSelectedBuildPiece === "function" && tryPlaceSelectedBuildPiece(event)) return;
   if (player.isDead) return;
   if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen || event.button !== 0) return;
   if (player.rainCloudCasting) return;
@@ -1291,6 +1319,23 @@ function handleBowVisualMouseUp(event) {
       clearMobileAutoBowTarget();
     }
   }
+
+  // Fire Wand owns Fireball in v377. Reuse the existing pointer-up bridge
+  // (desktop mouse and mobile ATK both arrive here) to commit the aimed cast.
+  if (
+    !player.isDead &&
+    event.button === 0 &&
+    fireballIsAiming() &&
+    equippedWeapon() === "wand"
+  ) {
+    const pointer = getCanvasPointerPosition(event);
+    releaseFireballAim({
+      x: currentCamX + pointer.x,
+      y: currentCamY + pointer.y
+    });
+    return;
+  }
+
   if (
     player.isDead ||
     event.button !== 0 ||

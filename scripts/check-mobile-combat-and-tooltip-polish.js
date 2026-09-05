@@ -14,10 +14,10 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const adopted = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.375");
-assert(server.includes('const BUILD_VERSION = "6-11-375";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-375";'));
-assert(html.includes('/client-input.js?v=375') && html.includes('/game.js?v=375'));
+assert.strictEqual(pkg.version, "0.6.11.379");
+assert(server.includes('const BUILD_VERSION = "6-11-379";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-379";'));
+assert(html.includes('/client-input.js?v=379') && html.includes('/game.js?v=379'));
 
 assert(config.includes('baseSpeed: 54'), "25% universal movement reduction missing");
 assert(game.includes('Number(player.speed) || GAME_CONFIG.player.baseSpeed'), "stat sheet must show effective movement speed");

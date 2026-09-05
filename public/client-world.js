@@ -44,24 +44,24 @@ function loadImage(src) {
 // -----------------------------------------------------------------------------
 // Split tree parts. Both are 32x48 and share the same bottom-centre anchor.
 const treeTrunkImage = new Image();
-treeTrunkImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAwCAYAAABwrHhvAAABk0lEQVRYR+2XMUoDQRSGJ2AlipVIsNLCwtrSQ+gBcgAv4CG8QA7gAfQQltYWFlpJCKlEsQoon/DDyzDJTGZhXrH7NRt2Z+d989683ewoODNyjj8IDBnoloHTo53ft/my0xzVNxP86vI4PD59hC4S1TcicHN9HqYPLz0QiGut9I8PD8Js8dmpDNmbUrUeBHIZ4DrHkrJkBzDZ7eQi3N0//09og+/v7Yav758VCV2HWCzFxosgAQLRcpATsOOrBZRGJgMbiP4HCYCuIXd2Mg6v77P6DNg0aqWgVSFgz0F8npJBlQAoA3raKRNMzDlWjJxQYChNP2QHIKLakhWVQOm3R+B3qjPWkR0gUmWJBVR3KAkORYOEJOy+gG1XbdlqcCxgM+AiIPonAPHzoXkJwFXAbkLaD/rVBcKtDV0FwL6IoGkXgBUgODTbhOAqYIO7bkL3B5FweRRr9e4CrB6atmHqTQjN2lACNribALhlANz3gCSabkLg+080EUh9mIimAnoPWAH+knG+pgxFA+0HCdjgonYz/gGmqF5PEL599AAAABBkZUJHRDMzREQ1OTEyMjE1MTA1Q8y+w2sAAAAASUVORK5CYIIA";
+treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=380";
 
 const treeCanopyImages = [];
 
 const treeCanopyImage = new Image();
-treeCanopyImage.src = "assets/flammable_tree_canopy_outline_v1.png";
+treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=380";
 treeCanopyImages.push(treeCanopyImage);
 
 const treeCanopyImageVariantB = new Image();
-treeCanopyImageVariantB.src = "assets/flammable_tree_canopy_outline_v1_flip.png";
+treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=380";
 treeCanopyImages.push(treeCanopyImageVariantB);
 
 const fireResistantTreeTrunkImage = new Image();
-fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=375";
+fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=380";
 const fireResistantTreeCanopyImage = new Image();
-fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=375";
+fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=380";
 const fireResistantTreeCanopyFlippedImage = new Image();
-fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=375";
+fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=380";
 
 const rockPlainImage = loadImage("assets/rock_plain.png");
 const rockGrassImage = loadImage("assets/rock_grass.png");
@@ -79,10 +79,10 @@ function getTreeCanopyImage(tree) {
 }
 
 const treeDamagedTrunkImage = new Image();
-treeDamagedTrunkImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAwCAYAAABwrHhvAAABpklEQVRYR+2XP0oDQRSHJ2AlilWQYKWFhbWlh9ADeAAv4CG8gAfwAHoIS2sLi1hJCFaiWAnKJ/zk+djs/FmYKbJfk7A7M+/b997MJpPQmEnj+KPAmIFhGTjY3fieL78GrVE8meCnJ3vh7v4lDJEonojAxdlRuL59XAMBX2ulfzbdCYvXt0FliE7qqvUoEMsA9/lMKUt0AItdnh+Hq5uH3wVt8O2tzfD+8flPQvfBi3XRexMkQCC2HMQE7PhiAaWRxcAGYv+DBED3kDvcn4Wn50V5Bmwa9aSgp0LAXgN/nZJBkQAoAzrtlAkW5hpPjJxQYEhNP0QHIKLakhWVQOm3n8D3rp2xiugA0VUWL6C6Q0pwSBokJGH7AnKf2pI12AvYDDQREOsnAP58qF4CaCpgmzD12O0ia8KqXaA35d/ADLImWQEhkdSj15M1oU+gahOClYCmAgSHkkbMGuxfSKK6QPMekAANCNWbEAEFHwVIP1TdhrYEqj9U24YSsMGbCUCzDEDzHpBE1SYE/v+JKgL+PVD9IPK/BawAP8m4XlKGpIF9wUVpM/4AT3pVTyKa5rAAAAAQZGVCR0NFM0RFMEUwNUM1MDRCNjXlVnAeAAAAAElFTkSuQmCC";
+treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=380";
 
 const treeStumpImage = new Image();
-treeStumpImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAwCAYAAABwrHhvAAAA/0lEQVRYR+2WPQrCQBCFJ2AlipVIEIRYiAew9BBewGt4CK/hBTyEpQcQCwNCCGIlipWgPHDCoiBmi5nmfV3CJu/j7eQnEWcS53wKsAE2wAbYABtgA2yADbABNsAG4hoY9hrP6uDN4fSIulftixC+mE9kkI2rc8d8J8vVNkqi1gVhOEIVPY6RqLUYArNpX0ZZ+tXAPi9lvSlsBNJupwpvt5pyvd2lPF/sBEAoAVwFEA7MtgCEDZgLuM+ACmAAgfkQQkDDKYD6geljGG6B7j8wewxVIAx3EwBuDQD3GVAJ0yEE+CQrJgL6LwBcXkQq8PkaBvgZwfmYbfhr4a9wJXYYX7l6CUBHiG8wAAAAEGRlQkc3NkM2NTE3RDNCNkVCRUNCc1xDXAAAAABJRU5ErkJgggAA";
+treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=380";
 
 const trees = [
   // Loose trees around the central clearing.
@@ -195,6 +195,7 @@ for (const tree of trees) {
   tree.maxHp = 4;
   tree.hp = 4;
   tree.isStump = false;
+  tree.removed = false;
   tree.shakeTime = 0;
 
   // Final chop animation.
@@ -233,6 +234,7 @@ function camouflageCoverAtPlayer() {
 
   for (const tree of trees) {
     if (
+      tree.removed ||
       tree.isStump ||
       tree.falling ||
       tree.canopyBurned ||
@@ -636,6 +638,7 @@ function drawPixelFlame(x, y, phase, scale = 1) {
 }
 
 function drawTree(tree, camX, camY) {
+  if (tree.removed) return;
   const screenX = Math.round(tree.x - camX);
   const screenY = Math.round(tree.y - camY);
 

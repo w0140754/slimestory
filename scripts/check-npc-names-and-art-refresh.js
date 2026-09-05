@@ -22,8 +22,8 @@ const authored = JSON.parse(read("content", "adopted-map-overrides.json"));
 const authoredMirror = require(path.join(root, "public", "shared", "adopted-map-overrides.js"));
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-375";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-375";'));
+assert(server.includes('const BUILD_VERSION = "6-11-380";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-380";'));
 assert.ok(authored.version >= 68, "authored map revision must not regress below 68");
 assert.deepStrictEqual(authoredMirror, authored, "browser and server authored-map copies must match");
 
@@ -54,7 +54,7 @@ assert(cam && cam.interactionRadius === 24 && Number.isFinite(cam.x) && Number.i
 assert(!cam.name || cam.name === "Cam", "Cam authored name must be omitted/default or Cam");
 assert(myrtle && myrtle.id === "waterfallGrove:npc:greenWitch" && myrtle.name === "Myrtle" && myrtle.interactionRadius === 24 && Number.isFinite(myrtle.x) && Number.isFinite(myrtle.y), "Myrtle authored NPC data missing");
 assert.strictEqual(sunny.name, "Sunny");
-assert.strictEqual(world.defaultPlayerLoad.mapId, "prototypeIsland");
+assert.strictEqual(world.defaultPlayerLoad.mapId, "world_p0_p0");
 assert(Object.values(world.maps).some(map => (map.npcs || []).some(npc => npc.type === "camoGuy")), "runtime world content must include Cam wherever the editor placed him");
 
 for (const [type, name] of Object.entries({ shopkeeper: "Marnie", hunter: "Bramble", jester: "Jinx", beachGirl: "Sunny", greenWitch: "Myrtle", camoGuy: "Cam" })) {

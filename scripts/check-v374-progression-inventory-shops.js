@@ -14,9 +14,9 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const authored = JSON.parse(read("content/adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.375", "package version must be v374");
-assert(server.includes('BUILD_VERSION = "6-11-375"'), "server build marker missing");
-assert(read("public/client-config.js").includes('CLIENT_BUILD_VERSION = "6-11-375"'), "client build marker missing");
+assert.strictEqual(pkg.version, "0.6.11.380", "package version must be v374");
+assert(server.includes('BUILD_VERSION = "6-11-380"'), "server build marker missing");
+assert(read("public/client-config.js").includes('CLIENT_BUILD_VERSION = "6-11-380"'), "client build marker missing");
 
 assert(html.includes('data-craft-filter="consumables"') && html.includes('data-craft-filter="weapons"') && html.includes('data-craft-filter="armor"'), "crafting category buttons missing");
 assert(html.includes('.craft-recipe[hidden]') && html.includes('display: none !important'), "crafting hidden-category CSS guard missing");
@@ -47,16 +47,13 @@ assert(game.includes('player.items[itemId] =\n    inventoryItemCount(itemId) + a
 assert(game.includes('if (count > 0) output[itemId] = count;'), "saved equipment quantities are still being collapsed to unique ownership");
 assert(html.includes('class="inventory-stack-count"') || game.includes('stackCount.className = "inventory-stack-count"'), "inventory stack count UI missing");
 
-assert(game.includes('const CLASS_SELECTION_LEVEL = 10;'), "class selection is not locked to level 10");
-assert(game.includes('const SELECTABLE_CLASS_IDS = new Set(["arcana", "precision"]);'), "only Magus/Ranger should currently be selectable");
-assert(game.includes('CLASSES UNLOCK AT LV ${CLASS_SELECTION_LEVEL}') && game.includes('COMING SOON'), "class selection feedback missing");
-assert(html.includes('Classes unlock at Level 10') && html.includes('Bruiser and Rogue are coming soon'), "class selection UI copy missing");
+// v374's class/talent feature assertions are intentionally inverted in v377:
+// the inventory/shop/stacking work remains, while class selection and gathering
+// talent progression are retired from active gameplay.
+assert(game.includes('function equipmentRequiredClass(itemId)') && game.includes('v377 pivot: classes are retired'), "class restriction retirement marker missing");
+assert(html.includes('retired-system" data-page="skillsPage"') && html.includes('retired-system" data-page="talentsPage"'), "class/talent tabs should be retired from player UI");
+assert(game.includes('function awardFlowerHarvestingExp(amount)') && game.includes('v377: gathering talents are retired'), "flower harvesting compatibility no-op missing");
+assert(!server.includes('reward: "flowerHarvestingExp"'), "server must not award retired flower-harvesting talent EXP");
+assert(authored.version >= 88, "map-editor authored world data must preserve at least the v88 baseline or newer user-authored revisions");
 
-assert(game.includes('flowerHarvesting: {') && game.includes('function awardFlowerHarvestingExp(amount)'), "flower harvesting progression missing");
-assert(html.includes('id="flowerHarvestingLevelText"') && html.includes('id="flowerHarvestingFill"'), "flower harvesting talent UI missing");
-assert(net.includes('"flowerHarvestingExp"') && net.includes('awardFlowerHarvestingExp'), "network flower harvesting reward handling missing");
-assert(world.includes('awardFlowerHarvestingExp(1);'), "offline flower harvesting reward missing");
-assert(server.includes('reward: "flowerHarvestingExp"') && server.includes('action === "cutFlower"'), "server flower harvesting reward missing");
-assert.strictEqual(authored.version, 88, "map-editor authored world data must match the newest live editor-authored revision preserved for v374");
-
-console.log("v374 progression/inventory/shop regression checks passed.");
+console.log("v374 inventory/shop stacking retained; v377 class/talent retirement checks passed.");

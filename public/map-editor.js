@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "375";
+  const BUILD = "380";
   const canvas = document.getElementById("mapCanvas");
   const viewport = document.getElementById("viewport");
   const ctx = canvas.getContext("2d", { alpha: true });
@@ -61,7 +61,10 @@
 
   const editableMapIds = Object.keys(WORLD_CONTENT.maps).filter(id => {
     const definition = WORLD_CONTENT.maps[id];
-    return Boolean(definition?.terrain && definition?.dimensions);
+    // v377 coordinate-world cells are generated runtime content, not authored
+    // map documents. Keep the editor focused on legacy/special authored maps
+    // so applying a draft cannot accidentally freeze a generated biome cell.
+    return Boolean(definition?.terrain && definition?.dimensions && !definition?.grid);
   });
 
   if (editableMapIds.length === 0) {

@@ -4954,6 +4954,166 @@
     }
   }
 
+
+  /* v377 world-grid pivot: legacy class/skill/talent controls are intentionally retired. */
+  .retired-system { display: none !important; }
+
+  #worldGridStatus {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 32;
+    pointer-events: none;
+    padding: 3px 6px;
+    border: 1px solid rgba(233, 225, 199, 0.28);
+    border-radius: 3px;
+    background: rgba(15, 20, 16, 0.72);
+    color: #e9e1c7;
+    font: 8px/1.2 monospace;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
+  }
+
+  /* v378: fixed 3x3 local minimap. The center is always the player's
+     current map; the window slides across the coordinate world with them. */
+  #worldMiniMap {
+    position: absolute;
+    top: 28px;
+    right: 6px;
+    z-index: 32;
+    display: none;
+    grid-template-columns: repeat(3, 18px);
+    grid-template-rows: repeat(3, 18px);
+    gap: 1px;
+    padding: 3px;
+    background: rgba(15, 20, 16, 0.80);
+    border: 1px solid rgba(233, 225, 199, 0.34);
+    box-shadow: 1px 1px 0 rgba(0,0,0,.55);
+    pointer-events: none;
+  }
+
+  .world-mini-cell {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: rgba(54, 69, 49, 0.80);
+    border: 1px solid rgba(193, 190, 159, 0.20);
+  }
+
+  .world-mini-cell.undiscovered {
+    background: rgba(9, 12, 10, 0.94);
+    border-color: rgba(88, 90, 76, 0.28);
+  }
+
+  .world-mini-cell.outside-world {
+    background:
+      linear-gradient(45deg, transparent 42%, rgba(140, 126, 99, .34) 43%, rgba(140, 126, 99, .34) 56%, transparent 57%),
+      rgba(3, 5, 4, 0.98);
+    border-color: rgba(176, 150, 105, 0.48);
+  }
+
+  .world-mini-cell.current-cell {
+    border: 2px solid rgba(244, 239, 207, 0.94);
+  }
+
+  .world-mini-biome-icon {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Tiny CSS-pixel biome marks avoid another image request and remain crisp. */
+  .world-mini-biome-icon.biome-plains::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    bottom: 1px;
+    width: 2px;
+    height: 7px;
+    background: #85b768;
+    box-shadow: -3px 3px 0 #6f9f52, 3px 2px 0 #98c878;
+  }
+
+  .world-mini-biome-icon.biome-forest::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    bottom: 0;
+    width: 2px;
+    height: 4px;
+    background: #6d4c2d;
+  }
+
+  .world-mini-biome-icon.biome-forest::after {
+    content: "";
+    position: absolute;
+    left: 1px;
+    top: 0;
+    width: 8px;
+    height: 7px;
+    background: #4f7d43;
+    box-shadow: 1px -1px 0 #699353;
+  }
+
+  .world-mini-biome-icon.biome-rocky::before {
+    content: "";
+    position: absolute;
+    left: 1px;
+    bottom: 1px;
+    width: 5px;
+    height: 4px;
+    background: #8b8d82;
+    box-shadow: 4px -2px 0 #6f7169, 2px -4px 0 #a2a496;
+  }
+
+  .world-mini-spawn-marker {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 4px;
+    height: 4px;
+    background: #e5c56c;
+    box-shadow: 0 0 0 1px rgba(52, 42, 22, .9);
+  }
+
+  .world-mini-player-marker {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 3px;
+    height: 3px;
+    background: #fff8dc;
+    box-shadow: 0 0 0 1px rgba(20, 20, 16, .9);
+  }
+
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    #worldMiniMap {
+      top: 26px;
+      right: max(5px, env(safe-area-inset-right));
+      transform: scale(.84);
+      transform-origin: top right;
+    }
+  }
+
+  #slot4 { margin-left: 0 !important; }
+  #menuItemHotkeyRail .menu-hotkey-stack {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(42px, 1fr));
+    gap: 4px;
+  }
+  #menuItemHotkeyRail .menu-item-hotkey-slot {
+    min-width: 0;
+    justify-content: center;
+    padding: 4px 3px;
+  }
+  #menuItemHotkeyRail .menu-hotkey-item-name { display: none; }
+
 </style>
 </head>
 <body>
@@ -5063,8 +5223,10 @@
     </div>
 </div>
 <div id="mobileRotatePrompt">Rotate your phone sideways to play Slime Story.</div>
+<div id="worldGridStatus" aria-live="polite"></div>
+<div id="worldMiniMap" role="img" aria-label="Local world map"></div>
 
-<div id="abilityBar">
+<div id="abilityBar" class="retired-system" aria-hidden="true">
       <div class="ability-slot empty" id="abilitySlotShift">
         <img class="ability-slot-img" alt="" />
         <div class="ability-cooldown-mask"></div>
@@ -5096,41 +5258,51 @@
 </div>
 
 <div id="bottomUi">
-    <div id="hotbar">
-      <div class="hotbar-slot utility-slot" id="slot1">
+    <div id="hotbar" aria-label="Weapons and tools 1 through 9">
+      <div class="hotbar-slot" id="slot1">
         <img class="hotbar-item-img" alt="" />
-        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div><div class="utility-count"></div>
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">1</div>
       </div>
-      <div class="hotbar-slot utility-slot" id="slot2">
+      <div class="hotbar-slot" id="slot2">
         <img class="hotbar-item-img" alt="" />
-        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div><div class="utility-count"></div>
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">2</div>
       </div>
-      <div class="hotbar-slot utility-slot" id="slot3">
+      <div class="hotbar-slot" id="slot3">
         <img class="hotbar-item-img" alt="" />
-        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div><div class="utility-count"></div>
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">3</div>
       </div>
       <div class="hotbar-slot" id="slot4">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">4</div>
       </div>
       <div class="hotbar-slot" id="slot5">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">5</div>
       </div>
       <div class="hotbar-slot" id="slot6">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">6</div>
       </div>
       <div class="hotbar-slot" id="slot7">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">7</div>
       </div>
       <div class="hotbar-slot" id="slot8">
         <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
         <div class="hotbar-label">8</div>
+      </div>
+      <div class="hotbar-slot" id="slot9">
+        <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <div class="hotbar-label">9</div>
       </div>
     </div>
 
@@ -5138,18 +5310,22 @@
 </div>
 
 <div id="inventoryOverlay" aria-hidden="true">
-  <div id="menuItemHotkeyRail" class="menu-hotkey-rail" aria-label="Equipment hotkeys">
-    <div class="menu-hotkey-rail-title">Equipment</div>
+  <div id="menuItemHotkeyRail" class="menu-hotkey-rail" aria-label="Weapon and tool hotkeys">
+    <div class="menu-hotkey-rail-title">Weapons &amp; Tools</div>
     <div class="menu-hotkey-stack">
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="0" tabindex="0"><span class="menu-hotkey-key">4</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="1" tabindex="0"><span class="menu-hotkey-key">5</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="2" tabindex="0"><span class="menu-hotkey-key">6</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="3" tabindex="0"><span class="menu-hotkey-key">7</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="4" tabindex="0"><span class="menu-hotkey-key">8</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="0" tabindex="0"><span class="menu-hotkey-key">1</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="1" tabindex="0"><span class="menu-hotkey-key">2</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="2" tabindex="0"><span class="menu-hotkey-key">3</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="3" tabindex="0"><span class="menu-hotkey-key">4</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="4" tabindex="0"><span class="menu-hotkey-key">5</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="5" tabindex="0"><span class="menu-hotkey-key">6</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="6" tabindex="0"><span class="menu-hotkey-key">7</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="7" tabindex="0"><span class="menu-hotkey-key">8</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="8" tabindex="0"><span class="menu-hotkey-key">9</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
     </div>
-    <div class="menu-hotkey-rail-help">Drag, or tap a weapon then a slot · right-click to clear</div>
+    <div class="menu-hotkey-rail-help">Drag, or tap a weapon/tool then a slot · right-click to clear</div>
   </div>
-  <div id="menuUtilityHotkeyRail" class="menu-hotkey-rail" aria-label="Item hotkeys">
+  <div id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system" aria-label="Retired item hotkeys" aria-hidden="true">
     <div class="menu-hotkey-rail-title">Items</div>
     <div class="menu-hotkey-stack">
       <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="0" tabindex="0"><span class="menu-hotkey-key">1</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
@@ -5162,8 +5338,8 @@
     <div id="inventoryTop">
       <button class="inventory-tab active" data-page="inventoryPage">Inventory</button>
       <button class="inventory-tab" data-page="equipmentPage">Armor</button>
-      <button class="inventory-tab" data-page="skillsPage">Class</button>
-      <button class="inventory-tab" data-page="talentsPage">Talents</button>
+      <button class="inventory-tab retired-system" data-page="skillsPage" aria-hidden="true" tabindex="-1">Class</button>
+      <button class="inventory-tab retired-system" data-page="talentsPage" aria-hidden="true" tabindex="-1">Talents</button>
       <button class="inventory-tab" data-page="statsPage">Stats</button>
       <button class="inventory-tab" data-page="pvpPage">PvP</button>
       <button id="inventoryClose" aria-label="Close">×</button>
@@ -5202,15 +5378,15 @@
 
       <div class="menu-section-title">Consumables</div>
       <div id="inventoryConsumablesGrid" class="inventory-grid">
-        <div class="menu-item resource-menu-item" data-resource-key="healingPotions" data-utility-hotbar-assignable="true" data-utility-item="healingPotion" title="Healing Potion · restores 20 HP · drag to Items 1–3">
+        <div class="menu-item resource-menu-item" data-resource-key="healingPotions" data-consumable-item="healingPotion" title="Healing Potion · restores 20 HP · click to use">
           <img id="inventoryHealingPotionImg" alt="Healing Potion" />
           <span class="resource-menu-count" id="inventoryHealingPotionCount">0</span>
         </div>
-        <div class="menu-item resource-menu-item" data-resource-key="attackPotions" data-utility-hotbar-assignable="true" data-utility-item="attackPotion" title="Attack Potion · +15% physical damage for 5 min · drag to Items 1–3">
+        <div class="menu-item resource-menu-item" data-resource-key="attackPotions" data-consumable-item="attackPotion" title="Attack Potion · +15% physical damage for 5 min · click to use">
           <img id="inventoryAttackPotionImg" alt="Attack Potion" />
           <span class="resource-menu-count" id="inventoryAttackPotionCount">0</span>
         </div>
-        <div class="menu-item resource-menu-item" data-resource-key="magicPotions" data-utility-hotbar-assignable="true" data-utility-item="magicPotion" title="Magic Potion · +15% magic damage for 5 min · drag to Items 1–3">
+        <div class="menu-item resource-menu-item" data-resource-key="magicPotions" data-consumable-item="magicPotion" title="Magic Potion · +15% magic damage for 5 min · click to use">
           <img id="inventoryMagicPotionImg" alt="Magic Potion" />
           <span class="resource-menu-count" id="inventoryMagicPotionCount">0</span>
         </div>
@@ -5220,6 +5396,13 @@
         </div>
       </div>
       <div id="inventoryConsumablesEmpty" class="inventory-empty">No consumables</div>
+
+      <div class="menu-section-title">Building</div>
+      <div id="inventoryBuildingGrid" class="inventory-grid">
+        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–9 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=380" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–9 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=380" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+      </div>
+      <div id="inventoryBuildingEmpty" class="inventory-empty">No building pieces</div>
 
       <div class="menu-section-title">Weapons</div>
       <div id="inventoryWeaponsGrid" class="inventory-grid">
@@ -5429,7 +5612,7 @@
       </div>
     </div>
 
-    <div id="skillsPage" class="inventory-page">
+    <div id="skillsPage" class="inventory-page retired-system" aria-hidden="true">
       <div id="classSelectionGate" class="class-selection-gate">
         <div class="class-selection-title">Choose Your Class</div>
         <div class="class-selection-copy">
@@ -5721,7 +5904,7 @@
 
     </div>
 
-    <div id="talentsPage" class="inventory-page">
+    <div id="talentsPage" class="inventory-page retired-system" aria-hidden="true">
       <div class="stats-header">
         <div class="menu-section-title" style="margin:0;">Talents</div>
         <div style="color:#d7c786;font:8px/1 monospace;">Gathering & utility growth</div>
@@ -5807,7 +5990,7 @@
           <span>INT</span><span class="stat-value" id="statInt">0</span><button class="stat-plus" data-stat="int">+</button>
         </div>
       </div>
-      <div id="skillPointText">Skill Points 0</div>
+      <div id="skillPointText">Stat Points 0</div>
     </div>
 
     <div id="pvpPage" class="inventory-page">
@@ -5828,7 +6011,7 @@
     <div id="inventoryFooter">Esc to close</div>
   </div>
 
-  <div id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden" aria-label="Skill hotkeys">
+  <div id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden retired-system" aria-label="Retired skill hotkeys" aria-hidden="true">
     <div class="menu-hotkey-rail-title">Skills</div>
     <div class="skill-key-strip">
       <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotShiftIcon" alt="" /><span class="skill-key-name">Shift</span><span class="skill-key-skill" id="skillSlotShift">Empty</span></div>
@@ -5902,8 +6085,12 @@
       <button type="button" class="craft-tab active" data-craft-filter="consumables">Consumables</button>
       <button type="button" class="craft-tab" data-craft-filter="weapons">Weapons</button>
       <button type="button" class="craft-tab" data-craft-filter="armor">Armor</button>
+      <button type="button" class="craft-tab" data-craft-filter="building">Building</button>
     </div>
     <div id="craftGrid">
+      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=380" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=380" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+
       <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="healingPotion"><img id="craftHealingPotionImg" alt="Healing Potion" /><span class="craft-recipe-name">Healing Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftHealingWhiteIcon" alt="White Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftHealingBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="attackPotion"><img id="craftAttackPotionImg" alt="Attack Potion" /><span class="craft-recipe-name">Attack Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftAttackWhiteIcon" alt="White Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -5937,7 +6124,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=375" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=380" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -5959,33 +6146,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=375"></script>
-<script src="/shared/terrain-rules.js?v=375"></script>
-<script src="/shared/terrain-presentation.js?v=375"></script>
-<script src="/shared/combat-balance.js?v=375"></script>
-<script src="/shared/ability-scaling.js?v=375"></script>
-<script src="/shared/rain-field.js?v=375"></script>
-<script src="/shared/camouflage-rules.js?v=375"></script>
-<script src="/shared/enemy-net-protocol.js?v=375"></script>
-<script src="/shared/player-net-protocol.js?v=375"></script>
-<script src="/client-config.js?v=375"></script>
-<script src="/client-utils.js?v=375"></script>
-<script src="/client-world.js?v=375"></script>
-<script src="/client-maps.js?v=375"></script>
-<script src="/client-enemies.js?v=375"></script>
-<script src="/client-enemy-runtime.js?v=375"></script>
-<script src="/client-enemy-rendering.js?v=375"></script>
-<script src="/client-combat.js?v=375"></script>
-<script src="/client-abilities.js?v=375"></script>
-<script src="/client-magus-abilities.js?v=375"></script>
-<script src="/client-class-abilities.js?v=375"></script>
-<script src="/client-status.js?v=375"></script>
-<script src="/client-fire-environment.js?v=375"></script>
-<script src="/client-network.js?v=375"></script>
-<script src="/client-simulation-foundation.js?v=375"></script>
-<script src="/game.js?v=375"></script>
-<script src="/client-terrain.js?v=375"></script>
-<script src="/client-input.js?v=375"></script>
-<script src="/client-app.js?v=375"></script>
+<script src="/shared/world-content-runtime.js?v=380"></script>
+<script src="/shared/terrain-rules.js?v=380"></script>
+<script src="/shared/terrain-presentation.js?v=380"></script>
+<script src="/shared/combat-balance.js?v=380"></script>
+<script src="/shared/ability-scaling.js?v=380"></script>
+<script src="/shared/rain-field.js?v=380"></script>
+<script src="/shared/camouflage-rules.js?v=380"></script>
+<script src="/shared/enemy-net-protocol.js?v=380"></script>
+<script src="/shared/player-net-protocol.js?v=380"></script>
+<script src="/client-config.js?v=380"></script>
+<script src="/client-utils.js?v=380"></script>
+<script src="/client-world.js?v=380"></script>
+<script src="/client-maps.js?v=380"></script>
+<script src="/client-enemies.js?v=380"></script>
+<script src="/client-enemy-runtime.js?v=380"></script>
+<script src="/client-enemy-rendering.js?v=380"></script>
+<script src="/client-combat.js?v=380"></script>
+<script src="/client-abilities.js?v=380"></script>
+<script src="/client-magus-abilities.js?v=380"></script>
+<script src="/client-class-abilities.js?v=380"></script>
+<script src="/client-status.js?v=380"></script>
+<script src="/client-fire-environment.js?v=380"></script>
+<script src="/client-network.js?v=380"></script>
+<script src="/client-simulation-foundation.js?v=380"></script>
+<script src="/game.js?v=380"></script>
+<script src="/client-terrain.js?v=380"></script>
+<script src="/client-input.js?v=380"></script>
+<script src="/client-app.js?v=380"></script>
 </body>
 </html>

@@ -157,13 +157,17 @@ function showSkillCooldownMessage(skillId) {
 }
 
 function abilityLevel(skillId) {
-  const rawLevel = Math.max(0, Number(player.abilities[skillId] || 0));
-  const maxLevel = Math.max(0, Number(ACTIVE_SKILLS[skillId]?.maxLevel) || rawLevel);
-  return Math.min(rawLevel, maxLevel);
+  // v377 item-driven ability model. Old learned skill levels/classes are ignored.
+  // The original Fire Wand casts Fireball and the Rain Wand casts Rain Cloud.
+  // Other retired skills report level 0 and therefore cannot be triggered.
+  const weapon = typeof equippedWeapon === "function" ? equippedWeapon() : null;
+  if (skillId === "fireball" && weapon === "wand") return 1;
+  if (skillId === "rainCloud" && weapon === "rainWand") return 1;
+  return 0;
 }
 
 function isAbilityUnlocked(skillId) {
-  return skillBelongsToSelectedClass(skillId) && abilityLevel(skillId) > 0;
+  return abilityLevel(skillId) > 0;
 }
 
 function normalizeActiveSkillKey(event) {
@@ -249,6 +253,11 @@ function triggerActiveSkillForKey(key, options = {}) {
 }
 
 function handleActiveSkillKeyDown(event, activeSkillKey) {
+  // v377: active skill keys are retired; abilities are invoked by equipped items.
+  void event;
+  void activeSkillKey;
+  return false;
+
   if (!activeSkillKey || !skillBindings[activeSkillKey]) return false;
 
   if (activeSkillKey === "space") {

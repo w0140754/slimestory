@@ -44,9 +44,9 @@ assert(app.includes('terrainEntityTouchesWater(player.x, player.y, currentMapId,
 assert(app.includes('drawTerrainWadingOverlay('), "wading overlays not wired into sorted entity rendering");
 assert(terrainClient.includes('function drawTerrainWadingOverlay('), "wading renderer helper missing");
 assert(terrainClient.includes('function terrainEntityTouchesWater('), "water contact helper missing");
-assert(server.includes('const BUILD_VERSION = "6-11-375";'), "server build must be v347");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-375";'), "client build must be v347");
-assert(index.includes('/client-terrain.js?v=375') && index.includes('/client-app.js?v=375') && index.includes('/game.js?v=375'), "v347 client cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-380";'), "server build must be v347");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-380";'), "client build must be v347");
+assert(index.includes('/client-terrain.js?v=380') && index.includes('/client-app.js?v=380') && index.includes('/game.js?v=380'), "v347 client cache keys missing");
 assert(readme.includes('## v6-11-347 — Water traversal + Crab Wet affinity'), "README v347 changelog missing");
 
 console.log("Water traversal + Crab Wet affinity regression checks passed.");

@@ -12,7 +12,7 @@ const html = read("public", "index.html");
 const game = read("public", "game.js");
 const maps = JSON.parse(read("content", "adopted-map-overrides.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-375";'));
+assert(server.includes('const BUILD_VERSION = "6-11-380";'));
 assert.ok(maps.version >= 68, "live authored map revision must remain intact");
 
 assert(html.includes("background: rgba(18, 18, 18, .34);"));

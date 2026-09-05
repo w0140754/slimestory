@@ -446,6 +446,8 @@ class OnlineClient {
         player.goldSlimeBubbles = Math.max(0, Math.floor(message.goldSlimeBubbles));
       }
       if (Number.isFinite(message.arrows)) player.arrows = Math.max(0, Math.floor(message.arrows));
+      if (Number.isFinite(message.woodFloors)) player.woodFloors = Math.max(0, Math.floor(message.woodFloors));
+      if (Number.isFinite(message.woodWalls)) player.woodWalls = Math.max(0, Math.floor(message.woodWalls));
       if (typeof message.beachQuestStage === "string") player.beachQuest.stage = message.beachQuestStage;
       if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
@@ -883,9 +885,43 @@ class OnlineClient {
     }
 
     if (message.type === "environmentPatch") {
-      this.applyEnvironmentPatch(
-        message.entities
-      );
+      this.applyEnvironmentPatch(message.entities);
+      return;
+    }
+
+    if (message.type === "structureSnapshot") {
+      applyStructureSnapshot(message.mapId, message.structures);
+      return;
+    }
+
+    if (message.type === "structurePlaced") {
+      applyStructurePlaced(message.structure);
+      return;
+    }
+
+    if (message.type === "structureRemoved") {
+      applyStructureRemoved(message.mapId, message.structureId);
+      return;
+    }
+
+    if (message.type === "structureDestroyResult") {
+      if (!message.success) {
+        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : "TOO FAR";
+        spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.7);
+      }
+      return;
+    }
+
+    if (message.type === "structurePlaceResult") {
+      if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
+      if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
+      if (!message.success) {
+        const text = message.reason === "blocked" ? "BLOCKED" : message.reason === "tooFar" ? "TOO FAR" : message.reason === "mapLimit" ? "MAP BUILD LIMIT" : "NONE LEFT";
+        spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.75);
+      }
+      if (message.success && buildPieceCount(message.kind) <= 0) cancelBuildPlacement(true);
+      updateInventoryUi();
+      saveLocalCharacterState(true);
       return;
     }
 
@@ -1148,6 +1184,9 @@ class OnlineClient {
 
     if (state.kind === "tree") {
       const oldHp = entity.hp;
+      const oldX = entity.x;
+      const oldY = entity.y;
+      const wasRemoved = Boolean(entity.removed);
 
       const wasDepleted =
         Boolean(
@@ -1171,8 +1210,13 @@ class OnlineClient {
           ? state.maxHp
           : entity.maxHp;
 
+      if (Number.isFinite(state.x)) entity.x = Number(state.x);
+      if (Number.isFinite(state.y)) entity.y = Number(state.y);
+
       entity.isStump =
         Boolean(state.isStump);
+
+      entity.removed = Boolean(state.removed);
 
       entity.falling =
         Boolean(state.falling);
@@ -1218,6 +1262,7 @@ class OnlineClient {
       }
 
       const isFreshNow =
+        !entity.removed &&
         !entity.isStump &&
         !entity.falling &&
         !entity.canopyBurned &&
@@ -1226,7 +1271,7 @@ class OnlineClient {
 
       if (
         animateRegrowth &&
-        wasDepleted &&
+        (wasDepleted || wasRemoved || oldX !== entity.x || oldY !== entity.y) &&
         isFreshNow &&
         state.mapId === currentMapId
       ) {
@@ -1392,6 +1437,7 @@ class OnlineClient {
       tree.maxHp = Number.isFinite(tree.maxHp) ? tree.maxHp : 4;
       tree.hp = tree.maxHp;
       tree.isStump = false;
+      tree.removed = false;
       tree.falling = false;
       tree.fallTime = 0;
       tree.fallDirection = 1;
@@ -1987,6 +2033,18 @@ class OnlineClient {
     return true;
   }
 
+  requestStructurePlacement(kind, x, y) {
+    if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "structurePlace", kind, x, y }));
+    return true;
+  }
+
+  requestStructureDestroy(structureId) {
+    if (!structureId || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "structureDestroy", structureId }));
+    return true;
+  }
+
   requestConsumableUse(item) {
     if (!item || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
     this.socket.send(JSON.stringify({ type: "consumableUse", item }));
@@ -2105,6 +2163,8 @@ class OnlineClient {
     if (Number.isFinite(message.totalHealingPotions)) player.healingPotions = message.totalHealingPotions;
     if (Number.isFinite(message.totalAttackPotions)) player.attackPotions = message.totalAttackPotions;
     if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
+    if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
+    if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
 
     if (Number.isFinite(message.totalArrows)) {
       player.arrows = Math.max(0, Math.floor(message.totalArrows));
@@ -2116,7 +2176,9 @@ class OnlineClient {
           arrows: "totalArrows",
           healingPotions: "totalHealingPotions",
           attackPotions: "totalAttackPotions",
-          magicPotions: "totalMagicPotions"
+          magicPotions: "totalMagicPotions",
+          woodFloors: "totalWoodFloors",
+          woodWalls: "totalWoodWalls"
         }[recipe.resourceKey];
         if (!totalField || !Number.isFinite(message[totalField])) {
           player[recipe.resourceKey] =
@@ -2254,6 +2316,8 @@ class OnlineClient {
     if (Number.isFinite(message.totalGoldSlimeBubbles)) {
       player.goldSlimeBubbles = message.totalGoldSlimeBubbles;
     }
+    if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
+    if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
 
     if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
       player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));

@@ -16,8 +16,8 @@ const checks = [
   [server.includes("playerState.attackPotionUntil = now + POTION_BUFF_MS") && server.includes("playerState.magicPotionUntil = now + POTION_BUFF_MS"), "buff refresh"],
   [server.includes("? 1.15 : 1"), "damage multiplier"],
   [game.includes('UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"])'), "utility mapping"],
-  [input.includes('key === "1" || key === "2" || key === "3"') && input.includes('player.utilityHotbarAssignments?.[Number(key) - 1]'), "assignable utility hotkeys 1-3"],
-  [html.includes('class="hotbar-slot utility-slot" id="slot1"') && html.includes('class="hotbar-slot utility-slot" id="slot3"') && !html.includes('class="hotbar-slot utility-slot" id="slot6"'), "HUD utility slots 1-3"],
+  [!input.includes('key === "1" || key === "2" || key === "3"') && game.includes('useConsumable(utilityItemId);'), "v377 consumables use directly from Inventory"],
+  [html.includes('id="slot1"') && html.includes('id="slot9"') && game.includes('const HOTBAR_SLOT_COUNT = 9;'), "v377 unified weapon/tool HUD 1-9"],
   [html.includes('data-craft-recipe="woodRing"') && html.includes('id="craftWoodRingImg"'), "wood ring craft button"],
   [!server.includes("playerState.flowers +=") && !game.includes("player.flowers"), "split flower inventory"]
 ];

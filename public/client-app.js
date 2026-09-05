@@ -284,7 +284,7 @@ function updateWorldObjectStates(dt) {
         tree.y - 1
       );
 
-      awardWoodcuttingExp(1);
+      // v377: tree harvesting no longer feeds a gathering talent.
     }
   }
 }
@@ -833,6 +833,11 @@ function drawPrototypeIslandGroundLayer(camX, camY) {
       drawWaterfallGroveLandmark(currentMapId, camX, camY);
     }
 
+    // Player floors sit on top of the authored/generated terrain surface.
+    // v379 only drew them on the legacy flat-ground path, which made placement
+    // consume inventory without a visible floor on coordinate maps.
+    drawPlayerStructureFloors(camX, camY);
+
     // Terrain owns the top surface (including dirt/water). Reflections are
     // layered into authored water before a light surface veil.
     drawPlayerReflection(camX, camY);
@@ -875,6 +880,7 @@ function drawPrototypeIslandGroundLayer(camX, camY) {
 
 function drawGroundLayer(camX, camY) {
   drawGround(camX, camY);
+  drawPlayerStructureFloors(camX, camY);
   drawMapConnection(camX, camY);
 
   drawWaterBase(
@@ -920,6 +926,8 @@ function addDrawable(drawables, y, draw) {
 
 function buildWorldDrawables(camX, camY) {
   const drawables = [];
+
+  addPlayerStructureDrawables(drawables, camX, camY);
 
   for (const tree of trees) {
     addDrawable(drawables, tree.y, () => drawTree(tree, camX, camY));
@@ -1219,23 +1227,25 @@ function buildWorldDrawables(camX, camY) {
     }
   }
 
-  addDrawable(
-    drawables,
-    player.y,
-    () => {
-      drawPlayer(camX, camY);
-      if (typeof drawTerrainWadingOverlay === "function") {
-        drawTerrainWadingOverlay(
-          player.x,
-          player.y,
-          camX,
-          camY,
-          { width: 14, depth: 5, phase: 0.4 }
-        );
+  if (!shouldSuppressLocalPlayerForMapTransition()) {
+    addDrawable(
+      drawables,
+      player.y,
+      () => {
+        drawPlayer(camX, camY);
+        if (typeof drawTerrainWadingOverlay === "function") {
+          drawTerrainWadingOverlay(
+            player.x,
+            player.y,
+            camX,
+            camY,
+            { width: 14, depth: 5, phase: 0.4 }
+          );
+        }
+        drawPvpMarker(player, camX, camY);
       }
-      drawPvpMarker(player, camX, camY);
-    }
-  );
+    );
+  }
 
   return drawables;
 }
@@ -1357,6 +1367,7 @@ class GameRenderer {
       endNpcNameTagFrame();
     }
 
+    drawBuildPlacementPreview(renderCamera.x, renderCamera.y);
     drawMapTransitionCover();
   }
 }

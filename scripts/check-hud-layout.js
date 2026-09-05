@@ -7,28 +7,19 @@ const requiredCss = [
   ["canvas fills rendered viewport", /canvas\s*\{[\s\S]*?display:\s*block;[\s\S]*?width:\s*100%;[\s\S]*?height:\s*100%;/],
   ["top-center item anchor", /#bottomUi\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?left:\s*50%;[\s\S]*?top:\s*18px;[\s\S]*?transform:\s*translateX\(-50%\);/],
   ["bottom-center HP anchor", /#hpBarWrap\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?left:\s*50%;[\s\S]*?bottom:\s*12px;[\s\S]*?transform:\s*translateX\(-50%\);/],
-  ["right-center skill anchor", /#abilityBar\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?right:\s*12px;[\s\S]*?top:\s*50%;[\s\S]*?transform:\s*translateY\(-50%\);/],
   ["double-size HP HUD", /#hpBarWrap\s*\{[\s\S]*?width:\s*320px;[\s\S]*?#hpBar\s*\{[\s\S]*?width:\s*320px;[\s\S]*?height:\s*28px;[\s\S]*?#xpBar\s*\{[\s\S]*?width:\s*320px;[\s\S]*?height:\s*14px;/],
-  ["one-and-a-half-size skill HUD", /#abilityBar\s*\{[\s\S]*?grid-template-columns:\s*63px;[\s\S]*?grid-template-rows:\s*repeat\(4,\s*63px\);[\s\S]*?\.ability-slot\s*\{[\s\S]*?width:\s*63px;[\s\S]*?height:\s*63px;/],
-  ["four-slot vertical skill column", /#abilityBar\s*\{[\s\S]*?grid-template-columns:\s*63px;[\s\S]*?grid-template-rows:\s*repeat\(4,\s*63px\);/],
   ["arrow HUD sits opposite potion buffs beside HP", /#arrowHud\s*\{[\s\S]*?left:\s*calc\(100% \+ 12px\);[\s\S]*?top:\s*0;/],
   ["potion buffs sit left of HP", /#hudBuffs\s*\{[\s\S]*?right:\s*calc\(100% \+ 12px\);[\s\S]*?top:\s*0;/],
-  ["compact vertical skill column", /@media \(max-width: 560px\), \(max-height: 480px\)[\s\S]*?#abilityBar\s*\{[\s\S]*?right:\s*8px;[\s\S]*?top:\s*50%;[\s\S]*?grid-template-columns:\s*54px;[\s\S]*?grid-template-rows:\s*repeat\(4,\s*54px\);/],
-  ["narrow vertical skill column", /@media \(max-width: 420px\)[\s\S]*?#abilityBar\s*\{[\s\S]*?right:\s*6px;[\s\S]*?top:\s*50%;[\s\S]*?grid-template-columns:\s*38px;[\s\S]*?grid-template-rows:\s*repeat\(4,\s*38px\);/],
-  ["extra-compact collision rule", /@media \(max-width: 380px\)[\s\S]*?#hotbar\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?#abilityBar\s*\{[\s\S]*?right:\s*4px;[\s\S]*?top:\s*50%;/],
-  ["slot 3/4 group gap", /#slot4\s*\{\s*margin-left:\s*24px;/],
-  ["narrow enlarged-hotbar stepdown", /@media \(max-width: 760px\)[\s\S]*?\.hotbar-slot\s*\{[\s\S]*?width:\s*49px;[\s\S]*?height:\s*49px;[\s\S]*?#slot4\s*\{[\s\S]*?margin-left:\s*16px;/],
-  ["eight item slots", /id="slot1"[\s\S]*id="slot8"/],
-  ["skill keys", />Shift<[\s\S]*>Space<[\s\S]*>E<[\s\S]*>R</],
-  ["skill cooldown UI", /ability-cooldown-mask[\s\S]*ability-cooldown-text/],
-  ["utility overlays", /utility-count[\s\S]*utility-cooldown-mask[\s\S]*utility-cooldown-text/]
+  ["nine weapon/tool slots", /id="slot1"[\s\S]*id="slot9"/],
+  ["retired skill bar hidden", /id="abilityBar"[^>]*class="[^"]*retired-system[^"]*"[^>]*aria-hidden="true"/],
+  ["world-grid status inside viewport", /id="worldGridStatus"/]
 ];
 
 for (const [label, pattern] of requiredCss) {
   if (!pattern.test(html)) throw new Error(`HUD anchoring regression: ${label}`);
 }
 
-for (const id of ["hpBarWrap", "abilityBar", "bottomUi"]) {
+for (const id of ["hpBarWrap", "bottomUi"]) {
   const fixedPattern = new RegExp(`#${id}\\s*\\{[^}]*position:\\s*fixed;`);
   if (fixedPattern.test(html)) {
     throw new Error(`${id} must not anchor to browser/window edges`);
@@ -41,16 +32,17 @@ if (viewportStart < 0 || inventoryStart < 0 || inventoryStart <= viewportStart) 
   throw new Error("Rendered game viewport wrapper is missing or misplaced");
 }
 const viewportMarkup = html.slice(viewportStart, inventoryStart);
-for (const id of ["game", "hpBarWrap", "abilityBar", "bottomUi"]) {
+for (const id of ["game", "hpBarWrap", "bottomUi", "worldGridStatus"]) {
   if (!viewportMarkup.includes(`id="${id}"`)) {
     throw new Error(`${id} must live inside the rendered game viewport`);
   }
 }
+
 const hpIndex = viewportMarkup.indexOf('<div id="hpBarWrap">');
-const skillIndex = viewportMarkup.indexOf('<div id="abilityBar">');
+const gridIndex = viewportMarkup.indexOf('<div id="worldGridStatus"');
 const itemIndex = viewportMarkup.indexOf('<div id="bottomUi">');
-if (!(hpIndex > 0 && skillIndex > hpIndex && itemIndex > skillIndex)) {
-  throw new Error("HUD groups must remain independent ordered siblings inside gameViewport");
+if (!(hpIndex > 0 && gridIndex > hpIndex && itemIndex > gridIndex)) {
+  throw new Error("Active HUD groups must remain independent ordered siblings inside gameViewport");
 }
 
 const browsers = [
@@ -85,24 +77,12 @@ for (const browser of browsers) {
   const itemTop = extraCompact ? 14 : narrow ? 15 : compact ? 16 : 18;
   const itemOuter = extraCompact ? 29 : narrow ? 38 : compact ? 42 : hotbarCompact ? 53 : 62;
   const itemGap = extraCompact ? 1 : narrow ? 2 : compact ? 4 : hotbarCompact ? 5 : 9;
-  const utilityGap = extraCompact ? 4 : narrow ? 6 : compact ? 8 : hotbarCompact ? 10 : 18; // extra margin separating item keys 1–3 from equipment keys 4–8
-  const itemWidth = itemOuter * 8 + itemGap * 7 + utilityGap;
+  const itemWidth = itemOuter * 9 + itemGap * 8;
   const item = {
     left: viewportLeft + (viewportWidth - itemWidth) / 2,
     right: viewportLeft + (viewportWidth + itemWidth) / 2,
     top: viewportTop + itemTop,
     bottom: viewportTop + itemTop + itemOuter
-  };
-
-  const skillRight = extraCompact ? 4 : narrow ? 6 : compact ? 8 : 12;
-  const skillOuter = extraCompact ? 34 : narrow ? 42 : compact ? 58 : 67;
-  const skillGap = extraCompact ? 3 : narrow ? 4 : compact ? 6 : 9;
-  const skillHeight = skillOuter * 4 + skillGap * 3;
-  const skill = {
-    left: viewportRight - skillRight - skillOuter,
-    right: viewportRight - skillRight,
-    top: viewportTop + (viewportHeight - skillHeight) / 2,
-    bottom: viewportTop + (viewportHeight + skillHeight) / 2
   };
 
   const hpBottomMargin = extraCompact ? 6 : compact ? 8 : 12;
@@ -144,7 +124,7 @@ for (const browser of browsers) {
         bottom: hp.top + arrowHeight
       };
 
-  for (const [name, rect] of [["items", item], ["skills", skill], ["HP", hp], ["buffs", buffs], ["arrow", arrow]]) {
+  for (const [name, rect] of [["items", item], ["HP", hp], ["buffs", buffs], ["arrow", arrow]]) {
     const epsilon = 0.001;
     if (
       rect.left < viewportLeft - epsilon ||
@@ -155,18 +135,14 @@ for (const browser of browsers) {
       throw new Error(`${name} HUD escaped rendered viewport at ${browser.width}x${browser.height} (${browser.label})`);
     }
   }
+
   if (
-    overlaps(item, skill) || overlaps(item, hp) || overlaps(skill, hp) ||
-    overlaps(skill, buffs) || overlaps(skill, arrow) || overlaps(hp, buffs) ||
+    overlaps(item, hp) || overlaps(hp, buffs) ||
     overlaps(hp, arrow) || overlaps(buffs, arrow)
   ) {
     throw new Error(`HUD group collision at ${browser.width}x${browser.height} (${browser.label})`);
   }
 
-  // Letterboxing/gutters must move all anchors with the rendered canvas.
-  if (viewportLeft > 0 && skill.right >= browser.width - skillRight) {
-    throw new Error(`Skill anchor ignored horizontal gutter at ${browser.width}x${browser.height}`);
-  }
   if (viewportTop > 0 && item.top <= itemTop) {
     throw new Error(`Item hotbar ignored vertical letterbox at ${browser.width}x${browser.height}`);
   }
@@ -175,4 +151,4 @@ for (const browser of browsers) {
   }
 }
 
-console.log("Viewport HUD anchoring checks passed for top-center items, bottom-center HP/EXP, and right-center skills.");
+console.log("Viewport HUD anchoring checks passed for unified top-center 1-9 weapons/tools and bottom-center HP/EXP.");

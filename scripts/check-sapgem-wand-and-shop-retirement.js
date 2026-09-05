@@ -12,10 +12,10 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = require(path.join(root, "package.json"));
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-375";'), "server build must be 6-11-375");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-375";'), "client build must be 6-11-375");
-assert(pkg.version === "0.6.11.375", "package version must be 0.6.11.375");
-assert(html.includes('/shared/combat-balance.js?v=375') && html.includes('/game.js?v=375'), "v336 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-380";'), "server build must be 6-11-380");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-380";'), "client build must be 6-11-380");
+assert(pkg.version === "0.6.11.380", "package version must be 0.6.11.380");
+assert(html.includes('/shared/combat-balance.js?v=380') && html.includes('/game.js?v=380'), "v336 cache keys missing");
 assert(fs.existsSync(path.join(root, "public", "assets", "sapgem_wand_v4.png")), "current Sapgem sprite missing");
 assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372")'), "current Sapgem asset is not loaded");
 assert(game.includes('"weapon_sapgemWand"') && game.includes('"sapgemWand"'), "Sapgem weapon id/style missing");
@@ -45,6 +45,6 @@ const vendorCatalogBlock = server.match(/const SHOP_VENDOR_CATALOGS = Object\.fr
 assert(vendorCatalogBlock && !vendorCatalogBlock[1].includes('weapon_wand') && !vendorCatalogBlock[1].includes('weapon_rainWand'), "Fire/Rain Wand must be retired from current vendor stock");
 assert(server.includes('weapon_sapgemWand: Object.freeze({ price: 20, level: 10 })'), "Sapgem must be authorized in Myrtle's shop");
 assert(server.includes('SHOP_PURCHASE_HISTORY_ITEM_IDS') && server.includes('"weapon_wand"') && server.includes('"weapon_rainWand"'), "legacy Fire/Rain purchase-history compatibility missing");
-assert(server.includes('weaponIndex: clampInteger(source.weaponIndex, -1, 12, -1)'), "server weapon index clamp must include Sapgem");
+assert(server.includes('const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, 12, -1);') && server.includes('weaponIndex: sanitizedWeaponIndex'), "server weapon index clamp must include Sapgem");
 assert(readme.includes('## v6-11-334 — Sapgem Wand + wand progression cleanup'), "README historical v334 changelog missing");
 console.log("Sapgem wand/shop retirement regression checks passed.");

@@ -44,7 +44,11 @@ assert(
 
 assert(adopted.version >= 53, "Waterfall Grove must preserve its adopted map revisions");
 assert(adopted.maps.waterfallGrove, "Waterfall Grove is not present in adopted map data");
-assert.deepStrictEqual(adopted.defaultPlayerLoad, { mapId: "prototypeIsland", spawnId: "center" });
+assert(adopted.defaultPlayerLoad?.mapId, "default player load map is missing");
+assert(adopted.defaultPlayerLoad?.spawnId, "default player load spawn is missing");
+const defaultMap = WORLD_CONTENT.maps[adopted.defaultPlayerLoad.mapId];
+assert(defaultMap, "default player load map does not exist");
+assert(defaultMap.playerSpawns.some(spawn => spawn.id === adopted.defaultPlayerLoad.spawnId), "default player load spawn does not exist on its target map");
 
 const maps = read("public", "client-maps.js");
 const terrain = read("public", "client-terrain.js");
@@ -62,10 +66,10 @@ assert(terrain.includes("function drawWaterfallGroveAtmosphere"), "light/mist re
 assert(app.includes("drawWaterfallGroveLandmark(currentMapId, camX, camY)"), "ground landmark hook missing");
 assert(app.includes("drawWaterfallGroveAtmosphere(currentMapId, camX, camY)"), "atmosphere hook missing");
 assert(editor.includes("function drawMapLandmarks"), "map editor landmark preview missing");
-assert.strictEqual(pkg.version, "0.6.11.375");
-assert(server.includes('const BUILD_VERSION = "6-11-375";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-375";'));
-assert(html.includes('/client-terrain.js?v=375') && html.includes('/client-app.js?v=375'));
+assert.strictEqual(pkg.version, "0.6.11.380");
+assert(server.includes('const BUILD_VERSION = "6-11-380";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-380";'));
+assert(html.includes('/client-terrain.js?v=380') && html.includes('/client-app.js?v=380'));
 
 console.log(
   `Waterfall Grove OK: ${grove.environment.trees.length} trees, ` +

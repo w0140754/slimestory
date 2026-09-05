@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-375";
+const BUILD_VERSION = "6-11-380";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
@@ -600,6 +600,37 @@ function defaultPlayerLoadState() {
   };
 }
 
+function worldGridMetaForMap(mapId) {
+  const grid = WORLD_CONTENT.maps?.[mapId]?.grid;
+  if (!grid || !Number.isFinite(Number(grid.x)) || !Number.isFinite(Number(grid.y))) return null;
+  return {
+    x: Number(grid.x),
+    y: Number(grid.y),
+    distance: Math.max(0, Number(grid.distance) || 0)
+  };
+}
+
+function playerMapTransitionAllowed(previousMapId, requestedMapId) {
+  if (!previousMapId || previousMapId === requestedMapId) return true;
+
+  const previousGrid = worldGridMetaForMap(previousMapId);
+  const requestedGrid = worldGridMetaForMap(requestedMapId);
+
+  // The new coordinate world never accepts arbitrary client teleports. Grid
+  // transitions must move exactly one cardinal cell. Legacy-to-legacy travel
+  // remains compatible for the preserved rollback/editor maps.
+  if (previousGrid || requestedGrid) {
+    return Boolean(
+      previousGrid &&
+      requestedGrid &&
+      Math.abs(requestedGrid.x - previousGrid.x) +
+        Math.abs(requestedGrid.y - previousGrid.y) === 1
+    );
+  }
+
+  return true;
+}
+
 
 // -----------------------------------------------------------------------------
 // SHARED ENEMY AGGRO RULES
@@ -1109,6 +1140,7 @@ function serverEnemyMovementMultiplier(enemy) {
 
 function tickSharedEnemySnareStatuses(dt) {
   for (const enemy of allSharedEnemies()) {
+    if (!enemyMapSimulationActive(enemy.mapId)) continue;
     if (!enemy.alive) {
       clearServerEnemySnareState(enemy);
       continue;
@@ -1766,6 +1798,163 @@ function playerOwnedEffectMayAffectTarget(sourcePlayerId, target) {
 
 
 // -----------------------------------------------------------------------------
+// PLAYER-BUILT STRUCTURES (v379)
+// -----------------------------------------------------------------------------
+// Structures are server-authoritative, change-only state. They do not tick and
+// produce zero traffic while nobody is building. Map entry gets one compact
+// snapshot, then only placement events are broadcast.
+const sharedStructures = new Map();
+const sharedStructuresByMap = new Map();
+let nextSharedStructureId = 1;
+const MAX_STRUCTURES_PER_MAP = 96;
+const BUILD_GRID_SIZE = 16;
+const BUILD_PLACE_RANGE = 96;
+
+function structuresOnMap(mapId) {
+  return Array.from(sharedStructuresByMap.get(mapId)?.values() || []);
+}
+
+function structureSnapshot(mapId) {
+  return structuresOnMap(mapId).map(structure => ({
+    id: structure.id,
+    mapId: structure.mapId,
+    kind: structure.kind,
+    x: structure.x,
+    y: structure.y
+  }));
+}
+
+function structureRect(structure) {
+  return { x: structure.x - 8, y: structure.y - 8, width: 16, height: 16 };
+}
+
+function circleRectHit(x, y, radius, rect) {
+  const closestX = Math.max(rect.x, Math.min(x, rect.x + rect.width));
+  const closestY = Math.max(rect.y, Math.min(y, rect.y + rect.height));
+  const dx = x - closestX;
+  const dy = y - closestY;
+  return dx * dx + dy * dy <= radius * radius;
+}
+
+function serverPointHitsStructureWall(mapId, x, y, radius = 4) {
+  for (const structure of structuresOnMap(mapId)) {
+    if (structure.kind !== "woodWall") continue;
+    if (circleRectHit(x, y, radius, structureRect(structure))) return true;
+  }
+  return false;
+}
+
+function structurePlacementBlocked(mapId, x, y) {
+  const dimensions = mapWorldDimensions(mapId);
+  if (x < 32 || y < 32 || x > dimensions.width - 32 || y > dimensions.height - 32) return true;
+  for (const structure of structuresOnMap(mapId)) {
+    if (Math.abs(structure.x - x) < BUILD_GRID_SIZE && Math.abs(structure.y - y) < BUILD_GRID_SIZE) return true;
+  }
+  for (const entity of environmentEntitiesOnMap(mapId)) {
+    if (entity.removed || entity.depleted || entity.cut) continue;
+    if (Math.hypot(entity.x - x, entity.y - y) < 18) return true;
+  }
+  for (const npc of WORLD_CONTENT.maps[mapId]?.npcs || []) {
+    if (Math.hypot(Number(npc.x) - x, Number(npc.y) - y) < 26) return true;
+  }
+  for (const playerState of players.values()) {
+    if (playerState.mapId === mapId && playerState.hp > 0 && Math.hypot(playerState.x - x, playerState.y - y) < 12) return true;
+  }
+  return false;
+}
+
+function handleStructurePlaceRequest(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "woodWall" ? "woodWall" : null;
+  if (!playerState || playerState.hp <= 0 || !kind || !worldGridMetaForMap(playerState.mapId)) return;
+
+  const resourceKey = kind === "woodFloor" ? "woodFloors" : "woodWalls";
+  const dimensions = mapWorldDimensions(playerState.mapId);
+  const x = Math.round(clampNumber(message.x, 0, dimensions.width, playerState.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(clampNumber(message.y, 0, dimensions.height, playerState.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  let reason = null;
+  if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
+  else if (Math.hypot(x - playerState.x, y - playerState.y) > BUILD_PLACE_RANGE) reason = "tooFar";
+  else if (structuresOnMap(playerState.mapId).length >= MAX_STRUCTURES_PER_MAP) reason = "mapLimit";
+  else if (structurePlacementBlocked(playerState.mapId, x, y)) reason = "blocked";
+
+  if (reason) {
+    sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls });
+    return;
+  }
+
+  playerState[resourceKey] -= 1;
+  const structure = {
+    id: `build:${nextSharedStructureId++}`,
+    mapId: playerState.mapId,
+    kind,
+    x,
+    y,
+    ownerId: playerId
+  };
+  sharedStructures.set(structure.id, structure);
+  if (!sharedStructuresByMap.has(structure.mapId)) sharedStructuresByMap.set(structure.mapId, new Map());
+  sharedStructuresByMap.get(structure.mapId).set(structure.id, structure);
+
+  broadcastToMap(structure.mapId, { type: "structurePlaced", structure });
+  sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls });
+}
+
+function removeSharedStructure(structureId) {
+  const structure = sharedStructures.get(structureId);
+  if (!structure) return null;
+  sharedStructures.delete(structureId);
+  const bucket = sharedStructuresByMap.get(structure.mapId);
+  bucket?.delete(structureId);
+  if (bucket && bucket.size === 0) sharedStructuresByMap.delete(structure.mapId);
+  return structure;
+}
+
+function handleStructureDestroyRequest(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  const structureId = typeof message?.structureId === "string" ? message.structureId : "";
+  const structure = sharedStructures.get(structureId);
+  if (!playerState || playerState.hp <= 0 || !structure) return;
+
+  let reason = null;
+  if (playerState.mapId !== structure.mapId) reason = "wrongMap";
+  else if (playerState.weaponIndex !== 11) reason = "needPickaxe";
+  else if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) reason = "tooFar";
+
+  if (reason) {
+    sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
+    return;
+  }
+
+  const removed = removeSharedStructure(structureId);
+  if (!removed) return;
+
+  broadcastToMap(removed.mapId, {
+    type: "structureRemoved",
+    structureId: removed.id,
+    mapId: removed.mapId,
+    reason: "mined"
+  });
+
+  // Return the exact placed piece as ordinary shared loot. This is still
+  // change-only state: there are no structure timers or idle-map heartbeats.
+  spawnSharedResource(
+    removed.mapId,
+    removed.kind,
+    removed.x,
+    removed.y,
+    { life: 30.0 }
+  );
+
+  sendJson(socket, {
+    type: "structureDestroyResult",
+    success: true,
+    structureId: removed.id,
+    kind: removed.kind
+  });
+}
+
+// -----------------------------------------------------------------------------
 // SHARED ENVIRONMENT
 // -----------------------------------------------------------------------------
 // The browser already owns the static art/layout for trees, grass, and flowers.
@@ -1796,8 +1985,12 @@ const ENVIRONMENT_SPREAD_INTERVAL = STATUS_RULES.environmentSpreadInterval;
 
 // Regrowth uses one timestamp stored on the existing environment entity.
 // There are no per-tree/per-grass setTimeout timers.
-const TREE_REGROW_MIN_MS = 360_000;
-const TREE_REGROW_MAX_MS = 540_000;
+// v379 trees do not respawn where they were chopped. The deterministic tree
+// slot disappears after a short stump period and can very rarely establish at
+// a different location much later. No per-tree timers or network heartbeats.
+const TREE_STUMP_VISIBLE_MS = 5000;
+const TREE_RESEED_MIN_MS = 1_200_000;
+const TREE_RESEED_MAX_MS = 2_400_000;
 const GRASS_REGROW_MIN_MS = 180_000;
 const GRASS_REGROW_MAX_MS = 300_000;
 const FLOWER_REGROW_MIN_MS = 600_000;
@@ -1820,21 +2013,9 @@ function randomRegrowTimestamp(
   return Date.now() + delay;
 }
 
-function scheduleTreeRegrow(entity) {
-  if (
-    !entity ||
-    entity.kind !== "tree" ||
-    entity.regrowAt > 0
-  ) {
-    return false;
-  }
-
-  entity.regrowAt =
-    randomRegrowTimestamp(
-      TREE_REGROW_MIN_MS,
-      TREE_REGROW_MAX_MS
-    );
-
+function scheduleTreeReseed(entity) {
+  if (!entity || entity.kind !== "tree" || entity.reseedAt > 0) return false;
+  entity.reseedAt = randomRegrowTimestamp(TREE_RESEED_MIN_MS, TREE_RESEED_MAX_MS);
   return true;
 }
 
@@ -1895,6 +2076,7 @@ function scheduleRockRegrow(entity) {
 function resetTreeToFresh(entity) {
   entity.hp = entity.maxHp;
   entity.isStump = false;
+  entity.removed = false;
 
   entity.falling = false;
   entity.fallTime = 0;
@@ -1905,6 +2087,8 @@ function resetTreeToFresh(entity) {
   entity.canopyBurned = false;
 
   entity.regrowAt = 0;
+  entity.removeAt = 0;
+  entity.reseedAt = 0;
 
   markEnvironmentDirty(entity);
 }
@@ -2018,6 +2202,7 @@ function environmentEntitySnapshot(entity) {
       hp: entity.hp,
       maxHp: entity.maxHp,
       isStump: entity.isStump,
+      removed: Boolean(entity.removed),
       falling: entity.falling,
       fallTime: Number(entity.fallTime.toFixed(3)),
       fallDuration: entity.fallDuration,
@@ -2078,7 +2263,7 @@ function environmentEntitySnapshot(entity) {
 function environmentEntityHasNonDefaultState(entity) {
   if (!entity) return false;
   if (entity.kind === "tree") {
-    return entity.hp < entity.maxHp || entity.isStump || entity.falling ||
+    return entity.hp < entity.maxHp || entity.isStump || entity.removed || entity.falling ||
       entity.canopyBurnTime > 0 || entity.canopyBurned;
   }
   if (entity.kind === "grass") {
@@ -2218,6 +2403,7 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       hp: 4,
       maxHp: 4,
       isStump: false,
+      removed: false,
 
       falling: false,
       fallTime: 0,
@@ -2230,6 +2416,8 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       canopyBurned: false,
 
       regrowAt: 0,
+      removeAt: 0,
+      reseedAt: 0,
 
       canopyVariant: clampInteger(
         source.canopyVariant,
@@ -2452,7 +2640,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee", "woodFloor", "woodWall"].includes(kind)) {
     return null;
   }
 
@@ -2470,7 +2658,7 @@ function spawnSharedResource(
           ? "white"
           : null,
     ownerId: typeof options.ownerId === "string" ? options.ownerId : null,
-    life: kind === "icedCoffee" ? 28.0 : 18.0
+    life: Number.isFinite(Number(options.life)) ? Math.max(1, Number(options.life)) : kind === "icedCoffee" ? 28.0 : 18.0
   };
 
   sharedResources.set(
@@ -2571,6 +2759,10 @@ function handleResourcePickup(
     playerState.goldSlimeBubbles += 1;
   } else if (resource.kind === "icedCoffee") {
     playerState.beachQuestIcedCoffee = 1;
+  } else if (resource.kind === "woodFloor") {
+    playerState.woodFloors += 1;
+  } else if (resource.kind === "woodWall") {
+    playerState.woodWalls += 1;
   }
 
   broadcastToMap(resource.mapId, {
@@ -2585,6 +2777,8 @@ function handleResourcePickup(
     totalWhiteFlowers: playerState.whiteFlowers,
     totalBlueFlowers: playerState.blueFlowers,
     totalGoldSlimeBubbles: playerState.goldSlimeBubbles,
+    totalWoodFloors: playerState.woodFloors,
+    totalWoodWalls: playerState.woodWalls,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
@@ -2600,6 +2794,8 @@ const CRAFT_RECIPES = Object.freeze({
   woodChest: Object.freeze({ ingredients: Object.freeze({ wood: 12, stone: 3 }), stateKey: "woodChestCrafted", repeatable: true }),
   woodGreaves: Object.freeze({ ingredients: Object.freeze({ wood: 10, stone: 2 }), stateKey: "woodGreavesCrafted", repeatable: true }),
   woodRing: Object.freeze({ ingredients: Object.freeze({ wood: 5 }), stateKey: "woodRingCrafted", repeatable: true }),
+  woodFloor: Object.freeze({ repeatable: true, resourceKey: "woodFloors", outputCount: 4, ingredients: Object.freeze({ wood: 2 }) }),
+  woodWall: Object.freeze({ repeatable: true, resourceKey: "woodWalls", outputCount: 2, ingredients: Object.freeze({ wood: 3 }) }),
   arrows: Object.freeze({ repeatable: true, resourceKey: "arrows", outputCount: 50, ingredients: Object.freeze({ wood: 5, stone: 1 }) }),
   healingPotion: Object.freeze({ repeatable: true, resourceKey: "healingPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }) }),
   attackPotion: Object.freeze({ repeatable: true, resourceKey: "attackPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 2 }) }),
@@ -2901,7 +3097,9 @@ function handleCraftRequest(
       success: false,
       reason: "tooFar",
       totalWood: playerState.wood,
-      totalArrows: playerState.arrows
+      totalArrows: playerState.arrows,
+      totalWoodFloors: playerState.woodFloors,
+      totalWoodWalls: playerState.woodWalls
     });
     return;
   }
@@ -2917,7 +3115,9 @@ function handleCraftRequest(
       success: false,
       reason: "alreadyCrafted",
       totalWood: playerState.wood,
-      totalArrows: playerState.arrows
+      totalArrows: playerState.arrows,
+      totalWoodFloors: playerState.woodFloors,
+      totalWoodWalls: playerState.woodWalls
     });
     return;
   }
@@ -2936,7 +3136,9 @@ function handleCraftRequest(
       totalStone: playerState.stone,
       totalWhiteFlowers: playerState.whiteFlowers,
       totalBlueFlowers: playerState.blueFlowers,
-      totalArrows: playerState.arrows
+      totalArrows: playerState.arrows,
+      totalWoodFloors: playerState.woodFloors,
+      totalWoodWalls: playerState.woodWalls
     });
     return;
   }
@@ -2963,7 +3165,9 @@ function handleCraftRequest(
     totalArrows: playerState.arrows,
     totalHealingPotions: playerState.healingPotions,
     totalAttackPotions: playerState.attackPotions,
-    totalMagicPotions: playerState.magicPotions
+    totalMagicPotions: playerState.magicPotions,
+    totalWoodFloors: playerState.woodFloors,
+    totalWoodWalls: playerState.woodWalls
   });
 }
 
@@ -3269,6 +3473,7 @@ function igniteEnvironmentEntity(entity, sourcePlayerId = null) {
   if (entity.kind === "tree") {
     if (
       entity.fireImmune ||
+      entity.removed ||
       entity.isStump ||
       entity.falling ||
       entity.canopyBurned ||
@@ -3699,14 +3904,6 @@ function damageServerRock(
     scheduleRockRegrow(rock);
     spawnRockStoneDrops(rock);
 
-    if (source === "mining" && sourcePlayerId) {
-      sendToPlayer(sourcePlayerId, {
-        type: "environmentReward",
-        targetId: sourcePlayerId,
-        reward: "miningExp",
-        amount: 1
-      });
-    }
   }
 
   markEnvironmentDirty(rock, true);
@@ -4137,7 +4334,8 @@ function tickSharedEnvironment(dt) {
         entity.fallTime = 0;
         entity.falling = false;
         entity.isStump = true;
-        scheduleTreeRegrow(entity);
+        entity.removeAt = now + TREE_STUMP_VISIBLE_MS;
+        scheduleTreeReseed(entity);
 
         spawnSharedResource(
           entity.mapId,
@@ -4146,16 +4344,6 @@ function tickSharedEnvironment(dt) {
             entity.fallDirection * 14,
           entity.y - 1
         );
-
-        if (entity.lastHitPlayerId) {
-          sendToPlayer(entity.lastHitPlayerId, {
-            type: "environmentReward",
-            targetId:
-              entity.lastHitPlayerId,
-            reward: "woodcuttingExp",
-            amount: 1
-          });
-        }
 
         markEnvironmentDirty(entity);
       }
@@ -4171,7 +4359,6 @@ function tickSharedEnvironment(dt) {
         entity.canopyBurnTime = 0;
         entity.burnSourcePlayerId = null;
         entity.canopyBurned = true;
-        scheduleTreeRegrow(entity);
         markEnvironmentDirty(entity);
       }
     }
@@ -4201,14 +4388,42 @@ function tickSharedEnvironment(dt) {
       }
     }
 
+    if (entity.kind === "tree" && entity.isStump && entity.removeAt > 0 && now >= entity.removeAt) {
+      entity.isStump = false;
+      entity.removed = true;
+      entity.removeAt = 0;
+      markEnvironmentDirty(entity);
+      continue;
+    }
+
+    // Rare tree establishment happens only when the map is active, so sleeping
+    // maps never generate background network work. Reuse the persistent tree
+    // slot but move it to a new suitable point instead of respawning in place.
     if (
       entity.kind === "tree" &&
-      entity.regrowAt > 0 &&
-      now >= entity.regrowAt
+      entity.removed &&
+      entity.reseedAt > 0 &&
+      now >= entity.reseedAt &&
+      mapHasNetworkRecipients(entity.mapId)
     ) {
-      if (!livingPlayerNearEnvironmentHome(entity)) {
-        resetTreeToFresh(entity);
+      const dimensions = mapWorldDimensions(entity.mapId);
+      let placed = false;
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        const x = 40 + Math.random() * Math.max(1, dimensions.width - 80);
+        const y = 40 + Math.random() * Math.max(1, dimensions.height - 80);
+        const crowded = environmentEntitiesOnMap(entity.mapId, "tree").some(other =>
+          other !== entity && !other.removed && Math.hypot(other.x - x, other.y - y) < 34
+        );
+        if (crowded || serverPointHitsStructureWall(entity.mapId, x, y, 10)) continue;
+        entity.x = Math.round(x);
+        entity.y = Math.round(y);
+        entity.homeX = entity.x;
+        entity.homeY = entity.y;
+        placed = true;
+        break;
       }
+      if (placed) resetTreeToFresh(entity);
+      else entity.reseedAt = randomRegrowTimestamp(TREE_RESEED_MIN_MS, TREE_RESEED_MAX_MS);
       continue;
     }
 
@@ -4393,6 +4608,7 @@ function handleEnvironmentAction(
     if (
       entity.kind !== "tree" ||
       entity.nonInteractive ||
+      entity.removed ||
       entity.isStump ||
       entity.falling ||
       !environmentMeleeValid(
@@ -4413,7 +4629,6 @@ function handleEnvironmentAction(
     );
 
     entity.lastHitPlayerId = playerId;
-    scheduleTreeRegrow(entity);
     markEnvironmentDirty(entity);
 
     if (entity.hp <= 0) {
@@ -4474,13 +4689,6 @@ function handleEnvironmentAction(
     entity.cut = true;
     entity.burnTime = 0;
     scheduleFlowerRegrow(entity);
-
-    sendToPlayer(playerId, {
-      type: "environmentReward",
-      targetId: playerId,
-      reward: "flowerHarvestingExp",
-      amount: 1
-    });
 
     if (!entity.looted) {
       entity.looted = true;
@@ -5152,6 +5360,86 @@ function mapHasNetworkRecipients(mapId) {
   return false;
 }
 
+// v378 grid-world enemy lifecycle:
+//   active = a player socket is physically on the map -> full AI + replication
+//   warm   = a cardinal neighbour of an active grid map -> frozen mob snapshot
+//   cold   = farther away -> reset ordinary mob state once and retain no churn
+// This keeps map transitions consistent without making every discovered map an
+// always-on simulation or generating outbound enemy traffic for empty maps.
+const gridEnemyMapLifecycle = new Map();
+
+function gridMapCardinalDistance(mapA, mapB) {
+  const a = worldGridMetaForMap(mapA);
+  const b = worldGridMetaForMap(mapB);
+  if (!a || !b) return Infinity;
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+function occupiedGridMapIds() {
+  const active = [];
+  for (const mapId of ALLOWED_MAPS) {
+    if (worldGridMetaForMap(mapId) && mapHasNetworkRecipients(mapId)) {
+      active.push(mapId);
+    }
+  }
+  return active;
+}
+
+function gridEnemyMapTier(mapId, activeMapIds = occupiedGridMapIds()) {
+  if (!worldGridMetaForMap(mapId)) return "legacy";
+  if (activeMapIds.includes(mapId)) return "active";
+  if (activeMapIds.some(activeMapId => gridMapCardinalDistance(mapId, activeMapId) === 1)) {
+    return "warm";
+  }
+  return "cold";
+}
+
+function clearEnemyReplicationCachesForMap(mapId) {
+  for (const enemy of allSharedEnemies()) {
+    if (enemy.mapId !== mapId) continue;
+    enemyMotionNetworkCache.delete(enemy.id);
+    enemyStateNetworkCache.delete(enemy.id);
+    enemyHealthNetworkCache.delete(enemy.id);
+  }
+  pendingPassiveEnemyIntents.delete(mapId);
+}
+
+function resetGridEnemiesOnMap(mapId) {
+  for (const enemy of allSharedEnemies()) {
+    if (enemy.mapId !== mapId) continue;
+    if (enemy.type === "slime") resetServerSlime(enemy);
+    else if (enemy.type === "mushroom") resetServerMushroom(enemy);
+    else if (enemy.type === "crab") resetServerCrab(enemy);
+    else if (enemy.type === "goblin") resetServerGoblin(enemy);
+    else if (enemy.type === "ghost") resetServerGhost(enemy);
+    else if (enemy.type === "bigGoldSlime") resetServerBigGoldSlime(enemy);
+  }
+  clearEnemyReplicationCachesForMap(mapId);
+}
+
+function refreshGridEnemyMapLifecycle() {
+  const activeMapIds = occupiedGridMapIds();
+  for (const mapId of ALLOWED_MAPS) {
+    if (!worldGridMetaForMap(mapId)) continue;
+    const nextTier = gridEnemyMapTier(mapId, activeMapIds);
+    const previousTier = gridEnemyMapLifecycle.get(mapId);
+
+    // Initial server construction already begins at clean spawn state, so only
+    // reset on an actual warm/active -> cold transition.
+    if (nextTier === "cold" && previousTier && previousTier !== "cold") {
+      resetGridEnemiesOnMap(mapId);
+    }
+
+    gridEnemyMapLifecycle.set(mapId, nextTier);
+  }
+}
+
+function enemyMapSimulationActive(mapId) {
+  // Preserve legacy-map behavior for rollback/editor smoke tests. The new
+  // coordinate world only simulates enemies on maps that actually have a player.
+  return !worldGridMetaForMap(mapId) || mapHasNetworkRecipients(mapId);
+}
+
 function passiveDiagForMap(mapId) {
   let entry = passiveEnemyNetworkDiagnostics.get(mapId);
   if (!entry) {
@@ -5697,6 +5985,14 @@ function broadcastSharedEnemyNetworkDeltas() {
   const now = Date.now();
 
   for (const mapId of ALLOWED_MAPS) {
+    // No player on the map means there is nobody to receive enemy deltas.
+    // Skip snapshot construction/serialization entirely instead of producing
+    // zero-recipient traffic records for sleeping grid cells.
+    if (!mapHasNetworkRecipients(mapId)) {
+      pendingPassiveEnemyIntents.delete(mapId);
+      continue;
+    }
+
     const motionRecords = [];
     const stateRecords = [];
     const healthRecords = [];
@@ -7839,11 +8135,12 @@ function handlePlayerRespawn(
 
   target.hp = target.maxHp;
   target.isDead = false;
-  target.mapId = "spawn";
+  const respawnLoad = defaultPlayerLoadState();
+  target.mapId = respawnLoad.mapId;
 
-  // Respawn is server-authoritative and always returns to the safe clearing.
-  target.x = 172;
-  target.y = 112;
+  // Respawn is server-authoritative and returns to the coordinate-world center.
+  target.x = respawnLoad.x;
+  target.y = respawnLoad.y;
   target.burnTime = 0;
   target.burnTickTimer = 0;
   target.burnDamageAccumulator = 0;
@@ -8153,6 +8450,7 @@ function killSharedEnemy(
 
 function tickSharedGhosts(dt) {
   for (const ghost of sharedGhosts) {
+    if (!enemyMapSimulationActive(ghost.mapId)) continue;
     if (!ghost.alive) {
       ghost.respawnTime -= dt;
 
@@ -8354,6 +8652,7 @@ function tickSharedGhosts(dt) {
 
 function tickSharedGoblins(dt) {
   for (const goblin of sharedGoblins) {
+    if (!enemyMapSimulationActive(goblin.mapId)) continue;
     if (!goblin.alive) {
       goblin.respawnTime -= dt;
 
@@ -9654,6 +9953,7 @@ function releaseEnemyTauntOnContact(enemy, radius = 8.5) {
 
 function tickSharedBigGoldSlimes(dt) {
   for (const slime of sharedBigGoldSlimes) {
+    if (!enemyMapSimulationActive(slime.mapId)) continue;
     if (!slime.alive) {
       slime.respawnTime -= dt;
 
@@ -10115,6 +10415,7 @@ function tryServerCrabContact(crab) {
 
 function tickSharedCrabs(dt) {
   for (const crab of sharedCrabs) {
+    if (!enemyMapSimulationActive(crab.mapId)) continue;
     if (!crab.alive) {
       crab.respawnTime -= dt;
       if (crab.respawnTime <= 0) resetServerCrab(crab);
@@ -10392,6 +10693,7 @@ function tryServerMushroomContact(mushroom) {
 
 function tickSharedMushrooms(dt) {
   for (const mushroom of sharedMushrooms) {
+    if (!enemyMapSimulationActive(mushroom.mapId)) continue;
     if (!mushroom.alive) {
       mushroom.respawnTime -= dt;
 
@@ -10679,6 +10981,8 @@ function mapPointAllowed(
       }
     }
   }
+
+  if (serverPointHitsStructureWall(mapId, x, y, Math.max(4, padding))) return false;
 
   return true;
 }
@@ -11193,6 +11497,7 @@ function bigGoldSlimeAliveOnMap(mapId) {
 
 function tickSharedSlimes(dt) {
   for (const slime of sharedSlimes) {
+    if (!enemyMapSimulationActive(slime.mapId)) continue;
     if (!slime.alive) {
       // Baby gold slimes only enter/re-enter the den during the long window
       // where the Big Gold Slime is dead. Their timer freezes while the elite
@@ -11481,6 +11786,7 @@ function refreshServerWaterWetness() {
   }
 
   for (const enemy of allSharedEnemies()) {
+    if (!enemyMapSimulationActive(enemy.mapId)) continue;
     if (
       !enemy.alive ||
       enemy.returningHome ||
@@ -11510,6 +11816,7 @@ setInterval(() => {
 
   previousSlimeTick = now;
 
+  refreshGridEnemyMapLifecycle();
   tickSharedEnemySnareStatuses(dt);
   tickServerPlayerBurns(dt);
   refreshServerWaterWetness();
@@ -11935,7 +12242,7 @@ function serverRainGrassSlowMultiplierAtPoint(mapId,x,y,entityRadius=7,now=Date.
 function pointIsInServerRainGrass(mapId,x,y,entityRadius=7,now=Date.now()){return serverRainGrassSlowMultiplierAtPoint(mapId,x,y,entityRadius,now)<1;}
 function updateEnemyRainGrassDerivedState(enemy,now=Date.now()){if(!enemy?.alive)return false;const multiplier=serverRainGrassSlowMultiplierAtPoint(enemy.mapId,Number(enemy.x)||0,Number(enemy.y)||0,7,now);const active=multiplier<1;
   if(Boolean(enemy.magicGrassFieldActive)!==active){if(active)rainDiagnostics.grassEnters+=1;else rainDiagnostics.grassExits+=1;enemy.magicGrassFieldActive=active;}enemy.magicGrassSlowMultiplier=active?multiplier:RAIN_FIELD.SPEED_MULTIPLIER;return active;}
-function tickServerRainGrassMembership(){const now=Date.now();settleServerRainFields(now);for(const enemy of allSharedEnemies()){if(!enemy.alive){enemy.magicGrassFieldActive=false;continue;}updateEnemyRainGrassDerivedState(enemy,now);}}
+function tickServerRainGrassMembership(){const now=Date.now();settleServerRainFields(now);for(const enemy of allSharedEnemies()){if(!enemyMapSimulationActive(enemy.mapId))continue;if(!enemy.alive){enemy.magicGrassFieldActive=false;continue;}updateEnemyRainGrassDerivedState(enemy,now);}}
 function spreadServerRainGrassFire(){const now=Date.now();settleServerRainFields(now);const sources=[];for(const field of activeServerRainFields.values())for(const cell of field.cells)if(serverRainFieldCellBurning(field,cell.index,now))sources.push({field,cell});
   fireDiagnostics.spreadSources+=sources.length;for(const {field,cell} of sources){const sourceId=field.burnSourcePlayerIds[cell.index]||field.ownerId;igniteServerLivingNear(field.mapId,cell.x,cell.y-5,14,sourceId);
     if(Math.random()>RAIN_FIELD.FIRE_CHAIN_CHANCE)continue;igniteEnvironmentNear(field.mapId,cell.x,cell.y-5,RAIN_FIELD.FIRE_CHAIN_RADIUS,sourceId);igniteServerRainGrassNear(field.mapId,cell.x,cell.y-5,RAIN_FIELD.FIRE_CHAIN_RADIUS,sourceId,{chance:1,maxIgnitions:RAIN_FIELD.FIRE_CHAIN_MAX_IGNITIONS});}}
@@ -12524,20 +12831,28 @@ function handleVisualEffect(
 }
 
 function sanitizePlayerState(id, source = {}, previous = null) {
-  const requestedMapId = ALLOWED_MAPS.has(source.mapId)
+  const defaultMapId = WORLD_CONTENT.worldGrid?.startMapId || defaultPlayerLoadTarget().mapId;
+  let requestedMapId = ALLOWED_MAPS.has(source.mapId)
     ? source.mapId
-    : "spawn";
+    : defaultMapId;
 
-  const authoritativeDead =
-    Boolean(previous && previous.hp <= 0);
+  const authoritativeDead = Boolean(previous && previous.hp <= 0);
 
-  // Dead players stay exactly where they fell until the client presses the
-  // explicit Respawn button. Their ordinary movement packets must not move
-  // them or transfer them through portals while dead.
-  const mapId =
-    authoritativeDead && previous?.mapId
-      ? previous.mapId
-      : requestedMapId;
+  // Full state packets are the map-transition path, but in the coordinate
+  // world the destination must be one cardinal neighbour. This prevents a
+  // modified client from teleporting across the grid or back into legacy maps.
+  if (
+    previous?.mapId &&
+    requestedMapId !== previous.mapId &&
+    !playerMapTransitionAllowed(previous.mapId, requestedMapId)
+  ) {
+    requestedMapId = previous.mapId;
+  }
+
+  // Dead players stay exactly where they fell until the explicit Respawn path.
+  const mapId = authoritativeDead && previous?.mapId
+    ? previous.mapId
+    : requestedMapId;
 
   const sanitizedLevel = clampInteger(
     source.level,
@@ -12545,24 +12860,19 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     99,
     previous?.level || 1
   );
-  const hasClassField = Object.prototype.hasOwnProperty.call(source, "classId");
-  const previousClassId = ["might", "arcana", "precision", "guile"].includes(previous?.classId)
-    ? previous.classId
-    : null;
-  let sanitizedClassId = previousClassId;
-  if (hasClassField) {
-    if (source.classId === null) {
-      sanitizedClassId = null;
-    } else if (previousClassId && source.classId !== previousClassId) {
-      // A chosen class cannot silently switch. The reset crystal clears it first.
-      sanitizedClassId = previousClassId;
-    } else if (!previousClassId && ["might", "arcana", "precision", "guile"].includes(source.classId)) {
-      // Client UI owns the temporary Level-10 / available-class gate. Accept
-      // legacy saved Bruiser/Rogue characters here so this patch does not erase them.
-      sanitizedClassId = source.classId;
-    }
+  const sanitizedClassId = null; // v377: classes are retired.
+  const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, 12, -1);
+  const dimensions = mapWorldDimensions(mapId);
+  let sanitizedX = authoritativeDead && previous && Number.isFinite(previous.x)
+    ? previous.x
+    : clampNumber(source.x, 0, dimensions.width, dimensions.width / 2);
+  let sanitizedY = authoritativeDead && previous && Number.isFinite(previous.y)
+    ? previous.y
+    : clampNumber(source.y, 0, dimensions.height, dimensions.height / 2);
+  if (!authoritativeDead && previous?.mapId === mapId) {
+    if (serverPointHitsStructureWall(mapId, sanitizedX, previous.y, 4)) sanitizedX = previous.x;
+    if (serverPointHitsStructureWall(mapId, sanitizedX, sanitizedY, 4)) sanitizedY = previous.y;
   }
-
 
   return {
     id,
@@ -12600,6 +12910,14 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     arrows: previous && Number.isFinite(previous.arrows)
       ? previous.arrows
+      : 0,
+
+    woodFloors: previous && Number.isFinite(previous.woodFloors)
+      ? previous.woodFloors
+      : 0,
+
+    woodWalls: previous && Number.isFinite(previous.woodWalls)
+      ? previous.woodWalls
       : 0,
 
     beachQuestStage: previous
@@ -12708,30 +13026,14 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? previous.pvpCombatUntil
         : 0,
 
-    x:
-      authoritativeDead && previous && Number.isFinite(previous.x)
-        ? previous.x
-        : clampNumber(
-            source.x,
-            0,
-            mapWorldDimensions(mapId).width,
-            mapWorldDimensions(mapId).width / 2
-          ),
-    y:
-      authoritativeDead && previous && Number.isFinite(previous.y)
-        ? previous.y
-        : clampNumber(
-            source.y,
-            0,
-            mapWorldDimensions(mapId).height,
-            mapWorldDimensions(mapId).height / 2
-          ),
+    x: sanitizedX,
+    y: sanitizedY,
 
     hatIndex: clampInteger(source.hatIndex, -1, 10, -1),
     shirtIndex: clampInteger(source.shirtIndex, -1, 7, -1),
     pantsIndex: clampInteger(source.pantsIndex, -1, 7, -1),
     charmIndex: clampInteger(source.charmIndex, -1, 0, -1),
-    weaponIndex: clampInteger(source.weaponIndex, -1, 12, -1),
+    weaponIndex: sanitizedWeaponIndex,
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -12769,39 +13071,15 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       )
     },
 
-    // Combat-relevant learned skill levels. They are not broadcast to other
-    // players; the authoritative damage formula only needs them server-side.
+    // v377: combat capabilities are item-owned, not learned/class-owned.
+    // The server derives these levels from authoritative sanitized equipment
+    // instead of trusting a client-supplied skill tree.
     abilities: {
-      wandMastery: clampInteger(
-        source.abilities?.wandMastery,
-        0,
-        COMBAT_BALANCE.abilityProfiles.wandMasteryMelee.maxLevel,
-        previous?.abilities?.wandMastery || 0
-      ),
-      fireball: clampInteger(
-        source.abilities?.fireball,
-        0,
-        COMBAT_BALANCE.abilityProfiles.fireball.maxLevel,
-        previous?.abilities?.fireball || 0
-      ),
-      rainCloud: clampInteger(
-        source.abilities?.rainCloud,
-        0,
-        ABILITY_SCALING.rainCloud.maxLevel,
-        previous?.abilities?.rainCloud || 0
-      ),
-      jesterBlink: clampInteger(
-        source.abilities?.jesterBlink,
-        0,
-        ABILITY_SCALING.hallucination.maxLevel,
-        previous?.abilities?.jesterBlink || 0
-      ),
-      camouflage: clampInteger(
-        source.abilities?.camouflage,
-        0,
-        1,
-        previous?.abilities?.camouflage || 0
-      )
+      wandMastery: 0,
+      fireball: sanitizedWeaponIndex === 2 ? 1 : 0,
+      rainCloud: sanitizedWeaponIndex === 3 ? 1 : 0,
+      jesterBlink: 0,
+      camouflage: 0
     },
 
     walkTime: clampNumber(source.walkTime, 0, 1000000, 0),
@@ -13241,6 +13519,12 @@ function sendMapSceneSync(
     mapId,
     sparse: true,
     entities: sharedEnvironmentChangesSnapshot(mapId)
+  });
+
+  sendJson(socket, {
+    type: "structureSnapshot",
+    mapId,
+    structures: structureSnapshot(mapId)
   });
 
   sendJson(socket, {
@@ -13762,6 +14046,8 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.magicPotionCooldownUntil = now + Math.min(BUFF_POTION_COOLDOWN_MS, clampInteger(buffs.magicPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   playerState.goldSlimeBubbles = clampInteger(resources.goldSlimeBubbles, 0, 999999, 0);
   playerState.arrows = clampInteger(resources.arrows, 0, 999999, 0);
+  playerState.woodFloors = clampInteger(resources.woodFloors, 0, 999999, 0);
+  playerState.woodWalls = clampInteger(resources.woodWalls, 0, 999999, 0);
 
   const story = state.story && typeof state.story === "object"
     ? state.story
@@ -13818,6 +14104,8 @@ function handlePersistentStateRestore(playerId, socket, message) {
     magicPotionUntil: playerState.magicPotionUntil,
     goldSlimeBubbles: playerState.goldSlimeBubbles,
     arrows: playerState.arrows,
+    woodFloors: playerState.woodFloors,
+    woodWalls: playerState.woodWalls,
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
     beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,
@@ -13946,6 +14234,14 @@ function handleClientMessage(playerId, socket, message) {
 
     case "craftRequest":
       handleCraftRequest(playerId, socket, message);
+      return;
+
+    case "structurePlace":
+      handleStructurePlaceRequest(playerId, socket, message);
+      return;
+
+    case "structureDestroy":
+      handleStructureDestroyRequest(playerId, socket, message);
       return;
 
     case "consumableUse":

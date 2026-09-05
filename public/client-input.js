@@ -500,6 +500,10 @@ function updateMobileAutoAttack() {
   const weapon = equippedWeapon();
   if (!weapon) return false;
 
+  // v377: Fire Wand and Rain Wand own aimed/channelled primary actions. AUTO
+  // intentionally stays off those actions so it cannot choose cast locations.
+  if (weapon === "wand" || weapon === "rainWand") return false;
+
   const target = mobileEnemyTarget(
     weapon === "bow"
       ? MOBILE_BOW_VISIBLE_TARGET_DISTANCE
@@ -739,8 +743,13 @@ function installMobileControls() {
   autoAttack.addEventListener("pointerdown", event => {
     event.preventDefault();
     clearMobilePointTargetMode();
-    if (!mobileAutoAttackEnabled && !equippedWeapon()) {
+    const weapon = equippedWeapon();
+    if (!mobileAutoAttackEnabled && !weapon) {
       spawnFloatingText(player.x, player.y - 27, "EQUIP A WEAPON", "#ffe38b", 0.72);
+      return;
+    }
+    if (!mobileAutoAttackEnabled && (weapon === "wand" || weapon === "rainWand")) {
+      spawnFloatingText(player.x, player.y - 27, "MANUAL CAST", "#ffe38b", 0.72);
       return;
     }
     setMobileAutoAttackEnabled(!mobileAutoAttackEnabled);
@@ -863,11 +872,15 @@ function handleCanvasMouseMove(event) {
 canvas.addEventListener("mousemove", handleCanvasMouseMove);
 
 const HOTBAR_KEY_TO_INDEX = Object.freeze({
-  "4": 0,
-  "5": 1,
-  "6": 2,
-  "7": 3,
-  "8": 4
+  "1": 0,
+  "2": 1,
+  "3": 2,
+  "4": 3,
+  "5": 4,
+  "6": 5,
+  "7": 6,
+  "8": 7,
+  "9": 8
 });
 
 const DEBUG_ARROW_GRANT = 99;
@@ -933,21 +946,13 @@ const DEBUG_COIN_GRANT = 10;
 
 function grantDebugProgressionPoints() {
   player.skillPoints += 5;
-  player.abilityPoints += 3;
+  player.abilityPoints = 0;
 
   spawnFloatingText(
     player.x,
     player.y - 38,
     "+5 SP",
     "#ffe070",
-    1.0
-  );
-
-  spawnFloatingText(
-    player.x,
-    player.y - 48,
-    "+3 AP",
-    "#e5b8ff",
     1.0
   );
 
@@ -1000,6 +1005,11 @@ function handleMenuKeyDown(key) {
     return false;
   }
 
+  if (typeof selectedBuildPiece !== "undefined" && selectedBuildPiece) {
+    cancelBuildPlacement(false);
+    return true;
+  }
+
   // Rain Cloud is a committed summon. Do not allow the inventory/menu to open
   // mid-channel, because that exposes equipment/hotbar mutations while the
   // player is meant to be action-locked.
@@ -1025,12 +1035,6 @@ function handleMenuKeyDown(key) {
 
 
 function handleWeaponHotkey(key) {
-  if (key === "1" || key === "2" || key === "3") {
-    sanitizeUtilityHotbarAssignments();
-    const itemId = player.utilityHotbarAssignments?.[Number(key) - 1] || null;
-    if (itemId) useConsumable(itemId);
-    return true;
-  }
   if (Object.prototype.hasOwnProperty.call(HOTBAR_KEY_TO_INDEX, key)) {
     inputController.queueCommand("equipWeapon", {
       index: HOTBAR_KEY_TO_INDEX[key]
@@ -1069,7 +1073,7 @@ function handleGameKeyDown(event) {
     return;
   }
 
-  // TEST CHEAT: same AP/SP rewards as one normal level-up, without level/EXP.
+  // TEST CHEAT: grant stat points without changing level/EXP.
   if (key === "f9") {
     event.preventDefault();
     grantDebugProgressionPoints();

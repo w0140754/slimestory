@@ -21,8 +21,8 @@ for (const className of ["terrain-tool", "palette-tool"]) {
   }
 }
 
-if (!/const BUILD = "375"/.test(js) || !/Map Editor <span>v374<\/span>/.test(html)) {
-  throw new Error("Map editor build markers are not synchronized for v374");
+if (!/const BUILD = "379"/.test(js) || !/Map Editor <span>v379<\/span>/.test(html)) {
+  throw new Error("Map editor build markers are not synchronized for v379");
 }
 
 console.log(`Map editor DOM contract OK: ${referencedIds.size} ids`);

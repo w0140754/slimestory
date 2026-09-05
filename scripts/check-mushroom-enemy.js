@@ -45,10 +45,10 @@ for (const name of assetNames) {
 }
 
 const checks = [
-  [packageJson.version === "0.6.11.375", "package version is 0.6.11.375"],
-  [server.includes('const BUILD_VERSION = "6-11-375";') && read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-375";'), "server/client build versions are 330"],
-  [indexHtml.includes('/client-enemies.js?v=375') && indexHtml.includes('/client-enemy-rendering.js?v=375') && indexHtml.includes('/game.js?v=375'), "330 game cache keys"],
-  [editorHtml.includes('/map-editor.js?v=375') && editor.includes('const BUILD = "375";'), "330 editor cache/build keys"],
+  [packageJson.version === "0.6.11.380", "package version is 0.6.11.380"],
+  [server.includes('const BUILD_VERSION = "6-11-380";') && read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-380";'), "server/client build versions are 330"],
+  [indexHtml.includes('/client-enemies.js?v=380') && indexHtml.includes('/client-enemy-rendering.js?v=380') && indexHtml.includes('/game.js?v=380'), "330 game cache keys"],
+  [editorHtml.includes('/map-editor.js?v=380') && editor.includes('const BUILD = "380";'), "330 editor cache/build keys"],
   [server.includes('mushroom: Object.freeze({') && server.includes('mushroom: makeServerMushroom') && server.includes('const sharedMushrooms =') && server.includes('tickSharedMushrooms(dt);'), "server registry/factory/collection/tick wiring"],
   [/function makeServerMushroom\([\s\S]*?type: "mushroom"[\s\S]*?aggroMode: ENEMY_AGGRO_PROVOKED/.test(server), "mushroom starts provoked-only"],
   [/function tickSharedMushrooms\([\s\S]*?Passive state: deliberately no wander target choice or movement\./.test(server), "sleeping mushroom has no passive wander"],
@@ -59,7 +59,7 @@ const checks = [
   [balance.includes('mushroom: Object.freeze({') && /mushroom: Object\.freeze\(\{[\s\S]*?level: 1,[\s\S]*?physicalDefense: 0,[\s\S]*?magicResist: 0/.test(balance), "explicit neutral combat-balance profile"],
   [editor.includes('{ value: "mushroom", label: "Sleeping Mushroom" }') && editor.includes('type === "mushroom"') && editor.includes('label: "M"'), "map-editor mushroom species and marker"],
   [draftFormat.includes('["slime", "mushroom", "crab", "goblin", "ghost", "bigGoldSlime"]'), "map draft enemy type validation includes mushroom"],
-  [!read("public", "shared", "world-content.js").includes('type: "mushroom"') && !adoptedOverrides.includes('"type": "mushroom"'), "patch does not auto-place mushrooms or mutate authored spawn data"],
+  [Object.values(WORLD_CONTENT.maps).some(map => map?.grid && (map.enemySpawns || []).some(spawn => spawn?.type === "mushroom")) && !adoptedOverrides.includes('"type": "mushroom"'), "procedural forest cells may spawn mushrooms without mutating authored map data"],
   [read("README.md").includes('## v6-11-327 — Sleeping Mushroom enemy + map-editor spawn support'), "README retains v327 MushroomEnemy changelog"],
 ];
 

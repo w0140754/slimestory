@@ -1,5 +1,59 @@
 # Slime Story
 
+## v6-11-380 — Building & Seam Refinement
+
+- Fixed player-built **Wood Floors** not rendering on coordinate maps that use authored terrain layers.
+- **Wood Floor** and **Wood Wall** can now be assigned to any 1–9 action slot. Selecting their hotbar slot enters placement mode; the assignment remains available even when the current stack reaches zero.
+- The **Pickaxe** can now reclaim placed Wood Floors and Wood Walls. The server removes the structure, drops the exact piece as shared ground loot, and the piece can be picked up back into building inventory.
+- Reclaimed building-piece drops use the existing shared-loot path and expire after 30 seconds rather than creating persistent loose-item simulation.
+- Coordinate-map edge travel now preserves the player’s perpendicular position: east/west travel keeps Y, while north/south travel keeps X, instead of recentering on every destination map.
+- Directional map panning now renders the local player only once across the seam, removing the duplicate outgoing/incoming player sprite while keeping the v378 transition feel.
+- Corrected the interactive tree trunk art mapping so untouched trees show the clean trunk and the first axe hit reveals the damaged/cut trunk before the tree is felled.
+- Preserved the **400×400** coordinate maps, Manhattan-distance difficulty, active/warm/cold enemy lifecycle, and traffic-idle building persistence introduced in v379.
+- Preserved live map-editor-authored world content **v96** unchanged.
+
+## v6-11-379 — Persistent World & Building Foundation
+
+- Coordinate-world cells are now square **400×400** maps; legacy/editor-authored maps keep their original dimensions.
+- Coordinate difficulty now uses Manhattan distance: `abs(x) + abs(y)`. Cardinal neighbours are difficulty 1; current corner maps are difficulty 2.
+- Generated map population budgets were reduced for the smaller cells to avoid needless crowding/network pressure.
+- Chopped trees no longer regrow at the harvested position. The stump remains briefly, then disappears.
+- A removed tree slot can very rarely establish a fresh tree at a different valid location, and this reseed check only occurs while that map is active.
+- Added craftable **Wood Floor ×4 (2 Wood)** and **Wood Wall ×2 (3 Wood)** recipes under a new Building crafting tab.
+- Crafted building pieces appear in Inventory; click a piece, then click the world to place it on the 16px building grid. Esc cancels placement.
+- Player-built floors/walls are server-authoritative, synchronized only as snapshots/placement events, and persist while leaving/re-entering maps during the server session.
+- Wood walls are solid for players and enemies. Placement is range-limited, edge-safe, avoids existing environment/NPC/player footprints, and each map has a hard 96-structure cap.
+- Building state has no simulation tick and creates no idle network traffic. Existing v378 active/warm/cold enemy lifecycle remains intact.
+- Map-editor-authored world data remains isolated from generated coordinate-world persistence/building state.
+
+## v6-11-378 — World Navigation Polish
+
+- Replaced the coordinate-world black map cover with a **directional 0.34s pan**. The outgoing map stays visible while the destination enemy snapshot synchronizes, then slides out as the new map slides in from the travelled direction.
+- Added a compact **fixed 3×3 local minimap** that always centers the player’s current map. The window shifts as the player travels, keeps Spawn marked when visible, darkens undiscovered cells, shows simple biome icons for discovered cells, highlights the current cell, and renders hard world-edge cells outside the current radius.
+- Persisted discovered coordinate cells in the existing browser-local character save without adding websocket traffic.
+- Added a traffic-conscious grid enemy lifecycle: only maps with a player socket actively simulate enemies; cardinal neighbours retain a frozen **warm** mob snapshot for quick backtracking; maps farther away become **cold** and reset ordinary enemy state once.
+- Empty maps now skip enemy delta construction/serialization entirely, so sleeping cells do not produce zero-recipient enemy traffic.
+- Kept the radius-1 world and current **640×400** generated map dimensions unchanged for this navigation pass so map-size tuning can be tested separately rather than silently altering the new world feel.
+- Preserved the live map-editor-authored world content **v96** unchanged; generated coordinate cells remain separate from authored legacy/special-map data.
+
+## v6-11-377 — World Grid Pivot Foundation
+
+- Pivoted Slime Story from a fixed authored-map/class-skill structure to a **coordinate world** foundation. The active world now begins at `(0,0)` in a deterministic radius-1 **3×3 grid**, with cardinal edge travel to neighbouring cells and a square ring boundary ready for later expansion.
+- Added deterministic first-pass **Spawn Plains / Plains / Forest / Rocky Plains** generation. Outer-ring cells populate from their biome seed and distance from spawn, with distance-1 enemies beginning above the safe center's difficulty.
+- Retired active **classes, skills, skill hotkeys, and gathering talents** from player-facing progression. Historical save/schema fields and legacy authored maps remain readable for migration/rollback, but no longer drive active gameplay.
+- Rebuilt the main belt as **nine unified weapon/tool slots on keys 1–9**. Existing v376 4–8 assignments migrate to the same physical keys, mouse wheel cycles all occupied 1–9 slots, and consumables remain usable directly from Inventory.
+- Moved the first abilities onto items: the **Fire Wand primary action casts Fireball** and the **Rain Wand primary action casts Rain Cloud** using their existing aim/cast/cooldown behavior. The server derives these capabilities from equipped item index rather than trusting a learned-skill payload.
+- Added server-side cardinal adjacency validation for coordinate-map changes and moved death respawn to the new `(0,0)` world spawn.
+- Kept Marnie and the crafting table at the new safe center so the existing Axe → 10 Wood → Pickaxe onboarding remains usable while the new world evolves.
+- Kept generated coordinate cells out of the authored-map editor so a draft cannot accidentally freeze procedural biome cells into canonical map data.
+- Preserved the latest live map-editor-authored world data from Drive as untouched legacy/special-map content while the coordinate-world architecture becomes the active game.
+
+## v6-11-376 — Interactive tree art refresh
+- Replaced the interactive/choppable tree canopy, standing trunk, damaged trunk, and harvested stump sprites with the newly provided art.
+- Preserved existing tree behavior, hit states, falling animation, and stump/harvest logic.
+- Preserved the newer live map-editor-authored world content **v92** from Drive before deployment; the canonical map JSON/JS were not overwritten by this art patch.
+
+
 ## v6-11-375 — Decorative tree art swap
 
 - Replaced the decorative fire-immune tree sprites with the user's new 32x48 trunk and canopy art, preserving the existing two-piece decorative-tree system, placement data, layering, and non-interactive behavior.
