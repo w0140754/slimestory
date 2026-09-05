@@ -57,11 +57,11 @@ treeCanopyImageVariantB.src = "assets/flammable_tree_canopy_outline_v1_flip.png"
 treeCanopyImages.push(treeCanopyImageVariantB);
 
 const fireResistantTreeTrunkImage = new Image();
-fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png";
+fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=375";
 const fireResistantTreeCanopyImage = new Image();
-fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png";
+fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=375";
 const fireResistantTreeCanopyFlippedImage = new Image();
-fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png";
+fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=375";
 
 const rockPlainImage = loadImage("assets/rock_plain.png");
 const rockGrassImage = loadImage("assets/rock_grass.png");

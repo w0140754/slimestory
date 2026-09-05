@@ -1,5 +1,12 @@
 # Slime Story
 
+## v6-11-375 — Decorative tree art swap
+
+- Replaced the decorative fire-immune tree sprites with the user's new 32x48 trunk and canopy art, preserving the existing two-piece decorative-tree system, placement data, layering, and non-interactive behavior.
+- Generated a matching flipped canopy variant from the new canopy art so the current decorative-tree variant randomization continues to work without code-path changes.
+- Added explicit cache-busting on the decorative tree trunk/canopy asset URLs so the art swap shows up immediately after deploy/reload instead of being masked by browser cache.
+- Preserved the current map-editor-authored world content unchanged while applying this asset-only build.
+
 ## v6-11-374 — Multi-item progression, shop/crafting fixes, and Flower Harvesting
 
 - Fixed the crafting-table category tabs so **Consumables / Weapons / Armor** actually hide/show their own recipes; Consumables remains the default and the grid stays three recipes wide.
@@ -434,8 +441,6 @@
 - Added a dedicated **Items** hotkey rail on the right side of the Inventory tab. Consumables are assigned by dragging them from Inventory into slots 1–3; assigned items can be dragged between slots to swap and right-clicked to clear.
 - The Escape-menu shortcut rails are now contextual: **Inventory** shows Equipment 4–8 on the left and Items 1–3 on the right; **Class/Skills** shows only the skill-binding rail; other tabs hide all shortcut rails.
 - Equipment 4–8 drag/drop, skill drag/drop, potion behavior, potion feedback/status HUD, and world/map data are unchanged.
-
-# Slime Story
 
 ## v6-11-316 — Assignable item hotkeys
 

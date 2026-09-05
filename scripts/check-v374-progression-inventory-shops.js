@@ -14,9 +14,9 @@ const server = read("server.js");
 const pkg = JSON.parse(read("package.json"));
 const authored = JSON.parse(read("content/adopted-map-overrides.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.374", "package version must be v374");
-assert(server.includes('BUILD_VERSION = "6-11-374"'), "server build marker missing");
-assert(read("public/client-config.js").includes('CLIENT_BUILD_VERSION = "6-11-374"'), "client build marker missing");
+assert.strictEqual(pkg.version, "0.6.11.375", "package version must be v374");
+assert(server.includes('BUILD_VERSION = "6-11-375"'), "server build marker missing");
+assert(read("public/client-config.js").includes('CLIENT_BUILD_VERSION = "6-11-375"'), "client build marker missing");
 
 assert(html.includes('data-craft-filter="consumables"') && html.includes('data-craft-filter="weapons"') && html.includes('data-craft-filter="armor"'), "crafting category buttons missing");
 assert(html.includes('.craft-recipe[hidden]') && html.includes('display: none !important'), "crafting hidden-category CSS guard missing");
