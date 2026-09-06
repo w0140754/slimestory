@@ -10,9 +10,9 @@ const config = read("public", "client-config.js");
 const game = read("public", "game.js");
 const abilities = read("public", "client-abilities.js");
 
-assert.strictEqual(pkg.version, "0.6.11.391");
-assert(server.includes('const BUILD_VERSION = "6-11-391";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-391";'));
+assert.strictEqual(pkg.version, "0.6.11.393");
+assert(server.includes('const BUILD_VERSION = "6-11-393";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
 
 const declaration = game.indexOf("let selectedBuildPiece = null;");
 const equipped = game.indexOf("function equippedWeapon()");

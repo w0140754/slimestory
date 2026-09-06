@@ -3,10 +3,9 @@ const { spawn } = require("child_process");
 const WebSocket = require("ws");
 const path = require("path");
 const root = path.join(__dirname, "..");
-const port = 43390;
+const port = 43392;
 const server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"] });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => { socket.off("message", onMessage); reject(new Error(`Timed out waiting for ${type}`)); }, timeoutMs);
@@ -18,13 +17,11 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     socket.on("message", onMessage);
   });
 }
-
 async function place(socket, kind, x, y, edge = null) {
   const pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === kind);
   socket.send(JSON.stringify({ type: "structurePlace", kind, x, y, ...(edge ? { edge } : {}) }));
   return pending;
 }
-
 (async () => {
   try {
     await delay(500);
@@ -35,40 +32,43 @@ async function place(socket, kind, x, y, edge = null) {
     if (welcome.buildVersion !== "6-11-393") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
-    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 2, woodWalls: 7, woodDoors: 1 } } }));
+    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 5, woodWalls: 8, woodDoors: 2 } } }));
     await restoredPending;
-    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 112, y: 96, weaponIndex: -1 } }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 144, y: 112, weaponIndex: -1 } }));
     await delay(80);
 
+    // Two neighboring floors: the shared edge must stay open.
     for (const x of [128, 144]) {
       const result = await place(socket, "woodFloor", x, 96);
-      if (!result.success) throw new Error(`floor placement failed at ${x}: ${JSON.stringify(result)}`);
+      if (!result.success) throw new Error(`floor placement failed at ${x},96: ${JSON.stringify(result)}`);
     }
-
-    // Enclose a 2x1 connected floor component. Its shared middle edge remains
-    // empty, giving us a boundary that would normally accept a wall.
-    const perimeter = [
-      [128, 96, "north"], [128, 96, "south"], [128, 96, "west"],
-      [144, 96, "north"], [144, 96, "south"], [144, 96, "east"]
-    ];
-    for (const [x, y, edge] of perimeter) {
-      const result = await place(socket, "woodWall", x, y, edge);
-      if (!result.success) throw new Error(`perimeter wall failed ${x},${y},${edge}: ${JSON.stringify(result)}`);
-    }
-
     let result = await place(socket, "woodWall", 128, 96, "east");
-    if (result.success || result.reason !== "roofed") {
-      throw new Error(`roofed building accepted an interior wall: ${JSON.stringify(result)}`);
+    if (result.success || result.reason !== "interiorEdge") throw new Error(`internal wall was accepted: ${JSON.stringify(result)}`);
+
+    // Three floors in a row create a perimeter long enough for a centered door.
+    for (const x of [128, 144, 160]) {
+      const existing = x !== 160 && x <= 144;
+      if (existing) continue;
+      const floor = await place(socket, "woodFloor", x, 128);
+      if (!floor.success) throw new Error(`door-run floor failed at ${x},128: ${JSON.stringify(floor)}`);
+    }
+    // Need the two missing floor cells at y=128.
+    for (const x of [128, 144]) {
+      const floor = await place(socket, "woodFloor", x, 128);
+      if (!floor.success) throw new Error(`door-run floor failed at ${x},128: ${JSON.stringify(floor)}`);
     }
 
-    result = await place(socket, "woodDoor", 128, 96, "east");
-    if (result.success || result.reason !== "roofed") {
-      throw new Error(`roofed building accepted an interior door: ${JSON.stringify(result)}`);
+    result = await place(socket, "woodDoor", 144, 128, "south");
+    if (result.success || result.reason !== "doorNeedsWalls") throw new Error(`unsupported door was accepted: ${JSON.stringify(result)}`);
+
+    for (const x of [128, 160]) {
+      const wall = await place(socket, "woodWall", x, 128, "south");
+      if (!wall.success) throw new Error(`flanking wall failed at ${x},128: ${JSON.stringify(wall)}`);
     }
+    result = await place(socket, "woodDoor", 144, 128, "south");
+    if (!result.success) throw new Error(`door with two flanking walls was rejected: ${JSON.stringify(result)}`);
 
     socket.close();
-    console.log("v390 roof-lock WebSocket smoke passed: completing a roofed 2x1 house locks later wall/door placement on its still-empty interior boundary.");
-  } finally {
-    server.kill("SIGTERM");
-  }
+    console.log("v392 WebSocket smoke passed: internal floor-to-floor wall rejected, unsupported door rejected, and door accepted only after same-axis walls exist on both sides.");
+  } finally { server.kill("SIGTERM"); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

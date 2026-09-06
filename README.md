@@ -1,3 +1,19 @@
+## v6-11-393 — Mobile Build Place Button
+
+- On touch/mobile controls, the primary `ATK` button becomes `PLACE` whenever Wood Floor, Wood Wall, or Wood Door placement mode is active.
+- Pressing `PLACE` confirms the exact build preview that is currently highlighted by `mouseCanvasX` / `mouseCanvasY`; mobile combat-assist targeting is deliberately skipped so the button cannot move the placement target before confirming it.
+- Leaving build mode restores the button to `ATK`.
+- Desktop mouse placement is unchanged. Existing v392 perimeter-wall, flanked-door, roof-lock, server-authoritative placement, and silent-invalid-placement rules remain intact.
+- Mobile AUTO attack is quietly disabled if it is still active when `PLACE` is pressed, preventing combat automation from competing with build mode.
+
+## v6-11-392 — Building Placement Rules
+
+- Wood Walls and Wood Doors are now perimeter-only edge pieces: placement is rejected when another Wood Floor exists directly across the selected edge.
+- Wood Doors require an existing same-axis Wood Wall immediately on both sides of the door segment before placement is accepted.
+- The client placement preview applies the same perimeter/flanking-wall rules, so invalid internal edges and unsupported door openings are not shown as valid placement targets.
+- The server independently enforces both rules authoritatively; invalid placement remains quiet with no floating placement-tip chatter.
+- Existing roofed-building lock, door passage behavior, cursor Pickaxe targeting, house visibility, day/night clock, and all gameplay systems are preserved.
+
 ## v6-11-391 — Cursor Pickaxe Targeting
 
 - Pickaxe structure targeting is now driven by the cursor/touch aim point rather than choosing the nearest in-range placed Wood structure to the player.

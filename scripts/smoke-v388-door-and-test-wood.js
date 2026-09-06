@@ -44,13 +44,13 @@ async function connect() {
   try {
     await delay(500);
     const first = await connect();
-    if (first.welcome.buildVersion !== "6-11-391") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
+    if (first.welcome.buildVersion !== "6-11-393") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
     const restoredPending = waitForMessage(first.socket, "persistentStateRestored");
-    first.socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 1, woodDoors: 1 } } }));
+    first.socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 3, woodWalls: 2, woodDoors: 1 } } }));
     await restoredPending;
 
     const observer = await connect();
-    if (observer.welcome.buildVersion !== "6-11-391") throw new Error(`unexpected observer build ${observer.welcome.buildVersion}`);
+    if (observer.welcome.buildVersion !== "6-11-393") throw new Error(`unexpected observer build ${observer.welcome.buildVersion}`);
 
     // Free visible testing supply is server-authoritative and only usable at the crafting table.
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 226, y: 190, weaponIndex: -1 } }));
@@ -63,10 +63,18 @@ async function connect() {
     // Build one vertical door boundary.
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 112, y: 96, weaponIndex: -1 } }));
     await delay(80);
-    pending = waitForMessage(first.socket, "structurePlaceResult", m => m.kind === "woodFloor");
-    first.socket.send(JSON.stringify({ type: "structurePlace", kind: "woodFloor", x: 128, y: 96 }));
-    const floor = await pending;
-    if (!floor.success) throw new Error("floor placement failed");
+    for (const y of [80, 96, 112]) {
+      pending = waitForMessage(first.socket, "structurePlaceResult", m => m.kind === "woodFloor");
+      first.socket.send(JSON.stringify({ type: "structurePlace", kind: "woodFloor", x: 128, y }));
+      const floor = await pending;
+      if (!floor.success) throw new Error(`floor placement failed at y=${y}`);
+    }
+    for (const y of [80, 112]) {
+      pending = waitForMessage(first.socket, "structurePlaceResult", m => m.kind === "woodWall");
+      first.socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y, edge: "east" }));
+      const flank = await pending;
+      if (!flank.success) throw new Error(`door flank wall failed at y=${y}`);
+    }
 
     pending = waitForMessage(first.socket, "structurePlaceResult", m => m.kind === "woodDoor");
     first.socket.send(JSON.stringify({ type: "structurePlace", kind: "woodDoor", x: 128, y: 96, edge: "east" }));

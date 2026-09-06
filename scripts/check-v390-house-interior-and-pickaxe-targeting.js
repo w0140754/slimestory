@@ -12,10 +12,10 @@ const game = read("public", "game.js");
 const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 
-assert.strictEqual(pkg.version, "0.6.11.391");
-assert(server.includes('const BUILD_VERSION = "6-11-391";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-391";'));
-assert.strictEqual(world.version, 391);
+assert.strictEqual(pkg.version, "0.6.11.393");
+assert(server.includes('const BUILD_VERSION = "6-11-393";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
+assert.strictEqual(world.version, 393);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v390 must preserve the active coordinate world");
 
 assert(game.includes("const HOUSE_FOREGROUND_ALPHA = 0.34;"), "foreground wall fade alpha missing");

@@ -10712,6 +10712,7 @@ function beginBuildPlacement(kind) {
   // movement input. Only close the inventory when it is actually open.
   if (inventoryOpen) setInventoryOpen(false);
   updateCanvasCursor();
+  if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();
   return true;
 }
 
@@ -10720,6 +10721,7 @@ function cancelBuildPlacement(quiet = false) {
   selectedBuildPiece = null;
   if (!quiet) spawnFloatingText(player.x, player.y - 30, "BUILD CANCELLED", "#d9c9a0", 0.65);
   updateCanvasCursor();
+  if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();
   return true;
 }
 
@@ -10746,7 +10748,42 @@ function floorBelongsToCompletedRoof(floor) {
   return automaticRoofRegions().some(region => region.floorKeys?.has(key));
 }
 
-function wallPlacementCandidate(worldX, worldY) {
+function buildFloorExistsAt(x, y) {
+  return currentMapStructures().some(structure =>
+    structure?.kind === "woodFloor" &&
+    Math.abs(Number(structure.x) - Number(x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(y)) < 1
+  );
+}
+
+function floorExistsAcrossBuildEdge(floorX, floorY, edge) {
+  if (edge === "north") return buildFloorExistsAt(floorX, floorY - BUILD_GRID_SIZE);
+  if (edge === "south") return buildFloorExistsAt(floorX, floorY + BUILD_GRID_SIZE);
+  if (edge === "east") return buildFloorExistsAt(floorX + BUILD_GRID_SIZE, floorY);
+  if (edge === "west") return buildFloorExistsAt(floorX - BUILD_GRID_SIZE, floorY);
+  return false;
+}
+
+function doorCandidateHasFlankingWalls(candidate) {
+  if (!candidate) return false;
+  const points = candidate.axis === "horizontal"
+    ? [
+        { x: candidate.x - BUILD_GRID_SIZE, y: candidate.y },
+        { x: candidate.x + BUILD_GRID_SIZE, y: candidate.y }
+      ]
+    : [
+        { x: candidate.x, y: candidate.y - BUILD_GRID_SIZE },
+        { x: candidate.x, y: candidate.y + BUILD_GRID_SIZE }
+      ];
+  return points.every(point => currentMapStructures().some(structure =>
+    structure?.kind === "woodWall" &&
+    structure.axis === candidate.axis &&
+    Math.abs(Number(structure.x) - Number(point.x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(point.y)) < 1
+  ));
+}
+
+function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
   const floor = floorAtWorldPoint(worldX, worldY);
   if (!floor || floorBelongsToCompletedRoof(floor)) return null;
   const left = Number(floor.x) - 8;
@@ -10760,7 +10797,15 @@ function wallPlacementCandidate(worldX, worldY) {
     { edge: "west", distance: Math.abs(worldX - left), x: left, y: Number(floor.y), axis: "vertical" }
   ];
   edges.sort((a, b) => a.distance - b.distance);
-  return { ...edges[0], floorX: Number(floor.x), floorY: Number(floor.y) };
+  const candidate = { ...edges[0], floorX: Number(floor.x), floorY: Number(floor.y) };
+  // v392: walls/doors are perimeter pieces only. Internal edges between two
+  // floor cells are intentionally unavailable, which prevents clunky room
+  // partitions and multiple wall faces being stacked around one floor tile.
+  if (floorExistsAcrossBuildEdge(candidate.floorX, candidate.floorY, candidate.edge)) return null;
+  // A door is a deliberate opening in an established wall run: it needs a
+  // same-axis Wood Wall immediately on both sides before it can be placed.
+  if (kind === "woodDoor" && !doorCandidateHasFlankingWalls(candidate)) return null;
+  return candidate;
 }
 
 function drawWallEdgeHighlight(candidate, camX, camY) {
@@ -10784,7 +10829,7 @@ function tryPlaceSelectedBuildPiece(event) {
   const worldY = currentCamY + pointer.y;
 
   if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
-    const candidate = wallPlacementCandidate(worldX, worldY);
+    const candidate = wallPlacementCandidate(worldX, worldY, selectedBuildPiece);
     if (!candidate) return true;
     if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
       onlineClient.requestStructurePlacement(selectedBuildPiece, candidate.floorX, candidate.floorY, candidate.edge);
@@ -10805,7 +10850,7 @@ function drawBuildPlacementPreview(camX, camY) {
   const worldX = camX + mouseCanvasX;
   const worldY = camY + mouseCanvasY;
   if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
-    const candidate = wallPlacementCandidate(worldX, worldY);
+    const candidate = wallPlacementCandidate(worldX, worldY, selectedBuildPiece);
     if (!candidate) return;
     drawWallEdgeHighlight(candidate, camX, camY);
     const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };

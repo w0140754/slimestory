@@ -24,19 +24,31 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-391") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-393") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
-    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 1, woodWalls: 1, woodDoors: 2 } } }));
+    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 3, woodWalls: 3, woodDoors: 2 } } }));
     const restored = await restoredPending;
     if (restored.woodDoors !== 2) throw new Error("Wood Door resource did not restore");
     socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 112, y: 96, weaponIndex: -1, attackAimAngle: 0 } }));
     await delay(80);
 
-    let pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodFloor");
-    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodFloor", x: 128, y: 96 }));
-    const floor = await pending;
-    if (!floor.success) throw new Error("floor placement failed");
+    const floors = [];
+    let pending;
+    for (const y of [80, 96, 112]) {
+      pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodFloor");
+      socket.send(JSON.stringify({ type: "structurePlace", kind: "woodFloor", x: 128, y }));
+      const placed = await pending;
+      if (!placed.success) throw new Error(`floor placement failed at y=${y}`);
+      floors.push(placed);
+    }
+    const floor = floors[1];
+    for (const y of [80, 112]) {
+      pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
+      socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y, edge: "east" }));
+      const flank = await pending;
+      if (!flank.success) throw new Error(`door flank wall failed at y=${y}`);
+    }
 
     const doorBroadcastPending = waitForMessage(socket, "structurePlaced", m => m.structure?.kind === "woodDoor");
     pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodDoor");
@@ -76,6 +88,6 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     if (!destroy.success) throw new Error("floor remained blocked after door removal");
 
     socket.close();
-    console.log("v386 Wood Door WebSocket smoke passed: edge normalization, wall/door exclusivity, floor support protection, resource sync, and Pickaxe reclaim.");
+    console.log("v386 Wood Door compatibility smoke passed under v392 rules: flanked perimeter door placement, edge normalization/exclusivity, floor protection, resource sync, and Pickaxe reclaim.");
   } finally { server.kill("SIGTERM"); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

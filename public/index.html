@@ -4595,6 +4595,13 @@
       z-index: 24;
     }
 
+    #mobileAttackButton.build-place-mode {
+      border-color: rgba(255, 226, 128, .92) !important;
+      box-shadow:
+        0 0 0 2px rgba(255, 226, 128, .28),
+        3px 3px 0 rgba(0,0,0,.35) !important;
+    }
+
     #mobileAttackButton.point-target-armed,
     .ability-slot.point-target-armed {
       border-color: #ffe078 !important;
@@ -5461,9 +5468,9 @@
 
       <div class="menu-section-title">Building</div>
       <div id="inventoryBuildingGrid" class="inventory-grid">
-        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–9 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=391" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–9 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=391" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–9 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=391" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–9 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=393" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–9 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=393" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–9 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=393" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
       </div>
       <div id="inventoryBuildingEmpty" class="inventory-empty">No building pieces</div>
 
@@ -6151,9 +6158,9 @@
       <button type="button" class="craft-tab" data-craft-filter="building">Building</button>
     </div>
     <div id="craftGrid">
-      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=391" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=391" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=391" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=393" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=393" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=393" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="testWoodSupply"><img alt="Wood" /><span class="craft-recipe-name">Test Wood +100</span><span class="craft-recipe-cost">FREE · TEST SUPPLY</span><span class="craft-recipe-status">TAKE</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -6189,7 +6196,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=391" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=393" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -6211,33 +6218,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=391"></script>
-<script src="/shared/terrain-rules.js?v=391"></script>
-<script src="/shared/terrain-presentation.js?v=391"></script>
-<script src="/shared/combat-balance.js?v=391"></script>
-<script src="/shared/ability-scaling.js?v=391"></script>
-<script src="/shared/rain-field.js?v=391"></script>
-<script src="/shared/camouflage-rules.js?v=391"></script>
-<script src="/shared/enemy-net-protocol.js?v=391"></script>
-<script src="/shared/player-net-protocol.js?v=391"></script>
-<script src="/client-config.js?v=391"></script>
-<script src="/client-utils.js?v=391"></script>
-<script src="/client-world.js?v=391"></script>
-<script src="/client-maps.js?v=391"></script>
-<script src="/client-enemies.js?v=391"></script>
-<script src="/client-enemy-runtime.js?v=391"></script>
-<script src="/client-enemy-rendering.js?v=391"></script>
-<script src="/client-combat.js?v=391"></script>
-<script src="/client-abilities.js?v=391"></script>
-<script src="/client-magus-abilities.js?v=391"></script>
-<script src="/client-class-abilities.js?v=391"></script>
-<script src="/client-status.js?v=391"></script>
-<script src="/client-fire-environment.js?v=391"></script>
-<script src="/client-network.js?v=391"></script>
-<script src="/client-simulation-foundation.js?v=391"></script>
-<script src="/game.js?v=391"></script>
-<script src="/client-terrain.js?v=391"></script>
-<script src="/client-input.js?v=391"></script>
-<script src="/client-app.js?v=391"></script>
+<script src="/shared/world-content-runtime.js?v=393"></script>
+<script src="/shared/terrain-rules.js?v=393"></script>
+<script src="/shared/terrain-presentation.js?v=393"></script>
+<script src="/shared/combat-balance.js?v=393"></script>
+<script src="/shared/ability-scaling.js?v=393"></script>
+<script src="/shared/rain-field.js?v=393"></script>
+<script src="/shared/camouflage-rules.js?v=393"></script>
+<script src="/shared/enemy-net-protocol.js?v=393"></script>
+<script src="/shared/player-net-protocol.js?v=393"></script>
+<script src="/client-config.js?v=393"></script>
+<script src="/client-utils.js?v=393"></script>
+<script src="/client-world.js?v=393"></script>
+<script src="/client-maps.js?v=393"></script>
+<script src="/client-enemies.js?v=393"></script>
+<script src="/client-enemy-runtime.js?v=393"></script>
+<script src="/client-enemy-rendering.js?v=393"></script>
+<script src="/client-combat.js?v=393"></script>
+<script src="/client-abilities.js?v=393"></script>
+<script src="/client-magus-abilities.js?v=393"></script>
+<script src="/client-class-abilities.js?v=393"></script>
+<script src="/client-status.js?v=393"></script>
+<script src="/client-fire-environment.js?v=393"></script>
+<script src="/client-network.js?v=393"></script>
+<script src="/client-simulation-foundation.js?v=393"></script>
+<script src="/game.js?v=393"></script>
+<script src="/client-terrain.js?v=393"></script>
+<script src="/client-input.js?v=393"></script>
+<script src="/client-app.js?v=393"></script>
 </body>
 </html>

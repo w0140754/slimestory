@@ -11,9 +11,9 @@ const network = read("public", "client-network.js");
 const input = read("public", "client-input.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.391");
-assert(server.includes('const BUILD_VERSION = "6-11-391";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-391";'));
+assert.strictEqual(pkg.version, "0.6.11.393");
+assert(server.includes('const BUILD_VERSION = "6-11-393";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
 
 // Build hotbar persistence.
 assert(game.includes('return itemId && hotbarAssignmentCanPersist(itemId)'), "saved hotbar restore must accept persistent build items");
@@ -21,7 +21,7 @@ assert(game.includes('saveLocalCharacterState(true);\n  return true;\n}\n\nfunct
 assert(game.includes('saveLocalCharacterState(true);\n  }\n\n  return changed;'), "hotbar clearing should immediately save");
 
 // Edge placement replaces free rotation/autotiling.
-assert(game.includes('function wallPlacementCandidate(worldX, worldY)'), "nearest floor-edge selector missing");
+assert(game.includes('function wallPlacementCandidate(worldX, worldY, kind'), "nearest floor-edge selector missing");
 for (const edge of ["north", "east", "south", "west"]) assert(game.includes(`edge: "${edge}"`), `${edge} placement edge missing`);
 assert(game.includes('drawWallEdgeHighlight(candidate, camX, camY)'), "floor-edge highlight missing");
 assert(network.includes('requestStructurePlacement(kind, x, y, edge = null)'), "edge-aware network request missing");

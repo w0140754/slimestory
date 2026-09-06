@@ -13,9 +13,9 @@ const network = read("public", "client-network.js");
 const world = read("public", "client-world.js");
 const fire = read("public", "client-fire-environment.js");
 
-assert.strictEqual(pkg.version, "0.6.11.391");
-assert(server.includes('const BUILD_VERSION = "6-11-391";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-391";'));
+assert.strictEqual(pkg.version, "0.6.11.393");
+assert(server.includes('const BUILD_VERSION = "6-11-393";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
 
 assert(!game.includes("selectedBuildOrientation"));
 assert(!game.includes("rotateSelectedBuildPiece"));

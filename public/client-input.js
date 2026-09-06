@@ -449,6 +449,16 @@ function updateMobileAutoAttackButton() {
   button.textContent = mobileAutoAttackEnabled ? "AUTO ON" : "AUTO";
 }
 
+function updateMobilePrimaryActionButton() {
+  const button = document.getElementById("mobileAttackButton");
+  if (!button) return;
+  const buildMode = typeof selectedBuildPiece !== "undefined" && Boolean(selectedBuildPiece);
+  button.classList.toggle("build-place-mode", buildMode);
+  button.textContent = buildMode ? "PLACE" : "ATK";
+  button.setAttribute("aria-label", buildMode ? "Place building piece" : "Attack");
+  if (buildMode) button.classList.remove("point-target-armed");
+}
+
 function setMobileAutoAttackEnabled(enabled, { quiet = false } = {}) {
   const nextEnabled = Boolean(enabled && mobileControlsEnabled);
   if (mobileAutoAttackEnabled === nextEnabled) {
@@ -672,6 +682,22 @@ function installMobileControls() {
   attack.addEventListener("pointerdown", event => {
     event.preventDefault();
 
+    // v393: while a build piece is selected, the primary mobile action is
+    // PLACE rather than ATTACK. Confirm exactly the preview that is already
+    // highlighted; do not run combat assist first because that would move the
+    // aim point and make the confirmed placement disagree with the preview.
+    if (typeof selectedBuildPiece !== "undefined" && selectedBuildPiece) {
+      clearMobilePointTargetMode();
+      if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
+      if (typeof tryPlaceSelectedBuildPiece === "function") {
+        tryPlaceSelectedBuildPiece(mobilePointerEventForCanvas({
+          x: mouseCanvasX,
+          y: mouseCanvasY
+        }));
+      }
+      return;
+    }
+
     if (
       equippedWeapon() === "bow" &&
       !getLocalCarriedHurlObject() &&
@@ -824,6 +850,7 @@ function installMobileControls() {
 }
 
 installMobileControls();
+updateMobilePrimaryActionButton();
 
 const HUNTER_SNARE_MOVEMENT_KEYS = new Set([
   "w",

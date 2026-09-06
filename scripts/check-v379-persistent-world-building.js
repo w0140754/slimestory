@@ -12,9 +12,9 @@ const game = read("public", "game.js");
 const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.391", "package must remain on current v380 build");
-assert(server.includes('const BUILD_VERSION = "6-11-391";'), "server build marker must be v380");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-391";'), "client build marker must be v380");
+assert.strictEqual(pkg.version, "0.6.11.393", "package must remain on current v380 build");
+assert(server.includes('const BUILD_VERSION = "6-11-393";'), "server build marker must be v380");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-393";'), "client build marker must be v380");
 
 assert(server.includes("const sharedStructures = new Map();"), "server-authoritative structure registry missing");
 assert(server.includes("const sharedStructuresByMap = new Map();"), "map-indexed structure registry missing");

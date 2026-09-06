@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-391";
+const BUILD_VERSION = "6-11-393";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -1957,6 +1957,31 @@ function wallTouchesFloor(structure, floorX, floorY) {
   return candidates.some(wall => wallMatchesBoundary(structure, wall));
 }
 
+function floorAcrossBuildEdge(mapId, floorX, floorY, edge) {
+  if (edge === "north") return floorStructureAt(mapId, floorX, floorY - BUILD_GRID_SIZE);
+  if (edge === "south") return floorStructureAt(mapId, floorX, floorY + BUILD_GRID_SIZE);
+  if (edge === "east") return floorStructureAt(mapId, floorX + BUILD_GRID_SIZE, floorY);
+  if (edge === "west") return floorStructureAt(mapId, floorX - BUILD_GRID_SIZE, floorY);
+  return null;
+}
+
+function doorHasFlankingWalls(mapId, wall) {
+  if (!wall) return false;
+  const offsetA = wall.axis === "horizontal"
+    ? { x: wall.x - BUILD_GRID_SIZE, y: wall.y }
+    : { x: wall.x, y: wall.y - BUILD_GRID_SIZE };
+  const offsetB = wall.axis === "horizontal"
+    ? { x: wall.x + BUILD_GRID_SIZE, y: wall.y }
+    : { x: wall.x, y: wall.y + BUILD_GRID_SIZE };
+  const hasWallAt = point => structuresOnMap(mapId).some(structure =>
+    structure?.kind === "woodWall" &&
+    structure.axis === wall.axis &&
+    Math.abs(Number(structure.x) - point.x) < 1 &&
+    Math.abs(Number(structure.y) - point.y) < 1
+  );
+  return hasWallAt(offsetA) && hasWallAt(offsetB);
+}
+
 function buildFloorKey(x, y) {
   return `${Math.round(Number(x))},${Math.round(Number(y))}`;
 }
@@ -2077,6 +2102,8 @@ function handleStructurePlaceRequest(playerId, socket, message) {
   if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
   else if ((kind === "woodWall" || kind === "woodDoor") && (!wall || !floorStructureAt(playerState.mapId, floorX, floorY))) reason = "needsFloor";
   else if ((kind === "woodWall" || kind === "woodDoor") && roofedFloorKeysOnMap(playerState.mapId).has(buildFloorKey(floorX, floorY))) reason = "roofed";
+  else if ((kind === "woodWall" || kind === "woodDoor") && floorAcrossBuildEdge(playerState.mapId, floorX, floorY, edge)) reason = "interiorEdge";
+  else if (kind === "woodDoor" && !doorHasFlankingWalls(playerState.mapId, wall)) reason = "doorNeedsWalls";
   else if (Math.hypot(placementX - playerState.x, placementY - playerState.y) > BUILD_PLACE_RANGE) reason = "tooFar";
   else if (structuresOnMap(playerState.mapId).length >= MAX_STRUCTURES_PER_MAP) reason = "mapLimit";
   else if (structurePlacementBlocked(playerState.mapId, kind, floorX, floorY, wall)) reason = "blocked";

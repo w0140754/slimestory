@@ -26,7 +26,7 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-391") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-393") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 2, woodWalls: 3 } } }));
@@ -43,18 +43,25 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
       floorIds.push(result.structureId);
     }
 
-    const wallBroadcastPending = waitForMessage(socket, "structurePlaced", m => m.structure?.kind === "woodWall");
+    // v392 retires internal floor-to-floor walls. The old shared east/west
+    // boundary test now proves that the interior edge remains open.
     let pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
     socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96, edge: "east" }));
+    const interior = await pending;
+    if (interior.success || interior.reason !== "interiorEdge") throw new Error("internal floor-to-floor wall was not rejected");
+
+    const wallBroadcastPending = waitForMessage(socket, "structurePlaced", m => m.structure?.kind === "woodWall");
+    pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
+    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96, edge: "west" }));
     const wallResult = await pending;
     const wallBroadcast = await wallBroadcastPending;
-    if (!wallResult.success) throw new Error("east edge wall placement failed");
-    if (wallBroadcast.structure.axis !== "vertical" || wallBroadcast.structure.x !== 136 || wallBroadcast.structure.y !== 96) throw new Error("wall was not normalized to the shared vertical boundary");
+    if (!wallResult.success) throw new Error("west perimeter wall placement failed");
+    if (wallBroadcast.structure.axis !== "vertical" || wallBroadcast.structure.x !== 120 || wallBroadcast.structure.y !== 96) throw new Error("wall was not normalized to its vertical perimeter boundary");
 
     pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
-    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 144, y: 96, edge: "west" }));
+    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96, edge: "west" }));
     const duplicate = await pending;
-    if (duplicate.success || duplicate.reason !== "blocked") throw new Error("same shared boundary was double-placed");
+    if (duplicate.success || duplicate.reason !== "blocked") throw new Error("same perimeter boundary was double-placed");
 
     pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
     socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 176, y: 96, edge: "north" }));
@@ -79,6 +86,6 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     if (!destroy.success) throw new Error("floor remained blocked after attached wall was removed");
 
     socket.close();
-    console.log("v384 edge-wall WebSocket smoke passed: floor support, shared-boundary normalization, duplicate/orphan rejection, and wall-before-floor removal.");
+    console.log("v384 compatibility smoke passed under v392 rules: internal edges stay open, perimeter walls normalize/dedupe, floor support is enforced, and attached walls must be removed before floors.");
   } finally { server.kill("SIGTERM"); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
