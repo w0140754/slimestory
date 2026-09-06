@@ -198,6 +198,7 @@ class OnlineClient {
     if (message.type === "welcome") {
       this.localPlayerId = message.id;
       ensureEntityId(player, `player:${message.id}`);
+      applyWorldClockSnapshot(message.worldClock);
       this.serverBuildVersion =
         typeof message.buildVersion === "string"
           ? message.buildVersion
@@ -393,41 +394,6 @@ class OnlineClient {
       return;
     }
 
-    if (message.type === "debugCoinGrant") {
-      if (Number.isFinite(message.totalCoins)) {
-        player.coins = message.totalCoins;
-      }
-
-      spawnFloatingText(
-        player.x,
-        player.y - 58,
-        `+${Math.max(0, Number(message.amount) || 0)} COINS`,
-        "#ffd760",
-        1.0
-      );
-
-      updateInventoryUi();
-      updateShopUi();
-      return;
-    }
-
-    if (message.type === "debugArrowGrant") {
-      if (Number.isFinite(message.totalArrows)) {
-        player.arrows = Math.max(0, Math.floor(message.totalArrows));
-      }
-
-      spawnFloatingText(
-        player.x,
-        player.y - 50,
-        `+${Math.max(0, Number(message.amount) || 0)} ARROWS`,
-        "#e9e1c7",
-        0.9
-      );
-
-      updateInventoryUi();
-      return;
-    }
-
     if (message.type === "persistentStateRestored") {
       if (Number.isFinite(message.coins)) player.coins = Math.max(0, Math.floor(message.coins));
       if (Number.isFinite(message.wood)) player.wood = Math.max(0, Math.floor(message.wood));
@@ -448,6 +414,7 @@ class OnlineClient {
       if (Number.isFinite(message.arrows)) player.arrows = Math.max(0, Math.floor(message.arrows));
       if (Number.isFinite(message.woodFloors)) player.woodFloors = Math.max(0, Math.floor(message.woodFloors));
       if (Number.isFinite(message.woodWalls)) player.woodWalls = Math.max(0, Math.floor(message.woodWalls));
+      if (Number.isFinite(message.woodDoors)) player.woodDoors = Math.max(0, Math.floor(message.woodDoors));
       if (typeof message.beachQuestStage === "string") player.beachQuest.stage = message.beachQuestStage;
       if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
@@ -906,7 +873,7 @@ class OnlineClient {
 
     if (message.type === "structureDestroyResult") {
       if (!message.success) {
-        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : "TOO FAR";
+        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : message.reason === "wallAttached" ? "REMOVE WALL FIRST" : "TOO FAR";
         spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.7);
       }
       return;
@@ -915,10 +882,10 @@ class OnlineClient {
     if (message.type === "structurePlaceResult") {
       if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
       if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
-      if (!message.success) {
-        const text = message.reason === "blocked" ? "BLOCKED" : message.reason === "tooFar" ? "TOO FAR" : message.reason === "mapLimit" ? "MAP BUILD LIMIT" : "NONE LEFT";
-        spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.75);
-      }
+      if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
+      // v389: invalid building placement is intentionally quiet. The placement
+      // preview already communicates where a piece can go; failed clicks should
+      // not spam floating BLOCKED / PLACE ON FLOOR / TOO FAR notes.
       if (message.success && buildPieceCount(message.kind) <= 0) cancelBuildPlacement(true);
       updateInventoryUi();
       saveLocalCharacterState(true);
@@ -2033,9 +2000,11 @@ class OnlineClient {
     return true;
   }
 
-  requestStructurePlacement(kind, x, y) {
+  requestStructurePlacement(kind, x, y, edge = null) {
     if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
-    this.socket.send(JSON.stringify({ type: "structurePlace", kind, x, y }));
+    const payload = { type: "structurePlace", kind, x, y };
+    if (["woodWall", "woodDoor"].includes(kind) && ["north", "east", "south", "west"].includes(edge)) payload.edge = edge;
+    this.socket.send(JSON.stringify(payload));
     return true;
   }
 
@@ -2048,38 +2017,6 @@ class OnlineClient {
   requestConsumableUse(item) {
     if (!item || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
     this.socket.send(JSON.stringify({ type: "consumableUse", item }));
-    return true;
-  }
-
-  requestDebugCoins() {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "debugGrantCoins"
-    }));
-
-    return true;
-  }
-
-  requestDebugArrows() {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "debugGrantArrows"
-    }));
-
     return true;
   }
 
@@ -2165,6 +2102,7 @@ class OnlineClient {
     if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
+      if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
 
     if (Number.isFinite(message.totalArrows)) {
       player.arrows = Math.max(0, Math.floor(message.totalArrows));
@@ -2173,12 +2111,14 @@ class OnlineClient {
     if (message.success) {
       if (recipe.resourceKey) {
         const totalField = {
+          wood: "totalWood",
           arrows: "totalArrows",
           healingPotions: "totalHealingPotions",
           attackPotions: "totalAttackPotions",
           magicPotions: "totalMagicPotions",
           woodFloors: "totalWoodFloors",
-          woodWalls: "totalWoodWalls"
+          woodWalls: "totalWoodWalls",
+          woodDoors: "totalWoodDoors"
         }[recipe.resourceKey];
         if (!totalField || !Number.isFinite(message[totalField])) {
           player[recipe.resourceKey] =
@@ -2199,7 +2139,7 @@ class OnlineClient {
       spawnFloatingText(
         woodCraftBench.x,
         woodCraftBench.y - 24,
-        `${recipe.name.toUpperCase()} CRAFTED!`,
+        recipe.testSupply ? "+100 TEST WOOD" : `${recipe.name.toUpperCase()} CRAFTED!`,
         "#ffe38b",
         1.2
       );
@@ -2318,6 +2258,7 @@ class OnlineClient {
     }
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
+      if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
 
     if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
       player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));

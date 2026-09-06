@@ -253,20 +253,9 @@ function triggerActiveSkillForKey(key, options = {}) {
 }
 
 function handleActiveSkillKeyDown(event, activeSkillKey) {
-  // v377: active skill keys are retired; abilities are invoked by equipped items.
+  // v387: active skill keys remain retired; keep this compatibility hook inert
+  // without leaving dead statements after an unconditional return.
   void event;
   void activeSkillKey;
   return false;
-
-  if (!activeSkillKey || !skillBindings[activeSkillKey]) return false;
-
-  if (activeSkillKey === "space") {
-    event.preventDefault();
-  }
-
-  inputController.queueCommand("useActiveSkill", {
-    key: activeSkillKey
-  });
-
-  return true;
 }

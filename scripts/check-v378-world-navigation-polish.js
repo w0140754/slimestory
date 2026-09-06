@@ -12,15 +12,15 @@ const game = read("public", "game.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.380", "package version must be v378");
-assert(server.includes('const BUILD_VERSION = "6-11-380";'), "server build marker must be v378");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-380";'), "client build marker must be v378");
+assert.strictEqual(pkg.version, "0.6.11.390", "package version must be v378");
+assert(server.includes('const BUILD_VERSION = "6-11-390";'), "server build marker must be v378");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-390";'), "client build marker must be v378");
 
 assert(html.includes('id="worldMiniMap"'), "fixed local minimap DOM is missing");
-assert(html.includes("grid-template-columns: repeat(3, 18px)"), "minimap must stay fixed at 3 columns");
-assert(html.includes("grid-template-rows: repeat(3, 18px)"), "minimap must stay fixed at 3 rows");
-assert(game.includes("for (let offsetY = -1; offsetY <= 1; offsetY += 1)"), "minimap must render a sliding 3x3 local window");
-assert(game.includes("for (let offsetX = -1; offsetX <= 1; offsetX += 1)"), "minimap must render three local columns");
+assert(html.includes("--mini-cell: 26px"), "desktop minimap must use enlarged cells");
+assert(html.includes("transition: transform 340ms"), "minimap player marker must glide between cells");
+assert(game.includes("for (let y = -radius; y <= radius; y += 1)"), "minimap must render the fixed coordinate world rows");
+assert(game.includes("for (let x = -radius; x <= radius; x += 1)"), "minimap must render the fixed coordinate world columns");
 assert(game.includes("worldGridDiscoveredCells"), "minimap discovery state is missing");
 assert(game.includes("worldGridDiscovery: Array.from(worldGridDiscoveredCells).sort()"), "discovery state must persist in the browser-local save");
 assert(game.includes('cell.classList.add("outside-world")'), "minimap world-edge cells are missing");
@@ -61,4 +61,4 @@ assert.strictEqual(world.worldGrid.radius, 1, "v378 must keep the radius-1 found
 assert.strictEqual(world.worldGrid.mapWidth, 400, "current grid maps must remain 400px wide");
 assert.strictEqual(world.worldGrid.mapHeight, 400, "v378 navigation pass must not silently resize maps");
 
-console.log("v378 world navigation polish OK: directional pan, sliding 3x3 discovery minimap, active-only grid enemy simulation with warm/cold snapshots.");
+console.log("v378 compatibility OK: directional map pan, fixed coordinate minimap with gliding player marker, and active-only grid enemy simulation.");

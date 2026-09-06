@@ -39,14 +39,14 @@ assert(server.includes('serverPointTouchesWater(target.mapId, target.x, target.y
 assert(server.includes('applyServerEnemyWet(enemy, STATUS_RULES.enemyWetDuration)'), "enemy water Wet application missing");
 assert(game.includes('wetSpeedMultiplier: 1.25'), "Crab client profile Wet affinity missing");
 assert(game.includes('{ allowWater: true }'), "player authored-terrain collision must allow water");
-assert(game.includes('return !hitsSolidObstacle(x, y);'), "player movement must no longer reject water");
+assert(game.includes('return !hitsSolidObstacle(x, y, options);'), "player movement must no longer reject water");
 assert(app.includes('terrainEntityTouchesWater(player.x, player.y, currentMapId, 4)'), "local player Wet-from-water refresh missing");
 assert(app.includes('drawTerrainWadingOverlay('), "wading overlays not wired into sorted entity rendering");
 assert(terrainClient.includes('function drawTerrainWadingOverlay('), "wading renderer helper missing");
 assert(terrainClient.includes('function terrainEntityTouchesWater('), "water contact helper missing");
-assert(server.includes('const BUILD_VERSION = "6-11-380";'), "server build must be v347");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-380";'), "client build must be v347");
-assert(index.includes('/client-terrain.js?v=380') && index.includes('/client-app.js?v=380') && index.includes('/game.js?v=380'), "v347 client cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-390";'), "server build must be v347");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-390";'), "client build must be v347");
+assert(index.includes('/client-terrain.js?v=390') && index.includes('/client-app.js?v=390') && index.includes('/game.js?v=390'), "v347 client cache keys missing");
 assert(readme.includes('## v6-11-347 — Water traversal + Crab Wet affinity'), "README v347 changelog missing");
 
 console.log("Water traversal + Crab Wet affinity regression checks passed.");

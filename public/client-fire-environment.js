@@ -637,7 +637,7 @@ function updateFire(dt) {
         } else if (!clump.serverControlled) {
           clump.cut = true;
           clump.burnt = true;
-          scheduleLocalGrassRegrow(clump);
+          clump.regrowAt = 0;
         }
       }
     }

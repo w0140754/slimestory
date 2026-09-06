@@ -48,12 +48,13 @@ assert.deepStrictEqual(
   "browser runtime world content diverged from server WORLD_CONTENT"
 );
 
-const map = sandbox.WORLD_CONTENT.maps.prototypeIsland;
-assert.ok(map, "Prototype Island missing from runtime content");
-assert.ok(Array.isArray(map.environment?.rocks), "Prototype Island rocks missing");
-assert.ok(Array.isArray(map.terrain?.regions), "Prototype Island terrain missing");
+const map = sandbox.WORLD_CONTENT.maps.world_p0_p0;
+assert.ok(map, "coordinate spawn map missing from runtime content");
+assert.ok(Array.isArray(map.environment?.rocks), "coordinate spawn rocks missing");
+assert.ok(Array.isArray(map.terrain?.regions), "coordinate spawn terrain missing");
+assert.strictEqual(Object.keys(sandbox.WORLD_CONTENT.maps).length, 9, "runtime world should contain only the 3x3 coordinate grid");
 
 console.log(
   `runtime world content roundtrip ok: v${sandbox.WORLD_CONTENT.version}, ` +
-  `${map.environment.rocks.length} rocks, ${map.terrain.regions.length} terrain regions`
+  `${map.environment.rocks.length} rocks, ${map.terrain.regions.length} terrain regions, 9 coordinate maps`
 );

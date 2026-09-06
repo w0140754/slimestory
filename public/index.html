@@ -4958,45 +4958,64 @@
   /* v377 world-grid pivot: legacy class/skill/talent controls are intentionally retired. */
   .retired-system { display: none !important; }
 
-  #worldGridStatus {
+  /* v389: compact shared day/night clock. It is deliberately a small HUD chip,
+     not another full-width status bar. */
+  #worldClockHud {
     position: absolute;
     top: 6px;
     left: 50%;
+    z-index: 33;
+    min-width: 86px;
     transform: translateX(-50%);
-    z-index: 32;
+    padding: 5px 8px 4px;
+    box-sizing: border-box;
+    background: rgba(15, 20, 16, 0.82);
+    border: 1px solid rgba(233, 225, 199, 0.38);
+    box-shadow: 1px 1px 0 rgba(0,0,0,.55);
+    color: #f3e7bd;
+    font: 700 10px/1 monospace;
+    letter-spacing: .4px;
+    text-align: center;
     pointer-events: none;
-    padding: 3px 6px;
-    border: 1px solid rgba(233, 225, 199, 0.28);
-    border-radius: 3px;
-    background: rgba(15, 20, 16, 0.72);
-    color: #e9e1c7;
-    font: 8px/1.2 monospace;
-    letter-spacing: 0.25px;
     white-space: nowrap;
   }
 
-  /* v378: fixed 3x3 local minimap. The center is always the player's
-     current map; the window slides across the coordinate world with them. */
+  #worldClockHud[data-phase="night"] { color: #d9e2ff; }
+  #worldClockHud[data-phase="dawn"],
+  #worldClockHud[data-phase="dusk"] { color: #f1d39a; }
+
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    #worldClockHud {
+      top: 0;
+      min-width: 72px;
+      padding: 4px 6px 3px;
+      font-size: 8px;
+    }
+  }
+
+  /* v388: the minimap is a fixed view of the current coordinate world. The
+     player marker glides between cells instead of rebuilding a recentered map. */
   #worldMiniMap {
+    --mini-cell: 26px;
+    --mini-gap: 2px;
+    --mini-pad: 4px;
     position: absolute;
-    top: 28px;
+    top: 6px;
     right: 6px;
     z-index: 32;
     display: none;
-    grid-template-columns: repeat(3, 18px);
-    grid-template-rows: repeat(3, 18px);
-    gap: 1px;
-    padding: 3px;
-    background: rgba(15, 20, 16, 0.80);
-    border: 1px solid rgba(233, 225, 199, 0.34);
+    gap: var(--mini-gap);
+    padding: var(--mini-pad);
+    background: rgba(15, 20, 16, 0.82);
+    border: 1px solid rgba(233, 225, 199, 0.38);
     box-shadow: 1px 1px 0 rgba(0,0,0,.55);
     pointer-events: none;
   }
 
   .world-mini-cell {
     position: relative;
-    width: 18px;
-    height: 18px;
+    width: var(--mini-cell);
+    height: var(--mini-cell);
     box-sizing: border-box;
     overflow: hidden;
     background: rgba(54, 69, 49, 0.80);
@@ -5084,35 +5103,78 @@
 
   .world-mini-player-marker {
     position: absolute;
-    right: 2px;
-    bottom: 2px;
-    width: 3px;
-    height: 3px;
+    left: 0;
+    top: 0;
+    z-index: 5;
+    width: 5px;
+    height: 5px;
     background: #fff8dc;
     box-shadow: 0 0 0 1px rgba(20, 20, 16, .9);
+    transition: transform 340ms cubic-bezier(.22,.72,.22,1);
+    will-change: transform;
   }
 
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
     #worldMiniMap {
-      top: 26px;
-      right: max(5px, env(safe-area-inset-right));
-      transform: scale(.84);
-      transform-origin: top right;
+      --mini-cell: 18px;
+      --mini-gap: 1px;
+      --mini-pad: 2px;
+      top: 0;
+      right: 0;
+      transform: none;
+    }
+
+    .world-mini-player-marker {
+      width: 4px;
+      height: 4px;
     }
   }
 
   #slot4 { margin-left: 0 !important; }
+  #menuItemHotkeyRail {
+    width: 208px;
+  }
   #menuItemHotkeyRail .menu-hotkey-stack {
     display: grid;
-    grid-template-columns: repeat(3, minmax(42px, 1fr));
-    gap: 4px;
+    grid-template-columns: repeat(3, minmax(58px, 1fr));
+    gap: 6px;
   }
   #menuItemHotkeyRail .menu-item-hotkey-slot {
     min-width: 0;
+    min-height: 62px;
     justify-content: center;
-    padding: 4px 3px;
+    padding: 6px 4px;
+  }
+  #menuItemHotkeyRail .menu-item-hotkey-slot img {
+    width: 34px;
+    height: 34px;
+    margin: 13px auto 0;
+  }
+  #menuItemHotkeyRail .menu-item-hotkey-slot .menu-hotkey-key {
+    left: 4px;
+    top: 4px;
+    width: 18px;
+    height: 18px;
+    font-size: 8px;
   }
   #menuItemHotkeyRail .menu-hotkey-item-name { display: none; }
+
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    #menuItemHotkeyRail { width: 100%; }
+    #menuItemHotkeyRail .menu-hotkey-stack {
+      display: flex;
+      gap: 4px;
+    }
+    #menuItemHotkeyRail .menu-item-hotkey-slot {
+      min-height: 42px;
+      padding: 4px 3px 3px 22px;
+    }
+    #menuItemHotkeyRail .menu-item-hotkey-slot img {
+      width: 24px;
+      height: 24px;
+      margin: 5px auto 0;
+    }
+  }
 
 </style>
 </head>
@@ -5223,8 +5285,8 @@
     </div>
 </div>
 <div id="mobileRotatePrompt">Rotate your phone sideways to play Slime Story.</div>
-<div id="worldGridStatus" aria-live="polite"></div>
 <div id="worldMiniMap" role="img" aria-label="Local world map"></div>
+<div id="worldClockHud" role="status" aria-label="World time">08:00 · DAY</div>
 
 <div id="abilityBar" class="retired-system" aria-hidden="true">
       <div class="ability-slot empty" id="abilitySlotShift">
@@ -5399,8 +5461,9 @@
 
       <div class="menu-section-title">Building</div>
       <div id="inventoryBuildingGrid" class="inventory-grid">
-        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–9 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=380" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–9 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=380" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–9 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=390" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–9 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=390" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–9 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=390" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
       </div>
       <div id="inventoryBuildingEmpty" class="inventory-empty">No building pieces</div>
 
@@ -6088,8 +6151,10 @@
       <button type="button" class="craft-tab" data-craft-filter="building">Building</button>
     </div>
     <div id="craftGrid">
-      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=380" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=380" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=390" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=390" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=390" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="testWoodSupply"><img alt="Wood" /><span class="craft-recipe-name">Test Wood +100</span><span class="craft-recipe-cost">FREE · TEST SUPPLY</span><span class="craft-recipe-status">TAKE</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="healingPotion"><img id="craftHealingPotionImg" alt="Healing Potion" /><span class="craft-recipe-name">Healing Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftHealingWhiteIcon" alt="White Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftHealingBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -6124,7 +6189,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=380" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=390" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -6146,33 +6211,33 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=380"></script>
-<script src="/shared/terrain-rules.js?v=380"></script>
-<script src="/shared/terrain-presentation.js?v=380"></script>
-<script src="/shared/combat-balance.js?v=380"></script>
-<script src="/shared/ability-scaling.js?v=380"></script>
-<script src="/shared/rain-field.js?v=380"></script>
-<script src="/shared/camouflage-rules.js?v=380"></script>
-<script src="/shared/enemy-net-protocol.js?v=380"></script>
-<script src="/shared/player-net-protocol.js?v=380"></script>
-<script src="/client-config.js?v=380"></script>
-<script src="/client-utils.js?v=380"></script>
-<script src="/client-world.js?v=380"></script>
-<script src="/client-maps.js?v=380"></script>
-<script src="/client-enemies.js?v=380"></script>
-<script src="/client-enemy-runtime.js?v=380"></script>
-<script src="/client-enemy-rendering.js?v=380"></script>
-<script src="/client-combat.js?v=380"></script>
-<script src="/client-abilities.js?v=380"></script>
-<script src="/client-magus-abilities.js?v=380"></script>
-<script src="/client-class-abilities.js?v=380"></script>
-<script src="/client-status.js?v=380"></script>
-<script src="/client-fire-environment.js?v=380"></script>
-<script src="/client-network.js?v=380"></script>
-<script src="/client-simulation-foundation.js?v=380"></script>
-<script src="/game.js?v=380"></script>
-<script src="/client-terrain.js?v=380"></script>
-<script src="/client-input.js?v=380"></script>
-<script src="/client-app.js?v=380"></script>
+<script src="/shared/world-content-runtime.js?v=390"></script>
+<script src="/shared/terrain-rules.js?v=390"></script>
+<script src="/shared/terrain-presentation.js?v=390"></script>
+<script src="/shared/combat-balance.js?v=390"></script>
+<script src="/shared/ability-scaling.js?v=390"></script>
+<script src="/shared/rain-field.js?v=390"></script>
+<script src="/shared/camouflage-rules.js?v=390"></script>
+<script src="/shared/enemy-net-protocol.js?v=390"></script>
+<script src="/shared/player-net-protocol.js?v=390"></script>
+<script src="/client-config.js?v=390"></script>
+<script src="/client-utils.js?v=390"></script>
+<script src="/client-world.js?v=390"></script>
+<script src="/client-maps.js?v=390"></script>
+<script src="/client-enemies.js?v=390"></script>
+<script src="/client-enemy-runtime.js?v=390"></script>
+<script src="/client-enemy-rendering.js?v=390"></script>
+<script src="/client-combat.js?v=390"></script>
+<script src="/client-abilities.js?v=390"></script>
+<script src="/client-magus-abilities.js?v=390"></script>
+<script src="/client-class-abilities.js?v=390"></script>
+<script src="/client-status.js?v=390"></script>
+<script src="/client-fire-environment.js?v=390"></script>
+<script src="/client-network.js?v=390"></script>
+<script src="/client-simulation-foundation.js?v=390"></script>
+<script src="/game.js?v=390"></script>
+<script src="/client-terrain.js?v=390"></script>
+<script src="/client-input.js?v=390"></script>
+<script src="/client-app.js?v=390"></script>
 </body>
 </html>

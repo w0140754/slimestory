@@ -648,8 +648,6 @@ function removeRemoteCasterEffectsForOwner(
 
 const LOCAL_TREE_REGROW_MIN_MS = 360_000;
 const LOCAL_TREE_REGROW_MAX_MS = 540_000;
-const LOCAL_GRASS_REGROW_MIN_MS = 180_000;
-const LOCAL_GRASS_REGROW_MAX_MS = 300_000;
 
 function randomLocalRegrowTimestamp(
   minMs,
@@ -675,22 +673,6 @@ function scheduleLocalTreeRegrow(tree) {
     randomLocalRegrowTimestamp(
       LOCAL_TREE_REGROW_MIN_MS,
       LOCAL_TREE_REGROW_MAX_MS
-    );
-}
-
-function scheduleLocalGrassRegrow(clump) {
-  if (
-    isTemporaryRainGrass(clump) ||
-    clump.serverControlled ||
-    clump.regrowAt > 0
-  ) {
-    return;
-  }
-
-  clump.regrowAt =
-    randomLocalRegrowTimestamp(
-      LOCAL_GRASS_REGROW_MIN_MS,
-      LOCAL_GRASS_REGROW_MAX_MS
     );
 }
 
@@ -2531,6 +2513,35 @@ function markWorldGridDiscovered(mapId = currentMapId) {
   return changed;
 }
 
+function ensureWorldMiniMapCells(miniMap, radius) {
+  const dimension = radius * 2 + 1;
+  const signature = `${radius}:${dimension}`;
+  if (miniMap.dataset.gridSignature === signature) {
+    return miniMap.querySelector(".world-mini-player-marker");
+  }
+
+  miniMap.replaceChildren();
+  miniMap.dataset.gridSignature = signature;
+  miniMap.style.gridTemplateColumns = `repeat(${dimension}, var(--mini-cell))`;
+  miniMap.style.gridTemplateRows = `repeat(${dimension}, var(--mini-cell))`;
+
+  for (let y = -radius; y <= radius; y += 1) {
+    for (let x = -radius; x <= radius; x += 1) {
+      const cell = document.createElement("div");
+      cell.className = "world-mini-cell";
+      cell.dataset.gridX = `${x}`;
+      cell.dataset.gridY = `${y}`;
+      miniMap.appendChild(cell);
+    }
+  }
+
+  const playerMarker = document.createElement("span");
+  playerMarker.className = "world-mini-player-marker";
+  playerMarker.setAttribute("aria-hidden", "true");
+  miniMap.appendChild(playerMarker);
+  return playerMarker;
+}
+
 function updateWorldMiniMap() {
   const miniMap = document.getElementById("worldMiniMap");
   if (!miniMap) return;
@@ -2543,73 +2554,72 @@ function updateWorldMiniMap() {
 
   const radius = Math.max(0, Number(WORLD_CONTENT?.worldGrid?.radius) || 0);
   miniMap.style.display = "grid";
-  miniMap.replaceChildren();
+  const playerMarker = ensureWorldMiniMapCells(miniMap, radius);
   miniMap.setAttribute(
     "aria-label",
-    `Local world map. Current ${current.x},${current.y}, ${worldGridBiomeLabel(current.biome)}.`
+    `World map. Current ${current.x},${current.y}, ${worldGridBiomeLabel(current.biome)}.`
   );
 
-  for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
-    for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
-      const x = current.x + offsetX;
-      const y = current.y + offsetY;
-      const cell = document.createElement("div");
-      cell.className = "world-mini-cell";
+  for (const cell of miniMap.querySelectorAll(".world-mini-cell")) {
+    const x = Number(cell.dataset.gridX);
+    const y = Number(cell.dataset.gridY);
+    cell.className = "world-mini-cell";
+    cell.replaceChildren();
 
-      const outsideWorld = Math.max(Math.abs(x), Math.abs(y)) > radius;
-      const mapId = outsideWorld ? null : worldGridMapIdAt(x, y);
-      const definition = mapId ? WORLD_CONTENT?.maps?.[mapId] : null;
-      const discovered = Boolean(mapId) && worldGridDiscoveredCells.has(worldGridCellKey(x, y));
+    const mapId = worldGridMapIdAt(x, y);
+    const definition = mapId ? WORLD_CONTENT?.maps?.[mapId] : null;
+    const discovered = Boolean(mapId) && worldGridDiscoveredCells.has(worldGridCellKey(x, y));
 
-      if (outsideWorld || !mapId) {
-        cell.classList.add("outside-world");
-        cell.title = "World edge";
-      } else if (!discovered) {
-        cell.classList.add("undiscovered");
-        cell.title = `Undiscovered · ${x},${y}`;
-      } else {
-        cell.classList.add("discovered");
-        const biome = String(definition?.grid?.biome || "plains");
-        const icon = document.createElement("span");
-        icon.className = `world-mini-biome-icon ${worldGridBiomeIconClass(biome)}`;
-        icon.setAttribute("aria-hidden", "true");
-        cell.appendChild(icon);
-        cell.title = `${worldGridBiomeLabel(biome)} · ${x},${y}`;
-      }
+    if (!mapId) {
+      cell.classList.add("outside-world");
+      cell.title = "World edge";
+    } else if (!discovered) {
+      cell.classList.add("undiscovered");
+      cell.title = `Undiscovered · ${x},${y}`;
+    } else {
+      cell.classList.add("discovered");
+      const biome = String(definition?.grid?.biome || "plains");
+      const icon = document.createElement("span");
+      icon.className = `world-mini-biome-icon ${worldGridBiomeIconClass(biome)}`;
+      icon.setAttribute("aria-hidden", "true");
+      cell.appendChild(icon);
+      cell.title = `${worldGridBiomeLabel(biome)} · ${x},${y}`;
+    }
 
-      if (x === 0 && y === 0 && !outsideWorld) {
-        const spawnMarker = document.createElement("span");
-        spawnMarker.className = "world-mini-spawn-marker";
-        spawnMarker.setAttribute("aria-hidden", "true");
-        cell.appendChild(spawnMarker);
-        cell.classList.add("spawn-cell");
-      }
+    if (x === 0 && y === 0 && mapId) {
+      const spawnMarker = document.createElement("span");
+      spawnMarker.className = "world-mini-spawn-marker";
+      spawnMarker.setAttribute("aria-hidden", "true");
+      cell.appendChild(spawnMarker);
+      cell.classList.add("spawn-cell");
+    }
 
-      if (offsetX === 0 && offsetY === 0) {
-        cell.classList.add("current-cell");
-        const playerMarker = document.createElement("span");
-        playerMarker.className = "world-mini-player-marker";
-        playerMarker.setAttribute("aria-hidden", "true");
-        cell.appendChild(playerMarker);
-      }
+    if (x === current.x && y === current.y) {
+      cell.classList.add("current-cell");
+    }
+  }
 
-      miniMap.appendChild(cell);
+  const targetCell = miniMap.querySelector(
+    `.world-mini-cell[data-grid-x="${current.x}"][data-grid-y="${current.y}"]`
+  );
+  if (playerMarker && targetCell) {
+    const x = targetCell.offsetLeft + targetCell.offsetWidth - playerMarker.offsetWidth - 3;
+    const y = targetCell.offsetTop + targetCell.offsetHeight - playerMarker.offsetHeight - 3;
+    if (miniMap.dataset.markerReady !== "1") {
+      playerMarker.style.transition = "none";
+      playerMarker.style.transform = `translate(${x}px, ${y}px)`;
+      miniMap.dataset.markerReady = "1";
+      requestAnimationFrame(() => { playerMarker.style.transition = ""; });
+    } else {
+      playerMarker.style.transform = `translate(${x}px, ${y}px)`;
     }
   }
 }
 
 function updateWorldGridStatus() {
-  const status = document.getElementById("worldGridStatus");
-  if (!status) return;
-  const grid = worldGridMapMeta();
-  if (!grid) {
-    status.style.display = "none";
-    updateWorldMiniMap();
-    return;
-  }
-  const radius = Math.max(0, Number(WORLD_CONTENT?.worldGrid?.radius) || 0);
-  status.style.display = "block";
-  status.textContent = `${worldGridBiomeLabel(grid.biome)} · ${grid.x},${grid.y} · Distance ${grid.distance} · Radius ${radius}`;
+  // v388: the old Spawn/Distance/Radius banner is retired. Keep the historical
+  // function name because map-transition plumbing already calls it, but only
+  // refresh the minimap now.
   updateWorldMiniMap();
 }
 
@@ -2742,6 +2752,19 @@ function updateMapTransition(dt) {
 // Historical name retained so existing render plumbing does not need an
 // overlay-only patch. v378 now composites a directional slide, never a black
 // cover, and keeps the outgoing frame stationary while the server syncs.
+function drawMapTransitionPlayerAtScreen(screenX, screenY) {
+  // Transition snapshots live in physical backing pixels on mobile, while the
+  // player renderer works in logical game pixels. Restore the normal game
+  // transform before drawing the one live player sprite over the composite.
+  ctx.save();
+  ctx.setTransform(GAME_RENDER_SCALE, 0, 0, GAME_RENDER_SCALE, 0, 0);
+  const camX = player.x - screenX;
+  const camY = player.y - screenY;
+  drawPlayer(camX, camY);
+  drawPvpMarker(player, camX, camY);
+  ctx.restore();
+}
+
 function drawMapTransitionCover() {
   if (mapTransitionPhase === "idle" || !mapTransitionOutgoingFrame) return;
 
@@ -2752,14 +2775,9 @@ function drawMapTransitionCover() {
   if (mapTransitionPhase === "syncing" || mapTransitionPhase === "starting") {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(mapTransitionOutgoingFrame, 0, 0);
-    drawPlayer(
-      player.x - mapTransitionOutgoingPlayerScreenX,
-      player.y - mapTransitionOutgoingPlayerScreenY
-    );
-    drawPvpMarker(
-      player,
-      player.x - mapTransitionOutgoingPlayerScreenX,
-      player.y - mapTransitionOutgoingPlayerScreenY
+    drawMapTransitionPlayerAtScreen(
+      mapTransitionOutgoingPlayerScreenX,
+      mapTransitionOutgoingPlayerScreenY
     );
     ctx.restore();
     return;
@@ -2789,10 +2807,7 @@ function drawMapTransitionCover() {
   const playerScreenY =
     mapTransitionOutgoingPlayerScreenY +
     (mapTransitionIncomingPlayerScreenY - mapTransitionOutgoingPlayerScreenY) * progress;
-  const playerCamX = player.x - playerScreenX;
-  const playerCamY = player.y - playerScreenY;
-  drawPlayer(playerCamX, playerCamY);
-  drawPvpMarker(player, playerCamX, playerCamY);
+  drawMapTransitionPlayerAtScreen(playerScreenX, playerScreenY);
 
   ctx.restore();
 }
@@ -4183,6 +4198,7 @@ const player = {
   arrows: 0,
   woodFloors: 0,
   woodWalls: 0,
+  woodDoors: 0,
 
   // Count-based item ownership. Missing/zero means not owned.
   // New players intentionally start with no gear or weapons.
@@ -4291,7 +4307,7 @@ const player = {
 const HOTBAR_SLOT_COUNT = 9;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
-const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall"]);
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall", "woodDoor"]);
 const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -4448,6 +4464,23 @@ const CRAFT_RECIPES = Object.freeze({
     ingredients: Object.freeze({ wood: 3 }),
     repeatable: true
   }),
+  woodDoor: Object.freeze({
+    name: "Wood Door",
+    resourceKey: "woodDoors",
+    outputCount: 1,
+    category: "building",
+    ingredients: Object.freeze({ wood: 4 }),
+    repeatable: true
+  }),
+  testWoodSupply: Object.freeze({
+    name: "Test Wood +100",
+    resourceKey: "wood",
+    outputCount: 100,
+    category: "building",
+    ingredients: Object.freeze({}),
+    repeatable: true,
+    testSupply: true
+  }),
   arrows: Object.freeze({
     name: "50 Arrows",
     resourceKey: "arrows",
@@ -4562,6 +4595,7 @@ const SHOP_ITEMS = [
 function shopImageForItemId(itemId) {
   if (itemId === "woodFloor") return document.getElementById("inventoryWoodFloorImg");
   if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
+  if (itemId === "woodDoor") return document.getElementById("inventoryWoodDoorImg");
   if (itemId === "arrows") return arrowResourceImage;
 
   const weaponIndex =
@@ -4770,12 +4804,14 @@ function hotbarItemInventoryCount(itemId) {
   if (WEAPON_ITEM_IDS.includes(itemId)) return inventoryItemCount(itemId);
   if (itemId === "woodFloor") return Math.max(0, Math.floor(Number(player.woodFloors) || 0));
   if (itemId === "woodWall") return Math.max(0, Math.floor(Number(player.woodWalls) || 0));
+  if (itemId === "woodDoor") return Math.max(0, Math.floor(Number(player.woodDoors) || 0));
   return 0;
 }
 
 function hotbarItemDisplayName(itemId) {
   if (itemId === "woodFloor") return "Wood Floor";
   if (itemId === "woodWall") return "Wood Wall";
+  if (itemId === "woodDoor") return "Wood Door";
   const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
   if (weaponIndex >= 0) return weaponDisplayName(weaponIndex);
   return itemId || "Item";
@@ -4912,6 +4948,7 @@ function assignItemToHotbar(itemId, slotIndex) {
 
   updateHotbar();
   updateInventoryUi();
+  saveLocalCharacterState(true);
   return true;
 }
 
@@ -4941,6 +4978,7 @@ function clearItemFromHotbar(itemId) {
 
     updateHotbar();
     updateInventoryUi();
+    saveLocalCharacterState(true);
   }
 
   return changed;
@@ -5306,7 +5344,7 @@ function craftRecipeOffline(recipeId) {
   spawnFloatingText(
     woodCraftBench.x,
     woodCraftBench.y - 24,
-    `${recipe.name.toUpperCase()} CRAFTED!`,
+    recipe.testSupply ? "+100 TEST WOOD" : `${recipe.name.toUpperCase()} CRAFTED!`,
     "#ffe38b",
     1.2
   );
@@ -5398,9 +5436,11 @@ function updateCraftingUi() {
 
     const itemImage = recipe.resourceKey === "arrows"
       ? arrowResourceImage
-      : recipe.resourceKey
-        ? potionImageForItem(recipeId)
-        : shopImageForItemId(recipe.itemId);
+      : recipe.resourceKey === "wood"
+        ? woodImage
+        : recipe.resourceKey
+          ? potionImageForItem(recipeId)
+          : shopImageForItemId(recipe.itemId);
 
     if (image && itemImage) {
       image.src = itemImage.src;
@@ -5435,8 +5475,10 @@ function updateCraftingUi() {
     if (status) {
       status.textContent =
         pending
-          ? "CRAFTING..."
-          : "CRAFT";
+          ? "WORKING..."
+          : recipe.testSupply
+            ? "TAKE"
+            : "CRAFT";
     }
   }
 }
@@ -7599,8 +7641,16 @@ function spendSkillPoint(stat) {
 }
 
 let remotePlayerDrawDepth = 0;
+// v387: declare build-selection state before any startup UI helper can read it.
+// setupSkillTreeUi/updateHotbar run before the lower building helper section initializes.
+let selectedBuildPiece = null;
 
 function equippedWeapon() {
+  // v386: build pieces are actions, not weapons. Keep the equipped weapon index
+  // intact for quick return, but render/use the local player as empty-handed
+  // while Wood Floor/Wall/Door placement is selected.
+  if (remotePlayerDrawDepth <= 0 && selectedBuildPiece) return null;
+
   if (player.weaponIndex < 0) {
     return null;
   }
@@ -7702,7 +7752,8 @@ function nextOccupiedHotbarSlot(direction) {
   if (!occupied.length) return -1;
 
   const equippedItemId = weaponItemIdForIndex(player.weaponIndex);
-  const currentSlot = equippedItemId ? hotbarSlotForItem(equippedItemId) : -1;
+  const currentItemId = selectedBuildPiece || equippedItemId;
+  const currentSlot = currentItemId ? hotbarSlotForItem(currentItemId) : -1;
 
   if (currentSlot < 0) {
     return direction > 0 ? occupied[0] : occupied[occupied.length - 1];
@@ -7741,7 +7792,7 @@ function updateMenuItemHotkeyRail() {
     const name = slot.querySelector(".menu-hotkey-item-name");
 
     slot.classList.toggle("empty", !assigned);
-    slot.classList.toggle("active", available && (itemId === equippedItemId || itemId === selectedBuildPiece));
+    slot.classList.toggle("active", available && (selectedBuildPiece ? itemId === selectedBuildPiece : itemId === equippedItemId));
     slot.draggable = assigned;
 
     if (assigned) {
@@ -7812,7 +7863,7 @@ function updateHotbar() {
     const available = assigned && hotbarItemInventoryCount(itemId) > 0;
     const image = slot.querySelector(".hotbar-item-img");
 
-    slot.classList.toggle("active", available && (equippedItemId === itemId || selectedBuildPiece === itemId));
+    slot.classList.toggle("active", available && (selectedBuildPiece ? selectedBuildPiece === itemId : equippedItemId === itemId));
     slot.classList.remove("cooling-down", "buff-active");
 
     if (image) {
@@ -8285,6 +8336,7 @@ function updateInventoryUi() {
   const arrowCount = document.getElementById("inventoryArrowCount");
   const woodFloorCount = document.getElementById("inventoryWoodFloorCount");
   const woodWallCount = document.getElementById("inventoryWoodWallCount");
+  const woodDoorCount = document.getElementById("inventoryWoodDoorCount");
   const arrowHud = document.getElementById("arrowHud");
   const arrowHudCount = document.getElementById("arrowHudCount");
 
@@ -8300,6 +8352,7 @@ function updateInventoryUi() {
   if (arrowCount) arrowCount.textContent = `${player.arrows}`;
   if (woodFloorCount) woodFloorCount.textContent = `${player.woodFloors}`;
   if (woodWallCount) woodWallCount.textContent = `${player.woodWalls}`;
+  if (woodDoorCount) woodDoorCount.textContent = `${player.woodDoors}`;
   if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
   if (arrowHud) {
     arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
@@ -8781,7 +8834,8 @@ function buildLocalCharacterSave() {
       goldSlimeBubbles: Math.max(0, Math.floor(Number(player.goldSlimeBubbles) || 0)),
       arrows: Math.max(0, Math.floor(Number(player.arrows) || 0)),
       woodFloors: Math.max(0, Math.floor(Number(player.woodFloors) || 0)),
-      woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0))
+      woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0)),
+      woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0))
     },
 
     items: validSavedItemIds(player.items),
@@ -8920,6 +8974,7 @@ function applyLocalCharacterSave(save) {
   player.arrows = clampLocalSaveInteger(save.resources?.arrows, 0, 999999, 0);
   player.woodFloors = clampLocalSaveInteger(save.resources?.woodFloors, 0, 999999, 0);
   player.woodWalls = clampLocalSaveInteger(save.resources?.woodWalls, 0, 999999, 0);
+  player.woodDoors = clampLocalSaveInteger(save.resources?.woodDoors, 0, 999999, 0);
 
   player.items = validSavedItemIds(save.items);
   player.shopPurchases = Array.from(new Set(
@@ -8989,7 +9044,7 @@ function applyLocalCharacterSave(save) {
       // positions during the one-time migration into the new 1-9 belt.
       const sourceIndex = legacyFiveSlotHotbar ? index - 3 : index;
       const itemId = sourceIndex >= 0 ? savedHotbarAssignments[sourceIndex] : null;
-      return itemId && isHotbarAssignableItem(itemId) && playerOwnsItem(itemId)
+      return itemId && hotbarAssignmentCanPersist(itemId)
         ? itemId
         : null;
     }
@@ -9076,7 +9131,8 @@ function persistentServerBootstrapPayload() {
       goldSlimeBubbles: player.goldSlimeBubbles,
       arrows: player.arrows,
       woodFloors: player.woodFloors,
-      woodWalls: player.woodWalls
+      woodWalls: player.woodWalls,
+      woodDoors: player.woodDoors
     },
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
@@ -9999,11 +10055,22 @@ document.querySelectorAll(".stat-plus").forEach(button => {
 
 
 // -----------------------------------------------------------------------------
-// PLAYER BUILDING (v379)
+// PLAYER BUILDING (v384 edge-wall model)
 // -----------------------------------------------------------------------------
 const placedStructuresByMap = new Map();
-let selectedBuildPiece = null;
+let placedStructureRevision = 0;
 const BUILD_GRID_SIZE = 16;
+const BUILD_WALL_EDGES = Object.freeze(["north", "east", "south", "west"]);
+const BUILD_EDGE_STRUCTURE_KINDS = Object.freeze(["woodWall", "woodDoor"]);
+const DOOR_ADJACENT_DISTANCE = 10;
+const DOOR_PASSAGE_DISTANCE = 14;
+const DOOR_PASSAGE_MS = 420;
+const HOUSE_FOREGROUND_ALPHA = 0.34;
+const ROOF_PLAYER_COVER_ALPHA = 0.58;
+const ROOF_OVERHANG = 3;
+let localDoorPassageId = null;
+let localDoorPassageUntil = 0;
+let roofRegionCache = { mapId: null, revision: -1, regions: [] };
 
 function currentMapStructures() {
   return placedStructuresByMap.get(currentMapId) || [];
@@ -10012,12 +10079,16 @@ function currentMapStructures() {
 function applyStructureSnapshot(mapId, structures) {
   if (typeof mapId !== "string") return;
   placedStructuresByMap.set(mapId, Array.isArray(structures) ? structures.map(item => ({ ...item })) : []);
+  placedStructureRevision += 1;
 }
 
 function applyStructurePlaced(structure) {
   if (!structure?.id || !structure?.mapId) return;
   const list = placedStructuresByMap.get(structure.mapId) || [];
-  if (!list.some(item => item.id === structure.id)) list.push({ ...structure });
+  if (!list.some(item => item.id === structure.id)) {
+    list.push({ ...structure });
+    placedStructureRevision += 1;
+  }
   placedStructuresByMap.set(structure.mapId, list);
 }
 
@@ -10027,6 +10098,11 @@ function applyStructureRemoved(mapId, structureId) {
   const next = list.filter(item => item.id !== structureId);
   if (next.length === list.length) return false;
   placedStructuresByMap.set(mapId, next);
+  placedStructureRevision += 1;
+  if (localDoorPassageId === structureId) {
+    localDoorPassageId = null;
+    localDoorPassageUntil = 0;
+  }
   return true;
 }
 
@@ -10040,14 +10116,236 @@ function drawWoodFloor(structure, camX, camY, alpha = 1) {
   ctx.restore();
 }
 
+function wallCollisionRect(structure) {
+  if (structure?.axis === "vertical") {
+    return { x: Number(structure.x) - 1, y: Number(structure.y) - 8, width: 2, height: 16 };
+  }
+  return { x: Number(structure.x) - 8, y: Number(structure.y) - 1, width: 16, height: 2 };
+}
+
+function verticalWallHasUpperHorizontalJoin(structure) {
+  if (structure?.axis !== "vertical") return false;
+  const x = Number(structure.x);
+  const upperY = Number(structure.y) - 8;
+  return currentMapStructures().some(other =>
+    BUILD_EDGE_STRUCTURE_KINDS.includes(other?.kind) &&
+    other.axis !== "vertical" &&
+    Math.abs(Number(other.y) - upperY) < 1 &&
+    Math.abs(Math.abs(Number(other.x) - x) - 8) < 1
+  );
+}
+
+function structureVisuallyCoversLocalPlayer(structure) {
+  if (!structure || remotePlayerDrawDepth > 0) return false;
+  const sx = Number(structure.x);
+  const sy = Number(structure.y);
+  const px = Number(player.x);
+  const py = Number(player.y);
+  if (structure.axis === "vertical") {
+    const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const top = sy - 23 - extension;
+    return Math.abs(px - sx) <= 7 && py >= top && py <= sy + 8;
+  }
+  return Math.abs(px - sx) <= 11 && py >= sy - 31 && py <= sy + 2;
+}
+
+function structureBelongsToRoofFacade(structure, region) {
+  if (!structure || !region?.boundaryKeys) return false;
+  return region.boundaryKeys.has(
+    structureBoundaryKey(structure.axis, structure.x, structure.y)
+  );
+}
+
+function structureIsForegroundRoofBoundary(structure, region) {
+  if (!structure || !region?.foregroundBoundaryKeys) return false;
+  return region.foregroundBoundaryKeys.has(
+    structureBoundaryKey(structure.axis, structure.x, structure.y)
+  );
+}
+
+function activeInteriorRoofRegion() {
+  if (remotePlayerDrawDepth > 0) return null;
+  return automaticRoofRegions().find(region => playerInsideRoofRegion(region)) || null;
+}
+
+function structureFadeAlpha(structure, alpha = 1) {
+  const interiorRegion = activeInteriorRoofRegion();
+  if (interiorRegion && structureBelongsToRoofFacade(structure, interiorRegion)) {
+    // Inside a finished house the roof disappears completely and only the
+    // south/foreground wall is softened. Back and side walls stay fully solid
+    // so the interior keeps a stable room-like silhouette.
+    return structureIsForegroundRoofBoundary(structure, interiorRegion)
+      ? alpha * HOUSE_FOREGROUND_ALPHA
+      : alpha;
+  }
+  return structureVisuallyCoversLocalPlayer(structure) ? alpha * 0.58 : alpha;
+}
+
+function doorPerpendicularDistance(structure, x, y) {
+  return structure?.axis === "vertical"
+    ? Math.abs(Number(x) - Number(structure.x))
+    : Math.abs(Number(y) - Number(structure.y));
+}
+
+function doorTangentialDistance(structure, x, y) {
+  return structure?.axis === "vertical"
+    ? Math.abs(Number(y) - Number(structure.y))
+    : Math.abs(Number(x) - Number(structure.x));
+}
+
+function localDoorPassageActive(structure) {
+  if (!structure?.id || localDoorPassageId !== structure.id) return false;
+  if (performance.now() > localDoorPassageUntil) return false;
+  return doorPerpendicularDistance(structure, player.x, player.y) <= DOOR_PASSAGE_DISTANCE;
+}
+
+function doorAllowsLocalPlayerStep(structure, fromX, fromY, toX, toY, playerRadius = 4) {
+  if (structure?.kind !== "woodDoor") return false;
+  const now = performance.now();
+  const tangential = Math.min(
+    doorTangentialDistance(structure, fromX, fromY),
+    doorTangentialDistance(structure, toX, toY)
+  );
+  if (tangential > 8 + playerRadius + 2) return false;
+
+  if (localDoorPassageId === structure.id && now <= localDoorPassageUntil) {
+    localDoorPassageUntil = now + DOOR_PASSAGE_MS;
+    return true;
+  }
+
+  const before = doorPerpendicularDistance(structure, fromX, fromY);
+  const after = doorPerpendicularDistance(structure, toX, toY);
+  const steppingToward = before <= DOOR_ADJACENT_DISTANCE && after < before - 0.01;
+  if (!steppingToward) return false;
+
+  localDoorPassageId = structure.id;
+  localDoorPassageUntil = now + DOOR_PASSAGE_MS;
+  return true;
+}
+
+function doorVisuallyOpen(structure) {
+  if (localDoorPassageActive(structure)) return true;
+
+  // Remote door state is not networked. A tiny near-plane heuristic keeps the
+  // animation plausible for other players without adding a door heartbeat.
+  const remotes = typeof onlineClient !== "undefined" ? onlineClient?.remotePlayers : null;
+  if (!remotes?.values) return false;
+  for (const remote of remotes.values()) {
+    if (remote?.mapId !== currentMapId || remote?.hp <= 0) continue;
+    const rx = Number.isFinite(remote.renderX) ? remote.renderX : remote.x;
+    const ry = Number.isFinite(remote.renderY) ? remote.renderY : remote.y;
+    if (
+      doorPerpendicularDistance(structure, rx, ry) <= 5 &&
+      doorTangentialDistance(structure, rx, ry) <= 11
+    ) return true;
+  }
+  return false;
+}
+
 function drawWoodWall(structure, camX, camY, alpha = 1) {
-  const x = Math.round(structure.x - camX - 8);
-  const y = Math.round(structure.y - camY - 12);
-  ctx.save(); ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#50351f"; ctx.fillRect(x, y, 16, 20);
-  ctx.fillStyle = "#956238"; ctx.fillRect(x + 1, y + 1, 14, 17);
-  ctx.fillStyle = "#b67943"; ctx.fillRect(x + 2, y + 2, 5, 15); ctx.fillRect(x + 9, y + 2, 4, 15);
-  ctx.fillStyle = "#5c3b24"; ctx.fillRect(x + 7, y + 1, 2, 17); ctx.fillRect(x, y + 17, 16, 3);
+  // v385: walls remain thin floor-edge colliders; corner projection is visual only.
+  // Horizontal walls rise 32px above their edge. A vertical wall that meets a
+  // horizontal wall at its upper endpoint gains one extra 16px visual extension
+  // so the side wall reaches the back wall's top without adding another collider.
+  const sx = Math.round(Number(structure.x) - camX);
+  const sy = Math.round(Number(structure.y) - camY);
+  const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
+
+  ctx.save();
+  ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+
+  if (axis === "horizontal") {
+    const left = sx - 8;
+    const top = sy - 31;
+    ctx.fillStyle = "#4f321d";
+    ctx.fillRect(left, top, 16, 32);
+    ctx.fillStyle = "#8d5b32";
+    ctx.fillRect(left + 1, top + 1, 14, 30);
+    ctx.fillStyle = "#b67a45";
+    ctx.fillRect(left + 2, top + 2, 12, 5);
+    ctx.fillRect(left + 2, top + 10, 12, 5);
+    ctx.fillRect(left + 2, top + 18, 12, 5);
+    ctx.fillRect(left + 2, top + 26, 12, 4);
+    ctx.fillStyle = "#654023";
+    ctx.fillRect(left + 4, top + 1, 1, 30);
+    ctx.fillRect(left + 11, top + 1, 1, 30);
+    // Strong one-pixel base line communicates the exact collision boundary.
+    ctx.fillStyle = "#3e2818";
+    ctx.fillRect(left, sy, 16, 1);
+  } else {
+    // Side walls normally span their 16px edge plus the projected 16px wall rise.
+    // At an upper/back corner, the extra 16px closes the projection gap shown in
+    // the v385 corner diagram while leaving collision and placement unchanged.
+    const cornerExtension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const height = 32 + cornerExtension;
+    const left = sx - 2;
+    const top = sy + 9 - height;
+    ctx.fillStyle = "#4f321d";
+    ctx.fillRect(left, top, 4, height);
+    ctx.fillStyle = "#956039";
+    ctx.fillRect(left + 1, top + 1, 2, height - 2);
+    ctx.fillStyle = "#bd8150";
+    for (let y = top + 3; y < top + height - 2; y += 7) ctx.fillRect(left + 1, y, 2, 1);
+    ctx.fillStyle = "#3e2818";
+    ctx.fillRect(sx, sy - 8, 1, 16);
+  }
+
+  ctx.restore();
+}
+
+function drawWoodDoor(structure, camX, camY, alpha = 1) {
+  const sx = Math.round(Number(structure.x) - camX);
+  const sy = Math.round(Number(structure.y) - camY);
+  const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
+  const open = doorVisuallyOpen(structure);
+  ctx.save();
+  ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+
+  if (axis === "horizontal") {
+    const top = sy - 31;
+    if (open) {
+      // Open leaf tucks against the left jamb, leaving the 16px passage clear.
+      ctx.fillStyle = "#4f321d";
+      ctx.fillRect(sx - 8, top, 4, 32);
+      ctx.fillStyle = "#9f6638";
+      ctx.fillRect(sx - 7, top + 1, 2, 30);
+      ctx.fillStyle = "#d29a59";
+      ctx.fillRect(sx - 7, top + 16, 1, 1);
+    } else {
+      ctx.fillStyle = "#4f321d";
+      ctx.fillRect(sx - 8, top, 16, 32);
+      ctx.fillStyle = "#9f6638";
+      ctx.fillRect(sx - 7, top + 1, 14, 30);
+      ctx.fillStyle = "#654023";
+      ctx.fillRect(sx - 1, top + 1, 1, 30);
+      ctx.fillRect(sx - 7, top + 10, 14, 1);
+      ctx.fillRect(sx - 7, top + 21, 14, 1);
+      ctx.fillStyle = "#d29a59";
+      ctx.fillRect(sx + 4, sy - 15, 1, 1);
+    }
+    ctx.fillStyle = "#3e2818";
+    if (!open) ctx.fillRect(sx - 8, sy, 16, 1);
+  } else {
+    const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const height = 32 + extension;
+    const top = sy + 9 - height;
+    if (open) {
+      // Open side-facing leaf folds northward from the upper jamb.
+      ctx.fillStyle = "#4f321d";
+      ctx.fillRect(sx - 8, sy - 8, 8, 3);
+      ctx.fillStyle = "#9f6638";
+      ctx.fillRect(sx - 7, sy - 7, 6, 1);
+    } else {
+      ctx.fillStyle = "#4f321d";
+      ctx.fillRect(sx - 2, top, 4, height);
+      ctx.fillStyle = "#9f6638";
+      ctx.fillRect(sx - 1, top + 1, 2, height - 2);
+      ctx.fillStyle = "#d29a59";
+      ctx.fillRect(sx, sy - 1, 1, 1);
+      ctx.fillStyle = "#3e2818";
+      ctx.fillRect(sx, sy - 8, 1, 16);
+    }
+  }
   ctx.restore();
 }
 
@@ -10055,41 +10353,284 @@ function drawPlayerStructureFloors(camX, camY) {
   for (const structure of currentMapStructures()) if (structure.kind === "woodFloor") drawWoodFloor(structure, camX, camY);
 }
 
-function addPlayerStructureDrawables(drawables, camX, camY) {
-  for (const structure of currentMapStructures()) {
-    if (structure.kind !== "woodWall") continue;
-    addDrawable(drawables, structure.y + 7, () => drawWoodWall(structure, camX, camY));
+function structureCellKey(x, y) {
+  return `${Math.round(Number(x))},${Math.round(Number(y))}`;
+}
+
+function structureBoundaryKey(axis, x, y) {
+  return `${axis}:${Math.round(Number(x))},${Math.round(Number(y))}`;
+}
+
+function automaticRoofRegions() {
+  if (
+    roofRegionCache.mapId === currentMapId &&
+    roofRegionCache.revision === placedStructureRevision
+  ) return roofRegionCache.regions;
+
+  const structures = currentMapStructures();
+  const floors = new Map();
+  const boundaries = new Set();
+  for (const structure of structures) {
+    if (structure?.kind === "woodFloor") {
+      floors.set(structureCellKey(structure.x, structure.y), structure);
+    } else if (BUILD_EDGE_STRUCTURE_KINDS.includes(structure?.kind)) {
+      boundaries.add(structureBoundaryKey(structure.axis, structure.x, structure.y));
+    }
+  }
+
+  const visited = new Set();
+  const regions = [];
+  const neighbors = [
+    [0, -BUILD_GRID_SIZE],
+    [BUILD_GRID_SIZE, 0],
+    [0, BUILD_GRID_SIZE],
+    [-BUILD_GRID_SIZE, 0]
+  ];
+
+  for (const [startKey, startFloor] of floors.entries()) {
+    if (visited.has(startKey)) continue;
+    const queue = [startFloor];
+    const component = [];
+    visited.add(startKey);
+
+    while (queue.length) {
+      const floor = queue.shift();
+      component.push(floor);
+      for (const [dx, dy] of neighbors) {
+        const key = structureCellKey(Number(floor.x) + dx, Number(floor.y) + dy);
+        if (!visited.has(key) && floors.has(key)) {
+          visited.add(key);
+          queue.push(floors.get(key));
+        }
+      }
+    }
+
+    let enclosed = component.length > 0;
+    const perimeterBoundaries = new Set();
+    const foregroundBoundaries = new Set();
+    for (const floor of component) {
+      const x = Number(floor.x);
+      const y = Number(floor.y);
+      const edgeChecks = [
+        { side: "north", neighbor: structureCellKey(x, y - BUILD_GRID_SIZE), boundary: structureBoundaryKey("horizontal", x, y - 8) },
+        { side: "east", neighbor: structureCellKey(x + BUILD_GRID_SIZE, y), boundary: structureBoundaryKey("vertical", x + 8, y) },
+        { side: "south", neighbor: structureCellKey(x, y + BUILD_GRID_SIZE), boundary: structureBoundaryKey("horizontal", x, y + 8) },
+        { side: "west", neighbor: structureCellKey(x - BUILD_GRID_SIZE, y), boundary: structureBoundaryKey("vertical", x - 8, y) }
+      ];
+      for (const check of edgeChecks) {
+        if (floors.has(check.neighbor)) continue;
+        perimeterBoundaries.add(check.boundary);
+        if (check.side === "south") foregroundBoundaries.add(check.boundary);
+        if (!boundaries.has(check.boundary)) {
+          enclosed = false;
+          break;
+        }
+      }
+      if (!enclosed) break;
+    }
+
+    if (enclosed) {
+      regions.push({
+        floors: component,
+        floorKeys: new Set(component.map(floor => structureCellKey(floor.x, floor.y))),
+        boundaryKeys: perimeterBoundaries,
+        foregroundBoundaryKeys: foregroundBoundaries
+      });
+    }
+  }
+
+  roofRegionCache = { mapId: currentMapId, revision: placedStructureRevision, regions };
+  return regions;
+}
+
+function playerInsideRoofRegion(region) {
+  return region.floors.some(floor =>
+    Math.abs(Number(player.x) - Number(floor.x)) <= 8 &&
+    Math.abs(Number(player.y) - Number(floor.y)) <= 8
+  );
+}
+
+function roofRegionVisuallyCoversLocalPlayer(region) {
+  if (!region?.floors || remotePlayerDrawDepth > 0) return false;
+  const px = Number(player.x);
+  const playerBottom = Number(player.y);
+  const playerTop = playerBottom - 15;
+  const floorKeys = region.floorKeys || new Set(region.floors.map(floor => structureCellKey(floor.x, floor.y)));
+
+  return region.floors.some(floor => {
+    const fx = Number(floor.x);
+    const fy = Number(floor.y);
+    const west = !floorKeys.has(structureCellKey(fx - BUILD_GRID_SIZE, fy));
+    const east = !floorKeys.has(structureCellKey(fx + BUILD_GRID_SIZE, fy));
+    const north = !floorKeys.has(structureCellKey(fx, fy - BUILD_GRID_SIZE));
+    const south = !floorKeys.has(structureCellKey(fx, fy + BUILD_GRID_SIZE));
+    const left = fx - 8 - (west ? ROOF_OVERHANG : 0);
+    const right = fx + 8 + (east ? ROOF_OVERHANG : 0);
+    const top = fy - 40 - (north ? ROOF_OVERHANG : 0);
+    const bottom = fy - 24 + (south ? ROOF_OVERHANG : 0);
+    return px >= left - 4 && px <= right + 4 && playerBottom >= top && playerTop <= bottom;
+  });
+}
+
+function drawAutomaticStructureRoofs(camX, camY) {
+  for (const region of automaticRoofRegions()) {
+    const inside = playerInsideRoofRegion(region);
+    // Once the local player is inside a completed house, remove the roof
+    // entirely. The foreground wall still gives the room a readable facade.
+    if (inside) continue;
+    const alpha = roofRegionVisuallyCoversLocalPlayer(region)
+      ? ROOF_PLAYER_COVER_ALPHA
+      : 0.96;
+    const floorKeys = region.floorKeys || new Set(region.floors.map(floor => structureCellKey(floor.x, floor.y)));
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    for (const floor of region.floors) {
+      const fx = Number(floor.x);
+      const fy = Number(floor.y);
+      const x = Math.round(fx - camX - 8);
+      // The roof is projected upward over the wall rise. Exposed sides gain a
+      // small overhang so the thin wall-edge art cannot poke through around a
+      // completed house's roof perimeter.
+      const y = Math.round(fy - camY - 40);
+      const north = !floorKeys.has(structureCellKey(fx, fy - BUILD_GRID_SIZE));
+      const south = !floorKeys.has(structureCellKey(fx, fy + BUILD_GRID_SIZE));
+      const west = !floorKeys.has(structureCellKey(fx - BUILD_GRID_SIZE, fy));
+      const east = !floorKeys.has(structureCellKey(fx + BUILD_GRID_SIZE, fy));
+      const leftOverhang = west ? ROOF_OVERHANG : 0;
+      const rightOverhang = east ? ROOF_OVERHANG : 0;
+      const topOverhang = north ? ROOF_OVERHANG : 0;
+      const bottomOverhang = south ? ROOF_OVERHANG : 0;
+
+      ctx.fillStyle = "#6a3f23";
+      ctx.fillRect(
+        x - leftOverhang,
+        y - topOverhang,
+        16 + leftOverhang + rightOverhang,
+        16 + topOverhang + bottomOverhang
+      );
+      ctx.fillStyle = "#a66a38";
+      ctx.fillRect(x + 1, y + 1, 14, 4);
+      ctx.fillRect(x + 1, y + 9, 14, 3);
+      ctx.fillStyle = "#4c2e1b";
+      ctx.fillRect(x, y + 7, 16, 1);
+      ctx.fillRect(x + 5, y, 1, 7);
+      ctx.fillRect(x + 11, y + 8, 1, 8);
+
+      // Outline the roof itself at the outside of the overhang, rather than
+      // exposing the underlying wall boundary line.
+      ctx.fillStyle = "#3c2517";
+      if (north) ctx.fillRect(x - leftOverhang, y - topOverhang, 16 + leftOverhang + rightOverhang, 1);
+      if (south) ctx.fillRect(x - leftOverhang, y + 15 + bottomOverhang, 16 + leftOverhang + rightOverhang, 1);
+      if (west) ctx.fillRect(x - leftOverhang, y - topOverhang, 1, 16 + topOverhang + bottomOverhang);
+      if (east) ctx.fillRect(x + 15 + rightOverhang, y - topOverhang, 1, 16 + topOverhang + bottomOverhang);
+    }
+
+    ctx.restore();
   }
 }
 
-function hitsPlayerStructureObstacle(x, y, playerRadius = 4) {
+function wallDrawSortY(structure) {
+  return Number(structure.y) + (structure?.axis === "vertical" ? 8 : 0);
+}
+
+function addPlayerStructureDrawables(drawables, camX, camY) {
   for (const structure of currentMapStructures()) {
-    if (structure.kind !== "woodWall") continue;
-    if (circleRectCollision(x, y, playerRadius, structure.x - 8, structure.y - 8, 16, 16)) return true;
+    if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
+    addDrawable(drawables, wallDrawSortY(structure), () => {
+      if (structure.kind === "woodDoor") drawWoodDoor(structure, camX, camY);
+      else drawWoodWall(structure, camX, camY);
+    });
+  }
+}
+
+function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
+  for (const structure of currentMapStructures()) {
+    if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
+    const rect = wallCollisionRect(structure);
+    if (!circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) continue;
+    if (
+      structure.kind === "woodDoor" &&
+      Number.isFinite(options.fromX) &&
+      Number.isFinite(options.fromY) &&
+      doorAllowsLocalPlayerStep(structure, options.fromX, options.fromY, x, y, playerRadius)
+    ) continue;
+    return true;
   }
   return false;
 }
 
-function tryHitPlayerStructure() {
+function playerStructurePickaxeTarget() {
   const originX = player.x;
   const originY = player.y - 8;
   let best = null;
+  let bestPriority = Infinity;
   let bestDistance = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || !["woodFloor", "woodWall"].includes(structure.kind)) continue;
+    if (!structure?.id || !["woodFloor", "woodWall", "woodDoor"].includes(structure.kind)) continue;
     const dx = structure.x - originX;
     const dy = structure.y - originY;
     const distance = Math.hypot(dx, dy);
     const targetAngle = Math.atan2(dy, dx);
-    const insideAngle = Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= 0.92;
-    const insideRange = distance <= currentMeleeReach() + 10;
-    if (insideAngle && insideRange && distance < bestDistance) {
+    const insideAngle = Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= 1.05;
+    const insideRange = distance <= currentMeleeReach() + 12;
+    const priority = BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind) ? 0 : 1;
+    if (
+      insideAngle &&
+      insideRange &&
+      (priority < bestPriority || (priority === bestPriority && distance < bestDistance))
+    ) {
       best = structure;
+      bestPriority = priority;
       bestDistance = distance;
     }
   }
+  return best;
+}
 
+function drawPickaxeStructureTargetHighlight(camX, camY) {
+  if (remotePlayerDrawDepth > 0 || selectedBuildPiece || equippedWeapon() !== "pickaxe") return;
+  const structure = playerStructurePickaxeTarget();
+  if (!structure) return;
+
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = "#ffe38b";
+
+  if (structure.kind === "woodFloor") {
+    const left = Math.round(Number(structure.x) - camX - 8);
+    const top = Math.round(Number(structure.y) - camY - 8);
+    ctx.fillRect(left, top, 16, 1);
+    ctx.fillRect(left, top + 15, 16, 1);
+    ctx.fillRect(left, top, 1, 16);
+    ctx.fillRect(left + 15, top, 1, 16);
+  } else if (structure.axis === "vertical") {
+    const sx = Math.round(Number(structure.x) - camX);
+    const sy = Math.round(Number(structure.y) - camY);
+    const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const height = 32 + extension;
+    const left = sx - 3;
+    const top = sy + 9 - height - 1;
+    ctx.fillRect(left, top, 6, 1);
+    ctx.fillRect(left, top + height + 1, 6, 1);
+    ctx.fillRect(left, top, 1, height + 2);
+    ctx.fillRect(left + 5, top, 1, height + 2);
+  } else {
+    const sx = Math.round(Number(structure.x) - camX);
+    const sy = Math.round(Number(structure.y) - camY);
+    const left = sx - 9;
+    const top = sy - 32;
+    ctx.fillRect(left, top, 18, 1);
+    ctx.fillRect(left, sy + 1, 18, 1);
+    ctx.fillRect(left, top, 1, 34);
+    ctx.fillRect(left + 17, top, 1, 34);
+  }
+  ctx.restore();
+}
+
+function tryHitPlayerStructure() {
+  const best = playerStructurePickaxeTarget();
   if (!best) return false;
   return Boolean(
     typeof onlineClient !== "undefined" &&
@@ -10098,14 +10639,18 @@ function tryHitPlayerStructure() {
 }
 
 function buildPieceCount(kind) {
-  return kind === "woodFloor" ? Math.max(0, Number(player.woodFloors) || 0) : kind === "woodWall" ? Math.max(0, Number(player.woodWalls) || 0) : 0;
+  if (kind === "woodFloor") return Math.max(0, Number(player.woodFloors) || 0);
+  if (kind === "woodWall") return Math.max(0, Number(player.woodWalls) || 0);
+  if (kind === "woodDoor") return Math.max(0, Number(player.woodDoors) || 0);
+  return 0;
 }
 
 function beginBuildPlacement(kind) {
-  if (!['woodFloor','woodWall'].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  if (!["woodFloor", "woodWall", "woodDoor"].includes(kind) || buildPieceCount(kind) <= 0) return false;
   selectedBuildPiece = kind;
-  setInventoryOpen(false);
-  spawnFloatingText(player.x, player.y - 34, kind === "woodFloor" ? "PLACE WOOD FLOOR" : "PLACE WOOD WALL", "#f0d59a", 0.95);
+  // Selecting a build piece from the hotbar/mouse wheel must not clear held
+  // movement input. Only close the inventory when it is actually open.
+  if (inventoryOpen) setInventoryOpen(false);
   updateCanvasCursor();
   return true;
 }
@@ -10118,28 +10663,99 @@ function cancelBuildPlacement(quiet = false) {
   return true;
 }
 
+function floorAtWorldPoint(worldX, worldY) {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "woodFloor") continue;
+    const dx = Math.abs(worldX - Number(structure.x));
+    const dy = Math.abs(worldY - Number(structure.y));
+    if (dx > 8 || dy > 8) continue;
+    const distance = dx * dx + dy * dy;
+    if (distance < bestDistance) {
+      best = structure;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function floorBelongsToCompletedRoof(floor) {
+  if (!floor) return false;
+  const key = structureCellKey(floor.x, floor.y);
+  return automaticRoofRegions().some(region => region.floorKeys?.has(key));
+}
+
+function wallPlacementCandidate(worldX, worldY) {
+  const floor = floorAtWorldPoint(worldX, worldY);
+  if (!floor || floorBelongsToCompletedRoof(floor)) return null;
+  const left = Number(floor.x) - 8;
+  const right = Number(floor.x) + 8;
+  const top = Number(floor.y) - 8;
+  const bottom = Number(floor.y) + 8;
+  const edges = [
+    { edge: "north", distance: Math.abs(worldY - top), x: Number(floor.x), y: top, axis: "horizontal" },
+    { edge: "east", distance: Math.abs(worldX - right), x: right, y: Number(floor.y), axis: "vertical" },
+    { edge: "south", distance: Math.abs(worldY - bottom), x: Number(floor.x), y: bottom, axis: "horizontal" },
+    { edge: "west", distance: Math.abs(worldX - left), x: left, y: Number(floor.y), axis: "vertical" }
+  ];
+  edges.sort((a, b) => a.distance - b.distance);
+  return { ...edges[0], floorX: Number(floor.x), floorY: Number(floor.y) };
+}
+
+function drawWallEdgeHighlight(candidate, camX, camY) {
+  if (!candidate) return;
+  const x = Math.round(candidate.x - camX);
+  const y = Math.round(candidate.y - camY);
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = "#ffe38b";
+  if (candidate.axis === "vertical") ctx.fillRect(x - 1, y - 8, 2, 16);
+  else ctx.fillRect(x - 8, y - 1, 16, 2);
+  ctx.restore();
+}
+
 function tryPlaceSelectedBuildPiece(event) {
   if (!selectedBuildPiece) return false;
   if (event.button !== 0) return true;
   if (buildPieceCount(selectedBuildPiece) <= 0) { cancelBuildPlacement(true); return true; }
   const pointer = getCanvasPointerPosition(event);
-  const x = Math.round((currentCamX + pointer.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
-  const y = Math.round((currentCamY + pointer.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const worldX = currentCamX + pointer.x;
+  const worldY = currentCamY + pointer.y;
+
+  if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
+    const candidate = wallPlacementCandidate(worldX, worldY);
+    if (!candidate) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement(selectedBuildPiece, candidate.floorX, candidate.floorY, candidate.edge);
+    }
+    return true;
+  }
+
+  const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
-    onlineClient.requestStructurePlacement(selectedBuildPiece, x, y);
-  } else {
-    spawnFloatingText(player.x, player.y - 30, "CONNECT TO BUILD", "#ffe38b", 0.8);
+    onlineClient.requestStructurePlacement("woodFloor", x, y);
   }
   return true;
 }
 
 function drawBuildPlacementPreview(camX, camY) {
   if (!selectedBuildPiece) return;
-  const x = Math.round((camX + mouseCanvasX) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
-  const y = Math.round((camY + mouseCanvasY) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
-  const preview = { kind: selectedBuildPiece, x, y };
-  if (selectedBuildPiece === "woodFloor") drawWoodFloor(preview, camX, camY, 0.55);
-  else drawWoodWall(preview, camX, camY, 0.55);
+  const worldX = camX + mouseCanvasX;
+  const worldY = camY + mouseCanvasY;
+  if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
+    const candidate = wallPlacementCandidate(worldX, worldY);
+    if (!candidate) return;
+    drawWallEdgeHighlight(candidate, camX, camY);
+    const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };
+    if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, 0.42);
+    else drawWoodWall(preview, camX, camY, 0.42);
+    return;
+  }
+  const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  drawWoodFloor({ kind: "woodFloor", x, y }, camX, camY, 0.55);
 }
 
 // -----------------------------------------------------------------------------
@@ -10147,17 +10763,19 @@ function drawBuildPlacementPreview(camX, camY) {
 // -----------------------------------------------------------------------------
 
 
-function worldPositionIsOpen(x, y) {
+function worldPositionIsOpen(x, y, options = {}) {
   // Water is traversable for players. Void/solid geometry still blocks.
-  return !hitsSolidObstacle(x, y);
+  return !hitsSolidObstacle(x, y, options);
 }
 
 function moveWithWorldCollision(entity, nextX, nextY) {
-  if (worldPositionIsOpen(nextX, entity.y)) {
+  const startX = entity.x;
+  const startY = entity.y;
+  if (worldPositionIsOpen(nextX, startY, { fromX: startX, fromY: startY })) {
     entity.x = nextX;
   }
 
-  if (worldPositionIsOpen(entity.x, nextY)) {
+  if (worldPositionIsOpen(entity.x, nextY, { fromX: entity.x, fromY: startY })) {
     entity.y = nextY;
   }
 }
@@ -10172,6 +10790,84 @@ function getCanvasPointerPosition(event) {
 
 
 let worldTime = 0;
+
+// v389 shared day/night clock. The server sends one anchor on connect; clients
+// advance it locally from performance.now(), so the clock and lighting stay in
+// sync without periodic network packets. Offline/local fallback starts at 08:00.
+const WORLD_CLOCK_MINUTES_PER_DAY = 24 * 60;
+const WORLD_CLOCK_DEFAULT_REAL_MS_PER_GAME_MINUTE = 500;
+let worldClockAnchorGameMinutes = 8 * 60;
+let worldClockAnchorLocalMs = performance.now();
+let worldClockRealMsPerGameMinute = WORLD_CLOCK_DEFAULT_REAL_MS_PER_GAME_MINUTE;
+let worldClockLastHudMinute = null;
+
+function applyWorldClockSnapshot(snapshot) {
+  if (!snapshot || !Number.isFinite(Number(snapshot.gameMinutes))) return false;
+  const realMsPerGameMinute = Number(snapshot.realMsPerGameMinute);
+  worldClockAnchorGameMinutes = ((Number(snapshot.gameMinutes) % WORLD_CLOCK_MINUTES_PER_DAY) + WORLD_CLOCK_MINUTES_PER_DAY) % WORLD_CLOCK_MINUTES_PER_DAY;
+  worldClockAnchorLocalMs = performance.now();
+  worldClockRealMsPerGameMinute = Number.isFinite(realMsPerGameMinute) && realMsPerGameMinute > 0
+    ? realMsPerGameMinute
+    : WORLD_CLOCK_DEFAULT_REAL_MS_PER_GAME_MINUTE;
+  worldClockLastHudMinute = null;
+  updateWorldClockHud();
+  return true;
+}
+
+function currentWorldClockMinutes() {
+  const elapsedRealMs = Math.max(0, performance.now() - worldClockAnchorLocalMs);
+  return (
+    worldClockAnchorGameMinutes +
+    elapsedRealMs / Math.max(1, worldClockRealMsPerGameMinute)
+  ) % WORLD_CLOCK_MINUTES_PER_DAY;
+}
+
+function worldClockPhase(minutes = currentWorldClockMinutes()) {
+  const hour = minutes / 60;
+  if (hour >= 20 || hour < 5) return "NIGHT";
+  if (hour < 7) return "DAWN";
+  if (hour < 18) return "DAY";
+  return "DUSK";
+}
+
+function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
+  const hour = minutes / 60;
+  const maxNightAlpha = 0.42;
+  if (hour >= 20 || hour < 5) return maxNightAlpha;
+  if (hour >= 5 && hour < 7) return maxNightAlpha * (1 - (hour - 5) / 2);
+  if (hour >= 18 && hour < 20) return maxNightAlpha * ((hour - 18) / 2);
+  return 0;
+}
+
+function formatWorldClock(minutes = currentWorldClockMinutes()) {
+  const wholeMinutes = Math.floor(minutes) % WORLD_CLOCK_MINUTES_PER_DAY;
+  const hour = Math.floor(wholeMinutes / 60);
+  const minute = wholeMinutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function updateWorldClockHud() {
+  const hud = document.getElementById("worldClockHud");
+  if (!hud) return;
+  const minutes = currentWorldClockMinutes();
+  const wholeMinute = Math.floor(minutes);
+  if (wholeMinute === worldClockLastHudMinute) return;
+  worldClockLastHudMinute = wholeMinute;
+  const phase = worldClockPhase(minutes);
+  hud.textContent = `${formatWorldClock(minutes)} · ${phase}`;
+  hud.dataset.phase = phase.toLowerCase();
+  hud.setAttribute("aria-label", `World time ${formatWorldClock(minutes)}, ${phase.toLowerCase()}`);
+}
+
+function drawWorldLightingOverlay() {
+  const alpha = worldClockLightingAlpha();
+  if (alpha <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#14203a";
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.restore();
+}
 
 // Current camera position, used to aim the sword correctly with the mouse.
 let currentCamX = 0;
@@ -10353,13 +11049,13 @@ function hitsPrototypeIslandVoid(x, y, playerRadius = 4) {
   return !pointInPrototypeIslandWalkableArea(x, y);
 }
 
-function hitsSolidObstacle(x, y) {
+function hitsSolidObstacle(x, y, options = {}) {
   return (
     hitsPrototypeIslandVoid(x, y) ||
     hitsTreeObstacle(x, y) ||
     hitsSceneryRockObstacle(x, y) ||
     hitsHouseObstacle(x, y) ||
-    hitsPlayerStructureObstacle(x, y) ||
+    hitsPlayerStructureObstacle(x, y, 4, options) ||
     hitsSpawnFixtureObstacle(x, y)
   );
 }

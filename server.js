@@ -7,8 +7,29 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-380";
+const BUILD_VERSION = "6-11-390";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
+
+// v389 shared world clock. One full in-game day lasts 12 real minutes, which
+// keeps night encounters quick to reach during development. Clients receive a
+// single clock anchor on connect and advance it locally, so this adds no idle
+// heartbeat traffic. Server restarts begin at 08:00 for predictable testing.
+const WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE = 500;
+const WORLD_CLOCK_START_GAME_MINUTES = 8 * 60;
+const WORLD_CLOCK_SERVER_STARTED_AT = Date.now();
+
+function serverWorldClockSnapshot(now = Date.now()) {
+  const elapsedRealMs = Math.max(0, now - WORLD_CLOCK_SERVER_STARTED_AT);
+  const gameMinutes = (
+    WORLD_CLOCK_START_GAME_MINUTES +
+    elapsedRealMs / WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE
+  ) % (24 * 60);
+  return {
+    serverNowMs: now,
+    gameMinutes,
+    realMsPerGameMinute: WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE
+  };
+}
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
 const TERRAIN_RULES = require("./public/shared/terrain-rules.js");
@@ -1809,6 +1830,9 @@ let nextSharedStructureId = 1;
 const MAX_STRUCTURES_PER_MAP = 96;
 const BUILD_GRID_SIZE = 16;
 const BUILD_PLACE_RANGE = 96;
+const DOOR_ADJACENT_DISTANCE = 10;
+const DOOR_PASSAGE_MS = 500;
+const playerDoorPassages = new Map();
 
 function structuresOnMap(mapId) {
   return Array.from(sharedStructuresByMap.get(mapId)?.values() || []);
@@ -1820,11 +1844,18 @@ function structureSnapshot(mapId) {
     mapId: structure.mapId,
     kind: structure.kind,
     x: structure.x,
-    y: structure.y
+    y: structure.y,
+    ...(["woodWall", "woodDoor"].includes(structure.kind) ? { axis: structure.axis } : {})
   }));
 }
 
 function structureRect(structure) {
+  if (["woodWall", "woodDoor"].includes(structure?.kind)) {
+    if (structure.axis === "vertical") {
+      return { x: structure.x - 1, y: structure.y - 8, width: 2, height: 16 };
+    }
+    return { x: structure.x - 8, y: structure.y - 1, width: 16, height: 2 };
+  }
   return { x: structure.x - 8, y: structure.y - 8, width: 16, height: 16 };
 }
 
@@ -1838,48 +1869,220 @@ function circleRectHit(x, y, radius, rect) {
 
 function serverPointHitsStructureWall(mapId, x, y, radius = 4) {
   for (const structure of structuresOnMap(mapId)) {
-    if (structure.kind !== "woodWall") continue;
+    if (!["woodWall", "woodDoor"].includes(structure.kind)) continue;
     if (circleRectHit(x, y, radius, structureRect(structure))) return true;
   }
   return false;
 }
 
-function structurePlacementBlocked(mapId, x, y) {
-  const dimensions = mapWorldDimensions(mapId);
-  if (x < 32 || y < 32 || x > dimensions.width - 32 || y > dimensions.height - 32) return true;
-  for (const structure of structuresOnMap(mapId)) {
-    if (Math.abs(structure.x - x) < BUILD_GRID_SIZE && Math.abs(structure.y - y) < BUILD_GRID_SIZE) return true;
+function serverDoorPerpendicularDistance(structure, x, y) {
+  return structure?.axis === "vertical"
+    ? Math.abs(Number(x) - Number(structure.x))
+    : Math.abs(Number(y) - Number(structure.y));
+}
+
+function serverDoorTangentialDistance(structure, x, y) {
+  return structure?.axis === "vertical"
+    ? Math.abs(Number(y) - Number(structure.y))
+    : Math.abs(Number(x) - Number(structure.x));
+}
+
+function serverDoorAllowsPlayerStep(playerId, structure, fromX, fromY, toX, toY, radius = 4) {
+  if (structure?.kind !== "woodDoor") return false;
+  const now = Date.now();
+  const passage = playerDoorPassages.get(playerId);
+  const tangential = Math.min(
+    serverDoorTangentialDistance(structure, fromX, fromY),
+    serverDoorTangentialDistance(structure, toX, toY)
+  );
+  if (tangential > 8 + radius + 2) return false;
+
+  if (passage?.doorId === structure.id && passage.expiresAt >= now) {
+    passage.expiresAt = now + DOOR_PASSAGE_MS;
+    return true;
   }
+
+  const before = serverDoorPerpendicularDistance(structure, fromX, fromY);
+  const after = serverDoorPerpendicularDistance(structure, toX, toY);
+  if (!(before <= DOOR_ADJACENT_DISTANCE && after < before - 0.01)) return false;
+
+  playerDoorPassages.set(playerId, { doorId: structure.id, expiresAt: now + DOOR_PASSAGE_MS });
+  return true;
+}
+
+function serverPlayerStepHitsStructureWall(playerId, mapId, fromX, fromY, toX, toY, radius = 4) {
+  for (const structure of structuresOnMap(mapId)) {
+    if (!["woodWall", "woodDoor"].includes(structure.kind)) continue;
+    if (!circleRectHit(toX, toY, radius, structureRect(structure))) continue;
+    if (
+      structure.kind === "woodDoor" &&
+      serverDoorAllowsPlayerStep(playerId, structure, fromX, fromY, toX, toY, radius)
+    ) continue;
+    return true;
+  }
+  return false;
+}
+
+function floorStructureAt(mapId, x, y) {
+  return structuresOnMap(mapId).find(structure =>
+    structure.kind === "woodFloor" &&
+    Math.abs(Number(structure.x) - x) < 1 &&
+    Math.abs(Number(structure.y) - y) < 1
+  ) || null;
+}
+
+function normalizedWallFromFloorEdge(floorX, floorY, edge) {
+  if (edge === "north") return { x: floorX, y: floorY - 8, axis: "horizontal" };
+  if (edge === "south") return { x: floorX, y: floorY + 8, axis: "horizontal" };
+  if (edge === "east") return { x: floorX + 8, y: floorY, axis: "vertical" };
+  if (edge === "west") return { x: floorX - 8, y: floorY, axis: "vertical" };
+  return null;
+}
+
+function wallMatchesBoundary(structure, wall) {
+  return ["woodWall", "woodDoor"].includes(structure?.kind) &&
+    structure.axis === wall.axis &&
+    Math.abs(Number(structure.x) - wall.x) < 1 &&
+    Math.abs(Number(structure.y) - wall.y) < 1;
+}
+
+function wallTouchesFloor(structure, floorX, floorY) {
+  if (!["woodWall", "woodDoor"].includes(structure?.kind)) return false;
+  const candidates = [
+    normalizedWallFromFloorEdge(floorX, floorY, "north"),
+    normalizedWallFromFloorEdge(floorX, floorY, "east"),
+    normalizedWallFromFloorEdge(floorX, floorY, "south"),
+    normalizedWallFromFloorEdge(floorX, floorY, "west")
+  ];
+  return candidates.some(wall => wallMatchesBoundary(structure, wall));
+}
+
+function buildFloorKey(x, y) {
+  return `${Math.round(Number(x))},${Math.round(Number(y))}`;
+}
+
+function roofedFloorKeysOnMap(mapId) {
+  const structures = structuresOnMap(mapId);
+  const floors = new Map();
+  const boundaries = new Set();
+  for (const structure of structures) {
+    if (structure?.kind === "woodFloor") {
+      floors.set(buildFloorKey(structure.x, structure.y), structure);
+    } else if (["woodWall", "woodDoor"].includes(structure?.kind)) {
+      boundaries.add(`${structure.axis}:${Math.round(Number(structure.x))},${Math.round(Number(structure.y))}`);
+    }
+  }
+
+  const roofed = new Set();
+  const visited = new Set();
+  const neighbors = [
+    [0, -BUILD_GRID_SIZE],
+    [BUILD_GRID_SIZE, 0],
+    [0, BUILD_GRID_SIZE],
+    [-BUILD_GRID_SIZE, 0]
+  ];
+
+  for (const [startKey, startFloor] of floors.entries()) {
+    if (visited.has(startKey)) continue;
+    const queue = [startFloor];
+    const component = [];
+    visited.add(startKey);
+    while (queue.length) {
+      const floor = queue.shift();
+      component.push(floor);
+      for (const [dx, dy] of neighbors) {
+        const key = buildFloorKey(Number(floor.x) + dx, Number(floor.y) + dy);
+        if (!visited.has(key) && floors.has(key)) {
+          visited.add(key);
+          queue.push(floors.get(key));
+        }
+      }
+    }
+
+    let enclosed = component.length > 0;
+    for (const floor of component) {
+      const x = Number(floor.x);
+      const y = Number(floor.y);
+      const edgeChecks = [
+        { neighbor: buildFloorKey(x, y - BUILD_GRID_SIZE), boundary: `horizontal:${Math.round(x)},${Math.round(y - 8)}` },
+        { neighbor: buildFloorKey(x + BUILD_GRID_SIZE, y), boundary: `vertical:${Math.round(x + 8)},${Math.round(y)}` },
+        { neighbor: buildFloorKey(x, y + BUILD_GRID_SIZE), boundary: `horizontal:${Math.round(x)},${Math.round(y + 8)}` },
+        { neighbor: buildFloorKey(x - BUILD_GRID_SIZE, y), boundary: `vertical:${Math.round(x - 8)},${Math.round(y)}` }
+      ];
+      for (const check of edgeChecks) {
+        if (floors.has(check.neighbor)) continue;
+        if (!boundaries.has(check.boundary)) {
+          enclosed = false;
+          break;
+        }
+      }
+      if (!enclosed) break;
+    }
+
+    if (enclosed) {
+      for (const floor of component) roofed.add(buildFloorKey(floor.x, floor.y));
+    }
+  }
+  return roofed;
+}
+
+function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
+  const dimensions = mapWorldDimensions(mapId);
+  const edgeKind = kind === "woodWall" || kind === "woodDoor";
+  const testX = edgeKind && wall ? wall.x : x;
+  const testY = edgeKind && wall ? wall.y : y;
+  if (kind === "woodFloor") {
+    if (x < 32 || y < 32 || x > dimensions.width - 32 || y > dimensions.height - 32) return true;
+  } else if (testX < 24 || testY < 24 || testX > dimensions.width - 24 || testY > dimensions.height - 24) {
+    return true;
+  }
+
+  if (kind === "woodFloor") {
+    if (floorStructureAt(mapId, x, y)) return true;
+  } else if (edgeKind) {
+    if (!wall || structuresOnMap(mapId).some(structure => wallMatchesBoundary(structure, wall))) return true;
+  }
+
   for (const entity of environmentEntitiesOnMap(mapId)) {
     if (entity.removed || entity.depleted || entity.cut) continue;
-    if (Math.hypot(entity.x - x, entity.y - y) < 18) return true;
+    if (Math.hypot(entity.x - testX, entity.y - testY) < (edgeKind ? 10 : 18)) return true;
   }
   for (const npc of WORLD_CONTENT.maps[mapId]?.npcs || []) {
-    if (Math.hypot(Number(npc.x) - x, Number(npc.y) - y) < 26) return true;
+    if (Math.hypot(Number(npc.x) - testX, Number(npc.y) - testY) < (edgeKind ? 14 : 26)) return true;
   }
+  const testRect = edgeKind && wall
+    ? structureRect({ kind, x: wall.x, y: wall.y, axis: wall.axis })
+    : null;
   for (const playerState of players.values()) {
-    if (playerState.mapId === mapId && playerState.hp > 0 && Math.hypot(playerState.x - x, playerState.y - y) < 12) return true;
+    if (playerState.mapId !== mapId || playerState.hp <= 0) continue;
+    if (testRect ? circleRectHit(playerState.x, playerState.y, 4, testRect) : Math.hypot(playerState.x - x, playerState.y - y) < 12) return true;
   }
   return false;
 }
 
 function handleStructurePlaceRequest(playerId, socket, message) {
   const playerState = players.get(playerId);
-  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "woodWall" ? "woodWall" : null;
+  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : null;
   if (!playerState || playerState.hp <= 0 || !kind || !worldGridMetaForMap(playerState.mapId)) return;
 
-  const resourceKey = kind === "woodFloor" ? "woodFloors" : "woodWalls";
+  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "woodWall" ? "woodWalls" : "woodDoors";
   const dimensions = mapWorldDimensions(playerState.mapId);
-  const x = Math.round(clampNumber(message.x, 0, dimensions.width, playerState.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
-  const y = Math.round(clampNumber(message.y, 0, dimensions.height, playerState.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const floorX = Math.round(clampNumber(message.x, 0, dimensions.width, playerState.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const floorY = Math.round(clampNumber(message.y, 0, dimensions.height, playerState.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const edge = typeof message?.edge === "string" ? message.edge : null;
+  const wall = (kind === "woodWall" || kind === "woodDoor") ? normalizedWallFromFloorEdge(floorX, floorY, edge) : null;
+  const placementX = wall?.x ?? floorX;
+  const placementY = wall?.y ?? floorY;
   let reason = null;
   if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
-  else if (Math.hypot(x - playerState.x, y - playerState.y) > BUILD_PLACE_RANGE) reason = "tooFar";
+  else if ((kind === "woodWall" || kind === "woodDoor") && (!wall || !floorStructureAt(playerState.mapId, floorX, floorY))) reason = "needsFloor";
+  else if ((kind === "woodWall" || kind === "woodDoor") && roofedFloorKeysOnMap(playerState.mapId).has(buildFloorKey(floorX, floorY))) reason = "roofed";
+  else if (Math.hypot(placementX - playerState.x, placementY - playerState.y) > BUILD_PLACE_RANGE) reason = "tooFar";
   else if (structuresOnMap(playerState.mapId).length >= MAX_STRUCTURES_PER_MAP) reason = "mapLimit";
-  else if (structurePlacementBlocked(playerState.mapId, x, y)) reason = "blocked";
+  else if (structurePlacementBlocked(playerState.mapId, kind, floorX, floorY, wall)) reason = "blocked";
 
   if (reason) {
-    sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls });
+    sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors });
     return;
   }
 
@@ -1888,8 +2091,9 @@ function handleStructurePlaceRequest(playerId, socket, message) {
     id: `build:${nextSharedStructureId++}`,
     mapId: playerState.mapId,
     kind,
-    x,
-    y,
+    x: placementX,
+    y: placementY,
+    ...((kind === "woodWall" || kind === "woodDoor") ? { axis: wall.axis } : {}),
     ownerId: playerId
   };
   sharedStructures.set(structure.id, structure);
@@ -1897,7 +2101,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
   sharedStructuresByMap.get(structure.mapId).set(structure.id, structure);
 
   broadcastToMap(structure.mapId, { type: "structurePlaced", structure });
-  sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls });
+  sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors });
 }
 
 function removeSharedStructure(structureId) {
@@ -1907,6 +2111,9 @@ function removeSharedStructure(structureId) {
   const bucket = sharedStructuresByMap.get(structure.mapId);
   bucket?.delete(structureId);
   if (bucket && bucket.size === 0) sharedStructuresByMap.delete(structure.mapId);
+  for (const [playerId, passage] of playerDoorPassages.entries()) {
+    if (passage?.doorId === structureId) playerDoorPassages.delete(playerId);
+  }
   return structure;
 }
 
@@ -1919,6 +2126,7 @@ function handleStructureDestroyRequest(playerId, socket, message) {
   let reason = null;
   if (playerState.mapId !== structure.mapId) reason = "wrongMap";
   else if (playerState.weaponIndex !== 11) reason = "needPickaxe";
+  else if (structure.kind === "woodFloor" && structuresOnMap(structure.mapId).some(other => wallTouchesFloor(other, structure.x, structure.y))) reason = "wallAttached";
   else if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) reason = "tooFar";
 
   if (reason) {
@@ -1991,8 +2199,6 @@ const ENVIRONMENT_SPREAD_INTERVAL = STATUS_RULES.environmentSpreadInterval;
 const TREE_STUMP_VISIBLE_MS = 5000;
 const TREE_RESEED_MIN_MS = 1_200_000;
 const TREE_RESEED_MAX_MS = 2_400_000;
-const GRASS_REGROW_MIN_MS = 180_000;
-const GRASS_REGROW_MAX_MS = 300_000;
 const FLOWER_REGROW_MIN_MS = 600_000;
 const FLOWER_REGROW_MAX_MS = 900_000;
 const ROCK_REGROW_MIN_MS = 720_000;
@@ -2016,24 +2222,6 @@ function randomRegrowTimestamp(
 function scheduleTreeReseed(entity) {
   if (!entity || entity.kind !== "tree" || entity.reseedAt > 0) return false;
   entity.reseedAt = randomRegrowTimestamp(TREE_RESEED_MIN_MS, TREE_RESEED_MAX_MS);
-  return true;
-}
-
-function scheduleGrassRegrow(entity) {
-  if (
-    !entity ||
-    entity.kind !== "grass" ||
-    entity.regrowAt > 0
-  ) {
-    return false;
-  }
-
-  entity.regrowAt =
-    randomRegrowTimestamp(
-      GRASS_REGROW_MIN_MS,
-      GRASS_REGROW_MAX_MS
-    );
-
   return true;
 }
 
@@ -2089,15 +2277,6 @@ function resetTreeToFresh(entity) {
   entity.regrowAt = 0;
   entity.removeAt = 0;
   entity.reseedAt = 0;
-
-  markEnvironmentDirty(entity);
-}
-
-function resetGrassToFresh(entity) {
-  entity.cut = false;
-  entity.burnt = false;
-  entity.burnTime = 0;
-  entity.regrowAt = 0;
 
   markEnvironmentDirty(entity);
 }
@@ -2640,7 +2819,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee", "woodFloor", "woodWall"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee", "woodFloor", "woodWall", "woodDoor"].includes(kind)) {
     return null;
   }
 
@@ -2763,6 +2942,8 @@ function handleResourcePickup(
     playerState.woodFloors += 1;
   } else if (resource.kind === "woodWall") {
     playerState.woodWalls += 1;
+  } else if (resource.kind === "woodDoor") {
+    playerState.woodDoors += 1;
   }
 
   broadcastToMap(resource.mapId, {
@@ -2779,6 +2960,7 @@ function handleResourcePickup(
     totalGoldSlimeBubbles: playerState.goldSlimeBubbles,
     totalWoodFloors: playerState.woodFloors,
     totalWoodWalls: playerState.woodWalls,
+    totalWoodDoors: playerState.woodDoors,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
@@ -2796,6 +2978,8 @@ const CRAFT_RECIPES = Object.freeze({
   woodRing: Object.freeze({ ingredients: Object.freeze({ wood: 5 }), stateKey: "woodRingCrafted", repeatable: true }),
   woodFloor: Object.freeze({ repeatable: true, resourceKey: "woodFloors", outputCount: 4, ingredients: Object.freeze({ wood: 2 }) }),
   woodWall: Object.freeze({ repeatable: true, resourceKey: "woodWalls", outputCount: 2, ingredients: Object.freeze({ wood: 3 }) }),
+  woodDoor: Object.freeze({ repeatable: true, resourceKey: "woodDoors", outputCount: 1, ingredients: Object.freeze({ wood: 4 }) }),
+  testWoodSupply: Object.freeze({ repeatable: true, resourceKey: "wood", outputCount: 100, ingredients: Object.freeze({}) }),
   arrows: Object.freeze({ repeatable: true, resourceKey: "arrows", outputCount: 50, ingredients: Object.freeze({ wood: 5, stone: 1 }) }),
   healingPotion: Object.freeze({ repeatable: true, resourceKey: "healingPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }) }),
   attackPotion: Object.freeze({ repeatable: true, resourceKey: "attackPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 2 }) }),
@@ -3099,7 +3283,8 @@ function handleCraftRequest(
       totalWood: playerState.wood,
       totalArrows: playerState.arrows,
       totalWoodFloors: playerState.woodFloors,
-      totalWoodWalls: playerState.woodWalls
+      totalWoodWalls: playerState.woodWalls,
+      totalWoodDoors: playerState.woodDoors
     });
     return;
   }
@@ -3117,7 +3302,8 @@ function handleCraftRequest(
       totalWood: playerState.wood,
       totalArrows: playerState.arrows,
       totalWoodFloors: playerState.woodFloors,
-      totalWoodWalls: playerState.woodWalls
+      totalWoodWalls: playerState.woodWalls,
+      totalWoodDoors: playerState.woodDoors
     });
     return;
   }
@@ -3138,7 +3324,8 @@ function handleCraftRequest(
       totalBlueFlowers: playerState.blueFlowers,
       totalArrows: playerState.arrows,
       totalWoodFloors: playerState.woodFloors,
-      totalWoodWalls: playerState.woodWalls
+      totalWoodWalls: playerState.woodWalls,
+      totalWoodDoors: playerState.woodDoors
     });
     return;
   }
@@ -3167,7 +3354,8 @@ function handleCraftRequest(
     totalAttackPotions: playerState.attackPotions,
     totalMagicPotions: playerState.magicPotions,
     totalWoodFloors: playerState.woodFloors,
-    totalWoodWalls: playerState.woodWalls
+    totalWoodWalls: playerState.woodWalls,
+    totalWoodDoors: playerState.woodDoors
   });
 }
 
@@ -3363,46 +3551,6 @@ function handleShopPurchase(playerId, socket, message) {
     success: true,
     price,
     totalCoins: playerState.coins,
-    totalArrows: playerState.arrows
-  });
-}
-
-const DEBUG_COIN_GRANT = 10;
-const DEBUG_ARROW_GRANT = 99;
-
-function handleDebugGrantCoins(
-  playerId,
-  socket
-) {
-  const playerState = players.get(playerId);
-  if (!playerState) return;
-
-  playerState.coins =
-    (Number.isFinite(playerState.coins)
-      ? playerState.coins
-      : 0) + DEBUG_COIN_GRANT;
-
-  sendJson(socket, {
-    type: "debugCoinGrant",
-    amount: DEBUG_COIN_GRANT,
-    totalCoins: playerState.coins
-  });
-}
-
-function handleDebugGrantArrows(
-  playerId,
-  socket
-) {
-  const playerState = players.get(playerId);
-  if (!playerState) return;
-
-  playerState.arrows =
-    Math.max(0, Math.floor(Number(playerState.arrows) || 0)) +
-    DEBUG_ARROW_GRANT;
-
-  sendJson(socket, {
-    type: "debugArrowGrant",
-    amount: DEBUG_ARROW_GRANT,
     totalArrows: playerState.arrows
   });
 }
@@ -4375,10 +4523,6 @@ function tickSharedEnvironment(dt) {
         entity.cut = true;
         entity.burnt = true;
 
-        if (entity.kind === "grass") {
-          scheduleGrassRegrow(entity);
-        }
-
         if (entity.kind === "flower") {
           entity.looted = true;
           scheduleFlowerRegrow(entity);
@@ -4424,15 +4568,6 @@ function tickSharedEnvironment(dt) {
       }
       if (placed) resetTreeToFresh(entity);
       else entity.reseedAt = randomRegrowTimestamp(TREE_RESEED_MIN_MS, TREE_RESEED_MAX_MS);
-      continue;
-    }
-
-    if (
-      entity.kind === "grass" &&
-      entity.regrowAt > 0 &&
-      now >= entity.regrowAt
-    ) {
-      resetGrassToFresh(entity);
       continue;
     }
 
@@ -4665,7 +4800,7 @@ function handleEnvironmentAction(
 
     entity.cut = true;
     entity.burnTime = 0;
-    scheduleGrassRegrow(entity);
+    entity.regrowAt = 0;
     markEnvironmentDirty(entity);
     return;
   }
@@ -10873,7 +11008,7 @@ function tickSharedMushrooms(dt) {
     }
 
     // Passive state: deliberately no wander target choice or movement. The
-    // creature stays planted at its authored map-editor spawn and sleeps.
+    // creature stays planted at its deterministic world spawn and sleeps.
     mushroom.wanderTargetX =
       mushroom.homeX;
     mushroom.wanderTargetY =
@@ -12870,8 +13005,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     ? previous.y
     : clampNumber(source.y, 0, dimensions.height, dimensions.height / 2);
   if (!authoritativeDead && previous?.mapId === mapId) {
-    if (serverPointHitsStructureWall(mapId, sanitizedX, previous.y, 4)) sanitizedX = previous.x;
-    if (serverPointHitsStructureWall(mapId, sanitizedX, sanitizedY, 4)) sanitizedY = previous.y;
+    const startX = previous.x;
+    const startY = previous.y;
+    if (serverPlayerStepHitsStructureWall(id, mapId, startX, startY, sanitizedX, startY, 4)) sanitizedX = startX;
+    if (serverPlayerStepHitsStructureWall(id, mapId, sanitizedX, startY, sanitizedX, sanitizedY, 4)) sanitizedY = startY;
   }
 
   return {
@@ -12918,6 +13055,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     woodWalls: previous && Number.isFinite(previous.woodWalls)
       ? previous.woodWalls
+      : 0,
+
+    woodDoors: previous && Number.isFinite(previous.woodDoors)
+      ? previous.woodDoors
       : 0,
 
     beachQuestStage: previous
@@ -13635,50 +13776,6 @@ function readJsonRequest(req, limit = 2 * 1024 * 1024) {
   });
 }
 
-async function handleLocalMapDraftAdoption(req, res, requestUrl) {
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
-  if (!localEditorWriteAllowed(req, requestUrl)) {
-    res.writeHead(403);
-    res.end(JSON.stringify({
-      ok: false,
-      error: "Applying drafts is restricted to the local Slime Story development server."
-    }));
-    return;
-  }
-
-  const origin = req.headers.origin;
-  if (origin) {
-    try {
-      const originUrl = new URL(origin);
-      if (originUrl.host !== requestUrl.host) {
-        res.writeHead(403);
-        res.end(JSON.stringify({ ok: false, error: "Editor request origin was rejected." }));
-        return;
-      }
-    } catch {
-      res.writeHead(403);
-      res.end(JSON.stringify({ ok: false, error: "Editor request origin was invalid." }));
-      return;
-    }
-  }
-
-  try {
-    const payload = await readJsonRequest(req);
-    const { adoptDraftPayload } = require("./tools/map-draft-adoption.js");
-    const result = adoptDraftPayload(payload, { worldContent: WORLD_CONTENT });
-    res.writeHead(200);
-    res.end(JSON.stringify(result));
-  } catch (error) {
-    res.writeHead(error.validationErrors ? 400 : 500);
-    res.end(JSON.stringify({
-      ok: false,
-      error: error.message,
-      errors: error.validationErrors || undefined,
-      warnings: error.validationWarnings || undefined
-    }));
-  }
-}
-
 function safePublicPath(requestPath) {
   let pathname;
 
@@ -13707,11 +13804,6 @@ const server = http.createServer((req, res) => {
     req.url,
     `http://${req.headers.host || "localhost"}`
   );
-
-  if (requestUrl.pathname === "/dev/map-editor/adopt" && req.method === "POST") {
-    handleLocalMapDraftAdoption(req, res, requestUrl);
-    return;
-  }
 
   // v288: browsers no longer reconstruct canonical map content from a base
   // source file plus a second adopted-map source. Serve the exact resolved
@@ -13742,34 +13834,6 @@ const server = http.createServer((req, res) => {
         "Cache-Control": "no-store"
       });
       res.end(`Could not load runtime world content: ${error.message}`);
-    }
-    return;
-  }
-
-  // The browser and Node now read the same canonical adopted-map JSON store.
-  // v286 wrote a generated JS mirror and then served that static file; this
-  // dynamic route removes that second source of truth and prevents a stale
-  // browser mirror from hiding a successfully applied editor change.
-  if (requestUrl.pathname === "/shared/adopted-map-overrides.js" && (req.method === "GET" || req.method === "HEAD")) {
-    try {
-      const { loadStore, browserModuleSource } = require("./tools/map-draft-adoption.js");
-      const store = loadStore(undefined, Number(WORLD_CONTENT.version) || 14);
-      const source = browserModuleSource(store);
-      const headers = {
-        "Content-Type": "application/javascript; charset=utf-8",
-        "Cache-Control": "no-store, max-age=0",
-        "X-Slime-Story-World-Content-Version": String(store.version || WORLD_CONTENT.version)
-      };
-      res.writeHead(200, headers);
-      if (req.method === "HEAD") {
-        res.end();
-      } else {
-        recordHttpOutbound(requestUrl.pathname, Buffer.byteLength(source));
-        res.end(source);
-      }
-    } catch (error) {
-      res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
-      res.end(`Could not load adopted map content: ${error.message}`);
     }
     return;
   }
@@ -14048,6 +14112,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.arrows = clampInteger(resources.arrows, 0, 999999, 0);
   playerState.woodFloors = clampInteger(resources.woodFloors, 0, 999999, 0);
   playerState.woodWalls = clampInteger(resources.woodWalls, 0, 999999, 0);
+  playerState.woodDoors = clampInteger(resources.woodDoors, 0, 999999, 0);
 
   const story = state.story && typeof state.story === "object"
     ? state.story
@@ -14106,6 +14171,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
     arrows: playerState.arrows,
     woodFloors: playerState.woodFloors,
     woodWalls: playerState.woodWalls,
+    woodDoors: playerState.woodDoors,
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
     beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,
@@ -14256,14 +14322,6 @@ function handleClientMessage(playerId, socket, message) {
       handleShopPurchase(playerId, socket, message);
       return;
 
-    case "debugGrantCoins":
-      handleDebugGrantCoins(playerId, socket);
-      return;
-
-    case "debugGrantArrows":
-      handleDebugGrantArrows(playerId, socket);
-      return;
-
     case "coinPickup":
       if (typeof message.coinId === "string") {
         handleCoinPickup(playerId, message.coinId);
@@ -14289,10 +14347,13 @@ wss.on("connection", socket => {
   players.set(id, initialState);
   registerPlayerSocket(socket, id, initialState.mapId);
 
+  const worldClock = serverWorldClockSnapshot();
+
   sendJson(socket, {
     type: "welcome",
     id,
     buildVersion: BUILD_VERSION,
+    worldClock,
     coins: initialState.coins,
     wood: initialState.wood,
     stone: initialState.stone,
@@ -14363,6 +14424,7 @@ wss.on("connection", socket => {
   socket.on("close", () => {
     focusFireDamageChains.delete(id);
     persistentStateRestoredPlayers.delete(id);
+    playerDoorPassages.delete(id);
 
     const previousState =
       players.get(id);

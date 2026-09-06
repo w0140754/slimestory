@@ -12,7 +12,7 @@ const requiredCss = [
   ["potion buffs sit left of HP", /#hudBuffs\s*\{[\s\S]*?right:\s*calc\(100% \+ 12px\);[\s\S]*?top:\s*0;/],
   ["nine weapon/tool slots", /id="slot1"[\s\S]*id="slot9"/],
   ["retired skill bar hidden", /id="abilityBar"[^>]*class="[^"]*retired-system[^"]*"[^>]*aria-hidden="true"/],
-  ["world-grid status inside viewport", /id="worldGridStatus"/]
+  ["world minimap inside viewport", /id="worldMiniMap"/]
 ];
 
 for (const [label, pattern] of requiredCss) {
@@ -32,14 +32,14 @@ if (viewportStart < 0 || inventoryStart < 0 || inventoryStart <= viewportStart) 
   throw new Error("Rendered game viewport wrapper is missing or misplaced");
 }
 const viewportMarkup = html.slice(viewportStart, inventoryStart);
-for (const id of ["game", "hpBarWrap", "bottomUi", "worldGridStatus"]) {
+for (const id of ["game", "hpBarWrap", "bottomUi", "worldMiniMap"]) {
   if (!viewportMarkup.includes(`id="${id}"`)) {
     throw new Error(`${id} must live inside the rendered game viewport`);
   }
 }
 
 const hpIndex = viewportMarkup.indexOf('<div id="hpBarWrap">');
-const gridIndex = viewportMarkup.indexOf('<div id="worldGridStatus"');
+const gridIndex = viewportMarkup.indexOf('<div id="worldMiniMap"');
 const itemIndex = viewportMarkup.indexOf('<div id="bottomUi">');
 if (!(hpIndex > 0 && gridIndex > hpIndex && itemIndex > gridIndex)) {
   throw new Error("Active HUD groups must remain independent ordered siblings inside gameViewport");

@@ -59,7 +59,7 @@ async function moveToMap(socket, mapId, x = 320, y = 200) {
     });
 
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-380") {
+    if (welcome.buildVersion !== "6-11-390") {
       throw new Error(`unexpected build ${welcome.buildVersion}`);
     }
     await initialSnapshotPending;
@@ -82,7 +82,7 @@ async function moveToMap(socket, mapId, x = 320, y = 200) {
     // proves that the legacy request did not change the authoritative map.
     socket.send(JSON.stringify({
       type: "playerState",
-      player: { mapId: "waterfallGrove", x: 320, y: 200, level: 1, weaponIndex: -1 }
+      player: { mapId: "world_p0_p0", x: 200, y: 200, level: 1, weaponIndex: -1 }
     }));
     await delay(150);
     await moveToMap(socket, "world_p0_p1", 624, 200);

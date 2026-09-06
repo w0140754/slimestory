@@ -57,6 +57,7 @@ function updateHudUi() {
     if (time) time.textContent = remaining > 0 ? `${Math.ceil(remaining / 1000)}s` : "";
   }
 
+  updateWorldClockHud();
   setRespawnButtonVisible(player.isDead);
 }
 
@@ -1352,10 +1353,12 @@ class GameRenderer {
       drawPrototypeIslandEarthFaces(renderCamera.x, renderCamera.y);
       drawPrototypeIslandGroundLayer(renderCamera.x, renderCamera.y);
       drawSortedWorldLayer(renderCamera.x, renderCamera.y);
+      drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
       drawForegroundLayer(renderCamera.x, renderCamera.y);
     } else {
       drawGroundLayer(renderCamera.x, renderCamera.y);
       drawSortedWorldLayer(renderCamera.x, renderCamera.y);
+      drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
       drawForegroundLayer(renderCamera.x, renderCamera.y);
     }
 
@@ -1368,6 +1371,8 @@ class GameRenderer {
     }
 
     drawBuildPlacementPreview(renderCamera.x, renderCamera.y);
+    drawWorldLightingOverlay();
+    drawPickaxeStructureTargetHighlight(renderCamera.x, renderCamera.y);
     drawMapTransitionCover();
   }
 }

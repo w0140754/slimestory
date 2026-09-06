@@ -883,101 +883,6 @@ const HOTBAR_KEY_TO_INDEX = Object.freeze({
   "9": 8
 });
 
-const DEBUG_ARROW_GRANT = 99;
-
-function grantBowVisualTest() {
-  if (!playerOwnsItem("weapon_bow")) {
-    grantInventoryItem(
-      "weapon_bow",
-      1
-    );
-  }
-
-  equipWeaponIndex(6);
-
-  player.bowDrawing = false;
-  player.bowDrawAmount = 0;
-  player.bowReleaseTime = 0;
-
-  let requestedServerArrows = false;
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    requestedServerArrows =
-      onlineClient.requestDebugArrows();
-  }
-
-  // Offline/local fallback. In multiplayer the server owns arrow totals.
-  if (!requestedServerArrows) {
-    player.arrows =
-      Math.max(0, Math.floor(Number(player.arrows) || 0)) +
-      DEBUG_ARROW_GRANT;
-
-    spawnFloatingText(
-      player.x,
-      player.y - 50,
-      `+${DEBUG_ARROW_GRANT} ARROWS`,
-      "#e9e1c7",
-      0.9
-    );
-  }
-
-  spawnFloatingText(
-    player.x,
-    player.y - 38,
-    "BOW TEST",
-    "#f0d77d",
-    1.0
-  );
-
-  updateInventoryUi();
-  updateHotbar();
-
-  if (
-    typeof onlineClient !== "undefined"
-  ) {
-    onlineClient.sendLocalState(true);
-  }
-}
-
-const DEBUG_COIN_GRANT = 10;
-
-function grantDebugProgressionPoints() {
-  player.skillPoints += 5;
-  player.abilityPoints = 0;
-
-  spawnFloatingText(
-    player.x,
-    player.y - 38,
-    "+5 SP",
-    "#ffe070",
-    1.0
-  );
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    onlineClient.requestDebugCoins();
-  } else {
-    player.coins += DEBUG_COIN_GRANT;
-
-    spawnFloatingText(
-      player.x,
-      player.y - 58,
-      `+${DEBUG_COIN_GRANT} COINS`,
-      "#ffd760",
-      1.0
-    );
-
-    updateShopUi();
-  }
-
-  updateInventoryUi();
-}
-
 function handleMenuKeyDown(key) {
   if (beachQuestOpen) {
     if (key === "escape") setBeachQuestOpen(false);
@@ -1066,19 +971,6 @@ function handleGameKeyDown(event) {
 
   if (handleMenuKeyDown(key)) return;
 
-  // TEST CHEAT: grant/equip the Wood Bow and add 99 arrows.
-  if (key === "f8") {
-    event.preventDefault();
-    grantBowVisualTest();
-    return;
-  }
-
-  // TEST CHEAT: grant stat points without changing level/EXP.
-  if (key === "f9") {
-    event.preventDefault();
-    grantDebugProgressionPoints();
-    return;
-  }
   if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
     inputController.setKey(key, false);
     return;
@@ -1173,6 +1065,7 @@ canvas.addEventListener("mousedown", event => {
   }
   handlePrimaryAttack(event);
 });
+
 window.addEventListener("mouseup", handleBowVisualMouseUp);
 
 function resetInputAfterFocusLoss() {

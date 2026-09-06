@@ -386,8 +386,9 @@ function buildClientEnemyFoundation() {
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
   const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=372");
-  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=380");
-  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=380");
+  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=390");
+  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=390");
+  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=390");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated
@@ -415,6 +416,10 @@ function buildClientEnemyFoundation() {
     }),
     woodWall: Object.freeze({
       image: woodWallLootImage,
+      shadowWidth: 8
+    }),
+    woodDoor: Object.freeze({
+      image: woodDoorLootImage,
       shadowWidth: 8
     })
   });

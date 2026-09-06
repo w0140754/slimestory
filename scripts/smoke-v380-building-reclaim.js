@@ -29,22 +29,27 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-380") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-390") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
-    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodWalls: 1 } } }));
+    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 1, woodWalls: 1 } } }));
     const restored = await restoredPending;
-    if (restored.woodWalls !== 1) throw new Error("test wall did not restore into inventory");
+    if (restored.woodFloors !== 1 || restored.woodWalls !== 1) throw new Error("test building pieces did not restore into inventory");
 
     socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 96, y: 96, weaponIndex: -1, attackAimAngle: 0 } }));
     await delay(80);
 
-    const placePending = waitForMessage(socket, "structurePlaceResult", message => message.kind === "woodWall");
-    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96 }));
+    let placePending = waitForMessage(socket, "structurePlaceResult", message => message.kind === "woodFloor");
+    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodFloor", x: 128, y: 96 }));
+    const supportFloor = await placePending;
+    if (!supportFloor.success) throw new Error("support floor placement failed");
+
+    placePending = waitForMessage(socket, "structurePlaceResult", message => message.kind === "woodWall");
+    socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96, edge: "east" }));
     const placed = await placePending;
     if (!placed.success || !placed.structureId || placed.totalWoodWalls !== 0) throw new Error("place wall step failed");
 
-    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 108, y: 104, weaponIndex: 11, attackAimAngle: 0 } }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 112, y: 96, weaponIndex: 11, attackAimAngle: 0 } }));
     await delay(80);
 
     const dropPending = waitForMessage(socket, "resourceSpawn", message => message.resource?.kind === "woodWall");

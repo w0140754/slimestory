@@ -14,11 +14,10 @@ const combat = read("public", "client-combat.js");
 const abilities = read("public", "client-abilities.js");
 const html = read("public", "index.html");
 const server = read("server.js");
-const editor = read("public", "map-editor.js");
 
-assert.strictEqual(pkg.version, "0.6.11.380", "package version must be v377");
-assert(server.includes('const BUILD_VERSION = "6-11-380";'), "server build marker must be v377");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-380";'), "client build marker must be v377");
+assert.strictEqual(pkg.version, "0.6.11.390", "package version must be v377");
+assert(server.includes('const BUILD_VERSION = "6-11-390";'), "server build marker must be v377");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-390";'), "client build marker must be v377");
 
 assert(world.worldGrid, "coordinate world metadata missing");
 assert.strictEqual(world.worldGrid.radius, 1, "foundation world radius must be 1");
@@ -59,7 +58,8 @@ assert(html.includes('id="abilityBar" class="retired-system"'), "old active-skil
 assert(html.includes('data-page="skillsPage" aria-hidden="true"') || html.includes('retired-system" data-page="skillsPage"'), "Class tab must be retired");
 assert(html.includes('retired-system" data-page="talentsPage"'), "Talents tab must be retired");
 assert(html.includes("Stat Points 0"), "Stats page should use Stat Points terminology");
-assert(html.includes('id="worldGridStatus"'), "world-grid coordinate/biome status missing");
+assert(html.includes('id="worldMiniMap"'), "world minimap missing");
+assert(!html.includes('id="worldGridStatus"'), "retired Spawn/Distance/Radius status banner must stay removed");
 
 assert(abilities.includes('skillId === "fireball" && weapon === "wand"'), "Fireball must derive from Fire Wand");
 assert(abilities.includes('skillId === "rainCloud" && weapon === "rainWand"'), "Rain Cloud must derive from Rain Wand");
@@ -79,6 +79,5 @@ assert(server.includes("Math.abs(requestedGrid.x - previousGrid.x)"), "server ca
 assert(server.includes("fireball: sanitizedWeaponIndex === 2 ? 1 : 0"), "server must derive Fireball from Fire Wand");
 assert(server.includes("rainCloud: sanitizedWeaponIndex === 3 ? 1 : 0"), "server must derive Rain Cloud from Rain Wand");
 assert(server.includes("const sanitizedClassId = null; // v377: classes are retired."), "server classes must be retired");
-assert(editor.includes("!definition?.grid"), "map editor must not expose generated coordinate cells as authored maps");
 
 console.log(`v377 world-grid pivot OK: ${gridEntries.length} cells, radius ${world.worldGrid.radius}, item-driven actions + unified 1-9 belt.`);

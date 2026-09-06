@@ -27,7 +27,7 @@ async function connect() {
   const welcome = waitForMessage(socket, "welcome");
   await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
   const message = await welcome;
-  if (message.buildVersion !== "6-11-380") throw new Error(`unexpected build ${message.buildVersion}`);
+  if (message.buildVersion !== "6-11-390") throw new Error(`unexpected build ${message.buildVersion}`);
   return socket;
 }
 
@@ -48,7 +48,7 @@ async function connect() {
     if (!floor.success || floor.totalWoodFloors !== 0) throw new Error("Wood Floor placement failed");
 
     const wallPlaced = waitForMessage(owner, "structurePlaceResult", message => message.kind === "woodWall");
-    owner.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 160, y: 96 }));
+    owner.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96, edge: "east" }));
     const wall = await wallPlaced;
     if (!wall.success || wall.totalWoodWalls !== 0) throw new Error("Wood Wall placement failed");
 

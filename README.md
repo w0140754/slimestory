@@ -1,4 +1,109 @@
+## v6-11-390 — House Interior Visibility & Build Targeting
+
+- Completed-house interior presentation refined: while the local player is inside a roofed enclosure, the roof is fully hidden, only the south/foreground wall or door is partially transparent, and back/side walls remain solid.
+- Existing outside/behind-wall transparency remains available when a wall visually covers the player.
+- Invalid Wood Floor/Wall/Door placement is fully quiet locally and over the network; placement preview is the only feedback.
+- Once a connected floor component is fully enclosed and therefore has an automatic roof, new Wood Wall/Wood Door placement on floors in that completed building is rejected authoritatively.
+- Pickaxe structure targeting now has a visible gold outline that exactly matches the same target selector used by the actual Pickaxe hit; walls/doors retain priority over floors.
+- Shared day/night clock, directional doors, automatic roofs, minimap, mobile transitions, Test Wood, permanent grass clearing, and all current coordinate-world behavior are preserved.
+- Coordinate-world layout/content remains unchanged apart from the v390 version marker.
+- Regression: 30 syntax targets + 65 retained checks/smokes pass.
+
+## v6-11-389 — House Facade & Day/Night Foundation
+
+- Completed roofed houses now behave as one visual facade: while the local player stands inside the enclosed floor region, the roof plus every perimeter Wood Wall/Wood Door fades together to 34% opacity instead of only fading the individual wall directly over the player.
+- Outside a completed house, the existing canopy-style wall transparency still works. Automatic roofs also fade when their projected roof art visually covers the local player behind the back/north wall.
+- Automatic roofs now overhang exposed perimeter edges by 3px so thin side/back wall rails cannot remain visible through/around the roof surface. Wall collision and placement geometry are unchanged.
+- Invalid Wood Floor/Wall/Door placement clicks are now silent; the placement preview remains the feedback instead of floating PLACE ON FLOOR / BLOCKED / TOO FAR / NONE LEFT notes.
+- Added the first shared day/night foundation. The server starts at 08:00 and sends one world-clock anchor on connect; clients advance the clock locally with no periodic clock packets.
+- One full in-game day currently lasts 12 real minutes for rapid encounter testing. DAY / DUSK / NIGHT / DAWN phases are shown in a compact top-center clock and dusk/night gradually darken the world.
+- No nighttime monster spawning/raid behavior is enabled yet; v389 only establishes the synchronized clock and lighting foundation.
+- Coordinate-world layout/content remains unchanged apart from the v389 version marker.
+
+## v6-11-388 — World UI, Door Flow & Automatic Roofs
+
+- Removed the Spawn / Distance / Radius HUD banner.
+- Enlarged the desktop minimap, made the mobile minimap flush to the top-right, and changed it to a fixed world view with a gliding player marker.
+- Fixed mobile map-transition player rendering by restoring the logical GAME_RENDER_SCALE before drawing the live player over physical-pixel transition snapshots.
+- Rebuilt the desktop 1–9 assignment rail so item art is readable instead of being hidden behind tiny number boxes.
+- Removed the retired F8/F9 bow/arrows and progression/coin debug cheats.
+- Pickaxe targeting now prioritizes walls/doors over the supporting floor when both are inside the attack cone.
+- Wood Doors no longer open from proximity alone. A player must already be adjacent and step toward the door; a short passage window keeps it open while crossing, then it closes after the player leaves. Enemy/world collision still treats doors as solid.
+- Added a server-authoritative free `Test Wood +100` supply to the crafting table's Building tab for rapid construction testing.
+- Added client-derived automatic roofs: a connected floor component gains a roof only when every exposed outer edge is closed by a wall or door. Roofs require no network state and fade nearly transparent while the local player is inside.
+- Coordinate-world content is unchanged apart from the v388 version marker.
+
+## v6-11-387 — Startup Initialization Fix
+
+- Fixed a v386 startup crash where early skill-tree/hotbar rendering read `selectedBuildPiece` before its lexical declaration had initialized.
+- Build selection is now declared before any startup UI helper can access it; the later duplicate declaration was removed.
+- Removed unreachable retired active-skill code after the unconditional `return false` in `client-abilities.js`.
+- No gameplay, wall/door behavior, world content, resource costs, or coordinate-world layout changed.
+- Retains v386 empty-handed building, wall transparency, Wood Door auto-open behavior, persistent build hotbar, and all v385 wall geometry.
+
+## v6-11-386 — Build Visuals & Wood Door
+
+- Selecting Wood Floor, Wood Wall, or Wood Door now makes the local player visibly empty-handed while preserving the previously equipped weapon for instant return when building selection ends.
+- Wood walls now fade to 58% opacity when their projected art covers the local player, matching the existing tree-canopy visibility treatment.
+- Added Wood Door: craft 1 for 4 Wood, assign it to the 1–9 hotbar, and place it on any Wood Floor edge using the same edge highlight as walls.
+- Doors share wall boundaries, so a wall and door cannot occupy the same edge. Attached doors also protect their supporting floor from Pickaxe removal until the door is removed.
+- Doors auto-open for players within 20px and close when players leave. Opening is derived from player proximity rather than a ticking network state, so idle doors add no traffic. Enemy/world collision continues to treat doors as closed, leaving the base-defense path ready for later mob logic.
+- Added `public/assets/ui/wood_door.png` and restored the existing Wood Floor/Wall UI PNGs into the full-project snapshot so the backup is self-contained.
+- Preserved v385 corner-wall projection, v384 edge placement/collision, persistent build hotbar assignments, permanent grass clearing, coordinate-world navigation, and existing combat/mobile systems.
+
+## v6-11-385 — Corner Wall Alignment
+
+- Fixed the upper/back corner projection gap identified in the in-game building screenshot and floor-grid diagram.
+- A vertical Wood Wall now detects when a horizontal Wood Wall meets its upper endpoint.
+- Only that upper corner gains one extra 16px tile of render height, so the side wall reaches the top of the 32px back-wall projection.
+- Lower/front joins remain unchanged because the existing side-wall projection already aligns with a horizontal wall at its lower endpoint.
+- This is render-only: placement, resource cost, shared-edge identity, 2×16 / 16×2 wall collision, Pickaxe reclaim, and network structure state are unchanged.
+- Persistent Wood Floor/Wood Wall hotbar assignments and all v384 floor-edge building rules are preserved.
+
+## v6-11-384 — Floor-Edge Walls & Persistent Build Hotbar
+
+- Wood Floor / Wood Wall hotbar assignments now survive refreshes. Build assignments are restored using the same persistence rules that allow placeable items to remain hotkeyed at zero count.
+- Wood Wall is no longer a full 16×16 structure tile. Walls are placed on one of the four edges of an existing Wood Floor.
+- Hovering a floor while Wood Wall is active highlights the nearest north/east/south/west edge; clicking places that edge directly, so no separate rotation key/state is needed.
+- Shared edges are normalized server-side: east of one floor and west of its neighbor are the same wall boundary and cannot be double-placed.
+- Wall collision is a thin authoritative edge rather than a full tile. Existing shared occupancy checks use the new edge collider, preparing the structure model for future base-defense pathing.
+- Wall visuals are approximately 32px tall and depth-sort against players/monsters, allowing actors to pass visually behind or in front while remaining unable to cross the wall edge.
+- v383 wall autotiling is removed for now.
+- A floor with any attached wall cannot be pickaxed until those wall segments are removed.
+- Current 3×3 coordinate-world data remains unchanged apart from build/version markers; the retired visual-editor/legacy-map subsystem remains removed.
+
 # Slime Story
+
+## v6-11-383 — Full-Cell Building & Legacy Map Cleanup
+
+- Wood Floors and Wood Walls now use one shared build layer: **only one structure can occupy a 16×16 build cell**. A wall can no longer be placed on top of a floor or vice versa.
+- Wood Walls now render in the same **16×16 visual footprint** as Wood Floors instead of extending 4 pixels taller. Collision remains a full build cell.
+- Wood Walls now **auto-tile from cardinal neighbours**. Shared edges blend together and straight runs, corners, junctions, and isolated pieces receive different connector/seam treatment automatically; there is no manual rotation state.
+- Fixed mouse-wheel building selection so only the currently selected building piece is highlighted; the previously equipped weapon/tool no longer stays highlighted at the same time.
+- Fixed mouse-wheel movement interruption: selecting a building piece while the inventory is already closed no longer calls the inventory-close input reset, so held movement continues normally.
+- Removed the retired visual map editor (`map-editor.html/js/css`), draft/adoption format and tool, authored override JSON/JS store, and editor/legacy-map regression scripts.
+- Removed the old hand-authored client map registry and legacy map dimensions. Canonical `WORLD_CONTENT` now contains **only the active deterministic 3×3 coordinate grid**.
+- Replaced the giant historical `npm run check` command with a compact regression runner that syntax-checks current runtime files and runs all retained current checks/smokes automatically.
+- Preserved v382 permanent normal-grass clearing, v380 Pickaxe building reclaim, current 400×400 grid cells, Manhattan difficulty, and traffic-idle structure state.
+
+## v6-11-382 — Building Cleanup & Permanent Grass Clearing
+
+- Retired the experimental Wood Wall rotation controls and orientation state. Walls remain full build-grid cells with no manual orientation.
+- Preserved the v381 mouse-wheel building-slot cycling fix and silent build selection.
+- Normal tall grass is now a one-time clearing resource: once cut with a valid melee tool, it stays cleared instead of respawning after 3–5 minutes.
+- Normal grass consumed by fire also stays cleared, preventing a burned building footprint from later growing grass back through placed flooring.
+- Cleared normal grass no longer renders permanent stubble. Temporary Rain Cloud grass keeps its existing temporary field lifecycle and is unaffected by this change.
+- Building placement still requires the grass to be cleared first; once cleared, that cell remains naturally buildable.
+- The then-current live map-editor-authored world content v96 remained untouched in this checkpoint; that retired editor/legacy-map store is intentionally removed in v383.
+
+## v6-11-381 — Building Rotation & Layering
+
+- Removed the floating **PLACE WOOD FLOOR / PLACE WOOD WALL** text when entering building placement mode.
+- Fixed mouse-wheel hotbar cycling while a Wood Floor or Wood Wall is active so the selected building slot is treated as the current slot instead of snapping relative to the equipped weapon.
+- Wood Walls now support **horizontal / vertical orientation**. While placing a wall, press **R** or right-click to rotate the preview; the chosen orientation is server-authoritative and synchronized to other players.
+- Wood Floors and Wood Walls now occupy separate build layers, so a wall can be placed on top of an existing floor and a floor can be added beneath an existing wall. Duplicate floors and duplicate/stacked walls in the same build cell remain blocked.
+- Preserved v380 map-edge transitions, Pickaxe building reclaim, 400×400 coordinate maps, Manhattan difficulty, and traffic-idle structure state.
+- Preserved live map-editor-authored world content **v96** unchanged.
 
 ## v6-11-380 — Building & Seam Refinement
 

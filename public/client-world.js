@@ -44,24 +44,24 @@ function loadImage(src) {
 // -----------------------------------------------------------------------------
 // Split tree parts. Both are 32x48 and share the same bottom-centre anchor.
 const treeTrunkImage = new Image();
-treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=380";
+treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=390";
 
 const treeCanopyImages = [];
 
 const treeCanopyImage = new Image();
-treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=380";
+treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=390";
 treeCanopyImages.push(treeCanopyImage);
 
 const treeCanopyImageVariantB = new Image();
-treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=380";
+treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=390";
 treeCanopyImages.push(treeCanopyImageVariantB);
 
 const fireResistantTreeTrunkImage = new Image();
-fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=380";
+fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=390";
 const fireResistantTreeCanopyImage = new Image();
-fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=380";
+fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=390";
 const fireResistantTreeCanopyFlippedImage = new Image();
-fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=380";
+fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=390";
 
 const rockPlainImage = loadImage("assets/rock_plain.png");
 const rockGrassImage = loadImage("assets/rock_grass.png");
@@ -79,10 +79,10 @@ function getTreeCanopyImage(tree) {
 }
 
 const treeDamagedTrunkImage = new Image();
-treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=380";
+treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=390";
 
 const treeStumpImage = new Image();
-treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=380";
+treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=390";
 
 const trees = [
   // Loose trees around the central clearing.
@@ -1421,7 +1421,10 @@ function drawTallGrass(clump, camX, camY) {
     clump.regrowAnimTime = Math.max(0, (clump.regrowAnimDuration || 0.22) - elapsed);
   }
 
-  // Once cut/burned, leave a little uneven stubble behind.
+  // Normal tall grass is permanently cleared once cut or burned. Temporary
+  // Rain Cloud grass keeps its own short-lived field lifecycle.
+  if (clump.cut && !magicGrass) return;
+
   if (clump.cut) {
     ctx.fillStyle = clump.burnt
       ? "rgba(45, 35, 28, .30)"
@@ -1632,9 +1635,9 @@ function tryCutGrass() {
         continue;
       }
 
-      // Offline fallback.
+      // Offline fallback. Normal tall grass is a one-time clearing resource.
       clump.cut = true;
-      scheduleLocalGrassRegrow(clump);
+      clump.regrowAt = 0;
     }
   }
 }
