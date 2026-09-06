@@ -10060,6 +10060,7 @@ document.querySelectorAll(".stat-plus").forEach(button => {
 const placedStructuresByMap = new Map();
 let placedStructureRevision = 0;
 const BUILD_GRID_SIZE = 16;
+const BUILD_PLACE_RANGE = 96;
 const BUILD_WALL_EDGES = Object.freeze(["north", "east", "south", "west"]);
 const BUILD_EDGE_STRUCTURE_KINDS = Object.freeze(["woodWall", "woodDoor"]);
 const DOOR_ADJACENT_DISTANCE = 10;
@@ -10711,6 +10712,13 @@ function beginBuildPlacement(kind) {
   // Selecting a build piece from the hotbar/mouse wheel must not clear held
   // movement input. Only close the inventory when it is actually open.
   if (inventoryOpen) setInventoryOpen(false);
+  if (
+    typeof mobileControlsEnabled !== "undefined" &&
+    mobileControlsEnabled &&
+    typeof beginMobileBuildCursorForSelectedPiece === "function"
+  ) {
+    beginMobileBuildCursorForSelectedPiece();
+  }
   updateCanvasCursor();
   if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();
   return true;
@@ -10719,6 +10727,7 @@ function beginBuildPlacement(kind) {
 function cancelBuildPlacement(quiet = false) {
   if (!selectedBuildPiece) return false;
   selectedBuildPiece = null;
+  if (typeof clearMobileBuildCursor === "function") clearMobileBuildCursor();
   if (!quiet) spawnFloatingText(player.x, player.y - 30, "BUILD CANCELLED", "#d9c9a0", 0.65);
   updateCanvasCursor();
   if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();
@@ -10783,9 +10792,9 @@ function doorCandidateHasFlankingWalls(candidate) {
   ));
 }
 
-function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
+function rawWallPlacementCandidate(worldX, worldY) {
   const floor = floorAtWorldPoint(worldX, worldY);
-  if (!floor || floorBelongsToCompletedRoof(floor)) return null;
+  if (!floor) return null;
   const left = Number(floor.x) - 8;
   const right = Number(floor.x) + 8;
   const top = Number(floor.y) - 8;
@@ -10797,7 +10806,12 @@ function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
     { edge: "west", distance: Math.abs(worldX - left), x: left, y: Number(floor.y), axis: "vertical" }
   ];
   edges.sort((a, b) => a.distance - b.distance);
-  const candidate = { ...edges[0], floorX: Number(floor.x), floorY: Number(floor.y) };
+  return { ...edges[0], floorX: Number(floor.x), floorY: Number(floor.y), floor };
+}
+
+function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
+  const candidate = rawWallPlacementCandidate(worldX, worldY);
+  if (!candidate || floorBelongsToCompletedRoof(candidate.floor)) return null;
   // v392: walls/doors are perimeter pieces only. Internal edges between two
   // floor cells are intentionally unavailable, which prevents clunky room
   // partitions and multiple wall faces being stacked around one floor tile.
@@ -10808,29 +10822,58 @@ function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
   return candidate;
 }
 
-function drawWallEdgeHighlight(candidate, camX, camY) {
+function drawWallEdgeHighlight(candidate, camX, camY, valid = true) {
   if (!candidate) return;
   const x = Math.round(candidate.x - camX);
   const y = Math.round(candidate.y - camY);
   ctx.save();
   ctx.globalAlpha = 0.9;
-  ctx.fillStyle = "#ffe38b";
+  ctx.fillStyle = valid ? "#ffe38b" : "#e86f62";
   if (candidate.axis === "vertical") ctx.fillRect(x - 1, y - 8, 2, 16);
   else ctx.fillRect(x - 8, y - 1, 16, 2);
   ctx.restore();
 }
 
-function tryPlaceSelectedBuildPiece(event) {
+function drawBuildCursorMarker(worldX, worldY, camX, camY, valid = false) {
+  const x = Math.round(worldX - camX);
+  const y = Math.round(worldY - camY);
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = valid ? "#ffe38b" : "#e86f62";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - 4.5, y - 4.5, 9, 9);
+  ctx.restore();
+}
+
+function selectedBuildPlacementWorldPoint(camX = currentCamX, camY = currentCamY) {
+  if (
+    typeof mobileControlsEnabled !== "undefined" &&
+    mobileControlsEnabled &&
+    typeof mobileBuildCursorWorldPoint === "function"
+  ) {
+    const mobilePoint = mobileBuildCursorWorldPoint();
+    if (mobilePoint) return mobilePoint;
+  }
+  return {
+    x: camX + mouseCanvasX,
+    y: camY + mouseCanvasY
+  };
+}
+
+function buildPlacementWithinRange(x, y) {
+  return Math.hypot(Number(x) - Number(player.x), Number(y) - Number(player.y)) <= BUILD_PLACE_RANGE;
+}
+
+function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
   if (!selectedBuildPiece) return false;
-  if (event.button !== 0) return true;
-  if (buildPieceCount(selectedBuildPiece) <= 0) { cancelBuildPlacement(true); return true; }
-  const pointer = getCanvasPointerPosition(event);
-  const worldX = currentCamX + pointer.x;
-  const worldY = currentCamY + pointer.y;
+  if (buildPieceCount(selectedBuildPiece) <= 0) {
+    cancelBuildPlacement(true);
+    return true;
+  }
 
   if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
     const candidate = wallPlacementCandidate(worldX, worldY, selectedBuildPiece);
-    if (!candidate) return true;
+    if (!candidate || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
     if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
       onlineClient.requestStructurePlacement(selectedBuildPiece, candidate.floorX, candidate.floorY, candidate.edge);
     }
@@ -10839,28 +10882,51 @@ function tryPlaceSelectedBuildPiece(event) {
 
   const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  if (!buildPlacementWithinRange(x, y)) return true;
   if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
     onlineClient.requestStructurePlacement("woodFloor", x, y);
   }
   return true;
 }
 
+function tryPlaceSelectedBuildPiece(event) {
+  if (!selectedBuildPiece) return false;
+  if (event.button !== 0) return true;
+  const pointer = getCanvasPointerPosition(event);
+  return tryPlaceSelectedBuildPieceAtWorld(
+    currentCamX + pointer.x,
+    currentCamY + pointer.y
+  );
+}
+
 function drawBuildPlacementPreview(camX, camY) {
   if (!selectedBuildPiece) return;
-  const worldX = camX + mouseCanvasX;
-  const worldY = camY + mouseCanvasY;
+  const point = selectedBuildPlacementWorldPoint(camX, camY);
+  const worldX = point.x;
+  const worldY = point.y;
+
   if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
     const candidate = wallPlacementCandidate(worldX, worldY, selectedBuildPiece);
-    if (!candidate) return;
-    drawWallEdgeHighlight(candidate, camX, camY);
+    if (!candidate) {
+      const rawCandidate = rawWallPlacementCandidate(worldX, worldY);
+      if (rawCandidate) drawWallEdgeHighlight(rawCandidate, camX, camY, false);
+      else drawBuildCursorMarker(worldX, worldY, camX, camY, false);
+      return;
+    }
+
+    const inRange = buildPlacementWithinRange(candidate.x, candidate.y);
+    drawWallEdgeHighlight(candidate, camX, camY, inRange);
     const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };
-    if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, 0.42);
-    else drawWoodWall(preview, camX, camY, 0.42);
+    if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, inRange ? 0.42 : 0.18);
+    else drawWoodWall(preview, camX, camY, inRange ? 0.42 : 0.18);
     return;
   }
+
   const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
-  drawWoodFloor({ kind: "woodFloor", x, y }, camX, camY, 0.55);
+  const inRange = buildPlacementWithinRange(x, y);
+  drawWoodFloor({ kind: "woodFloor", x, y }, camX, camY, inRange ? 0.55 : 0.2);
+  if (!inRange) drawBuildCursorMarker(x, y, camX, camY, false);
 }
 
 // -----------------------------------------------------------------------------

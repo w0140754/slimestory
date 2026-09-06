@@ -9,9 +9,9 @@ const server = read('server.js');
 const config = read('public', 'client-config.js');
 const game = read('public', 'game.js');
 
-assert.strictEqual(pkg.version, '0.6.11.393');
-assert(server.includes('const BUILD_VERSION = "6-11-393";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
+assert.strictEqual(pkg.version, '0.6.11.394');
+assert(server.includes('const BUILD_VERSION = "6-11-394";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
 assert(game.includes('function verticalWallHasUpperHorizontalJoin(structure)'), 'upper corner join detector missing');
 assert(game.includes('const upperY = Number(structure.y) - 8;'), 'upper endpoint must be based on the original 16px edge');
 assert(game.includes('Math.abs(Math.abs(Number(other.x) - x) - 8) < 1'), 'horizontal wall must meet either upper corner endpoint');

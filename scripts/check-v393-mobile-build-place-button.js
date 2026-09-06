@@ -13,23 +13,22 @@ const input = read("public", "client-input.js");
 const game = read("public", "game.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.393");
-assert(server.includes('const BUILD_VERSION = "6-11-393";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
-assert(html.includes('/client-input.js?v=393') && html.includes('/game.js?v=393'));
+assert.strictEqual(pkg.version, "0.6.11.394");
+assert(server.includes('const BUILD_VERSION = "6-11-394";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
+assert(html.includes('/client-input.js?v=394') && html.includes('/game.js?v=394'));
 
 assert(input.includes("function updateMobilePrimaryActionButton()"), "contextual mobile primary button updater missing");
 assert(input.includes('button.textContent = buildMode ? "PLACE" : "ATK";'), "mobile build mode must relabel ATK to PLACE");
 assert(input.includes('button.setAttribute("aria-label", buildMode ? "Place building piece" : "Attack")'), "mobile action aria label must follow build mode");
-assert(input.includes('if (typeof selectedBuildPiece !== "undefined" && selectedBuildPiece) {'), "mobile attack pointerdown must intercept build mode");
-assert(input.includes("tryPlaceSelectedBuildPiece(mobilePointerEventForCanvas({"), "PLACE must reuse canonical build placement function");
-assert(input.includes("x: mouseCanvasX") && input.includes("y: mouseCanvasY"), "PLACE must confirm the currently highlighted preview point");
+assert(input.includes("if (mobileBuildModeActive()) {"), "mobile attack pointerdown must intercept build mode");
+assert(input.includes("tryPlaceSelectedBuildPieceAtWorld(cursor.x, cursor.y);"), "PLACE must confirm the canonical selected build target");
 
-const buildBranch = input.indexOf('if (typeof selectedBuildPiece !== "undefined" && selectedBuildPiece) {', input.indexOf('attack.addEventListener("pointerdown"'));
+const buildBranch = input.indexOf("if (mobileBuildModeActive()) {", input.indexOf('attack.addEventListener("pointerdown"'));
 const combatAssist = input.indexOf("applyMobileCombatAssistAim()", buildBranch);
 assert(buildBranch >= 0 && combatAssist > buildBranch, "build PLACE branch must run before mobile combat assist can retarget the pointer");
 
 assert(game.includes('if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();'), "build begin/cancel must refresh the mobile button label");
 assert(html.includes("#mobileAttackButton.build-place-mode"), "PLACE mode visual state missing");
 
-console.log("v393 mobile build PLACE button regression OK");
+console.log("v393 mobile build PLACE button regression retained OK");

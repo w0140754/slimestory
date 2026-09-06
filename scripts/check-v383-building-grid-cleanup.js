@@ -12,10 +12,10 @@ const config = read("public", "client-config.js");
 const clientMaps = read("public", "client-maps.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.393");
+assert.strictEqual(pkg.version, "0.6.11.394");
 assert(!pkg.scripts?.["adopt-map"] && !pkg.scripts?.["build-waterfall-grove"], "retired editor/map npm aliases survived");
-assert(server.includes('const BUILD_VERSION = "6-11-393";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-393";'));
+assert(server.includes('const BUILD_VERSION = "6-11-394";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
 
 // v383 cleanup remains, while its temporary full-cell/autotile wall model is retired.
 assert(!server.includes('if (sameCell) return true;'), "v383 one-structure-per-cell wall rule survived");

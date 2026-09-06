@@ -88,6 +88,10 @@ let mobileAimDy = 0;
 let mobilePointTargetMode = null;
 let mobilePointTargetKey = null;
 let mobilePointTargetSuppressMouseUntil = 0;
+let mobileBuildCursorWorldX = null;
+let mobileBuildCursorWorldY = null;
+let mobileBuildCursorMapId = null;
+let mobileBuildCursorSuppressMouseUntil = 0;
 let mobileAutoBowTarget = null;
 let mobileTrackedBowEnemy = null;
 let mobileAutoAttackEnabled = false;
@@ -100,6 +104,108 @@ const MOBILE_POINT_TARGET_SKILLS = new Set([
   "rainCloud",
   "focusFire"
 ]);
+
+
+function mobileBuildModeActive() {
+  return Boolean(
+    mobileControlsEnabled &&
+    typeof selectedBuildPiece !== "undefined" &&
+    selectedBuildPiece
+  );
+}
+
+function mobileBuildCursorWorldPoint() {
+  if (!mobileBuildModeActive()) return null;
+  if (
+    mobileBuildCursorWorldX === null ||
+    mobileBuildCursorWorldY === null ||
+    mobileBuildCursorMapId !== currentMapId
+  ) {
+    beginMobileBuildCursorForSelectedPiece();
+  }
+  if (mobileBuildCursorWorldX === null || mobileBuildCursorWorldY === null) return null;
+  return {
+    x: mobileBuildCursorWorldX,
+    y: mobileBuildCursorWorldY
+  };
+}
+
+function setMobileBuildCursorWorldPoint(worldX, worldY) {
+  if (!mobileBuildModeActive()) return false;
+  if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) return false;
+  mobileBuildCursorWorldX = worldX;
+  mobileBuildCursorWorldY = worldY;
+  mobileBuildCursorMapId = currentMapId;
+  return true;
+}
+
+function setMobileBuildCursorFromCanvasPoint(point) {
+  if (!point || !mobileBuildModeActive()) return false;
+  return setMobileBuildCursorWorldPoint(
+    currentCamX + Number(point.x),
+    currentCamY + Number(point.y)
+  );
+}
+
+function clearMobileBuildCursor() {
+  mobileBuildCursorWorldX = null;
+  mobileBuildCursorWorldY = null;
+  mobileBuildCursorMapId = null;
+  document.body.classList.remove("mobile-build-cursor-mode");
+}
+
+function beginMobileBuildCursorForSelectedPiece() {
+  if (!mobileBuildModeActive()) {
+    clearMobileBuildCursor();
+    return false;
+  }
+
+  clearMobilePointTargetMode();
+  if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
+
+  const leadDistance = selectedBuildPiece === "woodFloor" ? 24 : 18;
+  const aimLength = Math.hypot(mobileAimDx, mobileAimDy) || 1;
+  setMobileBuildCursorWorldPoint(
+    player.x + (mobileAimDx / aimLength) * leadDistance,
+    player.y + (mobileAimDy / aimLength) * leadDistance
+  );
+  document.body.classList.add("mobile-build-cursor-mode");
+  updateMobilePrimaryActionButton();
+  return true;
+}
+
+function nudgeMobileBuildCursor(dx, dy) {
+  if (!mobileBuildModeActive()) return false;
+  const cursor = mobileBuildCursorWorldPoint();
+  if (!cursor) return false;
+
+  // Floor cells live on the 16px build grid. Wall/Door targeting needs the
+  // half-cell step so one tap can move from a floor centre to a specific edge.
+  const step = selectedBuildPiece === "woodFloor" ? 16 : 8;
+  return setMobileBuildCursorWorldPoint(
+    cursor.x + Number(dx) * step,
+    cursor.y + Number(dy) * step
+  );
+}
+
+function handleMobileBuildCursorPointerDown(event) {
+  if (!mobileBuildModeActive()) return;
+  if (event.button !== undefined && event.button !== 0) return;
+
+  const point = getCanvasPointerPosition(event);
+  if (!setMobileBuildCursorFromCanvasPoint(point)) return;
+
+  event.preventDefault();
+  clearMobilePointTargetMode();
+  mobileBuildCursorSuppressMouseUntil = performance.now() + 550;
+
+  // Keep the legacy pointer coordinates in sync for cursor/UI helpers, while
+  // the actual build target remains stored in world coordinates so moving the
+  // character/camera cannot drag the preview around.
+  mouseCanvasX = point.x;
+  mouseCanvasY = point.y;
+  updateCanvasCursor();
+}
 
 function mobileAbilitySlotForKey(key) {
   return document.getElementById(
@@ -456,6 +562,9 @@ function updateMobilePrimaryActionButton() {
   button.classList.toggle("build-place-mode", buildMode);
   button.textContent = buildMode ? "PLACE" : "ATK";
   button.setAttribute("aria-label", buildMode ? "Place building piece" : "Attack");
+  document.body.classList.toggle("mobile-build-cursor-mode", Boolean(buildMode && mobileControlsEnabled));
+  const nudgePad = document.getElementById("mobileBuildNudgePad");
+  if (nudgePad) nudgePad.setAttribute("aria-hidden", buildMode ? "false" : "true");
   if (buildMode) button.classList.remove("point-target-armed");
 }
 
@@ -609,7 +718,8 @@ function installMobileControls() {
   const autoAttack = document.getElementById("mobileAutoAttackButton");
   const interact = document.getElementById("mobileInteractButton");
   const menu = document.getElementById("mobileMenuButton");
-  if (!pad || !knob || !attack || !autoAttack || !interact || !menu) return;
+  const buildNudgePad = document.getElementById("mobileBuildNudgePad");
+  if (!pad || !knob || !attack || !autoAttack || !interact || !menu || !buildNudgePad) return;
 
   let attackPointerId = null;
   let attackPointerStartX = 0;
@@ -657,6 +767,23 @@ function installMobileControls() {
   pad.addEventListener("pointerup", stopMove);
   pad.addEventListener("pointercancel", stopMove);
 
+
+  for (const button of buildNudgePad.querySelectorAll("[data-build-nudge]")) {
+    button.addEventListener("pointerdown", event => {
+      if (!mobileBuildModeActive()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const direction = button.dataset.buildNudge;
+      const delta =
+        direction === "up" ? [0, -1] :
+        direction === "right" ? [1, 0] :
+        direction === "down" ? [0, 1] :
+        direction === "left" ? [-1, 0] :
+        null;
+      if (delta) nudgeMobileBuildCursor(delta[0], delta[1]);
+    });
+  }
+
   const aimAttackFromEvent = event => {
     const rect = attack.getBoundingClientRect();
     const dx = event.clientX - (rect.left + rect.width / 2);
@@ -682,18 +809,15 @@ function installMobileControls() {
   attack.addEventListener("pointerdown", event => {
     event.preventDefault();
 
-    // v393: while a build piece is selected, the primary mobile action is
-    // PLACE rather than ATTACK. Confirm exactly the preview that is already
-    // highlighted; do not run combat assist first because that would move the
-    // aim point and make the confirmed placement disagree with the preview.
-    if (typeof selectedBuildPiece !== "undefined" && selectedBuildPiece) {
+    // v394: mobile building owns a world-space cursor independent of player
+    // movement/camera movement. PLACE confirms that exact cursor target; it
+    // never invokes combat assist or derives a fresh point from the character.
+    if (mobileBuildModeActive()) {
       clearMobilePointTargetMode();
       if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
-      if (typeof tryPlaceSelectedBuildPiece === "function") {
-        tryPlaceSelectedBuildPiece(mobilePointerEventForCanvas({
-          x: mouseCanvasX,
-          y: mouseCanvasY
-        }));
+      const cursor = mobileBuildCursorWorldPoint();
+      if (cursor && typeof tryPlaceSelectedBuildPieceAtWorld === "function") {
+        tryPlaceSelectedBuildPieceAtWorld(cursor.x, cursor.y);
       }
       return;
     }
@@ -847,6 +971,7 @@ function installMobileControls() {
   }
 
   canvas.addEventListener("pointerdown", handleMobilePointTargetPointerDown);
+  canvas.addEventListener("pointerdown", handleMobileBuildCursorPointerDown);
 }
 
 installMobileControls();
@@ -1086,7 +1211,10 @@ window.addEventListener("keyup", handleGameKeyUp);
 canvas.addEventListener("mousedown", event => {
   if (
     mobileControlsEnabled &&
-    performance.now() < mobilePointTargetSuppressMouseUntil
+    (
+      performance.now() < mobilePointTargetSuppressMouseUntil ||
+      performance.now() < mobileBuildCursorSuppressMouseUntil
+    )
   ) {
     return;
   }
@@ -1098,6 +1226,7 @@ window.addEventListener("mouseup", handleBowVisualMouseUp);
 function resetInputAfterFocusLoss() {
   cancelHunterSnarePlacement(false);
   clearMobilePointTargetMode();
+  clearMobileBuildCursor();
   setMobileAutoAttackEnabled(false, { quiet: true });
 
   // A key released while another tab/window owns focus does not reliably send

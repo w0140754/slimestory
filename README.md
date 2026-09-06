@@ -1,3 +1,15 @@
+## v6-11-394 — Mobile Build Cursor Mode
+
+- Replaced v393's character-driven mobile build aiming with an independent world-space build cursor.
+- While Wood Floor, Wood Wall, or Wood Door is selected on mobile, tapping the game world now moves the build preview/cursor without placing anything.
+- The `PLACE` button confirms exactly that stored world-space cursor target, so moving the character or camera no longer drags the selected build location around.
+- Added a compact four-arrow build nudge pad beside the movement joystick. Floors nudge by one 16px build cell; Walls/Doors nudge by 8px half-cell steps so individual floor edges can be selected precisely.
+- Mobile build taps suppress the synthesized mouse click that previously could turn the targeting tap into an immediate placement.
+- Placement range is mirrored client-side at the server-authoritative 96px radius. Out-of-range previews remain visible as invalid and `PLACE` does nothing until the cursor/player is back in range.
+- Invalid Wall/Door targets retain a red edge/cursor marker so the player can see what they are adjusting instead of the preview disappearing entirely.
+- AUTO attack is hidden/disabled during mobile build-cursor mode. Character movement remains fully independent on the normal joystick.
+- Desktop mouse building and all v392 perimeter-wall/flanked-door/roof-lock rules are unchanged.
+
 ## v6-11-393 — Mobile Build Place Button
 
 - On touch/mobile controls, the primary `ATK` button becomes `PLACE` whenever Wood Floor, Wood Wall, or Wood Door placement mode is active.
