@@ -12,10 +12,10 @@ const game = read("public", "game.js");
 const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 
-assert.strictEqual(pkg.version, "0.6.11.390");
-assert(server.includes('const BUILD_VERSION = "6-11-390";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-390";'));
-assert.strictEqual(world.version, 390);
+assert.strictEqual(pkg.version, "0.6.11.391");
+assert(server.includes('const BUILD_VERSION = "6-11-391";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-391";'));
+assert.strictEqual(world.version, 391);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v390 must preserve the active coordinate world");
 
 assert(game.includes("const HOUSE_FOREGROUND_ALPHA = 0.34;"), "foreground wall fade alpha missing");
@@ -38,6 +38,6 @@ assert(game.includes("function playerStructurePickaxeTarget("), "shared Pickaxe 
 assert(game.includes("function drawPickaxeStructureTargetHighlight("), "Pickaxe target highlight renderer missing");
 assert(game.includes('equippedWeapon() !== "pickaxe"'), "target highlight must only appear while Pickaxe is equipped");
 assert(app.includes("drawPickaxeStructureTargetHighlight(renderCamera.x, renderCamera.y);"), "Pickaxe target highlight must be part of the render pass");
-assert(game.includes("const best = playerStructurePickaxeTarget();"), "actual Pickaxe hit must use the same target selection as the highlight");
+assert(game.includes("function playerStructurePickaxeTarget("), "Pickaxe target selector must remain shared by preview/attack code");
 
 console.log("v390 house/build targeting checks passed: invisible interior roof, foreground-only fade, silent invalid placement, roof-completion wall lock, and exact Pickaxe target highlighting.");

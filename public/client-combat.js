@@ -899,7 +899,12 @@ function queueBasicAttackImpact(weapon, shadowCritAttack) {
     weapon,
     mapId: currentMapId,
     time: attackImpactDelayForWeapon(weapon),
-    shadowCritAttack: Boolean(shadowCritAttack)
+    shadowCritAttack: Boolean(shadowCritAttack),
+    // Lock the cursor-selected structure at mouse/touch-down so the delayed
+    // Pickaxe impact cannot switch targets if the pointer moves during swing.
+    structureTargetId: weapon === "pickaxe"
+      ? playerStructurePickaxeTarget()?.id || null
+      : null
   };
 }
 
@@ -932,7 +937,8 @@ function updatePendingBasicAttack(dt) {
     player.slashDuration;
 
   executeWeaponAttack(
-    pending.weapon
+    pending.weapon,
+    pending.structureTargetId
   );
 
   player.shadowCritAttack = false;
@@ -963,7 +969,7 @@ function updateAttackAimFromPointer(pointerX, pointerY) {
   };
 }
 
-function executeWeaponAttack(weapon) {
+function executeWeaponAttack(weapon, lockedStructureId = undefined) {
   if (
     weapon === "sword" ||
     weapon === "oldSword" ||
@@ -986,7 +992,7 @@ function executeWeaponAttack(weapon) {
   if (weapon === "pickaxe") {
     tryHitEnemies();
     tryHitPvpPlayers();
-    if (!tryHitPlayerStructure()) {
+    if (!tryHitPlayerStructure(lockedStructureId)) {
       tryHitRock();
     }
     return;

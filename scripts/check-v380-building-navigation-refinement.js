@@ -15,9 +15,9 @@ const combat = read("public", "client-combat.js");
 const clientWorld = read("public", "client-world.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.390", "package version must be v380");
-assert(server.includes('const BUILD_VERSION = "6-11-390";'), "server build marker must be v380");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-390";'), "client build marker must be v380");
+assert.strictEqual(pkg.version, "0.6.11.391", "package version must be v380");
+assert(server.includes('const BUILD_VERSION = "6-11-391";'), "server build marker must be v380");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-391";'), "client build marker must be v380");
 
 assert.strictEqual(world.worldGrid.mapWidth, 400, "grid maps must be 400px wide");
 assert.strictEqual(world.worldGrid.mapHeight, 400, "grid maps must be 400px high");
@@ -36,7 +36,7 @@ assert(server.includes("else if (playerState.weaponIndex !== 11) reason = \"need
 assert(server.includes("spawnSharedResource(\n    removed.mapId,\n    removed.kind,"), "destroyed structures must drop the exact placed piece");
 assert(server.includes('["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee", "woodFloor", "woodWall", "woodDoor"]'), "shared loot must accept all current building piece types");
 assert(server.includes('} else if (resource.kind === "woodFloor") {') && server.includes('} else if (resource.kind === "woodWall") {'), "building loot pickup must restore exact inventory counts");
-assert(combat.includes("if (!tryHitPlayerStructure())"), "Pickaxe combat path must attempt structure hits");
+assert(combat.includes("tryHitPlayerStructure(lockedStructureId)"), "Pickaxe combat path must attempt the locked structure target");
 
 assert(game.includes("let forceSuppressLocalPlayerRendering = false;"), "transition duplicate-player suppression flag missing");
 assert(game.includes("return forceSuppressLocalPlayerRendering || mapTransitionPhase !== \"idle\";"), "local player must stay suppressed through transition frames");
@@ -45,7 +45,7 @@ assert(game.includes("function activateMap(mapId, entrySide, transitionContext =
 assert(game.includes("player.y = clampToWorld(Number(transitionContext.sourceY)"), "east/west crossings must preserve Y");
 assert(game.includes("player.x = clampToWorld(Number(transitionContext.sourceX)"), "north/south crossings must preserve X");
 
-assert(clientWorld.includes('treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=390";'), "fresh tree must use the clean swapped trunk state");
-assert(clientWorld.includes('treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=390";'), "first-hit tree must use the cut swapped trunk state");
+assert(clientWorld.includes('treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=391";'), "fresh tree must use the clean swapped trunk state");
+assert(clientWorld.includes('treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=391";'), "first-hit tree must use the cut swapped trunk state");
 
 console.log("v380 building/navigation refinement OK: visible floors, 1-9 assignment, Pickaxe reclaim, seam continuity, single-player transition render, and corrected tree states.");

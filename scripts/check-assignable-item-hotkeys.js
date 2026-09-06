@@ -12,7 +12,7 @@ const checks = [
   [game.includes("event.target.closest('[data-consumable-item]')") && game.includes('utilityElement.dataset.consumableItem') && game.includes('useConsumable(utilityItemId);'), "Inventory click directly uses consumables"],
   [html.includes('id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"') && html.includes('id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"'), "old utility/skill rails remain hidden only for compatibility"],
   [game.includes('document.getElementById("menuUtilityHotkeyRail")?.classList.add("context-hidden")') && game.includes('document.getElementById("menuSkillHotkeyRail")?.classList.add("context-hidden")'), "retired shortcut rails cannot become active by tab switching"],
-  [html.includes('/client-input.js?v=390') && html.includes('/game.js?v=390'), "v377 cache keys"],
+  [html.includes('/client-input.js?v=391') && html.includes('/game.js?v=391'), "v377 cache keys"],
 ];
 
 for (const [ok, label] of checks) {

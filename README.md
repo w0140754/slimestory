@@ -1,3 +1,13 @@
+## v6-11-391 — Cursor Pickaxe Targeting
+
+- Pickaxe structure targeting is now driven by the cursor/touch aim point rather than choosing the nearest in-range placed Wood structure to the player.
+- Player position is used only as the maximum interaction-range gate; it no longer breaks ties between candidate structures.
+- Walls/Doors retain priority only when their visible facade actually overlaps the Floor under the cursor.
+- The cursor-selected structure ID is locked at attack start, so moving the pointer during the short Pickaxe wind-up cannot redirect the delayed impact to another piece.
+- Clicking empty space stays an empty structure hit rather than retargeting at impact time.
+- v390 house visibility/roof lock, v389 day-night clock, building, mobile, combat, and coordinate-world behavior are otherwise unchanged.
+- Regression: 30 syntax targets + 66 retained checks/smokes pass.
+
 ## v6-11-390 — House Interior Visibility & Build Targeting
 
 - Completed-house interior presentation refined: while the local player is inside a roofed enclosure, the roof is fully hidden, only the south/foreground wall or door is partially transparent, and back/side walls remain solid.

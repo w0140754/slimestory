@@ -44,24 +44,24 @@ function loadImage(src) {
 // -----------------------------------------------------------------------------
 // Split tree parts. Both are 32x48 and share the same bottom-centre anchor.
 const treeTrunkImage = new Image();
-treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=390";
+treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=391";
 
 const treeCanopyImages = [];
 
 const treeCanopyImage = new Image();
-treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=390";
+treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=391";
 treeCanopyImages.push(treeCanopyImage);
 
 const treeCanopyImageVariantB = new Image();
-treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=390";
+treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=391";
 treeCanopyImages.push(treeCanopyImageVariantB);
 
 const fireResistantTreeTrunkImage = new Image();
-fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=390";
+fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=391";
 const fireResistantTreeCanopyImage = new Image();
-fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=390";
+fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=391";
 const fireResistantTreeCanopyFlippedImage = new Image();
-fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=390";
+fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=391";
 
 const rockPlainImage = loadImage("assets/rock_plain.png");
 const rockGrassImage = loadImage("assets/rock_grass.png");
@@ -79,10 +79,10 @@ function getTreeCanopyImage(tree) {
 }
 
 const treeDamagedTrunkImage = new Image();
-treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=390";
+treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=391";
 
 const treeStumpImage = new Image();
-treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=390";
+treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=391";
 
 const trees = [
   // Loose trees around the central clearing.

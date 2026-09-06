@@ -10560,32 +10560,88 @@ function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
   return false;
 }
 
+function pickaxeStructurePointerBounds(structure) {
+  if (structure?.kind === "woodFloor") {
+    return {
+      left: Number(structure.x) - 8,
+      top: Number(structure.y) - 8,
+      right: Number(structure.x) + 8,
+      bottom: Number(structure.y) + 8
+    };
+  }
+
+  if (structure?.axis === "vertical") {
+    const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const height = 32 + extension;
+    const x = Number(structure.x);
+    const y = Number(structure.y);
+    return {
+      left: x - 3,
+      top: y + 8 - height,
+      right: x + 3,
+      bottom: y + 10
+    };
+  }
+
+  const x = Number(structure.x);
+  const y = Number(structure.y);
+  return {
+    left: x - 9,
+    top: y - 32,
+    right: x + 9,
+    bottom: y + 2
+  };
+}
+
+function pointDistanceToRect(x, y, rect) {
+  const dx = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
+  const dy = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+  return Math.hypot(dx, dy);
+}
+
 function playerStructurePickaxeTarget() {
+  const pointerWorldX = currentCamX + mouseCanvasX;
+  const pointerWorldY = currentCamY + mouseCanvasY;
   const originX = player.x;
   const originY = player.y - 8;
+  const maxRange = currentMeleeReach() + 12;
+  const pointerTolerance = 5;
   let best = null;
+  let bestPointerDistance = Infinity;
   let bestPriority = Infinity;
-  let bestDistance = Infinity;
 
   for (const structure of currentMapStructures()) {
     if (!structure?.id || !["woodFloor", "woodWall", "woodDoor"].includes(structure.kind)) continue;
-    const dx = structure.x - originX;
-    const dy = structure.y - originY;
-    const distance = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
-    const insideAngle = Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= 1.05;
-    const insideRange = distance <= currentMeleeReach() + 12;
+
+    // Player position is only a reach gate. It must never decide which placed
+    // piece wins when several structures are in range; the cursor does that.
+    const physicalDistance = Math.hypot(Number(structure.x) - originX, Number(structure.y) - originY);
+    if (physicalDistance > maxRange) continue;
+
+    const pointerDistance = pointDistanceToRect(
+      pointerWorldX,
+      pointerWorldY,
+      pickaxeStructurePointerBounds(structure)
+    );
+    if (pointerDistance > pointerTolerance) continue;
+
+    // If the pointer overlaps a wall/door facade and the floor behind it,
+    // prefer the visible edge structure. Otherwise choose whichever structure
+    // is geometrically closest to the cursor, independent of player distance.
     const priority = BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind) ? 0 : 1;
     if (
-      insideAngle &&
-      insideRange &&
-      (priority < bestPriority || (priority === bestPriority && distance < bestDistance))
+      pointerDistance < bestPointerDistance - 0.001 ||
+      (
+        Math.abs(pointerDistance - bestPointerDistance) <= 0.001 &&
+        priority < bestPriority
+      )
     ) {
       best = structure;
+      bestPointerDistance = pointerDistance;
       bestPriority = priority;
-      bestDistance = distance;
     }
   }
+
   return best;
 }
 
@@ -10629,8 +10685,12 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
   ctx.restore();
 }
 
-function tryHitPlayerStructure() {
-  const best = playerStructurePickaxeTarget();
+function tryHitPlayerStructure(lockedStructureId = undefined) {
+  const best = lockedStructureId === undefined
+    ? playerStructurePickaxeTarget()
+    : lockedStructureId
+      ? currentMapStructures().find(structure => structure?.id === lockedStructureId) || null
+      : null;
   if (!best) return false;
   return Boolean(
     typeof onlineClient !== "undefined" &&
