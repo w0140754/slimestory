@@ -82,7 +82,7 @@ async function destroySupportExpectTorchFirst(socket, supportId, expectedTorchId
       socket.once("error", reject);
     });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-406") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-407") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({

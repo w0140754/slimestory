@@ -13,11 +13,11 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const WORLD_CONTENT = require("../public/shared/world-content.js");
 
-assert.strictEqual(pkg.version, "0.6.11.406");
-assert.strictEqual(WORLD_CONTENT.version, 406);
-assert(server.includes('const BUILD_VERSION = "6-11-406";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
-assert(html.includes('/game.js?v=406'));
+assert.strictEqual(pkg.version, "0.6.11.407");
+assert.strictEqual(WORLD_CONTENT.version, 407);
+assert(server.includes('const BUILD_VERSION = "6-11-407";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
+assert(html.includes('/game.js?v=407'));
 
 // Dynamic torch visibility: walls and closed doors become ray blockers and the
 // darkness cutout is clipped to the resulting visibility polygon.

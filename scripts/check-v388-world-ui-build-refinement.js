@@ -13,10 +13,10 @@ const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.406");
-assert(server.includes('const BUILD_VERSION = "6-11-406";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
-assert.strictEqual(world.version, 406);
+assert.strictEqual(pkg.version, "0.6.11.407");
+assert(server.includes('const BUILD_VERSION = "6-11-407";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
+assert.strictEqual(world.version, 407);
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");
 

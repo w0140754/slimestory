@@ -199,15 +199,15 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=406");
-const torchImage = loadImage("assets/torch_v1.png?v=406");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=407");
+const torchImage = loadImage("assets/torch_v1.png?v=407");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=406");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=406");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=406");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=406");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=407");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=407");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=407");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=407");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -11291,12 +11291,12 @@ function worldClockPhase(minutes = currentWorldClockMinutes()) {
 function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
   const hour = minutes / 60;
 
-  // v401: nights are intentionally dark enough that portable/placeable light
-  // matters. Darkness ramps up through the evening, peaks around midnight,
-  // then slowly eases before the existing 05:00 dawn.
-  const duskNightAlpha = 0.54;
-  const midnightAlpha = 0.82;
-  const preDawnAlpha = 0.56;
+  // v407: push the established torch-driven night look substantially darker.
+  // Darkness ramps through the evening, peaks near midnight, then eases toward
+  // the existing 05:00 dawn; light sources now matter on every map at night.
+  const duskNightAlpha = 0.60;
+  const midnightAlpha = 0.92;
+  const preDawnAlpha = 0.62;
 
   if (hour >= 20) {
     const t = Math.max(0, Math.min(1, (hour - 20) / 4));
@@ -11402,9 +11402,25 @@ function raySegmentIntersectionDistance(originX, originY, rayX, rayY, segment) {
   return t;
 }
 
+function heldItemOcclusionAllowsStructure(structure, sourceY) {
+  // v407: gameplay collision and visual occlusion are deliberately separate.
+  // A structure only hides a held-item pixel when that structure would be drawn
+  // in front of the local player by the world's normal Y-sort. In particular,
+  // a horizontal wall behind/below the player may still block the attack, but
+  // it must not erase the sword/torch that is visually in front of that wall.
+  if (!structure || !Number.isFinite(Number(sourceY))) return false;
+  return wallDrawSortY(structure) > Number(sourceY) + 0.01;
+}
+
 function torchLightVisibilityPolygon(sourceX, sourceY, radius, cacheKey = null) {
-  const blockers = torchLightBlockingSegments(sourceX, sourceY, radius);
-  const signature = `${currentMapId}:${placedStructureRevision}:${blockers.map(segment => segment.id).sort().join(",")}`;
+  let blockers = torchLightBlockingSegments(sourceX, sourceY, radius);
+  if (cacheKey === "held-item-local") {
+    const structuresById = new Map(currentMapStructures().map(structure => [structure?.id, structure]));
+    blockers = blockers.filter(segment =>
+      heldItemOcclusionAllowsStructure(structuresById.get(segment.id), sourceY)
+    );
+  }
+  const signature = `${currentMapId}:${placedStructureRevision}:${cacheKey === "held-item-local" ? "held" : "light"}:${blockers.map(segment => segment.id).sort().join(",")}`;
 
   if (cacheKey) {
     const cached = torchLightVisibilityCache.get(cacheKey);
@@ -11515,6 +11531,40 @@ function carveTorchLight(
 
 }
 
+function carveMountedTorchWallFaceLight(bufferCtx, structure) {
+  if (!bufferCtx || structure?.kind !== "torch" || structure?.mountType !== "wall") return;
+  const support = currentMapStructures().find(item => item?.id === structure.supportId);
+  if (!support || support.kind !== "woodWall") return;
+
+  const light = torchLightWorldPosition(structure);
+  const screenX = light.x - currentCamX;
+  const screenY = light.y - currentCamY;
+  const gradient = bufferCtx.createRadialGradient(screenX, screenY, 0, screenX, screenY, 34);
+  gradient.addColorStop(0, "rgba(0,0,0,0.88)");
+  gradient.addColorStop(0.48, "rgba(0,0,0,0.58)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  const sx = Math.round(Number(support.x) - currentCamX);
+  const sy = Math.round(Number(support.y) - currentCamY);
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  if (support.axis === "vertical") {
+    const extension = verticalWallHasUpperHorizontalJoin(support) ? 16 : 0;
+    const height = 32 + extension;
+    const top = sy + 9 - height;
+    // Only the painted wall facade is brightened. The geometric boundary still
+    // blocks the normal light polygon, so this cannot leak through the wall.
+    bufferCtx.rect(sx - 2, top, 4, height);
+  } else {
+    bufferCtx.rect(sx - 8, sy - 31, 16, 32);
+  }
+  bufferCtx.clip();
+  bufferCtx.globalCompositeOperation = "destination-out";
+  bufferCtx.fillStyle = gradient;
+  bufferCtx.fillRect(screenX - 34, screenY - 34, 68, 68);
+  bufferCtx.restore();
+}
+
 function drawWorldLightingOverlay() {
   const minutes = currentWorldClockMinutes();
   const alpha = worldClockLightingAlpha(minutes);
@@ -11547,6 +11597,7 @@ function drawWorldLightingOverlay() {
       visibilityOrigin.x,
       visibilityOrigin.y
     );
+    carveMountedTorchWallFaceLight(bufferCtx, structure);
   }
 
   // Selecting a torch keeps it in hand while the same build cursor remains

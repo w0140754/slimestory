@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-406";
+const BUILD_VERSION = "6-11-407";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -680,6 +680,11 @@ const ENEMY_AGGRO_PROVOKED = "provoked";
 const ENEMY_AGGRO_PROXIMITY = "proximity";
 const ENEMY_ENGAGEMENT_RADIUS = 120;
 const ENEMY_ENGAGEMENT_MEMORY_SECONDS = 3.5;
+// v407: ordinary mobs become hostile at night, but only within a bounded
+// detection radius so distant passive mobs remain on the cheap intent stream.
+// A slightly larger disengage radius prevents rapid active/passive thrashing.
+const NIGHT_HOSTILE_DETECTION_RADIUS = 208;
+const NIGHT_HOSTILE_DISENGAGE_RADIUS = 248;
 
 // -----------------------------------------------------------------------------
 // GENERIC SERVER ENEMY RUNTIME METADATA
@@ -7031,11 +7036,16 @@ function resolveEnemyAggroTarget(
 ) {
   if (!enemy?.alive || enemy.returningHome) return null;
 
+  const nightNow = serverWorldIsNight();
   const relentlessNightAggro = Boolean(
     enemy.nightOnly &&
-    serverWorldIsNight() &&
+    nightNow &&
     !enemy.nightEntering &&
     !enemy.nightFleeing
+  );
+  const ordinaryNightHostile = Boolean(
+    nightNow &&
+    !enemy.nightOnly
   );
 
   let target = visibleAggroPlayerById(
@@ -7057,7 +7067,11 @@ function resolveEnemyAggroTarget(
       target.y - enemy.y
     );
 
-    if (relentlessNightAggro || targetDistance <= ENEMY_ENGAGEMENT_RADIUS) {
+    const retentionRadius = ordinaryNightHostile
+      ? NIGHT_HOSTILE_DISENGAGE_RADIUS
+      : ENEMY_ENGAGEMENT_RADIUS;
+
+    if (relentlessNightAggro || targetDistance <= retentionRadius) {
       refreshEnemyEngagement(enemy, target.id);
     } else {
       enemy.aggroEngagementTime = Math.max(
@@ -7075,15 +7089,18 @@ function resolveEnemyAggroTarget(
   if (
     !target &&
     allowAcquire &&
-    (enemyUsesProximityAggro(enemy) || relentlessNightAggro)
+    (enemyUsesProximityAggro(enemy) || relentlessNightAggro || ordinaryNightHostile)
   ) {
+    const acquireRadius = relentlessNightAggro
+      ? Infinity
+      : ordinaryNightHostile
+        ? NIGHT_HOSTILE_DETECTION_RADIUS
+        : Math.max(0, Number(enemy.detectionRadius) || 0);
     const nearby = nearestVisiblePlayer(
       enemy.mapId,
       enemy.x,
       enemy.y,
-      relentlessNightAggro
-        ? Infinity
-        : Math.max(0, Number(enemy.detectionRadius) || 0)
+      acquireRadius
     );
 
     if (nearby) {

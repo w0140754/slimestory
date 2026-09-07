@@ -11,9 +11,9 @@ const network = read("public", "client-network.js");
 const input = read("public", "client-input.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.406");
-assert(server.includes('const BUILD_VERSION = "6-11-406";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
+assert.strictEqual(pkg.version, "0.6.11.407");
+assert(server.includes('const BUILD_VERSION = "6-11-407";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
 
 // Build hotbar persistence.
 assert(game.includes('return itemId && hotbarAssignmentCanPersist(itemId)'), "saved hotbar restore must accept persistent build items");

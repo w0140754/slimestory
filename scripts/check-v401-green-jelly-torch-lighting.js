@@ -14,10 +14,10 @@ const enemies = read("public", "client-enemies.js");
 const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.406");
-assert.strictEqual(world.version, 406);
-assert(server.includes('const BUILD_VERSION = "6-11-406";'));
-assert(html.includes('/game.js?v=406'));
+assert.strictEqual(pkg.version, "0.6.11.407");
+assert.strictEqual(world.version, 407);
+assert(server.includes('const BUILD_VERSION = "6-11-407";'));
+assert(html.includes('/game.js?v=407'));
 
 // Green Jelly Cube loot + crafting.
 assert(fs.existsSync(path.join(root, "public", "assets", "green_jelly_cube.png")));
@@ -43,7 +43,7 @@ assert(server.includes('"greenJellyCube", "icedCoffee", "woodFloor", "woodWall",
 assert(input.includes('selectedBuildPiece === "torch"'));
 
 // Lighting: dark midnight, softer edges, held + placed lights.
-assert(game.includes('const midnightAlpha = 0.82;'));
+assert(/const midnightAlpha = 0\.(?:8[2-9]|9\d);/.test(game), 'night must remain at least as dark as the original v401 torch pass');
 assert(game.includes('function carveTorchLight('));
 assert(game.includes('bufferCtx.globalCompositeOperation = "destination-out"'));
 assert(game.includes('structure?.kind !== "torch"'));

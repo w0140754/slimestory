@@ -1,3 +1,14 @@
+## v6-11-407 — Night Hostility & Lighting Polish
+
+- Held-item visual occlusion now follows the same world Y-sort used for wall/player draw order. A wall can still block the attack mechanically, but if the player is standing below/in front of that wall the held sword/tool/torch remains visible in front instead of being clipped away.
+- Wall-mounted Torches now locally brighten the painted Wood Wall face they are attached to while the normal visibility polygon still blocks light from crossing the wall boundary. This is a client-only facade wash and adds no network traffic.
+- Night ambient darkness is deeper across the full cycle: darkness begins stronger at 20:00, peaks at **0.92 alpha around midnight**, then eases toward the existing 05:00 dawn.
+- All ordinary mobs on occupied maps become hostile at night inside a **208 px detection radius**. A **248 px disengage radius** provides hysteresis so enemies do not rapidly promote/demote at the edge.
+- Spawn's special night-only Slimes retain their existing relentless/infinite-range night aggro and sunrise retreat behavior. Ordinary mobs outside the 208 px detection radius remain on the existing passive intent stream, avoiding a map-wide 8 Hz precise-motion traffic spike.
+- No new AI/lighting network message type or heartbeat was added; nighttime hostility reuses existing aggro state and movement replication.
+- Preserves v406 mounted-Torch attachment/reclaim rules, v405 single-target basic attacks and staggered Slime hops, v404 first-snapshot fake-death prevention, v403 night-Slime roaming, and all existing building/combat/world systems.
+- Regression: **30 syntax targets + 89 retained checks/smokes** pass, including a new WebSocket smoke proving an ordinary runtime Slime on a non-Spawn map acquires a nearby player at night. Server startup and `/health` pass as build 6-11-407.
+
 ## v6-11-406 — Held Occlusion & Mounted Torches
 
 - Removed the experimental house-only interior-darkness overlay entirely. Ambient darkness is once again owned by the normal world day/night lighting, with real Torch sources providing the contrast.

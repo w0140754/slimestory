@@ -195,7 +195,7 @@
   });
 
   return Object.freeze({
-    version: 406,
+    version: 407,
     schemaVersion: 1,
     worldGrid,
     defaultPlayerLoad: Object.freeze({ mapId: worldGrid.startMapId, spawnId: "center" }),

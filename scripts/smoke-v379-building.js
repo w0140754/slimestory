@@ -27,7 +27,7 @@ async function connect() {
   const welcome = waitForMessage(socket, "welcome");
   await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
   const message = await welcome;
-  if (message.buildVersion !== "6-11-406") throw new Error(`unexpected build ${message.buildVersion}`);
+  if (message.buildVersion !== "6-11-407") throw new Error(`unexpected build ${message.buildVersion}`);
   return socket;
 }
 
