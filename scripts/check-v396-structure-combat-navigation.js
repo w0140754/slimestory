@@ -13,10 +13,10 @@ const enemies = read("public", "client-enemies.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 const pkg = JSON.parse(read("package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.410");
-assert.strictEqual(world.version, 410);
-assert(server.includes('const BUILD_VERSION = "6-11-410";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
+assert.strictEqual(pkg.version, "0.6.11.413");
+assert.strictEqual(world.version, 413);
+assert(server.includes('const BUILD_VERSION = "6-11-413";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
 
 // Authored structure UI icons are now the live menu/loot assets.
 for (const name of ["wood_floor.png", "wood_wall.png", "wood_door.png"]) {
@@ -25,10 +25,10 @@ for (const name of ["wood_floor.png", "wood_wall.png", "wood_door.png"]) {
   assert.strictEqual(buf.readUInt32BE(16), 16, `${name} must be 16px wide`);
   assert.strictEqual(buf.readUInt32BE(20), 16, `${name} must be 16px high`);
 }
-assert(html.includes('assets/ui/wood_floor.png?v=410'));
-assert(html.includes('assets/ui/wood_wall.png?v=410'));
-assert(html.includes('assets/ui/wood_door.png?v=410'));
-assert(enemies.includes('assets/ui/wood_floor.png?v=410'));
+assert(html.includes('assets/ui/wood_floor.png?v=413'));
+assert(html.includes('assets/ui/wood_wall.png?v=413'));
+assert(html.includes('assets/ui/wood_door.png?v=413'));
+assert(enemies.includes('assets/ui/wood_floor.png?v=413'));
 
 // Roof remains deliberately uniform; only the outer silhouette gets special treatment.
 assert(game.includes('Keep the authored roof tile completely uniform'));

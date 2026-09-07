@@ -3,9 +3,10 @@ const { spawn } = require("child_process");
 const WebSocket = require("ws");
 const path = require("path");
 const root = path.join(__dirname, "..");
-const port = 43397;
+const port = 43411;
 const server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"] });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => { socket.off("message", onMessage); reject(new Error(`Timed out waiting for ${type}`)); }, timeoutMs);
@@ -17,11 +18,13 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     socket.on("message", onMessage);
   });
 }
+
 async function place(socket, kind, x, y, edge = null) {
   const pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === kind);
   socket.send(JSON.stringify({ type: "structurePlace", kind, x, y, ...(edge ? { edge } : {}) }));
   return pending;
 }
+
 (async () => {
   try {
     await delay(500);
@@ -32,23 +35,35 @@ async function place(socket, kind, x, y, edge = null) {
     if (welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
-    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 2, woodWalls: 2, woodDoors: 1 } } }));
+    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 3, woodWalls: 7 } } }));
     await restoredPending;
-    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 144, y: 112, weaponIndex: -1 } }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 112, y: 96, weaponIndex: -1 } }));
     await delay(80);
 
     for (const x of [128, 144]) {
-      const result = await place(socket, "woodFloor", x, 128);
-      if (!result.success) throw new Error(`floor failed: ${JSON.stringify(result)}`);
+      const result = await place(socket, "woodFloor", x, 96);
+      if (!result.success) throw new Error(`house floor placement failed at ${x}: ${JSON.stringify(result)}`);
     }
-    let result = await place(socket, "woodWall", 128, 128, "south");
-    if (!result.success) throw new Error(`straight flank failed: ${JSON.stringify(result)}`);
-    result = await place(socket, "woodWall", 144, 128, "east");
-    if (!result.success) throw new Error(`rotated corner flank failed: ${JSON.stringify(result)}`);
-    result = await place(socket, "woodDoor", 144, 128, "south");
-    if (!result.success) throw new Error(`corner-supported door was rejected: ${JSON.stringify(result)}`);
+    const perimeter = [
+      [128, 96, "north"], [128, 96, "south"], [128, 96, "west"],
+      [144, 96, "north"], [144, 96, "south"], [144, 96, "east"]
+    ];
+    for (const [x, y, edge] of perimeter) {
+      const result = await place(socket, "woodWall", x, y, edge);
+      if (!result.success) throw new Error(`perimeter wall failed ${x},${y},${edge}: ${JSON.stringify(result)}`);
+    }
+
+    const porch = await place(socket, "woodFloor", 160, 96);
+    if (!porch.success) throw new Error(`exterior floor placement failed: ${JSON.stringify(porch)}`);
+
+    const interiorAttempt = await place(socket, "woodWall", 128, 96, "east");
+    if (interiorAttempt.success || interiorAttempt.reason !== "roofed") {
+      throw new Error(`exterior floor invalidated enclosed roof topology: ${JSON.stringify(interiorAttempt)}`);
+    }
 
     socket.close();
-    console.log("v397 corner-door WebSocket smoke passed: one straight flank + one 90-degree corner wall supports a door.");
-  } finally { server.kill("SIGTERM"); }
+    console.log("v411 exterior-floor WebSocket smoke passed: a floor placed immediately outside a completed wall remains a porch and does not invalidate the enclosed roof.");
+  } finally {
+    server.kill("SIGTERM");
+  }
 })().catch(error => { console.error(error); process.exitCode = 1; });

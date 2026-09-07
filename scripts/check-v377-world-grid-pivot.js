@@ -15,9 +15,9 @@ const abilities = read("public", "client-abilities.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.410", "package version must be v377");
-assert(server.includes('const BUILD_VERSION = "6-11-410";'), "server build marker must be v377");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-410";'), "client build marker must be v377");
+assert.strictEqual(pkg.version, "0.6.11.413", "package version must be v377");
+assert(server.includes('const BUILD_VERSION = "6-11-413";'), "server build marker must be v377");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-413";'), "client build marker must be v377");
 
 assert(world.worldGrid, "coordinate world metadata missing");
 assert.strictEqual(world.worldGrid.radius, 1, "foundation world radius must be 1");

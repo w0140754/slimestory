@@ -14,11 +14,11 @@ const app = read("public", "client-app.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.410");
-assert.strictEqual(world.version, 410);
-assert(server.includes('const BUILD_VERSION = "6-11-410";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
-assert(html.includes('/game.js?v=410') && html.includes('/client-input.js?v=410'));
+assert.strictEqual(pkg.version, "0.6.11.413");
+assert.strictEqual(world.version, 413);
+assert(server.includes('const BUILD_VERSION = "6-11-413";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
+assert(html.includes('/game.js?v=413') && html.includes('/client-input.js?v=413'));
 
 // Coordinate-world definitions now contain population rules, never fixed mobs.
 for (const [mapId, map] of Object.entries(world.maps)) {

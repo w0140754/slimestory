@@ -9,8 +9,8 @@ const readme = read("README.md");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'), 'client build must be 6-11-406');
-assert(html.includes('/client-enemy-rendering.js?v=410') && html.includes('/client-enemies.js?v=410') && html.includes('/game.js?v=410'), 'v342 cache keys missing');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'), 'client build must be 6-11-406');
+assert(html.includes('/client-enemy-rendering.js?v=413') && html.includes('/client-enemies.js?v=413') && html.includes('/game.js?v=413'), 'v342 cache keys missing');
 assert(readme.includes('## v6-11-342 — Crab face clip fix'), 'historical README v342 changelog missing');
 const start = renderer.indexOf('function drawCrab(');
 const end = renderer.indexOf('\nfunction mushroomIsAwakePresentation', start);

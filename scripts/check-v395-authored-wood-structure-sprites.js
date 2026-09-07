@@ -24,12 +24,12 @@ assert.deepStrictEqual(pngSize(wall), [16, 32]);
 assert.deepStrictEqual(pngSize(door), [16, 32]);
 assert.deepStrictEqual(pngSize(roof), [16, 16]);
 
-assert(game.includes('const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=410");'));
-assert(game.includes('const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=410");'));
-assert(game.includes('const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=410");'));
-assert(game.includes('const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=410");'));
+assert(game.includes('const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=413");'));
+assert(game.includes('const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=413");'));
+assert(game.includes('const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=413");'));
+assert(game.includes('const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=413");'));
 
-assert(game.includes("ctx.drawImage(woodFloorStructureImage, x, y, 16, 16);"));
+assert(game.includes("ctx.drawImage(image, x, y, 16, 16);"));
 assert(game.includes("ctx.drawImage(woodWallStructureImage, left, top, 16, 32);"));
 assert(game.includes("ctx.drawImage(woodDoorStructureImage, left, top, 16, 32);"));
 assert(game.includes("ctx.drawImage(woodRoofStructureImage, x, y, 16, 16);"));

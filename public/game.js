@@ -199,15 +199,16 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=410");
-const torchImage = loadImage("assets/torch_v1.png?v=410");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=413");
+const torchImage = loadImage("assets/torch_v1.png?v=413");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=410");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=410");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=410");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=410");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=413");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=413");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=413");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=413");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=413");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -4121,9 +4122,14 @@ const player = {
   greenJellyCubes: 0,
   arrows: 0,
   woodFloors: 0,
+  stoneFloors: 0,
   woodWalls: 0,
   woodDoors: 0,
   torches: 0,
+
+  // Static treasure chests are world content. Only opened chest IDs persist;
+  // they are not part of routine multiplayer replication.
+  openedTreasureIds: new Set(),
 
   // Count-based item ownership. Missing/zero means not owned.
   // New players intentionally start with no gear or weapons.
@@ -4232,7 +4238,7 @@ const player = {
 const HOTBAR_SLOT_COUNT = 9;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
-const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall", "woodDoor", "torch"]);
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"]);
 const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -4381,6 +4387,14 @@ const CRAFT_RECIPES = Object.freeze({
     ingredients: Object.freeze({ wood: 2 }),
     repeatable: true
   }),
+  stoneFloor: Object.freeze({
+    name: "Stone Floor ×4",
+    resourceKey: "stoneFloors",
+    outputCount: 4,
+    category: "building",
+    ingredients: Object.freeze({ stone: 2 }),
+    repeatable: true
+  }),
   woodWall: Object.freeze({
     name: "Wood Wall ×2",
     resourceKey: "woodWalls",
@@ -4527,6 +4541,7 @@ const SHOP_ITEMS = [
 
 function shopImageForItemId(itemId) {
   if (itemId === "woodFloor") return document.getElementById("inventoryWoodFloorImg");
+  if (itemId === "stoneFloor") return document.getElementById("inventoryStoneFloorImg");
   if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
   if (itemId === "woodDoor") return document.getElementById("inventoryWoodDoorImg");
   if (itemId === "torch") return torchImage;
@@ -4737,6 +4752,7 @@ function isHotbarAssignableItem(itemId) {
 function hotbarItemInventoryCount(itemId) {
   if (WEAPON_ITEM_IDS.includes(itemId)) return inventoryItemCount(itemId);
   if (itemId === "woodFloor") return Math.max(0, Math.floor(Number(player.woodFloors) || 0));
+  if (itemId === "stoneFloor") return Math.max(0, Math.floor(Number(player.stoneFloors) || 0));
   if (itemId === "woodWall") return Math.max(0, Math.floor(Number(player.woodWalls) || 0));
   if (itemId === "woodDoor") return Math.max(0, Math.floor(Number(player.woodDoors) || 0));
   if (itemId === "torch") return Math.max(0, Math.floor(Number(player.torches) || 0));
@@ -4745,6 +4761,7 @@ function hotbarItemInventoryCount(itemId) {
 
 function hotbarItemDisplayName(itemId) {
   if (itemId === "woodFloor") return "Wood Floor";
+  if (itemId === "stoneFloor") return "Stone Floor";
   if (itemId === "woodWall") return "Wood Wall";
   if (itemId === "woodDoor") return "Wood Door";
   if (itemId === "torch") return "Torch";
@@ -5038,7 +5055,8 @@ function nearbySpawnInteraction() {
 
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     const type = npc?.type;
-    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"].includes(type)) continue;
+    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal", "treasureChest"].includes(type)) continue;
+    if (type === "treasureChest" && player.openedTreasureIds?.has(String(npc.id || ""))) continue;
     candidates.push({
       kind: "placedNpc",
       npcType: type,
@@ -5682,6 +5700,9 @@ function interactWithNearbyObject() {
     if (interaction.npcType === "classResetCrystal") {
       interactWithClassResetCrystal();
       return true;
+    }
+    if (interaction.npcType === "treasureChest") {
+      return Boolean(onlineClient?.requestTreasureOpen(interaction.npc?.id));
     }
   }
 
@@ -8283,6 +8304,7 @@ function updateInventoryUi() {
   const greenJellyCubeCount = document.getElementById("inventoryGreenJellyCubeCount");
   const arrowCount = document.getElementById("inventoryArrowCount");
   const woodFloorCount = document.getElementById("inventoryWoodFloorCount");
+  const stoneFloorCount = document.getElementById("inventoryStoneFloorCount");
   const woodWallCount = document.getElementById("inventoryWoodWallCount");
   const woodDoorCount = document.getElementById("inventoryWoodDoorCount");
   const torchCount = document.getElementById("inventoryTorchCount");
@@ -8301,6 +8323,7 @@ function updateInventoryUi() {
   if (greenJellyCubeCount) greenJellyCubeCount.textContent = `${player.greenJellyCubes}`;
   if (arrowCount) arrowCount.textContent = `${player.arrows}`;
   if (woodFloorCount) woodFloorCount.textContent = `${player.woodFloors}`;
+  if (stoneFloorCount) stoneFloorCount.textContent = `${player.stoneFloors}`;
   if (woodWallCount) woodWallCount.textContent = `${player.woodWalls}`;
   if (woodDoorCount) woodDoorCount.textContent = `${player.woodDoors}`;
   if (torchCount) torchCount.textContent = `${player.torches}`;
@@ -8773,6 +8796,8 @@ function buildLocalCharacterSave() {
       exp: Math.max(0, Math.floor(Number(player.flowerHarvesting?.exp) || 0))
     },
 
+    openedTreasureIds: Array.from(player.openedTreasureIds || []).slice(0, 64),
+
     resources: {
       coins: Math.max(0, Math.floor(Number(player.coins) || 0)),
       wood: Math.max(0, Math.floor(Number(player.wood) || 0)),
@@ -8786,6 +8811,7 @@ function buildLocalCharacterSave() {
       greenJellyCubes: Math.max(0, Math.floor(Number(player.greenJellyCubes) || 0)),
       arrows: Math.max(0, Math.floor(Number(player.arrows) || 0)),
       woodFloors: Math.max(0, Math.floor(Number(player.woodFloors) || 0)),
+      stoneFloors: Math.max(0, Math.floor(Number(player.stoneFloors) || 0)),
       woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0)),
       woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0)),
       torches: Math.max(0, Math.floor(Number(player.torches) || 0))
@@ -8927,9 +8953,15 @@ function applyLocalCharacterSave(save) {
   player.greenJellyCubes = clampLocalSaveInteger(save.resources?.greenJellyCubes, 0, 999999, 0);
   player.arrows = clampLocalSaveInteger(save.resources?.arrows, 0, 999999, 0);
   player.woodFloors = clampLocalSaveInteger(save.resources?.woodFloors, 0, 999999, 0);
+  player.stoneFloors = clampLocalSaveInteger(save.resources?.stoneFloors, 0, 999999, 0);
   player.woodWalls = clampLocalSaveInteger(save.resources?.woodWalls, 0, 999999, 0);
   player.woodDoors = clampLocalSaveInteger(save.resources?.woodDoors, 0, 999999, 0);
   player.torches = clampLocalSaveInteger(save.resources?.torches, 0, 999999, 0);
+  player.openedTreasureIds = new Set(
+    (Array.isArray(save.openedTreasureIds) ? save.openedTreasureIds : [])
+      .filter(id => typeof id === "string" && id.includes(":treasure:"))
+      .slice(0, 64)
+  );
 
   player.items = validSavedItemIds(save.items);
   player.shopPurchases = Array.from(new Set(
@@ -9074,6 +9106,7 @@ function persistentServerBootstrapPayload() {
   if (!localCharacterSaveLoaded) return null;
 
   return {
+    openedTreasureIds: Array.from(player.openedTreasureIds || []).slice(0, 64),
     resources: {
       coins: player.coins,
       wood: player.wood,
@@ -9087,6 +9120,7 @@ function persistentServerBootstrapPayload() {
       greenJellyCubes: player.greenJellyCubes,
       arrows: player.arrows,
       woodFloors: player.woodFloors,
+      stoneFloors: player.stoneFloors,
       woodWalls: player.woodWalls,
       woodDoors: player.woodDoors,
       torches: player.torches
@@ -10019,6 +10053,7 @@ let placedStructureRevision = 0;
 const BUILD_GRID_SIZE = 16;
 const BUILD_PLACE_RANGE = 96;
 const BUILD_WALL_EDGES = Object.freeze(["north", "east", "south", "west"]);
+const BUILD_FLOOR_STRUCTURE_KINDS = Object.freeze(["woodFloor", "stoneFloor"]);
 const BUILD_EDGE_STRUCTURE_KINDS = Object.freeze(["woodWall", "woodDoor"]);
 const DOOR_ADJACENT_DISTANCE = 10;
 const DOOR_PASSAGE_DISTANCE = 14;
@@ -10035,9 +10070,32 @@ const ROOF_EAVE_LIGHT = "#a65012";
 let localDoorPassageId = null;
 let localDoorPassageUntil = 0;
 let roofRegionCache = { mapId: null, revision: -1, regions: [] };
+let currentMapStructureCache = { mapId: null, revision: -1, structures: [] };
+
+function worldGeneratedStructuresForMap(mapId = currentMapId) {
+  const structures = typeof WORLD_CONTENT !== "undefined"
+    ? WORLD_CONTENT.maps?.[mapId]?.structures
+    : null;
+  return Array.isArray(structures) ? structures : [];
+}
 
 function currentMapStructures() {
-  return placedStructuresByMap.get(currentMapId) || [];
+  if (
+    currentMapStructureCache.mapId === currentMapId &&
+    currentMapStructureCache.revision === placedStructureRevision
+  ) return currentMapStructureCache.structures;
+
+  const worldStructures = worldGeneratedStructuresForMap(currentMapId);
+  const placedStructures = placedStructuresByMap.get(currentMapId) || [];
+  const structures = placedStructures.length > 0
+    ? worldStructures.concat(placedStructures)
+    : worldStructures;
+  currentMapStructureCache = {
+    mapId: currentMapId,
+    revision: placedStructureRevision,
+    structures
+  };
+  return structures;
 }
 
 function applyStructureSnapshot(mapId, structures) {
@@ -10070,14 +10128,19 @@ function applyStructureRemoved(mapId, structureId) {
   return true;
 }
 
-function drawWoodFloor(structure, camX, camY, alpha = 1) {
+function drawStructureFloor(structure, camX, camY, alpha = 1) {
   const x = Math.round(structure.x - camX - 8);
   const y = Math.round(structure.y - camY - 8);
+  const image = structure?.kind === "stoneFloor" ? stoneFloorStructureImage : woodFloorStructureImage;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(woodFloorStructureImage, x, y, 16, 16);
+  ctx.drawImage(image, x, y, 16, 16);
   ctx.restore();
+}
+
+function drawWoodFloor(structure, camX, camY, alpha = 1) {
+  drawStructureFloor(structure, camX, camY, alpha);
 }
 
 function torchDisplayWorldPosition(structure) {
@@ -10101,7 +10164,20 @@ function torchLightWorldPosition(structure) {
 
 function torchVisibilityWorldPosition(structure) {
   const light = torchLightWorldPosition(structure);
-  if (structure?.mountType !== "wall") return light;
+  if (structure?.mountType !== "wall") {
+    // v412: floor/ground Torches use their physical placement anchor as the
+    // topology/occlusion origin, while the visible light gradient stays on the
+    // raised flame. A Torch on the floor immediately outside a wall can have
+    // its flame sprite project above that wall in screen space; using the flame
+    // as the world-space ray origin incorrectly classified it as being inside
+    // the room and let exterior light illuminate the interior.
+    const anchorX = Number(structure?.x);
+    const anchorY = Number(structure?.y);
+    if (Number.isFinite(anchorX) && Number.isFinite(anchorY)) {
+      return { x: anchorX, y: anchorY };
+    }
+    return light;
+  }
 
   // v408: mounting-side information is interpreted through the shared
   // structure geometry module instead of re-deriving wall axes here. The
@@ -10454,7 +10530,9 @@ function drawWoodDoor(structure, camX, camY, alpha = 1) {
 }
 
 function drawPlayerStructureFloors(camX, camY) {
-  for (const structure of currentMapStructures()) if (structure.kind === "woodFloor") drawWoodFloor(structure, camX, camY);
+  for (const structure of currentMapStructures()) {
+    if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure.kind)) drawStructureFloor(structure, camX, camY);
+  }
 }
 
 function structureCellKey(x, y) {
@@ -10471,77 +10549,15 @@ function automaticRoofRegions() {
     roofRegionCache.revision === placedStructureRevision
   ) return roofRegionCache.regions;
 
-  const structures = currentMapStructures();
-  const floors = new Map();
-  const boundaries = new Set();
-  for (const structure of structures) {
-    if (structure?.kind === "woodFloor") {
-      floors.set(structureCellKey(structure.x, structure.y), structure);
-    } else if (BUILD_EDGE_STRUCTURE_KINDS.includes(structure?.kind)) {
-      boundaries.add(structureBoundaryKey(structure.axis, structure.x, structure.y));
-    }
-  }
-
-  const visited = new Set();
-  const regions = [];
-  const neighbors = [
-    [0, -BUILD_GRID_SIZE],
-    [BUILD_GRID_SIZE, 0],
-    [0, BUILD_GRID_SIZE],
-    [-BUILD_GRID_SIZE, 0]
-  ];
-
-  for (const [startKey, startFloor] of floors.entries()) {
-    if (visited.has(startKey)) continue;
-    const queue = [startFloor];
-    const component = [];
-    visited.add(startKey);
-
-    while (queue.length) {
-      const floor = queue.shift();
-      component.push(floor);
-      for (const [dx, dy] of neighbors) {
-        const key = structureCellKey(Number(floor.x) + dx, Number(floor.y) + dy);
-        if (!visited.has(key) && floors.has(key)) {
-          visited.add(key);
-          queue.push(floors.get(key));
-        }
-      }
-    }
-
-    let enclosed = component.length > 0;
-    const perimeterBoundaries = new Set();
-    const foregroundBoundaries = new Set();
-    for (const floor of component) {
-      const x = Number(floor.x);
-      const y = Number(floor.y);
-      const edgeChecks = [
-        { side: "north", neighbor: structureCellKey(x, y - BUILD_GRID_SIZE), boundary: structureBoundaryKey("horizontal", x, y - 8) },
-        { side: "east", neighbor: structureCellKey(x + BUILD_GRID_SIZE, y), boundary: structureBoundaryKey("vertical", x + 8, y) },
-        { side: "south", neighbor: structureCellKey(x, y + BUILD_GRID_SIZE), boundary: structureBoundaryKey("horizontal", x, y + 8) },
-        { side: "west", neighbor: structureCellKey(x - BUILD_GRID_SIZE, y), boundary: structureBoundaryKey("vertical", x - 8, y) }
-      ];
-      for (const check of edgeChecks) {
-        if (floors.has(check.neighbor)) continue;
-        perimeterBoundaries.add(check.boundary);
-        if (check.side === "south") foregroundBoundaries.add(check.boundary);
-        if (!boundaries.has(check.boundary)) {
-          enclosed = false;
-          break;
-        }
-      }
-      if (!enclosed) break;
-    }
-
-    if (enclosed) {
-      regions.push({
-        floors: component,
-        floorKeys: new Set(component.map(floor => structureCellKey(floor.x, floor.y))),
-        boundaryKeys: perimeterBoundaries,
-        foregroundBoundaryKeys: foregroundBoundaries
-      });
-    }
-  }
+  // v411: automatic roofs are based on independent structure layers. Floors
+  // connect only when no wall/door separates them, so an exterior floor tile
+  // touching a finished house remains outside instead of destroying the roof.
+  // Object and attachment layers (floor objects, wall torches, future
+  // furniture) are deliberately ignored by roof topology.
+  const regions = STRUCTURE_TOPOLOGY.automaticRoofRegions(
+    currentMapStructures(),
+    BUILD_GRID_SIZE
+  );
 
   roofRegionCache = { mapId: currentMapId, revision: placedStructureRevision, regions };
   return regions;
@@ -10733,7 +10749,7 @@ function pickaxeStructurePointerBounds(structure) {
     };
   }
 
-  if (structure?.kind === "woodFloor") {
+  if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure?.kind)) {
     return {
       left: Number(structure.x) - 8,
       top: Number(structure.y) - 8,
@@ -10783,7 +10799,7 @@ function playerStructurePickaxeTarget() {
   let bestPriority = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || !["woodFloor", "woodWall", "woodDoor", "torch"].includes(structure.kind)) continue;
+    if (!structure?.id || structure.worldGenerated || !["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(structure.kind)) continue;
 
     // Player position is only a reach gate. It must never decide which placed
     // piece wins when several structures are in range; the cursor does that.
@@ -10830,7 +10846,7 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
   ctx.globalAlpha = 0.92;
   ctx.fillStyle = "#ffe38b";
 
-  if (structure.kind === "woodFloor") {
+  if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure.kind)) {
     const left = Math.round(Number(structure.x) - camX - 8);
     const top = Math.round(Number(structure.y) - camY - 8);
     ctx.fillRect(left, top, 16, 1);
@@ -10884,6 +10900,7 @@ function tryHitPlayerStructure(lockedStructureId = undefined) {
 
 function buildPieceCount(kind) {
   if (kind === "woodFloor") return Math.max(0, Number(player.woodFloors) || 0);
+  if (kind === "stoneFloor") return Math.max(0, Number(player.stoneFloors) || 0);
   if (kind === "woodWall") return Math.max(0, Number(player.woodWalls) || 0);
   if (kind === "woodDoor") return Math.max(0, Number(player.woodDoors) || 0);
   if (kind === "torch") return Math.max(0, Number(player.torches) || 0);
@@ -10891,7 +10908,7 @@ function buildPieceCount(kind) {
 }
 
 function beginBuildPlacement(kind) {
-  if (!["woodFloor", "woodWall", "woodDoor", "torch"].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  if (!["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(kind) || buildPieceCount(kind) <= 0) return false;
   selectedBuildPiece = kind;
   // Selecting a build piece from the hotbar/mouse wheel must not clear held
   // movement input. Only close the inventory when it is actually open.
@@ -10926,7 +10943,7 @@ function floorAtWorldPoint(worldX, worldY) {
   let best = null;
   let bestDistance = Infinity;
   for (const structure of currentMapStructures()) {
-    if (structure?.kind !== "woodFloor") continue;
+    if (!BUILD_FLOOR_STRUCTURE_KINDS.includes(structure?.kind)) continue;
     const dx = Math.abs(worldX - Number(structure.x));
     const dy = Math.abs(worldY - Number(structure.y));
     if (dx > 8 || dy > 8) continue;
@@ -10947,7 +10964,7 @@ function floorBelongsToCompletedRoof(floor) {
 
 function buildFloorExistsAt(x, y) {
   return currentMapStructures().some(structure =>
-    structure?.kind === "woodFloor" &&
+    BUILD_FLOOR_STRUCTURE_KINDS.includes(structure?.kind) &&
     Math.abs(Number(structure.x) - Number(x)) < 1 &&
     Math.abs(Number(structure.y) - Number(y)) < 1
   );
@@ -11158,7 +11175,7 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   if (!buildPlacementWithinRange(x, y)) return true;
   if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
-    onlineClient.requestStructurePlacement("woodFloor", x, y);
+    onlineClient.requestStructurePlacement(selectedBuildPiece, x, y);
   }
   return true;
 }
@@ -11220,7 +11237,7 @@ function drawBuildPlacementPreview(camX, camY) {
   const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const inRange = buildPlacementWithinRange(x, y);
-  drawWoodFloor({ kind: "woodFloor", x, y }, camX, camY, inRange ? 0.55 : 0.2);
+  drawStructureFloor({ kind: selectedBuildPiece, x, y }, camX, camY, inRange ? 0.55 : 0.2);
   if (!inRange) drawBuildCursorMarker(x, y, camX, camY, false);
 }
 
@@ -11476,7 +11493,13 @@ function carveTorchLight(
     Math.sin(worldTime * 12.7 + seed) * 2.2 +
     Math.sin(worldTime * 19.3 + seed * 0.37) * 1.2;
   const lightRadius = Math.max(34, radius + flicker);
-  const visibilityRadius = radius + 6;
+  // v412: rendering and topology origins may intentionally differ (most
+  // notably a floor Torch whose flame is raised above its floor anchor). Grow
+  // the visibility envelope by that offset so decoupling occlusion from the
+  // flame does not trim the otherwise unchanged circular light radius in open
+  // space.
+  const originOffset = Math.hypot(worldX - visibilityOriginX, worldY - visibilityOriginY);
+  const visibilityRadius = radius + originOffset + 6;
   const polygon = torchLightVisibilityPolygon(
     visibilityOriginX,
     visibilityOriginY,
@@ -14000,7 +14023,7 @@ function drawJesterNpc(camX, camY) {
 
 function drawPlacedNpc(npc, camX, camY) {
   if (!npc) return;
-  const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"];
+  const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal", "treasureChest"];
   const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
   const screenX = Math.round((Number(npc.x) || 0) - camX);
   const screenY = Math.round((Number(npc.y) || 0) - camY);
@@ -14021,6 +14044,34 @@ function drawPlacedNpc(npc, camX, camY) {
     ctx.fillStyle = "rgba(20, 45, 38, .30)";
     ctx.fillRect(screenX - 7, screenY + 1, 14, 3);
     ctx.drawImage(classResetCrystalImage, screenX - 16, screenY - 31 + bob, 32, 32);
+    return;
+  }
+
+  if (type === "treasureChest") {
+    const opened = player.openedTreasureIds?.has(String(npc.id || ""));
+    ctx.fillStyle = "rgba(30, 24, 18, .28)";
+    ctx.fillRect(screenX - 7, screenY, 14, 2);
+    // Tiny procedural pixel chest: avoids another asset/request while keeping
+    // generated treasure visually distinct from NPCs.
+    ctx.fillStyle = "#3f2617";
+    ctx.fillRect(screenX - 7, screenY - 9, 14, 9);
+    ctx.fillStyle = "#8e5927";
+    ctx.fillRect(screenX - 6, screenY - 8, 12, 7);
+    ctx.fillStyle = "#c38a3f";
+    ctx.fillRect(screenX - 6, screenY - 7, 12, 2);
+    ctx.fillStyle = "#d8b45a";
+    ctx.fillRect(screenX - 1, screenY - 6, 2, 4);
+    if (opened) {
+      ctx.fillStyle = "#2b1b12";
+      ctx.fillRect(screenX - 6, screenY - 13, 12, 3);
+      ctx.fillStyle = "#8e5927";
+      ctx.fillRect(screenX - 5, screenY - 14, 10, 2);
+    } else {
+      ctx.fillStyle = "#58351e";
+      ctx.fillRect(screenX - 6, screenY - 10, 12, 3);
+      ctx.fillStyle = "#a86c2e";
+      ctx.fillRect(screenX - 5, screenY - 11, 10, 2);
+    }
     return;
   }
 
@@ -14303,7 +14354,9 @@ function drawInteractionPrompt(
       ? "F CRAFT"
       : interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
         ? "F RESET"
-        : "F TALK";
+        : placedKind === "treasureChest"
+          ? "F OPEN"
+          : "F TALK";
 
   drawStaticPixelText(
     promptText,
@@ -14454,7 +14507,7 @@ function drawRemotePlayer(
   player.weaponIndex = Number.isFinite(remote.weaponIndex)
     ? remote.weaponIndex
     : -1;
-  player.heldBuildPiece = ["woodFloor", "woodWall", "woodDoor", "torch"].includes(remote.heldBuildPiece)
+  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(remote.heldBuildPiece)
     ? remote.heldBuildPiece
     : null;
 

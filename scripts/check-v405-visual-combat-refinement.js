@@ -15,13 +15,13 @@ const game = read("public", "game.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.410");
-assert.strictEqual(world.version, 410);
-assert(server.includes('const BUILD_VERSION = "6-11-410";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
-assert(html.includes('/game.js?v=410'));
-assert(html.includes('/client-enemy-rendering.js?v=410'));
-assert(html.includes('/client-combat.js?v=410'));
+assert.strictEqual(pkg.version, "0.6.11.413");
+assert.strictEqual(world.version, 413);
+assert(server.includes('const BUILD_VERSION = "6-11-413";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
+assert(html.includes('/game.js?v=413'));
+assert(html.includes('/client-enemy-rendering.js?v=413'));
+assert(html.includes('/client-combat.js?v=413'));
 
 // v405's live-tested house darkness and wall-face lighting experiments were
 // deliberately rolled back in v406; keep a regression assertion that they do

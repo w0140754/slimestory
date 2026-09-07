@@ -12,11 +12,12 @@ const input = read("public", "client-input.js");
 const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 const server = read("server.js");
+const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.410");
-assert(server.includes('const BUILD_VERSION = "6-11-410";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
-assert.strictEqual(world.version, 410);
+assert.strictEqual(pkg.version, "0.6.11.413");
+assert(server.includes('const BUILD_VERSION = "6-11-413";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
+assert.strictEqual(world.version, 413);
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");
 
@@ -56,7 +57,7 @@ assert(html.includes('data-craft-recipe="testWoodSupply"'), "Test Wood crafting-
 assert(network.includes('wood: "totalWood"'), "Test Wood craft result must use server-authoritative total without double-granting");
 
 assert(game.includes("function automaticRoofRegions()"), "automatic enclosure roof detection missing");
-assert(game.includes("if (!boundaries.has(check.boundary))"), "roof must require every exposed floor edge to be closed");
+assert(topology.includes("if (!boundaries.has(edge.key))"), "roof must require every exposed surface edge to be closed by a wall/door boundary");
 assert(game.includes("function drawAutomaticStructureRoofs("), "automatic roof renderer missing");
 assert(game.includes("if (inside) continue;"), "completed-house roof must disappear while the player is inside");
 assert(app.includes("drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);"), "roof renderer must be wired over the sorted world layer");

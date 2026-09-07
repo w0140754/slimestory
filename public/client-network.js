@@ -413,10 +413,18 @@ class OnlineClient {
       }
       if (Number.isFinite(message.arrows)) player.arrows = Math.max(0, Math.floor(message.arrows));
       if (Number.isFinite(message.woodFloors)) player.woodFloors = Math.max(0, Math.floor(message.woodFloors));
+      if (Number.isFinite(message.stoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.stoneFloors));
       if (Number.isFinite(message.woodWalls)) player.woodWalls = Math.max(0, Math.floor(message.woodWalls));
       if (Number.isFinite(message.woodDoors)) player.woodDoors = Math.max(0, Math.floor(message.woodDoors));
       if (Number.isFinite(message.greenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.greenJellyCubes));
       if (Number.isFinite(message.torches)) player.torches = Math.max(0, Math.floor(message.torches));
+      if (Array.isArray(message.openedTreasureIds)) {
+        player.openedTreasureIds = new Set(
+          message.openedTreasureIds
+            .filter(id => typeof id === "string" && id.includes(":treasure:"))
+            .slice(0, 64)
+        );
+      }
       if (typeof message.beachQuestStage === "string") player.beachQuest.stage = message.beachQuestStage;
       if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
@@ -883,6 +891,7 @@ class OnlineClient {
 
     if (message.type === "structurePlaceResult") {
       if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
+    if (Number.isFinite(message.totalStoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.totalStoneFloors));
       if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
       if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
       if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
@@ -934,6 +943,26 @@ class OnlineClient {
 
     if (message.type === "resourcePicked") {
       this.handleResourcePicked(message);
+      return;
+    }
+
+    if (message.type === "treasureResult") {
+      const chestId = typeof message.chestId === "string" ? message.chestId : "";
+      if (chestId) player.openedTreasureIds?.add(chestId);
+      if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
+      if (Number.isFinite(message.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
+      if (Number.isFinite(message.totalStone)) player.stone = Math.max(0, Math.floor(message.totalStone));
+      if (message.success) {
+        const parts = [];
+        if ((Number(message.rewardCoins) || 0) > 0) parts.push(`+${Math.floor(message.rewardCoins)} COINS`);
+        if ((Number(message.rewardWood) || 0) > 0) parts.push(`+${Math.floor(message.rewardWood)} WOOD`);
+        if ((Number(message.rewardStone) || 0) > 0) parts.push(`+${Math.floor(message.rewardStone)} STONE`);
+        spawnFloatingText(player.x, player.y - 26, parts.join(" · ") || "TREASURE!", "#ffe08a", 1.45);
+      } else if (message.reason === "alreadyOpened") {
+        spawnFloatingText(player.x, player.y - 26, "EMPTY", "#c8b9a8", 0.8);
+      }
+      updateInventoryUi();
+      saveLocalCharacterState(true);
       return;
     }
 
@@ -1985,6 +2014,25 @@ class OnlineClient {
     return true;
   }
 
+  requestTreasureOpen(chestId) {
+    if (
+      typeof chestId !== "string" ||
+      !chestId ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+
+    // Treasure is interaction-driven only: no chest polling or idle sync.
+    this.socket.send(JSON.stringify({
+      type: "treasureOpen",
+      chestId
+    }));
+    return true;
+  }
+
   requestCraft(recipe) {
     if (
       !recipe ||
@@ -2105,6 +2153,7 @@ class OnlineClient {
     if (Number.isFinite(message.totalAttackPotions)) player.attackPotions = message.totalAttackPotions;
     if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
+    if (Number.isFinite(message.totalStoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.totalStoneFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
     if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
@@ -2123,6 +2172,7 @@ class OnlineClient {
           attackPotions: "totalAttackPotions",
           magicPotions: "totalMagicPotions",
           woodFloors: "totalWoodFloors",
+          stoneFloors: "totalStoneFloors",
           woodWalls: "totalWoodWalls",
           woodDoors: "totalWoodDoors",
           greenJellyCubes: "totalGreenJellyCubes",
@@ -2265,6 +2315,7 @@ class OnlineClient {
       player.goldSlimeBubbles = message.totalGoldSlimeBubbles;
     }
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
+    if (Number.isFinite(message.totalStoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.totalStoneFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
     if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));

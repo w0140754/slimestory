@@ -1,3 +1,30 @@
+## v6-11-413 — Stone Floor & World Features
+
+- Added the user-authored **16×16 Stone Floor** as a full building surface. It is craftable at the Crafting Table as **Stone Floor ×4 for 2 Stone**, hotbar-assignable, persistent, reclaimable, and follows the same placement/support/roof/collision rules as Wood Floor. Wood Walls, Wood Doors, floor-mounted Torches, and the existing layered occupancy system all work on Stone Floor.
+- Expanded deterministic coordinate-world variety with lightweight **ponds**, **meadows**, **tree rings**, and irregular **stone-floor patches**. Ponds reuse the existing water terrain/traversal system; meadows reuse grass/flower scenery; tree rings reuse existing trees; stone patches use the actual Stone Floor structure art.
+- Added rare generated **houses/ruins on corner maps only**. Each world generation deterministically contains **0 or 1 most of the time, with a rare maximum of 2 total**. Complete houses use the normal enclosed-wall roof topology; ruins can have missing floors/walls and naturally remain unroofed when incomplete.
+- Some generated houses/ruins can contain a **Treasure Chest**. Chests use the normal `F OPEN` interaction and grant a small deterministic bundle of coins/stone with a chance of wood. Opened-chest IDs persist with the character so the same chest cannot be repeatedly farmed.
+- **Network traffic stays lightweight:** all generated ponds/scenery/houses/ruins/stone patches are deterministic `WORLD_CONTENT` already present on client and server and are deliberately excluded from player-built structure snapshots. Treasure uses a single request + private response only when opened; there is no polling, heartbeat, or recurring map-feature packet stream. Enemy positions remain runtime-generated server-side rather than authored into the maps, and runtime spawn selection now avoids water and generated-building reservation areas.
+- The completed v412 lighting system is unchanged. Generated structures simply participate in the existing collision, roof, attachment, and lighting systems.
+- Regression: **32 syntax targets + 98 retained checks/smokes** pass, including Stone Floor craft/place/support, generated-feature topology, zero-idle static-structure replication, runtime spawn safety, and one-time Treasure Chest interaction. Server startup and `/health` pass as build **6-11-413** / world content **413**.
+
+## v6-11-412 — Floor Torch Room Occlusion Fix
+
+- Fixed exterior floor/ground Torches illuminating the inside of a completed building when the Torch is placed immediately beside a wall. The visible flame is intentionally drawn above the Torch base, but that screen-space projection no longer decides which side of a structural boundary the light belongs to.
+- Floor/ground Torches now use their **physical placement anchor** for world-space visibility, wall occlusion, and interior/exterior roof-region classification, while the radial light gradient remains centered on the raised flame. In the reported south-wall case, the flame may visually extend one pixel across the wall plane without becoming an interior light source.
+- Expanded the visibility-polygon envelope by the render-origin/occlusion-origin offset so this topology correction does not clip or shrink the established v410/v411 Torch radius in open space.
+- Wall-mounted Torches keep their existing explicit mount-side origin, wall-face propagation, roof masking, darkness/flicker, and player-independent surface lighting. No building topology, placement, collision, world generation, enemy spawning, or networking cadence changed.
+- Regression: **32 syntax targets + 96 retained checks/smokes** pass, including a dedicated v412 geometry case reproducing an exterior floor Torch whose raised flame crosses the south-wall centerline while its physical anchor remains outside. Server startup and `/health` pass as build **6-11-412** / world content **412**.
+
+## v6-11-411 — Enclosed Wall Roof Topology
+
+- Automatic roofs now treat **walls and doors as true separators between floor surfaces**. Adding a Wood Floor immediately outside a completed house no longer merges that porch/deck tile into the interior or removes the roof.
+- A roof still requires every exposed edge of the enclosed interior floor region to be closed by a Wood Wall or Wood Door. Removing a real boundary still opens the structure and removes the roof.
+- Added shared `structure-topology.js`, used by both client and server, so roof membership is calculated from the same topology rules everywhere instead of duplicating the algorithm.
+- Introduced explicit structure occupancy channels for future layered building work: **base → surface → object → boundary → attachment**. Current Wood Floors are surface content, Wood Walls/Doors are boundary content, floor-mounted Torches are object content, and wall-mounted Torches are attachment content. Object/attachment layers do not affect roof detection. This is groundwork only; generic furniture placement is not enabled yet.
+- Preserved the completed v410 lighting system unchanged, including wall-surface propagation, roof light masking, interior/exterior occlusion, darkness balance, and Torch behavior.
+- Regression: **32 syntax targets + 95 retained checks/smokes** pass, including new v411 topology and live WebSocket exterior-floor roof tests. Server startup and `/health` pass as build **6-11-411** / world content **411**.
+
 ## v6-11-410 — Roof Surface Lighting Occlusion Fix
 
 - Fixed the small exterior-roof light leak visible when a Torch is burning inside a completed building. The roof is now treated as its own projected lighting surface instead of inheriting light carved into the ground or hidden wall sprites underneath it.

@@ -14,10 +14,10 @@ const enemies = read("public", "client-enemies.js");
 const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.410");
-assert.strictEqual(world.version, 410);
-assert(server.includes('const BUILD_VERSION = "6-11-410";'));
-assert(html.includes('/game.js?v=410'));
+assert.strictEqual(pkg.version, "0.6.11.413");
+assert.strictEqual(world.version, 413);
+assert(server.includes('const BUILD_VERSION = "6-11-413";'));
+assert(html.includes('/game.js?v=413'));
 
 // Green Jelly Cube loot + crafting.
 assert(fs.existsSync(path.join(root, "public", "assets", "green_jelly_cube.png")));
@@ -33,13 +33,13 @@ assert(enemies.includes('greenJellyCube: Object.freeze({'));
 
 // Torch hold/place/reclaim lifecycle.
 assert(fs.existsSync(path.join(root, "public", "assets", "torch_v1.png")));
-assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall", "woodDoor", "torch"])'));
+assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"])'));
 assert(game.includes('selectedBuildPiece === "torch"'));
 assert(game.includes('function drawPlacedTorch(structure, camX, camY, alpha = 1)'));
 assert(server.includes('message?.kind === "torch" ? "torch" : null'));
 assert(server.includes('kind === "woodDoor" ? "woodDoors" : "torches"'));
 assert(server.includes('spawnSharedResource(\n    removed.mapId,\n    removed.kind,'));
-assert(server.includes('"greenJellyCube", "icedCoffee", "woodFloor", "woodWall", "woodDoor", "torch"'));
+assert(server.includes('"greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"'));
 assert(input.includes('selectedBuildPiece === "torch"'));
 
 // Lighting: dark midnight, softer edges, held + placed lights.
