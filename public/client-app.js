@@ -10,9 +10,7 @@ function updateHudUi() {
   if (mobileInteractButton) {
     const interactionAvailable = Boolean(
       !player.isDead &&
-      !inventoryOpen &&
       !shopOpen &&
-      !craftingOpen &&
       !classResetConfirmOpen &&
       !beachQuestOpen &&
       nearbySpawnInteraction()
@@ -631,15 +629,15 @@ class GameSimulation {
       return;
     }
 
-    const menuOpen = inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen;
+    const modalInputBlocked = shopOpen || classResetConfirmOpen || beachQuestOpen;
 
     worldTime += dt;
     this.state.advanceTick();
 
-    // Menus block local gameplay intent, but they do not pause the multiplayer
-    // world. Enemy interpolation, effects, contacts, timers, loot animation,
-    // and authoritative state presentation continue underneath the UI.
-    if (menuOpen) {
+    // v422: Inventory and Craft are live overlays. Only focused modal dialogs
+    // block local gameplay intent; the world remains fully playable under the
+    // normal inventory/crafting workspace.
+    if (modalInputBlocked) {
       this.input.clearCommands();
       primaryAttackHeld = false;
     } else {
@@ -1438,11 +1436,26 @@ class GameApp {
 
     this.simulation.update(dt);
 
+    // v424: nearby chests are local proximity-driven context targets. This
+    // performs no polling: network traffic only occurs when the nearest chest
+    // changes, the player explicitly switches context, or a stack is moved.
+    if (typeof updateNearbyChestContext === "function") {
+      updateNearbyChestContext();
+    }
+
     // Cooldown deadlines are wall-clock based; refresh only the lightweight
     // hotbar cooldown layer every frame so cast-time cooldowns are visible
     // immediately and continue counting down without requiring a menu refresh.
     if (typeof updateAbilityCooldownHud === "function") {
       updateAbilityCooldownHud();
+    }
+
+    // v420: recipe availability depends on live proximity to a portable
+    // Crafting Table. Refresh only while the menu is open so walking into/out
+    // of range immediately adds/removes workstation recipes without polling
+    // the server or generating any network traffic.
+    if (typeof craftingOpen !== "undefined" && craftingOpen && typeof updateCraftingUi === "function") {
+      updateCraftingUi();
     }
 
     if (this.online) {

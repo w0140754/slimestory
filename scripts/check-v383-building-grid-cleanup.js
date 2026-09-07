@@ -12,10 +12,10 @@ const config = read("public", "client-config.js");
 const clientMaps = read("public", "client-maps.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(pkg.version, "0.6.11.424");
 assert(!pkg.scripts?.["adopt-map"] && !pkg.scripts?.["build-waterfall-grove"], "retired editor/map npm aliases survived");
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
 
 // v383 cleanup remains, while its temporary full-cell/autotile wall model is retired.
 assert(!server.includes('if (sameCell) return true;'), "v383 one-structure-per-cell wall rule survived");
@@ -25,7 +25,7 @@ assert(game.includes('function wallCollisionRect(structure)'), "thin wall collis
 assert(game.includes('const BUILD_WALL_EDGES = Object.freeze(["north", "east", "south", "west"]);'), "four floor edges missing");
 
 // Mouse-wheel/build selection fixes.
-assert(game.includes('if (inventoryOpen) setInventoryOpen(false);'), "build selection must not clear movement when inventory is already closed");
+assert(!game.includes('if (inventoryOpen) setInventoryOpen(false);'), "v422 live inventory should stay open during build selection");
 assert(game.includes('selectedBuildPiece ? itemId === selectedBuildPiece : itemId === equippedItemId'), "menu hotbar single-active selection rule missing");
 assert(game.includes('selectedBuildPiece ? selectedBuildPiece === itemId : equippedItemId === itemId'), "HUD hotbar single-active selection rule missing");
 assert(game.includes('window.addEventListener("wheel"') && game.includes('cycleHotbarSelection(direction)'), "mouse wheel hotbar cycling missing");

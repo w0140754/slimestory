@@ -15,12 +15,12 @@ const input = read("public", "client-input.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(pkg.version, "0.6.11.424");
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.schemaVersion, 2);
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
-assert(html.includes('/game.js?v=419'));
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
+assert(html.includes('/game.js?v=424'));
 
 function dims(file) {
   const b = fs.readFileSync(file);
@@ -28,13 +28,13 @@ function dims(file) {
 }
 assert.deepStrictEqual(dims(path.join(root, "public/assets/building/chest_closed_v414.png")), [16, 16]);
 assert.deepStrictEqual(dims(path.join(root, "public/assets/building/chest_open_v414.png")), [16, 16]);
-assert(game.includes('chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=419")'));
-assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=419")'));
+assert(game.includes('chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=424")'));
+assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=424")'));
 assert(game.includes("function drawChestStructure("));
 assert(html.includes('data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true"'));
-assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"]);'));
+assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'));
 assert.strictEqual(topology.layerOf({ kind: "chest" }), topology.LAYERS.OBJECT);
-assert(input.includes('["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece)'));
+assert(input.includes('["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece)'));
 assert(enemies.includes('chest: Object.freeze({'));
 assert(game.includes('chests: player.chests'), "Chest inventory must be included in persistent bootstrap payload");
 assert(server.includes('chests: previous && Number.isFinite(previous.chests)'));
@@ -79,13 +79,16 @@ assert(game.includes("function applyStructureState("));
 assert(!server.includes("treasureHeartbeat"));
 assert(!server.includes("structureMutationHeartbeat"));
 
-// Treasure chest lifecycle: shared open state -> harvest -> ordinary placeable chest.
-assert(server.includes("function handleTreasureOpen("));
+// Treasure chest lifecycle remains shared and harvestable, but v424 replaces
+// permanent-open/instant-loot with an exclusive short-range context lock.
+assert(server.includes("function handleChestContextOpen("));
 assert(server.includes("updateChestStructureState(chest, { opened: true })"));
-assert(server.includes('structure.kind === "chest" && structure.treasure && !structure.opened'));
-assert(server.includes('message?.kind === "chest" ? "chest" : null'));
-assert(server.includes('kind === "chest" ? "chests" : "torches"'));
+assert(server.includes("updateChestStructureState(chest, { opened: false })"));
+assert(server.includes('structure.kind === "chest" && chestLockOwner(structure.id)'));
+assert(server.includes('structure.kind === "chest" && structure.treasure && chestHasLoot(structure)'));
+assert(server.includes('message?.kind === "chest" ? "chest" : message?.kind === "craftingTable" ? "craftingTable" : null'));
+assert(server.includes('kind === "chest" ? "chests" : kind === "craftingTable" ? "craftingTables" : "torches"'));
 assert(server.includes("function handleChestToggle("));
-assert(network.includes("requestChestToggle(chestId)"));
+assert(network.includes("requestChestContextOpen(chestId)"));
 
 console.log("v414 random/mutable world + chest check passed: seeded variation, real generated structures, map-local mutation deltas, authored chest sprites, harvest/re-place lifecycle, and no idle mutation traffic.");

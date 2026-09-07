@@ -33,14 +33,18 @@ async function moveToMap(socket, mapId, x, y) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-419" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
+    if (welcome.buildVersion !== "6-11-424" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
-    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { stone: 10, woodWalls: 1 } } }));
+    socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { stone: 10, woodWalls: 1, craftingTables: 1 } } }));
     await restoredPending;
 
-    const bench = WORLD_CONTENT.maps.world_p0_p0.npcs.find(npc => npc.type === "craftingTable");
-    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: bench.x, y: bench.y, weaponIndex: -1 } }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 96, y: 96, weaponIndex: -1 } }));
+    await delay(80);
+    const tablePlacePending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "craftingTable");
+    socket.send(JSON.stringify({ type: "structurePlace", kind: "craftingTable", x: 80, y: 96 }));
+    const tablePlaced = await tablePlacePending;
+    if (!tablePlaced.success) throw new Error(`portable Crafting Table placement failed: ${JSON.stringify(tablePlaced)}`);
     await delay(80);
     const craftPending = waitForMessage(socket, "craftResult", m => m.recipe === "stoneFloor");
     socket.send(JSON.stringify({ type: "craftRequest", recipe: "stoneFloor" }));
@@ -76,18 +80,32 @@ async function moveToMap(socket, mapId, x, y) {
     }
 
     const statePending = waitForMessage(socket, "structureState", m => m.structureId === chest.id && m.state?.opened === true);
-    const treasurePending = waitForMessage(socket, "treasureResult", m => m.chestId === chest.id);
-    socket.send(JSON.stringify({ type: "treasureOpen", chestId: chest.id }));
-    const [state, treasure] = await Promise.all([statePending, treasurePending]);
-    if (!state || !treasure.success || treasure.rewardCoins < 12 || treasure.rewardStone < 1) throw new Error(`treasure reward failed: ${JSON.stringify(treasure)}`);
+    const chestPending = waitForMessage(socket, "chestContextResult", m => m.chestId === chest.id);
+    socket.send(JSON.stringify({ type: "chestContextOpen", chestId: chest.id }));
+    const [state, chestContext] = await Promise.all([statePending, chestPending]);
+    const coins = (chestContext.items || []).find(item => item.itemId === "coins")?.count || 0;
+    const stone = (chestContext.items || []).find(item => item.itemId === "stone")?.count || 0;
+    if (!state || !chestContext.success || coins < 12 || stone < 1) throw new Error(`treasure context failed: ${JSON.stringify(chestContext)}`);
 
-    const repeatPending = waitForMessage(socket, "treasureResult", m => m.chestId === chest.id);
-    socket.send(JSON.stringify({ type: "treasureOpen", chestId: chest.id }));
+    const takePending = waitForMessage(socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === "coins");
+    socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: "coins" }));
+    const taken = await takePending;
+    if (!taken.success || taken.amount !== coins || (taken.items || []).some(item => item.itemId === "coins")) {
+      throw new Error(`treasure coin stack was not transferred exactly once: ${JSON.stringify(taken)}`);
+    }
+
+    const repeatPending = waitForMessage(socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === "coins");
+    socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: "coins" }));
     const repeat = await repeatPending;
-    if (repeat.success || repeat.reason !== "alreadyOpened") throw new Error("shared treasure chest could be looted twice");
+    if (repeat.success || repeat.reason !== "empty") throw new Error("shared treasure stack could be looted twice");
+
+    const closedStatePending = waitForMessage(socket, "structureState", m => m.structureId === chest.id && m.state?.opened === false);
+    const closedPending = waitForMessage(socket, "chestContextClosed", m => m.chestId === chest.id);
+    socket.send(JSON.stringify({ type: "chestContextClose", chestId: chest.id }));
+    await Promise.all([closedStatePending, closedPending]);
 
     socket.close();
-    console.log("v413 retained WebSocket smoke passed on v414: Stone Floor craft/place/support + real shared treasure chest open state + compact map mutation sync.");
+    console.log("v413 retained WebSocket smoke passed on v424: Stone Floor craft/place/support + shared treasure chest context/stack transfer + compact map mutation sync.");
   } finally {
     server.kill("SIGTERM");
   }

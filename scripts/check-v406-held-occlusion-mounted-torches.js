@@ -16,11 +16,11 @@ const network = read("public", "client-network.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(pkg.version, "0.6.11.424");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
-assert(html.includes('/game.js?v=419'));
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
+assert(html.includes('/game.js?v=424'));
 
 // The experimental house-only darkness and v405 wall-face carve are gone.
 assert(!game.includes("function enclosedInteriorDarknessAlpha("));

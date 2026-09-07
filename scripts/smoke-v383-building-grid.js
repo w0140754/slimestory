@@ -41,7 +41,7 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
       socket.once("error", reject);
     });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-424") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({

@@ -151,4 +151,4 @@ for (const browser of browsers) {
   }
 }
 
-console.log("Viewport HUD anchoring checks passed for unified top-center 1-9 weapons/tools and bottom-center HP/EXP.");
+console.log("Viewport HUD anchoring checks passed for unified top-center 1-0 weapons/tools and bottom-center HP/EXP.");

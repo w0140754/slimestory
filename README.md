@@ -1,3 +1,56 @@
+## v6-11-424 — Chest Context & 1–0 Hotbar
+
+- Starts from the completed **v6-11-423 Inventory Layout Polish** with the new live Inventory/Equipment overlay architecture preserved.
+- Extended the unified assignment hotbar from **1–9 to 1–0 (10 slots)**. The `0` key now selects slot 10 instead of acting as a special unequip shortcut.
+- Added tiny live **inventory-count badges** to every assigned hotbar slot so carried quantities are visible without opening Inventory. Counts update through the existing inventory/HUD refresh paths.
+- Moved **CRAFT directly under MENU**. The Menu overlay keeps its fixed designated position and is never shifted by Craft or Chest state.
+- Added a contextual **CHEST** button beside Craft. It appears only while a chest is within the new **22 px / roughly one-tile proximity range**. Craft and Chest are mutually exclusive views that occupy the same left-side context-panel position; Inventory remains an independent live overlay.
+- Removed Treasure Chest interaction from the normal **F** interaction path. Walking into close range automatically requests the Chest context once; the player can then toggle between Craft and Chest while remaining nearby, or leave/re-enter range to trigger the automatic Chest context again.
+- Treasure rewards are no longer dumped instantly into the player. The existing deterministic v414 **Coins / Stone / possible Wood** reward formula is preserved, but those rewards now appear as visible stacks inside the Chest panel. Dragging a stack into Inventory claims that entire stack through a server-authoritative transfer.
+- Added **exclusive multiplayer chest ownership**. Only one player may own a chest context at a time. Other nearby players see `CHEST IN USE` and cannot take loot until the owner closes/leaves range/dies/changes map/disconnects.
+- The physical chest's **open sprite is now tied to the active context lock**. Granting the context broadcasts `opened: true`; releasing the lock broadcasts `opened: false`, so every player on the map sees the chest open only while someone is actually using it.
+- Treasure chests with unclaimed loot cannot be Pickaxed (`lootFirst`), and any chest with an active owner cannot be Pickaxed (`inUse`). Once emptied and closed, generated chests retain the existing reclaim → pickup → re-place lifecycle. Player-built non-treasure chests currently open as empty context containers; depositing/storage is intentionally not added in this pass.
+- No chest polling or heartbeat was added. Proximity is derived client-side and server validation/lock traffic occurs only on context transitions and loot transfers. World content remains **414** and combat balance remains **30**.
+- Regression: **33 syntax targets + 113 retained checks/smokes** pass, including updated v413/v414 chest lifecycle coverage and a dedicated two-player v424 WebSocket smoke proving exclusive ownership, busy/not-owner rejection, shared open/closed visual state, lock transfer, and disconnect release.
+
+## v6-11-423 — Inventory Layout Polish
+
+- Starts from the completed **v6-11-422 Live Overlay Inventory Rebuild** with gameplay systems preserved.
+- Menu position is now completely independent of Craft state. Opening Craft no longer nudges or shifts the Menu overlay.
+- Removed the redundant Inventory/Menu title strip that was visually crowding the HUD/hotbar area.
+- Kept the selected-item detail panel for now, as requested.
+- Reworked the desktop inventory workspace to be wider and shorter rather than portrait-like.
+- Desktop inventory now uses a **9-column grid** with larger **66px item cards** and **46px item art**.
+- Close remains available as a compact floating × button rather than a full title bar.
+- Equipment, drag-to-hotbar, armor restrictions, generic future item-drop payloads, live gameplay input, and independent Craft/Menu behavior are preserved.
+- Mobile keeps its compact dedicated layout rather than inheriting oversized desktop cards.
+- World content remains **414** and combat balance remains **30**.
+- Regression: **33 syntax targets + 111 retained checks/smokes** pass, including the full retained WebSocket suite. Server startup and `/health` pass as build **6-11-423** / world content **414** / combat balance **30**.
+
+## v6-11-422 — Live Overlay Inventory Rebuild
+
+- Rebuilt the regular player menu as a **live gameplay overlay** instead of the old tabbed/pause-style screen. Opening Menu no longer blocks movement, attacks, skills, hotbar use, or ordinary world interaction; only pointer input directly on the overlay panels is captured.
+- Restored a dedicated **MENU** HUD button while keeping **CRAFT** as its own top-level button. Menu and Craft are completely independent: either can be open alone, both can be open together, and closing one never closes the other. Escape toggles Menu without commandeering Craft.
+- Removed the visible **Stats** and **PvP** tabs and replaced the old Inventory/Armor split with one combined workspace: a flat inventory grid in the center, selected-item details on the left, and compact equipment slots on the right. Existing underlying gameplay/state systems are preserved.
+- Simplified inventory cells to icon + quantity. Selecting an item populates the detail panel rather than opening a large permanent card or immediately consuming/assigning the item.
+- Added direct drag assignment from Inventory to the **actual HUD hotbar**. Only hotbar-eligible items can be dropped there; armor is rejected. Existing hotbar assignments can continue using the real 1–9 belt rather than a duplicate menu hotbar.
+- Added drag/tap equipment flow for armor: matching armor can be moved from the inventory grid onto the right-side Head/Shirt/Pants/Charm slots. Right-clicking an equipped slot unequips it.
+- Future-proofed inventory dragging so **every visible inventory item** carries a generic inventory drag payload. This intentionally prepares for a later “drag any item out of the menu to drop it into the world” feature; ground dropping arbitrary inventory items is **not enabled yet**.
+- Removed the odd visible `ALREADY CRAFTED` feedback path. Repeatable items such as Crafting Tables can simply be crafted again whenever the player has the materials.
+- Preserved v421 full-screen rain rendering, v419 persistent Wet behavior, portable Crafting Tables, acquisition auto-hotbar filling, lighting, world generation, enemy networking, and all gameplay systems not explicitly changed here.
+- Regression: **33 syntax targets + 110 retained checks/smokes** pass, including a dedicated v422 live-overlay static check and the full retained WebSocket smoke suite. Server startup and `/health` pass as build **6-11-422** / world content **414** / combat balance **30**.
+
+## v6-11-420 — Portable Crafting Progression
+
+- Removed the mandatory starter Marnie NPC and the static spawn Crafting Table. Brand-new characters now begin with a **Wood Sword, Pickaxe, and Axe** already owned and assigned to hotbar slots **1, 2, and 3**.
+- Added a **CRAFT** action to the main menu. The crafting list is material-driven: recipes only appear while the player currently carries their required ingredients.
+- The first default hand recipe is **Wood Crafting Table (10 Wood)**. Advanced recipes stay hidden/unavailable until the player is within **40 px** of a placed Crafting Table, and disappear again immediately when the player walks out of range.
+- Crafting Tables are normal portable OBJECT-layer structures: craft one, assign/place it from the build inventory, interact with it, Pickaxe it back into shared loot, pick it up, and move it elsewhere. They do not require a floor, so the first workstation can be placed before building materials are unlocked.
+- Crafting-table inventory counts persist through local/server character state and are synchronized authoritatively on craft/place/reclaim/pickup. Ground-drop rendering uses the existing wood bench art.
+- The hidden **Test Wood** recipe remains a test-only hand recipe so retained WebSocket regressions can seed crafting materials without restoring a static bench.
+- No crafting polling/heartbeat was added. Recipe visibility is derived client-side from carried materials + nearby placed structures; multiplayer traffic remains change-only for craft/place/reclaim events.
+- Regression: **33 syntax targets + 108 retained checks/smokes** pass, including dedicated v420 progression and portable-workstation WebSocket coverage. World content remains **414** and combat balance remains **30**.
+
 ## v6-11-419 — Persistent Rain Wetness
 
 - Fixed map-wide weather Wet expiring visually/locally while the player was still standing outside in active rain.

@@ -199,18 +199,18 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=419");
-const torchImage = loadImage("assets/torch_v1.png?v=419");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=424");
+const torchImage = loadImage("assets/torch_v1.png?v=424");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=419");
-const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=419");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=419");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=419");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=419");
-const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=419");
-const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=419");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=424");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=424");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=424");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=424");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=424");
+const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=424");
+const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=424");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -228,7 +228,7 @@ const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
 // v415: Tiger Paw inherits the retired Hurl art as a compact inventory/hotbar
 // icon. It is treated like a hand weapon, so no separate held sprite is drawn.
-const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=419");
+const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=424");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -3960,8 +3960,9 @@ const player = {
   wasMoving: false,
   firstRaisedLeg: "left",
 
-  // Equipped tool / attack state.
-  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe, 12 Sapgem Wand, 13 Tiger Paw
+  // Equipped tool / attack state. New v420 characters start with the Wood Sword
+  // selected; browser saves still overwrite this during restore.
+  weaponIndex: 0, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe, 12 Sapgem Wand, 13 Tiger Paw
 
   // Bow draw/release state, including close-range bow melee fallback.
   bowDrawing: false,
@@ -4132,22 +4133,28 @@ const player = {
   woodDoors: 0,
   torches: 0,
   chests: 0,
+  craftingTables: 0,
 
   // Legacy per-character opened-treasure IDs are retained only for old saves.
   // v414 chest open state is shared map mutation state.
   openedTreasureIds: new Set(),
 
-  // Count-based item ownership. Missing/zero means not owned.
-  // New players intentionally start with no gear or weapons.
-  items: {},
+  // Count-based item ownership. v420 starter loadout: every brand-new character
+  // begins able to gather/build without a tutorial handoff NPC. Existing browser
+  // saves overwrite this dictionary during restore.
+  items: {
+    weapon_sword: 1,
+    weapon_pickaxe: 1,
+    weapon_axe: 1
+  },
 
   // Historical vendor-purchase IDs are retained for backwards-compatible saves.
   // Item quantities live in player.items and are no longer unique.
   shopPurchases: [],
 
-  // v377 unified player-arranged weapon/tool belt (physical keys 1-9).
+  // v424 unified player-arranged weapon/tool belt (physical keys 1-0).
   hotbarAssignments: [
-    null, null, null, null, null, null, null, null, null
+    "weapon_sword", "weapon_pickaxe", "weapon_axe", null, null, null, null, null, null, null
   ],
 
   // Legacy v376 consumable-hotkey fields are retained only so old saves can
@@ -4241,10 +4248,23 @@ const player = {
   }
 };
 
-const HOTBAR_SLOT_COUNT = 9;
+const HOTBAR_SLOT_COUNT = 10;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
-const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"]);
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);
+const HOTBAR_RESOURCE_ITEM_BY_KEY = Object.freeze({
+  woodFloors: "woodFloor",
+  stoneFloors: "stoneFloor",
+  woodWalls: "woodWall",
+  woodDoors: "woodDoor",
+  torches: "torch",
+  chests: "chest",
+  craftingTables: "craftingTable"
+});
+
+function hotbarKeyLabel(slotIndex) {
+  return slotIndex === 9 ? "0" : String(slotIndex + 1);
+}
 const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand", "tigerPaw"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -4316,6 +4336,15 @@ const ALL_EQUIPMENT_ITEM_IDS = new Set([
 ]);
 
 const CRAFT_RECIPES = Object.freeze({
+  craftingTable: Object.freeze({
+    name: "Wood Crafting Table",
+    resourceKey: "craftingTables",
+    outputCount: 1,
+    category: "building",
+    station: "hand",
+    ingredients: Object.freeze({ wood: 10 }),
+    repeatable: true
+  }),
   woodSword: Object.freeze({
     name: "Wood Sword",
     itemId: "weapon_sword",
@@ -4559,6 +4588,7 @@ function shopImageForItemId(itemId) {
   if (itemId === "woodFloor") return document.getElementById("inventoryWoodFloorImg");
   if (itemId === "stoneFloor") return document.getElementById("inventoryStoneFloorImg");
   if (itemId === "chest") return document.getElementById("inventoryChestImg");
+  if (itemId === "craftingTable") return document.getElementById("inventoryCraftingTableImg") || woodBenchImage;
   if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
   if (itemId === "woodDoor") return document.getElementById("inventoryWoodDoorImg");
   if (itemId === "torch") return torchImage;
@@ -4774,7 +4804,20 @@ function hotbarItemInventoryCount(itemId) {
   if (itemId === "woodDoor") return Math.max(0, Math.floor(Number(player.woodDoors) || 0));
   if (itemId === "torch") return Math.max(0, Math.floor(Number(player.torches) || 0));
   if (itemId === "chest") return Math.max(0, Math.floor(Number(player.chests) || 0));
+  if (itemId === "craftingTable") return Math.max(0, Math.floor(Number(player.craftingTables) || 0));
   return 0;
+}
+
+function updateHotbarInventoryCountBadges() {
+  for (let slotIndex = 0; slotIndex < HOTBAR_SLOT_COUNT; slotIndex++) {
+    const slot = document.getElementById(`slot${slotIndex + 1}`);
+    const badge = slot?.querySelector(".hotbar-count");
+    if (!badge) continue;
+    const itemId = player.hotbarAssignments?.[slotIndex] || null;
+    badge.textContent = itemId && hotbarAssignmentCanPersist(itemId)
+      ? String(hotbarItemInventoryCount(itemId))
+      : "";
+  }
 }
 
 function hotbarItemDisplayName(itemId) {
@@ -4964,39 +5007,48 @@ function autoAssignHotbarItem(itemId) {
     return false;
   }
 
-  const emptySlot =
-    firstEmptyHotbarSlot();
+  const emptySlot = firstEmptyHotbarSlot();
+  if (emptySlot < 0) return false;
 
-  if (emptySlot < 0) {
-    return false;
-  }
-
-  player.hotbarAssignments[emptySlot] =
-    itemId;
-
+  player.hotbarAssignments[emptySlot] = itemId;
   return true;
 }
 
-// Ready for future drops, shops, chests, etc.
+function hotbarAssignableAcquisitionSnapshot() {
+  const snapshot = {};
+  for (const itemId of WEAPON_ITEM_IDS) {
+    snapshot[itemId] = hotbarItemInventoryCount(itemId);
+  }
+  for (const itemId of Object.values(HOTBAR_RESOURCE_ITEM_BY_KEY)) {
+    snapshot[itemId] = hotbarItemInventoryCount(itemId);
+  }
+  return snapshot;
+}
+
+function autoAssignNewlyAcquiredHotbarItems(beforeCounts = {}) {
+  sanitizeHotbarAssignments();
+  let changed = false;
+  for (const itemId of [...WEAPON_ITEM_IDS, ...Object.values(HOTBAR_RESOURCE_ITEM_BY_KEY)]) {
+    const before = Math.max(0, Number(beforeCounts?.[itemId]) || 0);
+    const after = hotbarItemInventoryCount(itemId);
+    if (after > before && autoAssignHotbarItem(itemId)) changed = true;
+  }
+  if (changed) saveLocalCharacterState(true);
+  return changed;
+}
+
+// Any newly received hotbar-eligible equipment fills the lowest free slot.
+// This intentionally also reassigns an item after a manual clear if the player
+// later acquires another copy; acquisition, not first-ever ownership, is the
+// trigger requested by the v421 inventory flow.
 function grantInventoryItem(itemId, count = 1) {
   if (!ALL_EQUIPMENT_ITEM_IDS.has(itemId)) {
     return false;
   }
 
-  const amount = Math.max(
-    1,
-    Math.floor(Number(count) || 1)
-  );
-
-  const wasOwned =
-    playerOwnsItem(itemId);
-
-  player.items[itemId] =
-    inventoryItemCount(itemId) + amount;
-
-  if (!wasOwned) {
-    autoAssignHotbarItem(itemId);
-  }
+  const amount = Math.max(1, Math.floor(Number(count) || 1));
+  player.items[itemId] = inventoryItemCount(itemId) + amount;
+  autoAssignHotbarItem(itemId);
 
   updateInventoryUi();
   updateHotbar();
@@ -5033,6 +5085,22 @@ function npcDisplayName(type, npc = null) {
   return customName || NPC_DEFAULT_NAMES[type] || "";
 }
 
+function nearbyChestContextTarget() {
+  let nearest = null;
+  let nearestDistance = Infinity;
+
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "chest") continue;
+    const distance = distanceToPlayer(Number(structure.x) || 0, Number(structure.y) || 0);
+    if (distance <= 22 && distance < nearestDistance) {
+      nearest = structure;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearest;
+}
+
 function nearbySpawnInteraction() {
   const candidates = [];
 
@@ -5044,13 +5112,6 @@ function nearbySpawnInteraction() {
         y: tutorialNpc.y,
         radius:
           tutorialNpc.interactionRadius
-      },
-      {
-        kind: "bench",
-        x: woodCraftBench.x,
-        y: woodCraftBench.y,
-        radius:
-          woodCraftBench.interactionRadius
       },
       {
         kind: "classResetCrystal",
@@ -5074,7 +5135,7 @@ function nearbySpawnInteraction() {
 
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     const type = npc?.type;
-    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"].includes(type)) continue;
+    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "classResetCrystal"].includes(type)) continue;
     candidates.push({
       kind: "placedNpc",
       npcType: type,
@@ -5085,20 +5146,6 @@ function nearbySpawnInteraction() {
     });
   }
 
-  for (const structure of currentMapStructures()) {
-    if (structure?.kind !== "chest") continue;
-    // Looted treasure stays visibly open and can still be harvested with the
-    // pickaxe, but does not keep showing a redundant OPEN prompt. Player-placed
-    // empty chests can be opened/closed as a simple object interaction.
-    if (structure.treasure && structure.opened) continue;
-    candidates.push({
-      kind: "chestStructure",
-      structure,
-      x: Number(structure.x) || 0,
-      y: Number(structure.y) || 0,
-      radius: 24
-    });
-  }
 
   if (candidates.length === 0) {
     return null;
@@ -5288,24 +5335,45 @@ function equipCraftedRecipe(recipe) {
   }
 }
 
-function craftRecipeOffline(recipeId) {
-  const recipe =
-    CRAFT_RECIPES[recipeId];
-
-  if (!recipe) return;
-
-  const ingredients = recipe.ingredients || { wood: recipe.cost };
-  const hasIngredients = Object.entries(ingredients).every(
-    ([key, amount]) => (Number(player[key]) || 0) >= amount
+function playerNearCraftingTable(range = 40) {
+  const maxRange = Math.max(8, Number(range) || 40);
+  return currentMapStructures().some(structure =>
+    structure?.kind === "craftingTable" &&
+    Math.hypot(Number(structure.x) - Number(player.x), Number(structure.y) - Number(player.y)) <= maxRange
   );
-  if (!hasIngredients) {
-    spawnFloatingText(
-      woodCraftBench.x,
-      woodCraftBench.y - 24,
-      "MISSING INGREDIENTS",
-      "#f08a7f",
-      0.9
-    );
+}
+
+function craftRecipeHasIngredients(recipe) {
+  if (!recipe) return false;
+  const ingredients = recipe.ingredients || { wood: recipe.cost };
+  return Object.entries(ingredients).every(
+    ([resourceKey, amount]) => (Number(player[resourceKey]) || 0) >= amount
+  );
+}
+
+function craftRecipeStationAvailable(recipe) {
+  if (!recipe) return false;
+  if (recipe.station === "hand") return true;
+  return playerNearCraftingTable();
+}
+
+function craftRecipeCurrentlyAvailable(recipe) {
+  return Boolean(
+    recipe &&
+    !recipe.testSupply &&
+    craftRecipeStationAvailable(recipe) &&
+    craftRecipeHasIngredients(recipe)
+  );
+}
+
+function craftRecipeOffline(recipeId) {
+  const recipe = CRAFT_RECIPES[recipeId];
+  if (!recipe || !craftRecipeStationAvailable(recipe)) return;
+
+  const beforeHotbarCounts = hotbarAssignableAcquisitionSnapshot();
+  const ingredients = recipe.ingredients || { wood: recipe.cost };
+  if (!craftRecipeHasIngredients(recipe)) {
+    spawnFloatingText(player.x, player.y - 28, "MISSING INGREDIENTS", "#f08a7f", 0.9);
     return;
   }
 
@@ -5318,20 +5386,17 @@ function craftRecipeOffline(recipeId) {
       Math.max(0, Number(player[recipe.resourceKey]) || 0) +
       Math.max(1, Number(recipe.outputCount) || 1);
   } else {
-    player.story[recipe.storyKey] = true;
-
-    grantInventoryItem(
-      recipe.itemId,
-      1
-    );
-
+    if (recipe.storyKey) player.story[recipe.storyKey] = true;
+    grantInventoryItem(recipe.itemId, 1);
     equipCraftedRecipe(recipe);
   }
 
+  autoAssignNewlyAcquiredHotbarItems(beforeHotbarCounts);
+
   spawnFloatingText(
-    woodCraftBench.x,
-    woodCraftBench.y - 24,
-    recipe.testSupply ? "+100 TEST WOOD" : `${recipe.name.toUpperCase()} CRAFTED!`,
+    player.x,
+    player.y - 28,
+    `${recipe.name.toUpperCase()} CRAFTED!`,
     "#ffe38b",
     1.2
   );
@@ -5339,45 +5404,26 @@ function craftRecipeOffline(recipeId) {
   updateCraftingUi();
   updateInventoryUi();
   updateHotbar();
+  saveLocalCharacterState(true);
 }
 
 function tryCraftRecipe(recipeId) {
-  const recipe =
-    CRAFT_RECIPES[recipeId];
+  const recipe = CRAFT_RECIPES[recipeId];
 
-  if (
-    !recipe ||
-    !craftingOpen ||
-    player.benchCraftPending
-  ) {
+  if (!recipe || !craftingOpen || player.benchCraftPending) return;
+  if (!craftRecipeStationAvailable(recipe)) {
+    spawnFloatingText(player.x, player.y - 28, "NEED CRAFTING TABLE", "#ffe38b", 0.9);
+    updateCraftingUi();
+    return;
+  }
+  if (!craftRecipeHasIngredients(recipe)) {
+    updateCraftingUi();
     return;
   }
 
-  const ingredients = recipe.ingredients || { wood: recipe.cost };
-  const hasIngredients = Object.entries(ingredients).every(
-    ([resourceKey, amount]) => (Number(player[resourceKey]) || 0) >= amount
-  );
-  if (!hasIngredients) {
-    spawnFloatingText(
-      woodCraftBench.x,
-      woodCraftBench.y - 24,
-      "MISSING INGREDIENTS",
-      "#f08a7f",
-      0.9
-    );
-    return;
-  }
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
     player.benchCraftPending = recipeId;
-
-    if (!onlineClient.requestCraft(recipeId)) {
-      player.benchCraftPending = null;
-    }
-
+    if (!onlineClient.requestCraft(recipeId)) player.benchCraftPending = null;
     updateCraftingUi();
     return;
   }
@@ -5385,61 +5431,49 @@ function tryCraftRecipe(recipeId) {
   craftRecipeOffline(recipeId);
 }
 
-let craftCategoryFilter = "consumables";
-
 function updateCraftingUi() {
-  for (const [recipeId, recipe] of
-    Object.entries(CRAFT_RECIPES)) {
-    const button =
-      document.querySelector(
-        `[data-craft-recipe="${recipeId}"]`
-      );
+  const entries = Object.entries(CRAFT_RECIPES);
+  const availableRecipeIds = new Set(
+    entries
+      .filter(([, recipe]) => craftRecipeCurrentlyAvailable(recipe))
+      .map(([recipeId]) => recipeId)
+  );
 
+  const nearTable = playerNearCraftingTable();
+  const title = document.getElementById("craftTitle");
+  if (title) title.textContent = nearTable ? "Craft · Table" : "Craft";
+
+  let visibleRecipeCount = 0;
+  for (const [recipeId, recipe] of entries) {
+    const button = document.querySelector(`[data-craft-recipe="${recipeId}"]`);
     if (!button) continue;
 
-    const categoryVisible = (recipe.category || "weapons") === craftCategoryFilter;
-    button.hidden = !categoryVisible;
-    // Do not rely on the browser's UA [hidden] rule: .craft-recipe is explicitly
-    // display:grid in our stylesheet, so force the category filter at runtime too.
-    button.style.display = categoryVisible ? "" : "none";
+    const visible = availableRecipeIds.has(recipeId);
+    button.hidden = !visible;
+    button.style.display = visible ? "" : "none";
+    if (visible) visibleRecipeCount += 1;
 
-    const pending =
-      player.benchCraftPending ===
-      recipeId;
-
-    const anyPending =
-      Boolean(player.benchCraftPending);
+    const pending = player.benchCraftPending === recipeId;
+    const anyPending = Boolean(player.benchCraftPending);
+    button.disabled = anyPending;
 
     const ingredients = recipe.ingredients || { wood: recipe.cost };
-    const hasIngredients = Object.entries(ingredients).every(
-      ([resourceKey, amount]) => (Number(player[resourceKey]) || 0) >= amount
-    );
-
-    button.disabled =
-      anyPending || !hasIngredients;
-
-    const image =
-      button.querySelector("img");
-
+    const image = button.querySelector("img");
     const itemImage = recipe.resourceKey === "arrows"
       ? arrowResourceImage
       : recipe.resourceKey === "wood"
         ? woodImage
         : recipe.resourceKey === "torches"
           ? torchImage
-          : recipe.resourceKey
-            ? potionImageForItem(recipeId)
-            : shopImageForItemId(recipe.itemId);
+          : recipe.resourceKey === "craftingTables"
+            ? woodBenchImage
+            : recipe.resourceKey
+              ? potionImageForItem(recipeId)
+              : shopImageForItemId(recipe.itemId);
 
-    if (image && itemImage) {
-      image.src = itemImage.src;
-    }
+    if (image && itemImage) image.src = itemImage.src;
 
-    const cost =
-      button.querySelector(
-        ".craft-recipe-cost"
-      );
-
+    const cost = button.querySelector(".craft-recipe-cost");
     if (cost) {
       cost.querySelectorAll("[data-craft-ingredient]").forEach(row => {
         const resourceKey = row.dataset.craftIngredient;
@@ -5456,78 +5490,277 @@ function updateCraftingUi() {
       });
     }
 
-    const status =
-      button.querySelector(
-        ".craft-recipe-status"
-      );
+    const status = button.querySelector(".craft-recipe-status");
+    if (status) status.textContent = pending ? "WORKING..." : "CRAFT";
+  }
 
-    if (status) {
-      status.textContent =
-        pending
-          ? "WORKING..."
-          : recipe.testSupply
-            ? "TAKE"
-            : "CRAFT";
+  const empty = document.getElementById("craftEmpty");
+  if (empty) {
+    const nothingAvailable = visibleRecipeCount === 0;
+    empty.style.display = nothingAvailable ? "block" : "none";
+    empty.textContent = nearTable
+      ? "Nothing craftable with your current materials."
+      : "Gather materials. A Crafting Table unlocks more recipes.";
+  }
+}
+
+function syncCraftPanelToViewport() {
+  const craftPanel = document.getElementById("craftPanel");
+  const chestPanel = document.getElementById("chestPanel");
+  const viewport = document.getElementById("gameViewport");
+  if (!viewport) return;
+  const rect = viewport.getBoundingClientRect();
+  const top = Math.round(rect.top + 86);
+  const left = Math.round(rect.left + 8);
+  const maxHeight = `${Math.max(96, Math.round(rect.bottom - top - 8))}px`;
+
+  for (const panel of [craftPanel, chestPanel]) {
+    if (!panel) continue;
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.maxHeight = maxHeight;
+  }
+}
+
+function syncContextOverlayVisibility() {
+  const overlay = document.getElementById("craftOverlay");
+  if (!overlay) return;
+  const open = Boolean(craftingOpen || chestContextOpen);
+  overlay.classList.toggle("open", open);
+  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+
+  const craftPanel = document.getElementById("craftPanel");
+  const chestPanel = document.getElementById("chestPanel");
+  if (craftPanel) craftPanel.hidden = !craftingOpen;
+  if (chestPanel) chestPanel.hidden = !chestContextOpen;
+
+  if (open) syncCraftPanelToViewport();
+}
+
+function chestContextItemName(itemId) {
+  if (itemId === "coins") return "Coins";
+  if (itemId === "wood") return "Wood";
+  if (itemId === "stone") return "Stone";
+  return itemId || "Item";
+}
+
+function chestContextItemImage(itemId) {
+  if (itemId === "coins") return coinImage;
+  if (itemId === "wood") return woodImage;
+  if (itemId === "stone") return typeof rockLootableImage !== "undefined" ? rockLootableImage : null;
+  return null;
+}
+
+function normalizedChestContextItems(items) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => ({
+      itemId: typeof item?.itemId === "string" ? item.itemId : "",
+      count: Math.max(0, Math.floor(Number(item?.count) || 0))
+    }))
+    .filter(item => ["coins", "wood", "stone"].includes(item.itemId) && item.count > 0);
+}
+
+function renderChestContextUi() {
+  const grid = document.getElementById("chestGrid");
+  const empty = document.getElementById("chestEmpty");
+  if (!grid) return;
+
+  grid.replaceChildren();
+  const items = normalizedChestContextItems(chestContextItems);
+
+  for (const item of items) {
+    const card = document.createElement("div");
+    card.className = "chest-item";
+    card.dataset.chestItem = item.itemId;
+    card.draggable = chestContextOpen && chestTakePendingItemId !== item.itemId;
+    card.classList.toggle("pending", chestTakePendingItemId === item.itemId);
+    card.title = `Drag ${chestContextItemName(item.itemId)} into your inventory`;
+
+    const image = document.createElement("img");
+    const itemImage = chestContextItemImage(item.itemId);
+    if (itemImage?.src) image.src = itemImage.src;
+    image.alt = chestContextItemName(item.itemId);
+
+    const count = document.createElement("span");
+    count.className = "chest-item-count";
+    count.textContent = `${item.count}`;
+
+    const name = document.createElement("span");
+    name.className = "chest-item-name";
+    name.textContent = chestContextItemName(item.itemId);
+
+    card.append(image, count, name);
+    grid.append(card);
+  }
+
+  if (empty) empty.style.display = items.length ? "none" : "block";
+}
+
+function updateChestHudButton() {
+  const button = document.getElementById("chestHudButton");
+  if (!button) return;
+  const available = Boolean(nearbyChestContextId && !player.isDead);
+  button.hidden = !available;
+  button.disabled = Boolean(pendingChestContextId);
+  button.classList.toggle("active", Boolean(chestContextOpen && activeChestContextId));
+  button.setAttribute("aria-pressed", chestContextOpen ? "true" : "false");
+  button.title = chestContextBusyId === nearbyChestContextId
+    ? "Chest is currently in use by another player"
+    : "Open nearby chest";
+}
+
+function closeChestContext(sendRequest = true, reason = "closed") {
+  const chestId = activeChestContextId || pendingChestContextId;
+  if (sendRequest && activeChestContextId && typeof onlineClient !== "undefined" && onlineClient?.connected) {
+    onlineClient.requestChestContextClose(activeChestContextId);
+  }
+
+  chestContextOpen = false;
+  activeChestContextId = null;
+  pendingChestContextId = null;
+  chestContextItems = [];
+  chestTakePendingItemId = null;
+  draggingChestItemId = null;
+  document.getElementById("inventoryPage")?.classList.remove("chest-drop-ready");
+  renderChestContextUi();
+  updateChestHudButton();
+  syncContextOverlayVisibility();
+  return Boolean(chestId || reason);
+}
+
+function requestChestContextOpen(chestId, automatic = false) {
+  if (!chestId || player.isDead) return false;
+  if (activeChestContextId === chestId && chestContextOpen) return true;
+  if (pendingChestContextId === chestId) return true;
+  if (typeof onlineClient === "undefined" || !onlineClient?.connected) return false;
+
+  if (craftingOpen) setCraftingOpen(false);
+  if (activeChestContextId && activeChestContextId !== chestId) closeChestContext(true, "switch");
+
+  pendingChestContextId = chestId;
+  chestContextBusyId = null;
+  updateChestHudButton();
+
+  if (!onlineClient.requestChestContextOpen(chestId)) {
+    pendingChestContextId = null;
+    updateChestHudButton();
+    return false;
+  }
+
+  return true;
+}
+
+function applyChestContextResult(message) {
+  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
+  if (!chestId) return;
+  if (pendingChestContextId === chestId) pendingChestContextId = null;
+
+  if (!message.success) {
+    if (message.reason === "busy") {
+      chestContextBusyId = chestId;
+      showMenuFeedback("CHEST IN USE", "#ffe38b", 0.9);
     }
+    updateChestHudButton();
+    return;
+  }
+
+  // A delayed grant after the player already walked away is immediately
+  // released rather than reopening a stale off-range chest.
+  if (nearbyChestContextId !== chestId) {
+    onlineClient?.requestChestContextClose(chestId);
+    return;
+  }
+
+  if (craftingOpen) setCraftingOpen(false);
+  activeChestContextId = chestId;
+  chestContextOpen = true;
+  chestContextBusyId = null;
+  chestContextItems = normalizedChestContextItems(message.items);
+  chestTakePendingItemId = null;
+
+  // The player's inventory is the drop target, so surface it automatically.
+  setInventoryOpen(true);
+  renderChestContextUi();
+  updateChestHudButton();
+  syncContextOverlayVisibility();
+}
+
+function applyChestContextClosed(message) {
+  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
+  if (chestId && chestId !== activeChestContextId && chestId !== pendingChestContextId) return;
+  closeChestContext(false, message?.reason || "closed");
+}
+
+function applyChestTakeResult(message) {
+  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
+  if (chestId && chestId !== activeChestContextId) return;
+
+  chestTakePendingItemId = null;
+  if (Array.isArray(message?.items)) chestContextItems = normalizedChestContextItems(message.items);
+  if (Number.isFinite(message?.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
+  if (Number.isFinite(message?.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
+  if (Number.isFinite(message?.totalStone)) player.stone = Math.max(0, Math.floor(message.totalStone));
+
+  renderChestContextUi();
+  updateInventoryUi();
+  updateHotbar();
+  saveLocalCharacterState(true);
+}
+
+function updateNearbyChestContext() {
+  const target = (player.isDead || shopOpen || classResetConfirmOpen || beachQuestOpen)
+    ? null
+    : nearbyChestContextTarget();
+  const nextId = target?.id || null;
+  if (nextId === nearbyChestContextId) {
+    updateChestHudButton();
+    return;
+  }
+
+  const previousId = nearbyChestContextId;
+  nearbyChestContextId = nextId;
+  chestContextBusyId = null;
+
+  if (activeChestContextId && activeChestContextId !== nextId) {
+    closeChestContext(true, "range");
+  } else if (pendingChestContextId && pendingChestContextId !== nextId) {
+    pendingChestContextId = null;
+  }
+
+  updateChestHudButton();
+
+  // Entering the one-tile proximity zone auto-opens the Chest context once.
+  // Closing/switching to Craft while remaining beside the same chest does not
+  // immediately reopen it; walking away and back creates the next auto-open.
+  if (nextId && nextId !== previousId) {
+    requestChestContextOpen(nextId, true);
   }
 }
 
 function setCraftingOpen(open) {
-  craftingOpen = open;
+  // Craft and Chest occupy one shared context-panel space. Inventory remains a
+  // separate live overlay and can stay open alongside either context.
+  const nextOpen = Boolean(open);
+  if (nextOpen && chestContextOpen) closeChestContext(true, "craft");
+  craftingOpen = nextOpen;
 
-  if (open) {
-    craftCategoryFilter = "consumables";
-    document.querySelectorAll(".craft-tab").forEach(tab => {
-      const active = tab.dataset.craftFilter === craftCategoryFilter;
-      tab.classList.toggle("active", active);
-      tab.setAttribute("aria-selected", active ? "true" : "false");
-    });
-  }
+  if (craftingOpen && shopOpen) setShopOpen(false);
 
-  if (open && player.hunterSnareSetting) {
-    cancelHunterSnarePlacement(false);
-  }
+  const hudButton = document.getElementById("craftHudButton");
+  hudButton?.classList.toggle("active", craftingOpen);
+  hudButton?.setAttribute("aria-pressed", craftingOpen ? "true" : "false");
 
-  if (open && focusFireIsCasting()) {
-    cancelFocusFire();
-  }
-
-  if (open && fireballIsAiming()) {
-    cancelFireballAim();
-  }
-
-  const overlay =
-    document.getElementById(
-      "craftOverlay"
-    );
-
-  if (!overlay) return;
-
-  if (open && inventoryOpen) {
-    setInventoryOpen(false);
-  }
-
-  if (open && shopOpen) {
-    setShopOpen(false);
-  }
-
-  overlay.classList.toggle(
-    "open",
-    open
-  );
-
-  overlay.setAttribute(
-    "aria-hidden",
-    open ? "false" : "true"
-  );
-
-  inputController.clearKeys();
-
-  if (open) {
-    inputController.clearCommands();
-    updateCraftingUi();
-  }
+  if (craftingOpen) updateCraftingUi();
+  syncContextOverlayVisibility();
+  if (inventoryOpen) syncInventoryOverlayToViewport();
 }
+
+window.addEventListener("resize", () => {
+  if (craftingOpen || chestContextOpen) syncCraftPanelToViewport();
+}, { passive: true });
+window.visualViewport?.addEventListener("resize", () => {
+  if (craftingOpen || chestContextOpen) syncCraftPanelToViewport();
+}, { passive: true });
 
 function setClassResetConfirmOpen(open) {
   classResetConfirmOpen = Boolean(open);
@@ -5695,11 +5928,6 @@ function interactWithNearbyObject() {
 
   breakShadowHide();
 
-  if (interaction.kind === "chestStructure") {
-    const chest = interaction.structure;
-    if (chest?.treasure) return Boolean(onlineClient?.requestTreasureOpen(chest.id));
-    return Boolean(onlineClient?.requestChestToggle(chest?.id));
-  }
 
   if (interaction.kind === "npc") {
     interactWithTutorialNpc();
@@ -5732,23 +5960,12 @@ function interactWithNearbyObject() {
       interactWithCamoNpc(interaction.npc);
       return true;
     }
-    if (interaction.npcType === "craftingTable") {
-      interactWithWoodBench();
-      return true;
-    }
     if (interaction.npcType === "classResetCrystal") {
       interactWithClassResetCrystal();
       return true;
     }
-    if (interaction.npcType === "treasureChest") {
-      return Boolean(onlineClient?.requestTreasureOpen(interaction.npc?.id));
-    }
   }
 
-  if (interaction.kind === "bench") {
-    interactWithWoodBench();
-    return true;
-  }
 
   if (interaction.kind === "classResetCrystal") {
     interactWithClassResetCrystal();
@@ -6278,6 +6495,7 @@ function itemDetailIdFromElement(element) {
 }
 
 function itemDetailTargetFromNode(node) {
+  if (node?.closest?.("#inventoryOverlay")) return null;
   return node?.closest?.("[data-owned-item], [data-shop-item-id], [data-item-detail-id]") || null;
 }
 
@@ -7810,7 +8028,7 @@ function updateMenuItemHotkeyRail() {
       }
       if (name) name.textContent = hotbarItemDisplayName(itemId);
       slot.style.opacity = available ? "1" : "0.55";
-      slot.title = `${hotbarItemDisplayName(itemId)} · key ${slotIndex + 1} · drag to move/swap · right-click to clear`;
+      slot.title = `${hotbarItemDisplayName(itemId)} · key ${hotbarKeyLabel(slotIndex)} · drag to move/swap · right-click to clear`;
     } else {
       slot.style.opacity = "";
       if (image) {
@@ -7883,18 +8101,18 @@ function updateHotbar() {
         if (itemImage) image.src = itemImage.src;
         image.alt = hotbarItemDisplayName(itemId);
         image.style.visibility = "visible";
-        slot.title = `${hotbarItemDisplayName(itemId)} · key ${slotIndex + 1} · ${BUILD_HOTBAR_ITEMS.includes(itemId) ? "click to build" : "click to equip"}`;
+        slot.title = `${hotbarItemDisplayName(itemId)} · key ${hotbarKeyLabel(slotIndex)} · ${BUILD_HOTBAR_ITEMS.includes(itemId) ? "click to build" : "click to equip"}`;
       } else {
         image.removeAttribute("src");
         image.alt = "";
         image.style.visibility = "hidden";
-        slot.title = `Empty weapon/tool hotkey ${slotIndex + 1}`;
+        slot.title = `Empty weapon/tool hotkey ${hotbarKeyLabel(slotIndex)}`;
       }
     }
 
     const countBadge = slot.querySelector(".utility-count");
     if (countBadge) {
-      countBadge.textContent = assigned && BUILD_HOTBAR_ITEMS.includes(itemId)
+      countBadge.textContent = assigned
         ? String(hotbarItemInventoryCount(itemId))
         : "";
     }
@@ -7931,6 +8149,14 @@ function updateHotbar() {
 let inventoryOpen = false;
 let shopOpen = false;
 let craftingOpen = false;
+let chestContextOpen = false;
+let nearbyChestContextId = null;
+let activeChestContextId = null;
+let pendingChestContextId = null;
+let chestContextBusyId = null;
+let chestContextItems = [];
+let chestTakePendingItemId = null;
+let draggingChestItemId = null;
 let classResetConfirmOpen = false;
 let beachQuestOpen = false;
 let rewardToastTimer = null;
@@ -8193,7 +8419,7 @@ function updateHotbarAssignmentUi() {
   if (equipmentButtons) equipmentButtons.style.display = equipmentSelection ? "flex" : "none";
   if (utilityButtons) utilityButtons.style.display = utilitySelection ? "flex" : "none";
   if (assignHelp) {
-    assignHelp.textContent = "Choose an action hotkey (1–9)";
+    assignHelp.textContent = "Choose an action hotkey (1–0)";
   }
 
   document
@@ -8336,6 +8562,210 @@ function updatePvpUi() {
         : "Both players must opt in. PvP attacks deal 50% damage. Magic is not enabled for PvP yet.";
 }
 
+
+// -----------------------------------------------------------------------------
+// v422 LIVE INVENTORY OVERLAY
+// -----------------------------------------------------------------------------
+let selectedOverlayInventoryToken = null;
+
+const INVENTORY_RESOURCE_META = Object.freeze({
+  coins: Object.freeze({ name: "Coin", type: "Currency", hint: "Currency used by shops." }),
+  wood: Object.freeze({ name: "Wood", type: "Resource", hint: "Harvested from trees and used in crafting." }),
+  stone: Object.freeze({ name: "Stone", type: "Resource", hint: "Mined from rocks and used in crafting." }),
+  whiteFlowers: Object.freeze({ name: "White Flower", type: "Resource", hint: "A crafting ingredient." }),
+  blueFlowers: Object.freeze({ name: "Blue Flower", type: "Resource", hint: "A crafting ingredient." }),
+  goldSlimeBubbles: Object.freeze({ name: "Gold Slime Bubble", type: "Loot", hint: "Rare slime loot." }),
+  greenJellyCubes: Object.freeze({ name: "Green Jelly Cube", type: "Loot", hint: "Slime material used in crafting." }),
+  healingPotions: Object.freeze({ name: "Healing Potion", type: "Consumable", hint: "Restores 20 HP." }),
+  attackPotions: Object.freeze({ name: "Attack Potion", type: "Consumable", hint: "+15% physical damage for 5 minutes." }),
+  magicPotions: Object.freeze({ name: "Magic Potion", type: "Consumable", hint: "+15% magic damage for 5 minutes." }),
+  arrows: Object.freeze({ name: "Arrows", type: "Ammunition", hint: "Ammunition for bows." }),
+  woodFloors: Object.freeze({ name: "Wood Floor", type: "Building", hint: "Drag to the hotbar to place it." }),
+  stoneFloors: Object.freeze({ name: "Stone Floor", type: "Building", hint: "Drag to the hotbar to place it." }),
+  woodWalls: Object.freeze({ name: "Wood Wall", type: "Building", hint: "Drag to the hotbar to place it." }),
+  woodDoors: Object.freeze({ name: "Wood Door", type: "Building", hint: "Drag to the hotbar to place it." }),
+  torches: Object.freeze({ name: "Torch", type: "Building / Light", hint: "Drag to the hotbar to hold or place it." }),
+  chests: Object.freeze({ name: "Chest", type: "Building", hint: "Drag to the hotbar to place it." }),
+  craftingTables: Object.freeze({ name: "Crafting Table", type: "Building / Workstation", hint: "Drag to the hotbar to place it." })
+});
+
+function inventoryOverlayCellToken(element) {
+  if (!element) return null;
+  if (element.dataset.ownedItem) return `item:${element.dataset.ownedItem}`;
+  if (element.dataset.resourceKey) return `resource:${element.dataset.resourceKey}`;
+  return null;
+}
+
+function inventoryOverlayCellForToken(token) {
+  if (!token) return null;
+  for (const element of document.querySelectorAll("#inventoryPage .menu-item")) {
+    if (inventoryOverlayCellToken(element) === token) return element;
+  }
+  return null;
+}
+
+function inventoryOverlayCellCount(element) {
+  if (!element) return 0;
+  if (element.dataset.ownedItem) return Math.max(0, inventoryItemCount(element.dataset.ownedItem));
+  if (element.dataset.resourceKey) return Math.max(0, Math.floor(Number(player[element.dataset.resourceKey]) || 0));
+  return 0;
+}
+
+function inventoryOverlayCellName(element) {
+  if (!element) return "Select an item";
+  const resourceMeta = INVENTORY_RESOURCE_META[element.dataset.resourceKey];
+  if (resourceMeta?.name) return resourceMeta.name;
+  const itemId = element.dataset.ownedItem;
+  if (itemId) {
+    const detail = itemDetailData(itemId);
+    if (detail?.name) return detail.name;
+    const label = element.querySelector("img")?.alt || element.querySelector("span")?.textContent;
+    if (label) return label.trim();
+    return itemDisplayNameForId(itemId);
+  }
+  return element.querySelector("img")?.alt || "Item";
+}
+
+function equipmentSlotForInventoryItem(itemId) {
+  if (HAT_ITEM_IDS.includes(itemId)) return "head";
+  if (SHIRT_ITEM_IDS.includes(itemId)) return "shirt";
+  if (PANTS_ITEM_IDS.includes(itemId)) return "pants";
+  if (CHARM_ITEM_IDS.includes(itemId)) return "charm";
+  return null;
+}
+
+function inventoryOverlayCellInfo(element) {
+  if (!element) return null;
+  const itemId = element.dataset.ownedItem || null;
+  const resourceKey = element.dataset.resourceKey || null;
+  const detail = itemId ? itemDetailData(itemId) : null;
+  const meta = resourceKey ? INVENTORY_RESOURCE_META[resourceKey] : null;
+  const equipmentSlot = equipmentSlotForInventoryItem(itemId);
+  const hotbarAssignable = Boolean(itemId && hotbarItemCanBeAssigned(itemId));
+  const consumableId = element.dataset.consumableItem || null;
+  const count = inventoryOverlayCellCount(element);
+  const image = element.querySelector("img");
+
+  let hint = meta?.hint || "Inventory item.";
+  if (equipmentSlot) hint = `Drag to the ${equipmentSlot === "head" ? "Head" : equipmentSlot === "shirt" ? "Shirt" : equipmentSlot === "pants" ? "Pants" : "Charm"} slot.`;
+  else if (hotbarAssignable) hint = "Drag to the actual hotbar to assign it.";
+
+  return {
+    token: inventoryOverlayCellToken(element),
+    itemId,
+    resourceKey,
+    consumableId,
+    equipmentSlot,
+    hotbarAssignable,
+    count,
+    name: detail?.name || meta?.name || inventoryOverlayCellName(element),
+    type: detail?.type || meta?.type || (itemId ? "Item" : "Resource"),
+    rows: detail?.rows || [],
+    hint,
+    imageSrc: image?.src || ""
+  };
+}
+
+function renderInventoryOverlaySelection() {
+  const name = document.getElementById("inventoryDetailName");
+  const type = document.getElementById("inventoryDetailType");
+  const quantity = document.getElementById("inventoryDetailQuantity");
+  const hint = document.getElementById("inventoryDetailHint");
+  const icon = document.getElementById("inventoryDetailIcon");
+  const stats = document.getElementById("inventoryDetailStats");
+  const action = document.getElementById("inventoryDetailAction");
+
+  document.querySelectorAll("#inventoryPage .menu-item.inventory-selected").forEach(element => {
+    element.classList.remove("inventory-selected");
+  });
+
+  let element = inventoryOverlayCellForToken(selectedOverlayInventoryToken);
+  if (element && (element.style.display === "none" || inventoryOverlayCellCount(element) <= 0)) {
+    selectedOverlayInventoryToken = null;
+    element = null;
+  }
+
+  if (!element) {
+    if (name) name.textContent = "Select an item";
+    if (type) type.textContent = "Inventory";
+    if (quantity) quantity.textContent = "Quantity 0";
+    if (hint) hint.textContent = "Click an item to inspect it.";
+    if (icon) { icon.removeAttribute("src"); icon.alt = ""; }
+    if (stats) stats.innerHTML = "";
+    if (action) { action.hidden = true; delete action.dataset.consumableItem; }
+    return;
+  }
+
+  element.classList.add("inventory-selected");
+  const info = inventoryOverlayCellInfo(element);
+  if (!info) return;
+
+  if (name) name.textContent = info.name;
+  if (type) type.textContent = info.type;
+  if (quantity) quantity.textContent = `Quantity ${info.count}`;
+  if (hint) hint.textContent = info.hint;
+  if (icon) {
+    if (info.imageSrc) icon.src = info.imageSrc;
+    else icon.removeAttribute("src");
+    icon.alt = info.name;
+  }
+  if (stats) {
+    stats.innerHTML = info.rows.map(([label, value]) =>
+      `<div class="inventory-detail-stat"><span>${label}</span><strong>${value}</strong></div>`
+    ).join("");
+  }
+  if (action) {
+    const canUse = Boolean(info.consumableId && consumableCount(info.consumableId) > 0);
+    action.hidden = !canUse;
+    if (canUse) {
+      action.textContent = "USE";
+      action.dataset.consumableItem = info.consumableId;
+    } else {
+      delete action.dataset.consumableItem;
+    }
+  }
+}
+
+function selectInventoryOverlayCell(element) {
+  const token = inventoryOverlayCellToken(element);
+  if (!token) return false;
+  selectedOverlayInventoryToken = token;
+  const itemId = element.dataset.ownedItem || null;
+  selectedHotbarInventoryItemId = itemId && hotbarItemCanBeAssigned(itemId) ? itemId : null;
+  renderInventoryOverlaySelection();
+  return true;
+}
+
+function equipInventoryArmorItemToSlot(itemId, slot) {
+  if (!itemId || !slot || inventoryItemCount(itemId) <= 0) return false;
+  if (equipmentSlotForInventoryItem(itemId) !== slot) return false;
+  if (!armorItemCanBeEquipped(itemId)) {
+    showArmorClassRestriction(itemId);
+    return false;
+  }
+
+  if (slot === "head") player.hatIndex = HAT_ITEM_IDS.indexOf(itemId);
+  else if (slot === "shirt") player.shirtIndex = SHIRT_ITEM_IDS.indexOf(itemId);
+  else if (slot === "pants") player.pantsIndex = PANTS_ITEM_IDS.indexOf(itemId);
+  else if (slot === "charm") player.charmIndex = CHARM_ITEM_IDS.indexOf(itemId);
+  else return false;
+
+  updateInventoryUi();
+  saveLocalCharacterState(true);
+  return true;
+}
+
+function unequipInventoryArmorSlot(slot) {
+  if (slot === "head") player.hatIndex = -1;
+  else if (slot === "shirt") player.shirtIndex = -1;
+  else if (slot === "pants") player.pantsIndex = -1;
+  else if (slot === "charm") player.charmIndex = -1;
+  else return false;
+  updateInventoryUi();
+  saveLocalCharacterState(true);
+  return true;
+}
+
 function updateInventoryUi() {
   const coinCount = document.getElementById("inventoryCoinCount");
   const woodCount = document.getElementById("inventoryWoodCount");
@@ -8354,6 +8784,7 @@ function updateInventoryUi() {
   const woodDoorCount = document.getElementById("inventoryWoodDoorCount");
   const torchCount = document.getElementById("inventoryTorchCount");
   const chestCount = document.getElementById("inventoryChestCount");
+  const craftingTableCount = document.getElementById("inventoryCraftingTableCount");
   const arrowHud = document.getElementById("arrowHud");
   const arrowHudCount = document.getElementById("arrowHudCount");
 
@@ -8374,10 +8805,12 @@ function updateInventoryUi() {
   if (woodDoorCount) woodDoorCount.textContent = `${player.woodDoors}`;
   if (torchCount) torchCount.textContent = `${player.torches}`;
   if (chestCount) chestCount.textContent = `${player.chests}`;
+  if (craftingTableCount) craftingTableCount.textContent = `${player.craftingTables}`;
   if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
   if (arrowHud) {
     arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
   }
+  updateHotbarInventoryCountBadges();
 
   function updateInventoryResourceGroup(gridId, emptyId) {
     const grid = document.getElementById(gridId);
@@ -8432,8 +8865,8 @@ function updateInventoryUi() {
         stackCount.className = "inventory-stack-count";
         element.append(stackCount);
       }
-      stackCount.textContent = count > 1 ? `×${count}` : "";
-      stackCount.hidden = count <= 1;
+      stackCount.textContent = `${count}`;
+      stackCount.hidden = false;
 
       if (visible) visibleEntries += 1;
     });
@@ -8445,6 +8878,10 @@ function updateInventoryUi() {
   updateOwnedInventoryGroup("inventoryWeaponsGrid", "inventoryWeaponsEmpty");
   updateOwnedInventoryGroup("inventoryArmorGrid", "inventoryArmorEmpty");
   updateOwnedInventoryGroup("inventoryAccessoriesGrid", "inventoryAccessoriesEmpty");
+
+  document.querySelectorAll("#inventoryPage .menu-item").forEach(element => {
+    element.draggable = element.style.display !== "none" && inventoryOverlayCellCount(element) > 0;
+  });
 
   document
     .querySelectorAll(
@@ -8474,7 +8911,7 @@ function updateInventoryUi() {
 
       if (slotIndex >= 0) {
         element.dataset.hotbarSlotLabel =
-          `${slotIndex + 4}`;
+          hotbarKeyLabel(slotIndex);
       } else {
         delete element.dataset.hotbarSlotLabel;
       }
@@ -8743,6 +9180,7 @@ function updateInventoryUi() {
 
   updateAbilityTreeUi();
   updateSkillBindingUi();
+  renderInventoryOverlaySelection();
   updatePvpUi();
 }
 
@@ -8862,7 +9300,8 @@ function buildLocalCharacterSave() {
       woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0)),
       woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0)),
       torches: Math.max(0, Math.floor(Number(player.torches) || 0)),
-      chests: Math.max(0, Math.floor(Number(player.chests) || 0))
+      chests: Math.max(0, Math.floor(Number(player.chests) || 0)),
+      craftingTables: Math.max(0, Math.floor(Number(player.craftingTables) || 0))
     },
 
     items: validSavedItemIds(player.items),
@@ -9006,6 +9445,7 @@ function applyLocalCharacterSave(save) {
   player.woodDoors = clampLocalSaveInteger(save.resources?.woodDoors, 0, 999999, 0);
   player.torches = clampLocalSaveInteger(save.resources?.torches, 0, 999999, 0);
   player.chests = clampLocalSaveInteger(save.resources?.chests, 0, 999999, 0);
+  player.craftingTables = clampLocalSaveInteger(save.resources?.craftingTables, 0, 999999, 0);
   player.openedTreasureIds = new Set(
     (Array.isArray(save.openedTreasureIds) ? save.openedTreasureIds : [])
       .filter(id => typeof id === "string" && id.includes(":treasure:"))
@@ -9077,7 +9517,7 @@ function applyLocalCharacterSave(save) {
     { length: HOTBAR_SLOT_COUNT },
     (_, index) => {
       // v376 equipment lived on physical keys 4-8. Preserve those physical
-      // positions during the one-time migration into the new 1-9 belt.
+      // positions during the one-time migration into the unified number-key belt.
       const sourceIndex = legacyFiveSlotHotbar ? index - 3 : index;
       const itemId = sourceIndex >= 0 ? savedHotbarAssignments[sourceIndex] : null;
       return itemId && hotbarAssignmentCanPersist(itemId)
@@ -9173,7 +9613,8 @@ function persistentServerBootstrapPayload() {
       woodWalls: player.woodWalls,
       woodDoors: player.woodDoors,
       torches: player.torches,
-      chests: player.chests
+      chests: player.chests,
+      craftingTables: player.craftingTables
     },
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
@@ -9324,6 +9765,7 @@ function setShopOpen(open) {
 
   if (shopOpen && inventoryOpen) setInventoryOpen(false);
   if (shopOpen && craftingOpen) setCraftingOpen(false);
+  if (shopOpen && chestContextOpen) closeChestContext(true, "shop");
   if (shopOpen && beachQuestOpen) setBeachQuestOpen(false);
 
   overlay.classList.toggle("open", shopOpen);
@@ -9376,47 +9818,47 @@ function tryPurchaseShopItem(itemId) {
   saveLocalCharacterState(true);
 }
 
+function syncInventoryOverlayToViewport() {
+  const overlay = document.getElementById("inventoryOverlay");
+  const viewport = document.getElementById("gameViewport");
+  if (!overlay || !viewport) return;
+  const rect = viewport.getBoundingClientRect();
+  overlay.style.left = `${Math.round(rect.left)}px`;
+  overlay.style.top = `${Math.round(rect.top)}px`;
+  overlay.style.width = `${Math.round(rect.width)}px`;
+  overlay.style.height = `${Math.round(rect.height)}px`;
+}
+
 function setInventoryOpen(open) {
-  // Inventory/equipment management is allowed while hidden.
-  inventoryOpen = open;
-  if (!open) {
+  // v422: Inventory/equipment is a live overlay. Opening it does not pause or
+  // clear gameplay input, and Craft remains independently open if requested.
+  inventoryOpen = Boolean(open);
+  if (!inventoryOpen) {
     hideItemDetailTooltip();
     hideSkillDetailTooltip();
   }
 
-  if (open && player.hunterSnareSetting) {
-    cancelHunterSnarePlacement(false);
-  }
-
-  if (open && focusFireIsCasting()) {
-    cancelFocusFire();
-  }
-
-  if (open && fireballIsAiming()) {
-    cancelFireballAim();
-  }
-
-  if (open && shopOpen) {
-    setShopOpen(false);
-  }
-
-  if (open && craftingOpen) {
-    setCraftingOpen(false);
-  }
+  if (inventoryOpen && shopOpen) setShopOpen(false);
 
   const overlay = document.getElementById("inventoryOverlay");
-  overlay.classList.toggle("open", open);
-  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+  if (!overlay) return;
+  overlay.classList.toggle("open", inventoryOpen);
+  overlay.setAttribute("aria-hidden", inventoryOpen ? "false" : "true");
 
-  // Stop held input and discard queued gameplay commands when a menu opens.
-  inputController.clearKeys();
-  if (open) inputController.clearCommands();
+  const hudButton = document.getElementById("menuHudButton");
+  hudButton?.classList.toggle("active", inventoryOpen);
+  hudButton?.setAttribute("aria-pressed", inventoryOpen ? "true" : "false");
 
   updateInventoryUi();
-  if (open) {
-    updateMenuHotkeyRailVisibility(document.querySelector(".inventory-page.active")?.id || "inventoryPage");
-  }
+  if (inventoryOpen) syncInventoryOverlayToViewport();
 }
+
+window.addEventListener("resize", () => {
+  if (inventoryOpen) syncInventoryOverlayToViewport();
+}, { passive: true });
+window.visualViewport?.addEventListener("resize", () => {
+  if (inventoryOpen) syncInventoryOverlayToViewport();
+}, { passive: true });
 
 function updateMenuHotkeyRailVisibility(pageId) {
   const inventoryContext = pageId === "inventoryPage";
@@ -9452,10 +9894,25 @@ document.querySelectorAll(".inventory-tab").forEach(tab => {
   });
 });
 
-window.addEventListener("wheel", event => {
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
+document.getElementById("menuHudButton")?.addEventListener("click", () => {
+  setInventoryOpen(!inventoryOpen);
+});
+
+document.getElementById("craftHudButton")?.addEventListener("click", () => {
+  setCraftingOpen(!craftingOpen);
+});
+
+document.getElementById("chestHudButton")?.addEventListener("click", () => {
+  if (!nearbyChestContextId) return;
+  if (chestContextOpen && activeChestContextId === nearbyChestContextId) {
+    closeChestContext(true, "closed");
     return;
   }
+  requestChestContextOpen(nearbyChestContextId, false);
+});
+
+window.addEventListener("wheel", event => {
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
 
   if (!Number.isFinite(event.deltaY) || Math.abs(event.deltaY) < 1) {
     return;
@@ -9471,9 +9928,7 @@ window.addEventListener("wheel", event => {
 
 const topHotbar = document.getElementById("hotbar");
 topHotbar?.addEventListener("click", event => {
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
-    return;
-  }
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
 
   const slot = event.target.closest(".hotbar-slot");
   if (!slot || !topHotbar.contains(slot)) return;
@@ -9646,24 +10101,13 @@ document.getElementById("shopGrid").addEventListener("click", event => {
 });
 
 
-document.getElementById("craftTabs")?.addEventListener("click", event => {
-  const button = event.target.closest("[data-craft-filter]");
-  if (!button) return;
-  craftCategoryFilter = button.dataset.craftFilter || "consumables";
-  document.querySelectorAll(".craft-tab").forEach(tab => {
-    const active = tab.dataset.craftFilter === craftCategoryFilter;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-selected", active ? "true" : "false");
-  });
-  updateCraftingUi();
-});
 
 document.getElementById("craftClose").addEventListener("click", () => {
   setCraftingOpen(false);
 });
 
-document.getElementById("craftOverlay").addEventListener("pointerdown", event => {
-  if (event.target === event.currentTarget) setCraftingOpen(false);
+document.getElementById("chestClose")?.addEventListener("click", () => {
+  closeChestContext(true, "closed");
 });
 
 document.getElementById("classResetYes").addEventListener("click", () => {
@@ -9718,83 +10162,173 @@ document.getElementById("craftGrid").addEventListener("click", event => {
   );
 });
 
-document.getElementById("inventoryPage").addEventListener("click", event => {
-  const utilityElement = event.target.closest('[data-consumable-item]');
-  if (utilityElement) {
-    const utilityItemId = utilityElement.dataset.consumableItem;
-    if (consumableCount(utilityItemId) <= 0) return;
-    useConsumable(utilityItemId);
-    updateInventoryUi();
-    return;
-  }
+const inventoryPageElement = document.getElementById("inventoryPage");
+const chestGridElement = document.getElementById("chestGrid");
 
-  const buildElement = event.target.closest('[data-build-item]');
-  if (buildElement) {
-    const buildItemId = buildElement.dataset.buildItem;
-    if (hotbarItemInventoryCount(buildItemId) <= 0) return;
-    selectedHotbarInventoryItemId = buildItemId;
-    updateInventoryUi();
-    return;
-  }
-
-  const itemElement =
-    event.target.closest(
-      '[data-hotbar-assignable="true"]'
-    );
-
-  if (!itemElement) return;
-
-  const itemId =
-    itemElement.dataset.ownedItem;
-
-  if (
-    !itemId ||
-    !playerOwnsItem(itemId)
-  ) {
-    return;
-  }
-
-  if (!hotbarItemCanBeAssigned(itemId)) {
-    showHotbarAssignmentRestriction(itemId);
-    return;
-  }
-
-  selectedHotbarInventoryItemId =
-    itemId;
-
-  updateInventoryUi();
-});
-
-document.getElementById("inventoryPage").addEventListener("dragstart", event => {
-  const utilityElement = event.target.closest('[data-consumable-item]');
-  if (utilityElement) {
+chestGridElement?.addEventListener("dragstart", event => {
+  const card = event.target.closest("[data-chest-item]");
+  if (!card || !chestContextOpen || !activeChestContextId || chestTakePendingItemId) {
     event.preventDefault();
     return;
   }
-
-  const itemElement = event.target.closest('[data-hotbar-assignable="true"]');
-  if (!itemElement) return;
-
-  const itemId = itemElement.dataset.ownedItem;
-  if (!hotbarItemCanBeAssigned(itemId)) {
+  const itemId = card.dataset.chestItem || "";
+  if (!itemId) {
     event.preventDefault();
-    showHotbarAssignmentRestriction(itemId);
     return;
   }
-
-  selectedHotbarInventoryItemId = itemId;
+  draggingChestItemId = itemId;
   event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("application/x-slime-item", itemId);
+  event.dataTransfer.setData("application/x-slime-chest-item", itemId);
   event.dataTransfer.setData("text/plain", itemId);
-  itemElement.classList.add("dragging");
+  card.classList.add("dragging");
+});
+
+chestGridElement?.addEventListener("dragend", event => {
+  event.target.closest("[data-chest-item]")?.classList.remove("dragging");
+  draggingChestItemId = null;
+  inventoryPageElement?.classList.remove("chest-drop-ready");
+});
+
+inventoryPageElement?.addEventListener("dragover", event => {
+  if (!draggingChestItemId || !chestContextOpen || !activeChestContextId || chestTakePendingItemId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  inventoryPageElement.classList.add("chest-drop-ready");
+});
+
+inventoryPageElement?.addEventListener("dragleave", event => {
+  if (!inventoryPageElement.contains(event.relatedTarget)) {
+    inventoryPageElement.classList.remove("chest-drop-ready");
+  }
+});
+
+inventoryPageElement?.addEventListener("drop", event => {
+  if (!draggingChestItemId || !chestContextOpen || !activeChestContextId || chestTakePendingItemId) return;
+  event.preventDefault();
+  inventoryPageElement.classList.remove("chest-drop-ready");
+  const itemId = event.dataTransfer.getData("application/x-slime-chest-item") || draggingChestItemId;
+  draggingChestItemId = null;
+  if (!["coins", "wood", "stone"].includes(itemId)) return;
+  chestTakePendingItemId = itemId;
+  renderChestContextUi();
+  if (!onlineClient?.requestChestTakeItem(activeChestContextId, itemId)) {
+    chestTakePendingItemId = null;
+    renderChestContextUi();
+  }
+});
+
+inventoryPageElement?.addEventListener("click", event => {
+  const cell = event.target.closest(".menu-item");
+  if (!cell || !inventoryPageElement.contains(cell) || cell.style.display === "none") return;
+  selectInventoryOverlayCell(cell);
+});
+
+inventoryPageElement?.addEventListener("dragstart", event => {
+  const cell = event.target.closest(".menu-item");
+  if (!cell || !inventoryPageElement.contains(cell) || inventoryOverlayCellCount(cell) <= 0) {
+    event.preventDefault();
+    return;
+  }
+
+  selectInventoryOverlayCell(cell);
+  const itemId = cell.dataset.ownedItem || "";
+  const token = inventoryOverlayCellToken(cell) || "";
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("application/x-slime-inventory-token", token);
+  event.dataTransfer.setData("application/x-slime-inventory-item", itemId);
+  if (itemId && hotbarItemCanBeAssigned(itemId)) {
+    event.dataTransfer.setData("application/x-slime-item", itemId);
+  }
+  event.dataTransfer.setData("text/plain", itemId || token);
+  cell.classList.add("dragging");
+});
+
+inventoryPageElement?.addEventListener("dragend", event => {
+  event.target.closest(".menu-item")?.classList.remove("dragging");
+  document.querySelectorAll("#hotbar .hotbar-slot.drag-over, #equipmentPage .equipped-box.drag-over")
+    .forEach(slot => slot.classList.remove("drag-over"));
+});
+
+document.getElementById("inventoryDetailAction")?.addEventListener("click", event => {
+  const itemId = event.currentTarget.dataset.consumableItem;
+  if (!itemId || consumableCount(itemId) <= 0) return;
+  useConsumable(itemId);
   updateInventoryUi();
 });
 
-document.getElementById("inventoryPage").addEventListener("dragend", event => {
-  event.target.closest('[data-hotbar-assignable="true"]')?.classList.remove("dragging");
-  event.target.closest('[data-utility-hotbar-assignable="true"]')?.classList.remove("dragging");
-  document.querySelectorAll("[data-menu-hotbar-slot].drag-over, [data-menu-utility-slot].drag-over")
-    .forEach(slot => slot.classList.remove("drag-over"));
+const liveEquipmentDock = document.querySelector("#equipmentPage .equipped-column");
+liveEquipmentDock?.addEventListener("dragover", event => {
+  const slot = event.target.closest("[data-equipment-slot]");
+  if (!slot) return;
+  const itemId = event.dataTransfer.getData("application/x-slime-inventory-item") || "";
+  if (equipmentSlotForInventoryItem(itemId) !== slot.dataset.equipmentSlot) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  slot.classList.add("drag-over");
+});
+
+liveEquipmentDock?.addEventListener("dragleave", event => {
+  event.target.closest("[data-equipment-slot]")?.classList.remove("drag-over");
+});
+
+liveEquipmentDock?.addEventListener("drop", event => {
+  const slot = event.target.closest("[data-equipment-slot]");
+  if (!slot) return;
+  event.preventDefault();
+  slot.classList.remove("drag-over");
+  const itemId = event.dataTransfer.getData("application/x-slime-inventory-item") || "";
+  equipInventoryArmorItemToSlot(itemId, slot.dataset.equipmentSlot);
+});
+
+liveEquipmentDock?.addEventListener("click", event => {
+  const slot = event.target.closest("[data-equipment-slot]");
+  if (!slot) return;
+  const selectedCell = inventoryOverlayCellForToken(selectedOverlayInventoryToken);
+  const selectedItemId = selectedCell?.dataset?.ownedItem || "";
+  if (selectedItemId && equipmentSlotForInventoryItem(selectedItemId) === slot.dataset.equipmentSlot) {
+    equipInventoryArmorItemToSlot(selectedItemId, slot.dataset.equipmentSlot);
+    return;
+  }
+  const equippedId = slot.dataset.itemDetailId;
+  if (equippedId) {
+    const cell = document.querySelector(`#inventoryPage [data-owned-item="${equippedId}"]`);
+    if (cell) selectInventoryOverlayCell(cell);
+  }
+});
+
+liveEquipmentDock?.addEventListener("contextmenu", event => {
+  const slot = event.target.closest("[data-equipment-slot]");
+  if (!slot) return;
+  event.preventDefault();
+  unequipInventoryArmorSlot(slot.dataset.equipmentSlot);
+});
+
+// The real world HUD hotbar is the only assignment target in v422.
+topHotbar?.addEventListener("dragover", event => {
+  const slot = event.target.closest(".hotbar-slot");
+  if (!slot) return;
+  const itemId = event.dataTransfer.getData("application/x-slime-item") || "";
+  if (!hotbarItemCanBeAssigned(itemId)) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  slot.classList.add("drag-over");
+});
+
+topHotbar?.addEventListener("dragleave", event => {
+  event.target.closest(".hotbar-slot")?.classList.remove("drag-over");
+});
+
+topHotbar?.addEventListener("drop", event => {
+  const slot = event.target.closest(".hotbar-slot");
+  if (!slot) return;
+  event.preventDefault();
+  slot.classList.remove("drag-over");
+  const itemId = event.dataTransfer.getData("application/x-slime-item") || "";
+  if (!hotbarItemCanBeAssigned(itemId)) return;
+  const slotNumber = Number(String(slot.id || "").replace("slot", ""));
+  if (Number.isInteger(slotNumber) && slotNumber >= 1 && slotNumber <= HOTBAR_SLOT_COUNT) {
+    assignItemToHotbar(itemId, slotNumber - 1);
+  }
 });
 
 const menuItemHotkeyRail = document.getElementById("menuItemHotkeyRail");
@@ -10262,6 +10796,20 @@ function drawChestStructure(structure, camX, camY, alpha = 1) {
   ctx.fillStyle = "rgba(30, 24, 18, .28)";
   ctx.fillRect(screenX - 7, screenY, 14, 2);
   ctx.drawImage(image, screenX - 8, screenY - 16, 16, 16);
+  ctx.restore();
+}
+
+function drawCraftingTableStructure(structure, camX, camY, alpha = 1) {
+  const screenX = Math.round(Number(structure?.x) - camX);
+  const screenY = Math.round(Number(structure?.y) - camY);
+  const width = woodBenchImage.width || 18;
+  const height = woodBenchImage.height || 18;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "rgba(30, 24, 18, .28)";
+  ctx.fillRect(screenX - 7, screenY, 14, 2);
+  ctx.drawImage(woodBenchImage, screenX - Math.round(width / 2), screenY - (height - 1));
   ctx.restore();
 }
 
@@ -10845,6 +11393,10 @@ function addPlayerStructureDrawables(drawables, camX, camY) {
       addDrawable(drawables, Number(structure.y), () => drawChestStructure(structure, camX, camY));
       continue;
     }
+    if (structure.kind === "craftingTable") {
+      addDrawable(drawables, Number(structure.y), () => drawCraftingTableStructure(structure, camX, camY));
+      continue;
+    }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
     addDrawable(drawables, wallDrawSortY(structure), () => {
       if (structure.kind === "woodDoor") drawWoodDoor(structure, camX, camY);
@@ -10855,7 +11407,7 @@ function addPlayerStructureDrawables(drawables, camX, camY) {
 
 function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
   for (const structure of currentMapStructures()) {
-    if (structure.kind === "chest") {
+    if (structure.kind === "chest" || structure.kind === "craftingTable") {
       const left = Number(structure.x) - 7;
       const top = Number(structure.y) - 8;
       if (circleRectCollision(x, y, playerRadius, left, top, 14, 8)) return true;
@@ -10892,6 +11444,15 @@ function pickaxeStructurePointerBounds(structure) {
       top: Number(structure.y) - 16,
       right: Number(structure.x) + 8,
       bottom: Number(structure.y)
+    };
+  }
+
+  if (structure?.kind === "craftingTable") {
+    return {
+      left: Number(structure.x) - 9,
+      top: Number(structure.y) - 18,
+      right: Number(structure.x) + 9,
+      bottom: Number(structure.y) + 1
     };
   }
 
@@ -10945,7 +11506,7 @@ function playerStructurePickaxeTarget() {
   let bestPriority = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(structure.kind)) continue;
+    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(structure.kind)) continue;
 
     // Player position is only a reach gate. It must never decide which placed
     // piece wins when several structures are in range; the cursor does that.
@@ -10962,7 +11523,7 @@ function playerStructurePickaxeTarget() {
     // If the pointer overlaps a wall/door facade and the floor behind it,
     // prefer the visible edge structure. Otherwise choose whichever structure
     // is geometrically closest to the cursor, independent of player distance.
-    const priority = ["torch", "chest"].includes(structure.kind)
+    const priority = ["torch", "chest", "craftingTable"].includes(structure.kind)
       ? 0
       : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)
         ? 1
@@ -10999,6 +11560,13 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
     ctx.fillRect(left, top + 15, 16, 1);
     ctx.fillRect(left, top, 1, 16);
     ctx.fillRect(left + 15, top, 1, 16);
+  } else if (structure.kind === "craftingTable") {
+    const left = Math.round(Number(structure.x) - camX - 9);
+    const top = Math.round(Number(structure.y) - camY - 18);
+    ctx.fillRect(left, top, 18, 1);
+    ctx.fillRect(left, top + 18, 18, 1);
+    ctx.fillRect(left, top, 1, 19);
+    ctx.fillRect(left + 17, top, 1, 19);
   } else if (structure.kind === "chest") {
     const left = Math.round(Number(structure.x) - camX - 8);
     const top = Math.round(Number(structure.y) - camY - 16);
@@ -11058,15 +11626,14 @@ function buildPieceCount(kind) {
   if (kind === "woodDoor") return Math.max(0, Number(player.woodDoors) || 0);
   if (kind === "torch") return Math.max(0, Number(player.torches) || 0);
   if (kind === "chest") return Math.max(0, Number(player.chests) || 0);
+  if (kind === "craftingTable") return Math.max(0, Number(player.craftingTables) || 0);
   return 0;
 }
 
 function beginBuildPlacement(kind) {
-  if (!["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  if (!["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(kind) || buildPieceCount(kind) <= 0) return false;
   selectedBuildPiece = kind;
-  // Selecting a build piece from the hotbar/mouse wheel must not clear held
-  // movement input. Only close the inventory when it is actually open.
-  if (inventoryOpen) setInventoryOpen(false);
+  // v422: build selection is compatible with the live inventory overlay.
   if (
     typeof mobileControlsEnabled !== "undefined" &&
     mobileControlsEnabled &&
@@ -11278,6 +11845,17 @@ function chestPlacementCandidate(worldX, worldY) {
   return { x, y, valid: Boolean(floor) && !occupied };
 }
 
+function craftingTablePlacementCandidate(worldX, worldY) {
+  const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const occupied = currentMapStructures().some(structure =>
+    STRUCTURE_TOPOLOGY.layerOf(structure) === STRUCTURE_TOPOLOGY.LAYERS.OBJECT &&
+    Math.abs(Number(structure.x) - x) < 1 &&
+    Math.abs(Number(structure.y) - y) < 1
+  );
+  return { x, y, valid: !occupied };
+}
+
 function torchPlacementCandidate(worldX, worldY) {
   const wall = torchWallSupportAtWorldPoint(worldX, worldY);
   if (wall) {
@@ -11328,6 +11906,23 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
       onlineClient.requestStructurePlacement(selectedBuildPiece, candidate.floorX, candidate.floorY, candidate.edge);
     }
     return true;
+  }
+
+  if (selectedBuildPiece === "craftingTable") {
+    const candidate = craftingTablePlacementCandidate(worldX, worldY);
+    if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement("craftingTable", candidate.x, candidate.y);
+    }
+    return true;
+  }
+
+  if (selectedBuildPiece === "craftingTable") {
+    const candidate = craftingTablePlacementCandidate(worldX, worldY);
+    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
+    drawCraftingTableStructure({ kind: "craftingTable", x: candidate.x, y: candidate.y }, camX, camY, valid ? 0.72 : 0.22);
+    if (!valid) drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, false);
+    return;
   }
 
   if (selectedBuildPiece === "chest") {
@@ -11767,37 +12362,47 @@ function drawMapRainOverlay() {
   const intensity = currentMapRainIntensity();
   if (intensity <= 0.01) return;
 
-  const particleCount = Math.max(18, Math.round(58 * intensity));
   const seedPrefix = `${Number(WORLD_CONTENT?.worldSeed) || 0}:${currentMapId}:rain`;
+  const columnSpacing = 12;
+  const columnCount = Math.ceil((VIEW_W + columnSpacing) / columnSpacing);
+  const dropsPerColumn = Math.max(1, 1 + Math.round(3 * intensity));
+  const ySpan = VIEW_H + 28;
 
   ctx.save();
-  // When the local player reveals a roofed interior, cut that room out of the
-  // screen-space rain pass. The server uses the same roof topology as shelter
-  // for Wet status, so the visual and gameplay rules agree.
+  // Shelter is still purely topology-driven, but the visible rain itself is a
+  // screen-space sheet. v421 distributes drops by lanes across the full logical
+  // viewport instead of relying on a small random cloud of particles that could
+  // leave half of a wide screen visually dry while gameplay correctly stayed Wet.
   applyCloudShadowInteriorClip(currentCamX, currentCamY);
 
-  // A rainy map is just a touch flatter/dimmer during the day. The separate
-  // night/interior lighting pass still owns actual darkness and torch carving.
   ctx.globalAlpha = 0.035 * intensity;
   ctx.fillStyle = "#2b3944";
   ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 
   ctx.fillStyle = "#b8cad2";
-  for (let index = 0; index < particleCount; index += 1) {
-    const seedX = stableTorchLightSeed(`${seedPrefix}:${index}:x`) / (Math.PI * 2);
-    const seedY = stableTorchLightSeed(`${seedPrefix}:${index}:y`) / (Math.PI * 2);
-    const seedSpeed = stableTorchLightSeed(`${seedPrefix}:${index}:s`) / (Math.PI * 2);
-    const speed = 62 + seedSpeed * 48;
-    const drift = 10 + seedSpeed * 8;
-    const xSpan = VIEW_W + 28;
-    const ySpan = VIEW_H + 24;
-    let y = (seedY * ySpan + worldTime * speed) % ySpan - 12;
-    let x = (seedX * xSpan - worldTime * drift + Math.floor((seedY * ySpan + worldTime * speed) / ySpan) * 19) % xSpan - 14;
-    if (x < -14) x += xSpan;
-    ctx.globalAlpha = intensity * (0.13 + seedSpeed * 0.10);
-    const length = 3 + Math.round(seedSpeed * 3);
-    ctx.fillRect(Math.round(x), Math.round(y), 1, length);
-    if (seedSpeed > 0.62) ctx.fillRect(Math.round(x - 1), Math.round(y + length - 1), 1, 1);
+  for (let column = 0; column < columnCount; column += 1) {
+    for (let row = 0; row < dropsPerColumn; row += 1) {
+      const key = `${seedPrefix}:${column}:${row}`;
+      const jitter = stableTorchLightSeed(`${key}:x`) / (Math.PI * 2);
+      const seedY = stableTorchLightSeed(`${key}:y`) / (Math.PI * 2);
+      const seedSpeed = stableTorchLightSeed(`${key}:s`) / (Math.PI * 2);
+      const speed = 66 + seedSpeed * 52;
+      const drift = 9 + seedSpeed * 8;
+      const baseY = ((row + seedY) / dropsPerColumn) * ySpan;
+      const travel = baseY + worldTime * speed;
+      const wrap = Math.floor(travel / ySpan);
+      const y = ((travel % ySpan) + ySpan) % ySpan - 14;
+      const laneX = column * columnSpacing + (jitter - 0.5) * (columnSpacing * 0.72);
+      const shiftedX = laneX - worldTime * drift + wrap * 7;
+      const x = ((shiftedX % (VIEW_W + columnSpacing)) + (VIEW_W + columnSpacing)) % (VIEW_W + columnSpacing) - 6;
+
+      ctx.globalAlpha = intensity * (0.13 + seedSpeed * 0.10);
+      const length = 3 + Math.round(seedSpeed * 3);
+      ctx.fillRect(Math.round(x), Math.round(y), 1, length);
+      if (seedSpeed > 0.62) {
+        ctx.fillRect(Math.round(x - 1), Math.round(y + length - 1), 1, 1);
+      }
+    }
   }
   ctx.restore();
 }
@@ -14922,7 +15527,7 @@ function drawInteractionPrompt(
   camX,
   camY
 ) {
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) return;
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
 
   const interaction =
     nearbySpawnInteraction();
@@ -14941,13 +15546,9 @@ function drawInteractionPrompt(
 
   const placedKind = interaction.kind === "placedNpc" ? interaction.npcType : null;
   const promptText =
-    interaction.kind === "chestStructure"
-      ? (interaction.structure?.opened ? "F CLOSE" : "F OPEN")
-      : interaction.kind === "bench" || placedKind === "craftingTable"
-        ? "F CRAFT"
-        : interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
-          ? "F RESET"
-          : "F TALK";
+    interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
+      ? "F RESET"
+      : "F TALK";
 
   drawStaticPixelText(
     promptText,
@@ -15098,7 +15699,7 @@ function drawRemotePlayer(
   player.weaponIndex = Number.isFinite(remote.weaponIndex)
     ? remote.weaponIndex
     : -1;
-  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(remote.heldBuildPiece)
+  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(remote.heldBuildPiece)
     ? remote.heldBuildPiece
     : null;
 

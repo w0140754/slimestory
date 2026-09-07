@@ -419,6 +419,7 @@ class OnlineClient {
       if (Number.isFinite(message.greenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.greenJellyCubes));
       if (Number.isFinite(message.torches)) player.torches = Math.max(0, Math.floor(message.torches));
       if (Number.isFinite(message.chests)) player.chests = Math.max(0, Math.floor(message.chests));
+      if (Number.isFinite(message.craftingTables)) player.craftingTables = Math.max(0, Math.floor(message.craftingTables));
       if (Array.isArray(message.openedTreasureIds)) {
         player.openedTreasureIds = new Set(
           message.openedTreasureIds
@@ -894,7 +895,7 @@ class OnlineClient {
 
     if (message.type === "structureDestroyResult") {
       if (!message.success) {
-        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : message.reason === "wallAttached" ? "REMOVE WALL FIRST" : message.reason === "objectAttached" ? "REMOVE OBJECT FIRST" : message.reason === "openFirst" ? "OPEN CHEST FIRST" : "TOO FAR";
+        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : message.reason === "wallAttached" ? "REMOVE WALL FIRST" : message.reason === "objectAttached" ? "REMOVE OBJECT FIRST" : message.reason === "inUse" ? "CHEST IN USE" : message.reason === "lootFirst" ? "LOOT CHEST FIRST" : "TOO FAR";
         spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.7);
       }
       return;
@@ -907,6 +908,7 @@ class OnlineClient {
       if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
       if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
       if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
+      if (Number.isFinite(message.totalCraftingTables)) player.craftingTables = Math.max(0, Math.floor(message.totalCraftingTables));
       // v389: invalid building placement is intentionally quiet. The placement
       // preview already communicates where a piece can go; failed clicks should
       // not spam floating BLOCKED / PLACE ON FLOOR / TOO FAR notes.
@@ -955,6 +957,21 @@ class OnlineClient {
 
     if (message.type === "resourcePicked") {
       this.handleResourcePicked(message);
+      return;
+    }
+
+    if (message.type === "chestContextResult") {
+      applyChestContextResult(message);
+      return;
+    }
+
+    if (message.type === "chestContextClosed") {
+      applyChestContextClosed(message);
+      return;
+    }
+
+    if (message.type === "chestTakeResult") {
+      applyChestTakeResult(message);
       return;
     }
 
@@ -2025,7 +2042,7 @@ class OnlineClient {
     return true;
   }
 
-  requestTreasureOpen(chestId) {
+  requestChestContextOpen(chestId) {
     if (
       typeof chestId !== "string" ||
       !chestId ||
@@ -2035,16 +2052,11 @@ class OnlineClient {
     ) {
       return false;
     }
-
-    // Treasure is interaction-driven only: no chest polling or idle sync.
-    this.socket.send(JSON.stringify({
-      type: "treasureOpen",
-      chestId
-    }));
+    this.socket.send(JSON.stringify({ type: "chestContextOpen", chestId }));
     return true;
   }
 
-  requestChestToggle(chestId) {
+  requestChestContextClose(chestId) {
     if (
       typeof chestId !== "string" ||
       !chestId ||
@@ -2054,8 +2066,33 @@ class OnlineClient {
     ) {
       return false;
     }
-    this.socket.send(JSON.stringify({ type: "chestToggle", chestId }));
+    this.socket.send(JSON.stringify({ type: "chestContextClose", chestId }));
     return true;
+  }
+
+  requestChestTakeItem(chestId, itemId) {
+    if (
+      typeof chestId !== "string" ||
+      !chestId ||
+      typeof itemId !== "string" ||
+      !itemId ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+    this.socket.send(JSON.stringify({ type: "chestTakeItem", chestId, itemId }));
+    return true;
+  }
+
+  // Backward-compatible wrappers retained for any old interaction callsites.
+  requestTreasureOpen(chestId) {
+    return this.requestChestContextOpen(chestId);
+  }
+
+  requestChestToggle(chestId) {
+    return this.requestChestContextOpen(chestId);
   }
 
   requestCraft(recipe) {
@@ -2175,6 +2212,7 @@ class OnlineClient {
     }
 
     player.benchCraftPending = null;
+    const beforeHotbarCounts = hotbarAssignableAcquisitionSnapshot();
 
     if (Number.isFinite(message.totalWood)) {
       player.wood = message.totalWood;
@@ -2192,6 +2230,7 @@ class OnlineClient {
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
     if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
     if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
+    if (Number.isFinite(message.totalCraftingTables)) player.craftingTables = Math.max(0, Math.floor(message.totalCraftingTables));
 
     if (Number.isFinite(message.totalArrows)) {
       player.arrows = Math.max(0, Math.floor(message.totalArrows));
@@ -2210,7 +2249,9 @@ class OnlineClient {
           woodWalls: "totalWoodWalls",
           woodDoors: "totalWoodDoors",
           greenJellyCubes: "totalGreenJellyCubes",
-          torches: "totalTorches"
+          torches: "totalTorches",
+          chests: "totalChests",
+          craftingTables: "totalCraftingTables"
         }[recipe.resourceKey];
         if (!totalField || !Number.isFinite(message[totalField])) {
           player[recipe.resourceKey] =
@@ -2228,9 +2269,11 @@ class OnlineClient {
         equipCraftedRecipe(recipe);
       }
 
+      autoAssignNewlyAcquiredHotbarItems(beforeHotbarCounts);
+
       spawnFloatingText(
-        woodCraftBench.x,
-        woodCraftBench.y - 24,
+        player.x,
+        player.y - 28,
         recipe.testSupply ? "+100 TEST WOOD" : `${recipe.name.toUpperCase()} CRAFTED!`,
         "#ffe38b",
         1.2
@@ -2244,44 +2287,31 @@ class OnlineClient {
 
     if (message.reason === "missingIngredients" || message.reason === "needWood") {
       spawnFloatingText(
-        woodCraftBench.x,
-        woodCraftBench.y - 24,
+        player.x,
+        player.y - 28,
         "MISSING INGREDIENTS",
         "#ffe38b",
         0.9
       );
     } else if (message.reason === "alreadyCrafted") {
-      player.story[recipe.storyKey] = true;
-
-      if (!playerOwnsItem(recipe.itemId)) {
-        grantInventoryItem(
-          recipe.itemId,
-          1
-        );
-      }
-
-      spawnFloatingText(
-        woodCraftBench.x,
-        woodCraftBench.y - 24,
-        "ALREADY CRAFTED",
-        "#ffe38b",
-        0.9
-      );
-
+      // v422: legacy one-time recipe reconciliation is silent. Repeatable
+      // recipes such as Crafting Tables never show an "already crafted" toast.
+      if (recipe.storyKey) player.story[recipe.storyKey] = true;
+      if (recipe.itemId && !playerOwnsItem(recipe.itemId)) grantInventoryItem(recipe.itemId, 1);
       updateInventoryUi();
       updateHotbar();
     } else if (message.reason === "tooFar") {
       spawnFloatingText(
-        woodCraftBench.x,
-        woodCraftBench.y - 24,
+        player.x,
+        player.y - 28,
         "MOVE CLOSER",
         "#ffe38b",
         0.9
       );
     } else {
       spawnFloatingText(
-        woodCraftBench.x,
-        woodCraftBench.y - 24,
+        player.x,
+        player.y - 28,
         "CRAFT FAILED",
         "#ffe38b",
         0.9
@@ -2333,6 +2363,8 @@ class OnlineClient {
       return;
     }
 
+    const beforeHotbarCounts = hotbarAssignableAcquisitionSnapshot();
+
     if (Number.isFinite(message.totalWood)) {
       player.wood =
         message.totalWood;
@@ -2355,6 +2387,7 @@ class OnlineClient {
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
     if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
     if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
+    if (Number.isFinite(message.totalCraftingTables)) player.craftingTables = Math.max(0, Math.floor(message.totalCraftingTables));
 
     if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
       player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
@@ -2363,8 +2396,9 @@ class OnlineClient {
     }
 
 
-
+    autoAssignNewlyAcquiredHotbarItems(beforeHotbarCounts);
     updateInventoryUi();
+    updateHotbar();
   }
 
   handleEnvironmentReward(message) {

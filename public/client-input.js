@@ -163,7 +163,7 @@ function beginMobileBuildCursorForSelectedPiece() {
   clearMobilePointTargetMode();
   if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
 
-  const leadDistance = (["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 24 : 18;
+  const leadDistance = (["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 24 : 18;
   const aimLength = Math.hypot(mobileAimDx, mobileAimDy) || 1;
   setMobileBuildCursorWorldPoint(
     player.x + (mobileAimDx / aimLength) * leadDistance,
@@ -181,7 +181,7 @@ function nudgeMobileBuildCursor(dx, dy) {
 
   // Floor cells live on the 16px build grid. Wall/Door targeting needs the
   // half-cell step so one tap can move from a floor centre to a specific edge.
-  const step = (["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 16 : 8;
+  const step = (["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 16 : 8;
   return setMobileBuildCursorWorldPoint(
     cursor.x + Number(dx) * step,
     cursor.y + Number(dy) * step
@@ -306,9 +306,7 @@ function updateMobilePointBowShot() {
   }
 
   const automatedDrawBlocked =
-    inventoryOpen ||
     shopOpen ||
-    craftingOpen ||
     classResetConfirmOpen ||
     beachQuestOpen ||
     mobilePointTargetMode ||
@@ -395,7 +393,7 @@ function executeMobilePointTargetCommand(payload = {}) {
 
 function handleMobilePointTargetPointerDown(event) {
   if (!mobileControlsEnabled || !mobilePointTargetMode || event.button !== 0) return;
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen) {
     clearMobilePointTargetMode();
     return;
   }
@@ -602,9 +600,7 @@ function updateMobileAutoAttack() {
     return false;
   }
   if (
-    inventoryOpen ||
     shopOpen ||
-    craftingOpen ||
     classResetConfirmOpen ||
     beachQuestOpen ||
     mobilePointTargetMode ||
@@ -1006,9 +1002,7 @@ function handleCanvasMouseMove(event) {
   mouseCanvasY = pointer.y;
 
   if (
-    !inventoryOpen &&
     !shopOpen &&
-    !craftingOpen &&
     equippedWeapon() === "bow" &&
     (player.bowDrawing || player.focusFireCharging)
   ) {
@@ -1032,7 +1026,8 @@ const HOTBAR_KEY_TO_INDEX = Object.freeze({
   "6": 5,
   "7": 6,
   "8": 7,
-  "9": 8
+  "9": 8,
+  "0": 9
 });
 
 function handleMenuKeyDown(key) {
@@ -1069,13 +1064,8 @@ function handleMenuKeyDown(key) {
     return true;
   }
 
-  // Escape acts as the universal menu key. If a contextual station/shop is
-  // open, close that first. Otherwise toggle the main inventory/menu overlay.
-  if (craftingOpen) {
-    setCraftingOpen(false);
-    return true;
-  }
-
+  // v422: Escape toggles the regular Menu independently from Craft. Focused
+  // contextual/modal screens still close first.
   if (shopOpen) {
     setShopOpen(false);
     return true;
@@ -1094,12 +1084,6 @@ function handleWeaponHotkey(key) {
     return true;
   }
 
-  if (key === "0") {
-    inputController.queueCommand("equipWeapon", {
-      index: -1
-    });
-    return true;
-  }
 
   return false;
 }
@@ -1118,7 +1102,7 @@ function handleGameKeyDown(event) {
 
   if (handleMenuKeyDown(key)) return;
 
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) {
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen) {
     inputController.setKey(key, false);
     return;
   }

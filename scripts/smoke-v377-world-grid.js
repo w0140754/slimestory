@@ -59,7 +59,7 @@ async function moveToMap(socket, mapId, x = 320, y = 200) {
     });
 
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-419") {
+    if (welcome.buildVersion !== "6-11-424") {
       throw new Error(`unexpected build ${welcome.buildVersion}`);
     }
     await initialSnapshotPending;
@@ -87,12 +87,13 @@ async function moveToMap(socket, mapId, x = 320, y = 200) {
     await delay(150);
     await moveToMap(socket, "world_p0_p1", 624, 200);
 
-    // Marnie remains available on the new spawn cell, so the retained onboarding
-    // can continue to be exercised even though the old class-shop maps are now
-    // intentionally outside the active world graph.
+    // v420 onboarding is self-starting: no mandatory Marnie/static bench, and
+    // 10 Wood can be turned into the first portable Crafting Table by hand.
     await moveToMap(socket, "world_p0_p0", 320, 200);
-    const marnie = WORLD_CONTENT.maps.world_p0_p0.npcs.find(npc => npc?.type === "shopkeeper");
-    if (!marnie) throw new Error("Marnie missing from coordinate spawn map");
+    const spawnNpcs = WORLD_CONTENT.maps.world_p0_p0.npcs || [];
+    if (spawnNpcs.some(npc => npc?.type === "shopkeeper" || npc?.type === "craftingTable")) {
+      throw new Error("retired starter NPC/static Crafting Table returned to coordinate spawn");
+    }
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({
@@ -101,21 +102,15 @@ async function moveToMap(socket, mapId, x = 320, y = 200) {
     }));
     await restoredPending;
 
-    socket.send(JSON.stringify({
-      type: "playerStatePatch",
-      player: { x: marnie.x, y: marnie.y }
-    }));
-    await delay(100);
-
-    const questPending = waitForMessage(socket, "marnieQuestResult");
-    socket.send(JSON.stringify({ type: "marnieQuestInteract", action: "turnInWood" }));
-    const quest = await questPending;
-    if (!quest.success || quest.goal !== 10 || quest.totalWood !== 0) {
-      throw new Error("Marnie's retained 10-Wood Pickaxe handoff failed on the new spawn cell");
+    const tablePending = waitForMessage(socket, "craftResult", message => message.recipe === "craftingTable");
+    socket.send(JSON.stringify({ type: "craftRequest", recipe: "craftingTable" }));
+    const table = await tablePending;
+    if (!table.success || table.totalWood !== 0 || table.totalCraftingTables !== 1) {
+      throw new Error(`portable Crafting Table onboarding craft failed: ${JSON.stringify(table)}`);
     }
 
     socket.close();
-    console.log("v377 coordinate-world WebSocket smoke passed: spawn, adjacency security, legacy isolation, and Marnie onboarding.");
+    console.log("v377 coordinate-world WebSocket smoke passed: spawn, adjacency security, legacy isolation, and self-starting portable crafting onboarding.");
   } finally {
     server.kill("SIGTERM");
   }

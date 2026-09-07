@@ -37,8 +37,8 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     await delay(500);
     const actor = await connect();
     const observer = await connect();
-    if (actor.welcome.buildVersion !== "6-11-419" || actor.welcome.worldSeed !== 0) throw new Error("unexpected actor welcome");
-    if (observer.welcome.buildVersion !== "6-11-419") throw new Error("unexpected observer welcome");
+    if (actor.welcome.buildVersion !== "6-11-424" || actor.welcome.worldSeed !== 0) throw new Error("unexpected actor welcome");
+    if (observer.welcome.buildVersion !== "6-11-424") throw new Error("unexpected observer welcome");
 
     const houseEntry = Object.entries(WORLD_CONTENT.maps).find(([, map]) => (map.structures || []).some(s => s.kind === "chest" && s.treasure));
     if (!houseEntry) throw new Error("seed-0 fixture missing generated treasure house");
@@ -71,16 +71,49 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     await delay(80);
 
     const openStatePending = waitForMessage(actor.socket, "structureState", m => m.structureId === chest.id && m.state?.opened === true);
-    const treasurePending = waitForMessage(actor.socket, "treasureResult", m => m.chestId === chest.id && m.success);
-    actor.socket.send(JSON.stringify({ type: "treasureOpen", chestId: chest.id }));
-    await Promise.all([openStatePending, treasurePending]);
+    const chestContextPending = waitForMessage(actor.socket, "chestContextResult", m => m.chestId === chest.id);
+    actor.socket.send(JSON.stringify({ type: "chestContextOpen", chestId: chest.id }));
+    const [, firstContext] = await Promise.all([openStatePending, chestContextPending]);
+    if (!firstContext.success || !(firstContext.items || []).length) throw new Error(`generated treasure chest context failed: ${JSON.stringify(firstContext)}`);
+
+    // A closed treasure chest with remaining loot cannot be reclaimed.
+    const firstClosedState = waitForMessage(actor.socket, "structureState", m => m.structureId === chest.id && m.state?.opened === false);
+    const firstClosed = waitForMessage(actor.socket, "chestContextClosed", m => m.chestId === chest.id);
+    actor.socket.send(JSON.stringify({ type: "chestContextClose", chestId: chest.id }));
+    await Promise.all([firstClosedState, firstClosed]);
+    const lootFirstPending = waitForMessage(actor.socket, "structureDestroyResult", m => m.structureId === chest.id);
+    actor.socket.send(JSON.stringify({ type: "structureDestroy", structureId: chest.id }));
+    const lootFirst = await lootFirstPending;
+    if (lootFirst.success || lootFirst.reason !== "lootFirst") throw new Error(`treasure chest was reclaimable before being emptied: ${JSON.stringify(lootFirst)}`);
+
+    // Reopen, transfer every visible stack, and prove the active lock itself
+    // still prevents reclaim until the player closes the context.
+    const reopenStatePending = waitForMessage(actor.socket, "structureState", m => m.structureId === chest.id && m.state?.opened === true);
+    const reopenPending = waitForMessage(actor.socket, "chestContextResult", m => m.chestId === chest.id && m.success);
+    actor.socket.send(JSON.stringify({ type: "chestContextOpen", chestId: chest.id }));
+    const [, reopened] = await Promise.all([reopenStatePending, reopenPending]);
+    for (const item of reopened.items || []) {
+      const takePending = waitForMessage(actor.socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === item.itemId);
+      actor.socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: item.itemId }));
+      const taken = await takePending;
+      if (!taken.success || taken.amount !== item.count) throw new Error(`failed to transfer ${item.itemId}: ${JSON.stringify(taken)}`);
+    }
+    const inUsePending = waitForMessage(actor.socket, "structureDestroyResult", m => m.structureId === chest.id);
+    actor.socket.send(JSON.stringify({ type: "structureDestroy", structureId: chest.id }));
+    const inUse = await inUsePending;
+    if (inUse.success || inUse.reason !== "inUse") throw new Error(`open chest lock did not block reclaim: ${JSON.stringify(inUse)}`);
+
+    const finalClosedState = waitForMessage(actor.socket, "structureState", m => m.structureId === chest.id && m.state?.opened === false);
+    const finalClosed = waitForMessage(actor.socket, "chestContextClosed", m => m.chestId === chest.id);
+    actor.socket.send(JSON.stringify({ type: "chestContextClose", chestId: chest.id }));
+    await Promise.all([finalClosedState, finalClosed]);
 
     const chestRemovedPending = waitForMessage(actor.socket, "structureRemoved", m => m.structureId === chest.id);
     const chestDropPending = waitForMessage(actor.socket, "resourceSpawn", m => m.resource?.kind === "chest");
     const chestDestroyPending = waitForMessage(actor.socket, "structureDestroyResult", m => m.structureId === chest.id);
     actor.socket.send(JSON.stringify({ type: "structureDestroy", structureId: chest.id }));
     const [removedMsg, drop, destroyed] = await Promise.all([chestRemovedPending, chestDropPending, chestDestroyPending]);
-    if (!removedMsg || !destroyed.success || destroyed.kind !== "chest") throw new Error("generated opened chest was not harvestable");
+    if (!removedMsg || !destroyed.success || destroyed.kind !== "chest") throw new Error("emptied/closed generated chest was not harvestable");
 
     const pickupPending = waitForMessage(actor.socket, "resourcePicked", m => m.resourceId === drop.resource.id);
     actor.socket.send(JSON.stringify({ type: "resourcePickup", resourceId: drop.resource.id }));
@@ -92,9 +125,14 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     const placed = await placePending;
     if (!placed.success || !placed.structureId || placed.totalChests !== 0) throw new Error(`harvested chest could not be re-placed: ${JSON.stringify(placed)}`);
 
-    const toggleStatePending = waitForMessage(actor.socket, "structureState", m => m.structureId === placed.structureId && m.state?.opened === true);
-    actor.socket.send(JSON.stringify({ type: "chestToggle", chestId: placed.structureId }));
-    await toggleStatePending;
+    const placedOpenState = waitForMessage(actor.socket, "structureState", m => m.structureId === placed.structureId && m.state?.opened === true);
+    const placedContextPending = waitForMessage(actor.socket, "chestContextResult", m => m.chestId === placed.structureId);
+    actor.socket.send(JSON.stringify({ type: "chestContextOpen", chestId: placed.structureId }));
+    const [, placedContext] = await Promise.all([placedOpenState, placedContextPending]);
+    if (!placedContext.success || (placedContext.items || []).length !== 0) throw new Error("ordinary placed chest should open as an empty context container");
+    const placedCloseState = waitForMessage(actor.socket, "structureState", m => m.structureId === placed.structureId && m.state?.opened === false);
+    actor.socket.send(JSON.stringify({ type: "chestContextClose", chestId: placed.structureId }));
+    await placedCloseState;
 
     // Destroy one real generated house wall to prove generated buildings use the same salvage path.
     actor.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: wall.x - 16, y: wall.y, weaponIndex: 11, attackAimAngle: 0 } }));
@@ -120,7 +158,7 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     if (observerMutations.length !== 0) throw new Error(`other-map observer received ${observerMutations.length} generated-world mutation(s)`);
 
     actor.socket.close(); observer.socket.close();
-    console.log("v414 mutable generated-world WebSocket smoke passed: shared chest open -> harvest -> pickup -> re-place/toggle, generated house wall salvage, compact re-entry deltas, and zero cross-map mutation broadcasts.");
+    console.log("v414 mutable generated-world WebSocket smoke passed on v424: context loot/reclaim gating, pickup/re-place/context state, generated house wall salvage, compact re-entry deltas, and zero cross-map mutation broadcasts.");
   } finally {
     server.kill("SIGTERM");
   }

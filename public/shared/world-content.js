@@ -455,12 +455,9 @@
       }
     }
 
-    if (x === 0 && y === 0) {
-      npcs.push(
-        { id: `${mapId}:npc:marnie`, type: "shopkeeper", name: "Marnie", x: 174, y: 190, interactionRadius: 24 },
-        { id: `${mapId}:npc:crafting`, type: "craftingTable", x: 226, y: 190, interactionRadius: 24 }
-      );
-    }
+    // v420: the coordinate-world spawn has no mandatory starter NPC or static
+    // crafting bench. New characters receive starter tools directly and build
+    // their own portable Crafting Table as the first hand-crafted workstation.
 
     return {
       name: x === 0 && y === 0 ? "Spawn" : `${biome === "forest" ? "Forest" : biome === "rocky-plains" ? "Rocky Plains" : "Plains"} ${x},${y}`,

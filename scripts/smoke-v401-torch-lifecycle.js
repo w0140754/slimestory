@@ -30,23 +30,24 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-424") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({
       type: "persistentStateRestore",
-      state: { resources: { wood: 1, greenJellyCubes: 1, torches: 0 } }
+      state: { resources: { wood: 1, greenJellyCubes: 1, torches: 0, craftingTables: 1 } }
     }));
     const restored = await restoredPending;
     if (restored.wood !== 1 || restored.greenJellyCubes !== 1 || restored.torches !== 0) {
       throw new Error("torch ingredients did not restore");
     }
 
-    const defaultMapId = WORLD_CONTENT.defaultPlayerLoad?.mapId;
-    const craftingTable = WORLD_CONTENT.maps?.[defaultMapId]?.npcs?.find(npc => npc?.type === "craftingTable");
-    if (!craftingTable) throw new Error("default crafting table missing");
-
-    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: craftingTable.x, y: craftingTable.y } }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 96, y: 96 } }));
+    await delay(80);
+    const tablePlacePending = waitForMessage(socket, "structurePlaceResult", message => message.kind === "craftingTable");
+    socket.send(JSON.stringify({ type: "structurePlace", kind: "craftingTable", x: 80, y: 96 }));
+    const tablePlaced = await tablePlacePending;
+    if (!tablePlaced.success || tablePlaced.totalCraftingTables !== 0) throw new Error("portable crafting table placement failed");
     await delay(80);
 
     const craftPending = waitForMessage(socket, "craftResult", message => message.recipe === "torch");

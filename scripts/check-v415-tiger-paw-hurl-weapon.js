@@ -16,8 +16,8 @@ const balance = read("public/shared/combat-balance.js");
 const index = read("public/index.html");
 const server = read("server.js");
 
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
 assert(game.includes('"weapon_tigerPaw"'));
 assert(game.includes('"tigerPaw"'));
 assert(game.includes('name: "Tiger Paw"'));

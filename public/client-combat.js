@@ -1320,7 +1320,7 @@ function executeBowMeleeAttack() {
 function handlePrimaryAttack(event) {
   if (typeof tryPlaceSelectedBuildPiece === "function" && tryPlaceSelectedBuildPiece(event)) return;
   if (player.isDead) return;
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen || event.button !== 0) return;
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen || event.button !== 0) return;
   if (player.rainCloudCasting) return;
 
   if (player.hunterSnareSetting) {
@@ -1388,7 +1388,7 @@ function handlePrimaryAttack(event) {
 function repeatHeldPrimaryAttackIfReady() {
   if (!primaryAttackHeld) return;
   if (player.isDead || player.hp <= 0) return;
-  if (inventoryOpen || shopOpen || craftingOpen || classResetConfirmOpen || beachQuestOpen) return;
+  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
   if (player.rainCloudCasting || focusFireIsCasting() || fireballIsAiming()) return;
   if (player.attackCooldown > 0) return;
 

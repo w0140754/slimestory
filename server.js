@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-419";
+const BUILD_VERSION = "6-11-424";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -2164,7 +2164,7 @@ function structureRect(structure) {
   if (STRUCTURE_GEOMETRY.isBoundaryStructure(structure)) {
     return STRUCTURE_GEOMETRY.collisionRect(structure, 2);
   }
-  if (structure?.kind === "chest") {
+  if (structure?.kind === "chest" || structure?.kind === "craftingTable") {
     return { x: Number(structure.x) - 7, y: Number(structure.y) - 8, width: 14, height: 8 };
   }
   return { x: structure.x - 8, y: structure.y - 8, width: 16, height: 16 };
@@ -2327,7 +2327,7 @@ function serverDoorAllowsPlayerStep(playerId, structure, fromX, fromY, toX, toY,
 
 function serverPlayerStepHitsStructureWall(playerId, mapId, fromX, fromY, toX, toY, radius = 4) {
   for (const structure of structuresOnMap(mapId)) {
-    if (!["woodWall", "woodDoor", "chest"].includes(structure.kind)) continue;
+    if (!["woodWall", "woodDoor", "chest", "craftingTable"].includes(structure.kind)) continue;
     if (!circleRectHit(toX, toY, radius, structureRect(structure))) continue;
     if (
       structure.kind === "woodDoor" &&
@@ -2551,10 +2551,10 @@ function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
 
 function handleStructurePlaceRequest(playerId, socket, message) {
   const playerState = players.get(playerId);
-  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "stoneFloor" ? "stoneFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : message?.kind === "torch" ? "torch" : message?.kind === "chest" ? "chest" : null;
+  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "stoneFloor" ? "stoneFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : message?.kind === "torch" ? "torch" : message?.kind === "chest" ? "chest" : message?.kind === "craftingTable" ? "craftingTable" : null;
   if (!playerState || playerState.hp <= 0 || !kind || !worldGridMetaForMap(playerState.mapId)) return;
 
-  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "stoneFloor" ? "stoneFloors" : kind === "woodWall" ? "woodWalls" : kind === "woodDoor" ? "woodDoors" : kind === "chest" ? "chests" : "torches";
+  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "stoneFloor" ? "stoneFloors" : kind === "woodWall" ? "woodWalls" : kind === "woodDoor" ? "woodDoors" : kind === "chest" ? "chests" : kind === "craftingTable" ? "craftingTables" : "torches";
   const dimensions = mapWorldDimensions(playerState.mapId);
   const floorX = Math.round(clampNumber(message.x, 0, dimensions.width, playerState.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const floorY = Math.round(clampNumber(message.y, 0, dimensions.height, playerState.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
@@ -2571,7 +2571,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
   if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
   else if ((kind === "woodWall" || kind === "woodDoor") && (!wall || !floorStructureAt(playerState.mapId, floorX, floorY))) reason = "needsFloor";
   else if (kind === "chest" && !floorStructureAt(playerState.mapId, floorX, floorY)) reason = "needsFloor";
-  else if (kind === "chest" && structuresOnMap(playerState.mapId).some(structure =>
+  else if (["chest", "craftingTable"].includes(kind) && structuresOnMap(playerState.mapId).some(structure =>
     STRUCTURE_TOPOLOGY.layerOf(structure) === STRUCTURE_TOPOLOGY.LAYERS.OBJECT &&
     Math.abs(Number(structure.x) - floorX) < 1 &&
     Math.abs(Number(structure.y) - floorY) < 1
@@ -2588,7 +2588,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
 
   if (reason) {
     sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors,
-      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches, totalChests: playerState.chests });
+      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches, totalChests: playerState.chests, totalCraftingTables: playerState.craftingTables });
     return;
   }
 
@@ -2626,7 +2626,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
 
   broadcastToMap(structure.mapId, { type: "structurePlaced", structure });
   sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors,
-      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches, totalChests: playerState.chests });
+      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches, totalChests: playerState.chests, totalCraftingTables: playerState.craftingTables });
 }
 
 function removeSharedStructure(structureId) {
@@ -2712,7 +2712,8 @@ function handleStructureDestroyRequest(playerId, socket, message) {
 
   let reason = null;
   if (playerState.weaponIndex !== 11) reason = "needPickaxe";
-  else if (structure.kind === "chest" && structure.treasure && !structure.opened) reason = "openFirst";
+  else if (structure.kind === "chest" && chestLockOwner(structure.id)) reason = "inUse";
+  else if (structure.kind === "chest" && structure.treasure && chestHasLoot(structure)) reason = "lootFirst";
 
   if (reason) {
     sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
@@ -2753,6 +2754,7 @@ function handleStructureDestroyRequest(playerId, socket, message) {
 
   const removed = removeAnyStructure(structureId, structure.mapId);
   if (!removed) return;
+  if (removed.kind === "chest") releaseChestContextByChestId(removed.id, "removed");
 
   broadcastRemovedStructureAsLoot(removed, "mined");
   if (removed.kind === "woodWall") removeDoorsOrphanedByWall(removed);
@@ -3438,7 +3440,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(kind)) {
     return null;
   }
 
@@ -3571,6 +3573,8 @@ function handleResourcePickup(
     playerState.torches += 1;
   } else if (resource.kind === "chest") {
     playerState.chests += 1;
+  } else if (resource.kind === "craftingTable") {
+    playerState.craftingTables += 1;
   }
 
   broadcastToMap(resource.mapId, {
@@ -3592,14 +3596,13 @@ function handleResourcePickup(
     totalWoodDoors: playerState.woodDoors,
     totalTorches: playerState.torches,
     totalChests: playerState.chests,
+    totalCraftingTables: playerState.craftingTables,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
 
-const FIRST_BENCH_X = 216;
-const FIRST_BENCH_Y = 101;
-
 const CRAFT_RECIPES = Object.freeze({
+  craftingTable: Object.freeze({ repeatable: true, resourceKey: "craftingTables", outputCount: 1, station: "hand", ingredients: Object.freeze({ wood: 10 }) }),
   woodSword: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodSwordCrafted", repeatable: true }),
   woodBow: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodBowCrafted", repeatable: true }),
   shepherdStaff: Object.freeze({ ingredients: Object.freeze({ wood: 10 }), stateKey: "shepherdStaffCrafted", repeatable: true }),
@@ -3616,7 +3619,7 @@ const CRAFT_RECIPES = Object.freeze({
   woodWall: Object.freeze({ repeatable: true, resourceKey: "woodWalls", outputCount: 2, ingredients: Object.freeze({ wood: 3 }) }),
   woodDoor: Object.freeze({ repeatable: true, resourceKey: "woodDoors", outputCount: 1, ingredients: Object.freeze({ wood: 4 }) }),
   torch: Object.freeze({ repeatable: true, resourceKey: "torches", outputCount: 1, ingredients: Object.freeze({ wood: 1, greenJellyCubes: 1 }) }),
-  testWoodSupply: Object.freeze({ repeatable: true, resourceKey: "wood", outputCount: 100, ingredients: Object.freeze({}) }),
+  testWoodSupply: Object.freeze({ repeatable: true, resourceKey: "wood", outputCount: 100, station: "hand", ingredients: Object.freeze({}) }),
   arrows: Object.freeze({ repeatable: true, resourceKey: "arrows", outputCount: 50, ingredients: Object.freeze({ wood: 5, stone: 1 }) }),
   healingPotion: Object.freeze({ repeatable: true, resourceKey: "healingPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }) }),
   attackPotion: Object.freeze({ repeatable: true, resourceKey: "attackPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 2 }) }),
@@ -3648,87 +3651,221 @@ function treasureRewardHash(text) {
   return hash >>> 0;
 }
 
+// v424: chests are short-range, server-authoritative context containers.
+// Only one player can own a chest context at a time. `opened` is now purely a
+// live visual state tied to that lock; treasure depletion is tracked separately.
+const CHEST_CONTEXT_RANGE = 22;
+const chestContextLocks = new Map(); // chestId -> { playerId, mapId }
+const chestContextByPlayer = new Map(); // playerId -> chestId
+const chestInventoryById = new Map(); // chestId -> { coins, wood, stone }
+
 function updateChestStructureState(structure, patch) {
   if (!structure?.id || !structure?.mapId || structure.kind !== "chest") return null;
+  const cleanPatch = patch && typeof patch === "object" ? { ...patch } : {};
   const dynamic = sharedStructures.get(structure.id);
   let nextState;
   if (dynamic) {
-    Object.assign(dynamic, patch || {});
-    nextState = { opened: Boolean(dynamic.opened) };
+    Object.assign(dynamic, cleanPatch);
+    nextState = { ...cleanPatch };
   } else {
-    const state = setWorldGeneratedStructureState(structure.mapId, structure.id, patch || {});
+    const state = setWorldGeneratedStructureState(structure.mapId, structure.id, cleanPatch);
     if (!state) return null;
-    nextState = { opened: Boolean(state.opened) };
+    nextState = { ...cleanPatch };
   }
   broadcastStructureState(structure, nextState);
   return nextState;
 }
 
 function playerNearChest(playerState, chest) {
-  if (!playerState || !chest || chest.kind !== "chest") return false;
+  if (!playerState || !chest || chest.kind !== "chest" || playerState.hp <= 0) return false;
+  if (playerState.mapId !== chest.mapId) return false;
   return Math.hypot(
     Number(playerState.x) - Number(chest.x),
     Number(playerState.y) - Number(chest.y)
-  ) <= 40;
+  ) <= CHEST_CONTEXT_RANGE;
 }
 
-function handleTreasureOpen(playerId, socket, message) {
+function initialChestInventory(chest) {
+  if (!chest?.treasure) return { coins: 0, wood: 0, stone: 0 };
+
+  // This is exactly the old v414 treasure reward formula, now exposed as
+  // visible stacks that are claimed individually from the chest panel.
+  const hash = treasureRewardHash(`${WORLD_CONTENT.worldSeed}:${chest.id}`);
+  return {
+    coins: 12 + (hash % 14),
+    stone: 1 + ((hash >>> 8) % 3),
+    wood: ((hash >>> 16) % 100) < 45 ? 1 + ((hash >>> 24) % 2) : 0
+  };
+}
+
+function chestInventoryFor(chest) {
+  if (!chest?.id) return { coins: 0, wood: 0, stone: 0 };
+  let inventory = chestInventoryById.get(chest.id);
+  if (!inventory) {
+    inventory = initialChestInventory(chest);
+    chestInventoryById.set(chest.id, inventory);
+  }
+  return inventory;
+}
+
+function chestInventoryPayload(chest) {
+  const inventory = chestInventoryFor(chest);
+  return ["coins", "wood", "stone"]
+    .map(itemId => ({ itemId, count: Math.max(0, Math.floor(Number(inventory[itemId]) || 0)) }))
+    .filter(item => item.count > 0);
+}
+
+function chestHasLoot(chest) {
+  return chestInventoryPayload(chest).some(item => item.count > 0);
+}
+
+function chestLockOwner(chestId) {
+  return chestContextLocks.get(chestId)?.playerId || null;
+}
+
+function releaseChestContextForPlayer(playerId, reason = "closed", notify = true) {
+  const chestId = chestContextByPlayer.get(playerId);
+  if (!chestId) return false;
+
+  const lock = chestContextLocks.get(chestId);
+  chestContextByPlayer.delete(playerId);
+
+  if (!lock || lock.playerId !== playerId) return false;
+  chestContextLocks.delete(chestId);
+
+  const chest = structureById(lock.mapId, chestId);
+  if (chest?.kind === "chest") {
+    updateChestStructureState(chest, { opened: false });
+  }
+
+  if (notify) {
+    const socket = socketsByPlayerId.get(playerId);
+    if (socket) sendJson(socket, { type: "chestContextClosed", chestId, reason });
+  }
+  return true;
+}
+
+function releaseChestContextByChestId(chestId, reason = "removed") {
+  const lock = chestContextLocks.get(chestId);
+  if (!lock) return false;
+  return releaseChestContextForPlayer(lock.playerId, reason, true);
+}
+
+function validatePlayerChestContext(playerId) {
+  const chestId = chestContextByPlayer.get(playerId);
+  if (!chestId) return;
+  const lock = chestContextLocks.get(chestId);
+  const playerState = players.get(playerId);
+  const chest = lock ? structureById(lock.mapId, chestId) : null;
+  if (!lock || lock.playerId !== playerId || !playerNearChest(playerState, chest)) {
+    releaseChestContextForPlayer(playerId, "range", true);
+  }
+}
+
+function handleChestContextOpen(playerId, socket, message) {
   const playerState = players.get(playerId);
   const chestId = typeof message?.chestId === "string" ? message.chestId : "";
   if (!playerState || !chestId) return;
 
   const chest = structureById(playerState.mapId, chestId);
-  if (!chest || chest.kind !== "chest" || !chest.treasure || !playerNearChest(playerState, chest)) return;
-
-  if (chest.opened) {
-    sendJson(socket, {
-      type: "treasureResult",
-      chestId,
-      success: false,
-      reason: "alreadyOpened",
-      totalCoins: playerState.coins,
-      totalWood: playerState.wood,
-      totalStone: playerState.stone
-    });
+  if (!chest || chest.kind !== "chest" || !playerNearChest(playerState, chest)) {
+    sendJson(socket, { type: "chestContextResult", success: false, chestId, reason: "range" });
     return;
   }
 
-  // Include the world seed so the same map/chest coordinate does not always
-  // contain the same reward across newly generated worlds.
-  const hash = treasureRewardHash(`${WORLD_CONTENT.worldSeed}:${chestId}`);
-  const rewardCoins = 12 + (hash % 14);
-  const rewardStone = 1 + ((hash >>> 8) % 3);
-  const rewardWood = ((hash >>> 16) % 100) < 45 ? 1 + ((hash >>> 24) % 2) : 0;
+  const previousChestId = chestContextByPlayer.get(playerId);
+  if (previousChestId && previousChestId !== chestId) {
+    releaseChestContextForPlayer(playerId, "switch", false);
+  }
 
-  if (!updateChestStructureState(chest, { opened: true })) return;
-  playerState.coins += rewardCoins;
-  playerState.stone += rewardStone;
-  playerState.wood += rewardWood;
+  const existingLock = chestContextLocks.get(chestId);
+  if (existingLock && existingLock.playerId !== playerId) {
+    const ownerState = players.get(existingLock.playerId);
+    const ownerChest = structureById(existingLock.mapId, chestId);
+    if (!playerNearChest(ownerState, ownerChest)) {
+      releaseChestContextForPlayer(existingLock.playerId, "range", true);
+    }
+  }
 
-  // One map-local state event plus the private reward response. There is no
-  // chest polling/heartbeat and players on other maps receive nothing.
+  const lockAfterValidation = chestContextLocks.get(chestId);
+  if (lockAfterValidation && lockAfterValidation.playerId !== playerId) {
+    sendJson(socket, { type: "chestContextResult", success: false, chestId, reason: "busy" });
+    return;
+  }
+
+  chestContextLocks.set(chestId, { playerId, mapId: chest.mapId });
+  chestContextByPlayer.set(playerId, chestId);
+  updateChestStructureState(chest, { opened: true });
+
   sendJson(socket, {
-    type: "treasureResult",
-    chestId,
+    type: "chestContextResult",
     success: true,
-    rewardCoins,
-    rewardWood,
-    rewardStone,
+    chestId,
+    items: chestInventoryPayload(chest)
+  });
+}
+
+function handleChestContextClose(playerId, socket, message) {
+  const requestedId = typeof message?.chestId === "string" ? message.chestId : "";
+  const activeId = chestContextByPlayer.get(playerId) || "";
+  if (!activeId || (requestedId && requestedId !== activeId)) return;
+  releaseChestContextForPlayer(playerId, "closed", false);
+  sendJson(socket, { type: "chestContextClosed", chestId: activeId, reason: "closed" });
+}
+
+function handleChestTakeItem(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
+  const itemId = typeof message?.itemId === "string" ? message.itemId : "";
+  if (!playerState || !chestId || !["coins", "wood", "stone"].includes(itemId)) return;
+
+  const lock = chestContextLocks.get(chestId);
+  const chest = structureById(playerState.mapId, chestId);
+  if (!lock || lock.playerId !== playerId || chestContextByPlayer.get(playerId) !== chestId) {
+    sendJson(socket, { type: "chestTakeResult", success: false, chestId, itemId, reason: "notOwner" });
+    return;
+  }
+  if (!chest || !playerNearChest(playerState, chest)) {
+    releaseChestContextForPlayer(playerId, "range", false);
+    sendJson(socket, { type: "chestContextClosed", chestId, reason: "range" });
+    return;
+  }
+
+  const inventory = chestInventoryFor(chest);
+  const amount = Math.max(0, Math.floor(Number(inventory[itemId]) || 0));
+  if (amount <= 0) {
+    sendJson(socket, { type: "chestTakeResult", success: false, chestId, itemId, reason: "empty", items: chestInventoryPayload(chest) });
+    return;
+  }
+
+  inventory[itemId] = 0;
+  if (itemId === "coins") playerState.coins += amount;
+  else if (itemId === "wood") playerState.wood += amount;
+  else if (itemId === "stone") playerState.stone += amount;
+
+  sendJson(socket, {
+    type: "chestTakeResult",
+    success: true,
+    chestId,
+    itemId,
+    amount,
+    items: chestInventoryPayload(chest),
     totalCoins: playerState.coins,
     totalWood: playerState.wood,
     totalStone: playerState.stone
   });
 }
 
+// Backward packet compatibility: old clients can still ask to open/toggle a
+// chest, but the server routes them into the v424 exclusive context model.
+function handleTreasureOpen(playerId, socket, message) {
+  handleChestContextOpen(playerId, socket, message);
+}
+
 function handleChestToggle(playerId, socket, message) {
-  const playerState = players.get(playerId);
-  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
-  if (!playerState || !chestId) return;
-  const chest = structureById(playerState.mapId, chestId);
-  if (!chest || chest.kind !== "chest" || chest.treasure || !playerNearChest(playerState, chest)) return;
-  const opened = !Boolean(chest.opened);
-  if (!updateChestStructureState(chest, { opened })) return;
-  sendJson(socket, { type: "chestToggleResult", success: true, chestId, opened });
+  const active = chestContextByPlayer.get(playerId);
+  if (active && active === message?.chestId) handleChestContextClose(playerId, socket, message);
+  else handleChestContextOpen(playerId, socket, message);
 }
 
 const BEACH_QUEST_FIRST_CRAB_GOAL = 10;
@@ -3961,20 +4098,10 @@ function pendingIcedCoffeeDropFor(playerId) {
 
 function playerNearAuthorizedCraftingTable(playerState) {
   if (!playerState) return false;
-
-  // Preserve the original Spawn Clearing crafting bench.
-  if (
-    playerState.mapId === "spawn" &&
-    Math.hypot(
-      playerState.x - FIRST_BENCH_X,
-      playerState.y - FIRST_BENCH_Y
-    ) <= 40
-  ) {
-    return true;
-  }
-
-  // Generated/shared crafting tables are authorized from their actual world position.
-  return playerNearPlacedInteraction(playerState, "craftingTable", 40, 12);
+  return structuresOnMap(playerState.mapId).some(structure =>
+    structure?.kind === "craftingTable" &&
+    Math.hypot(Number(structure.x) - Number(playerState.x), Number(structure.y) - Number(playerState.y)) <= 40
+  );
 }
 
 function handleCraftRequest(
@@ -4015,13 +4142,13 @@ function handleCraftRequest(
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
       totalTorches: playerState.torches,
-      totalChests: playerState.chests
+      totalChests: playerState.chests,
+      totalCraftingTables: playerState.craftingTables
     });
     return;
   }
 
-  const validBench =
-    playerNearAuthorizedCraftingTable(playerState);
+  const validBench = recipe.station === "hand" || playerNearAuthorizedCraftingTable(playerState);
 
   if (!validBench) {
     sendJson(socket, {
@@ -4037,7 +4164,8 @@ function handleCraftRequest(
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
       totalTorches: playerState.torches,
-      totalChests: playerState.chests
+      totalChests: playerState.chests,
+      totalCraftingTables: playerState.craftingTables
     });
     return;
   }
@@ -4060,7 +4188,8 @@ function handleCraftRequest(
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
       totalTorches: playerState.torches,
-      totalChests: playerState.chests
+      totalChests: playerState.chests,
+      totalCraftingTables: playerState.craftingTables
     });
     return;
   }
@@ -4086,7 +4215,8 @@ function handleCraftRequest(
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
       totalTorches: playerState.torches,
-      totalChests: playerState.chests
+      totalChests: playerState.chests,
+      totalCraftingTables: playerState.craftingTables
     });
     return;
   }
@@ -4120,7 +4250,8 @@ function handleCraftRequest(
     totalWoodDoors: playerState.woodDoors,
     totalGreenJellyCubes: playerState.greenJellyCubes,
     totalTorches: playerState.torches,
-    totalChests: playerState.chests
+    totalChests: playerState.chests,
+    totalCraftingTables: playerState.craftingTables
   });
 }
 
@@ -8271,6 +8402,7 @@ function handleAuthoritativePlayerDeath(target) {
   resetServerCamouflageState(target, "death", true);
 
   focusFireDamageChains.delete(target.id);
+  releaseChestContextForPlayer(target.id, "death", true);
 
   // Snares, clone/rain visuals, taunts, carried enemies, and enemy targeting
   // all end the instant the authoritative HP reaches zero.
@@ -9108,6 +9240,7 @@ function handlePlayerRespawn(
   if (target.hp > 0) return;
 
   const deathMapId = target.mapId;
+  releaseChestContextForPlayer(playerId, "respawn", true);
 
   // Respawn changes maps outside the normal playerState map-transition path.
   // Tell observers on the death map immediately so a backgrounded tab cannot
@@ -14676,7 +14809,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
   );
   const sanitizedClassId = null; // v377: classes are retired.
   const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, TIGER_PAW_WEAPON_INDEX, -1);
-  const sanitizedHeldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(source.heldBuildPiece)
+  const sanitizedHeldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(source.heldBuildPiece)
     ? source.heldBuildPiece
     : null;
   const dimensions = mapWorldDimensions(mapId);
@@ -14758,6 +14891,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     chests: previous && Number.isFinite(previous.chests)
       ? previous.chests
+      : 0,
+
+    craftingTables: previous && Number.isFinite(previous.craftingTables)
+      ? previous.craftingTables
       : 0,
 
     // Opened static treasure IDs are progression state only. They are never
@@ -15139,6 +15276,7 @@ function applyIncrementalPlayerUpdate(id, socket, patch) {
 
   players.set(id, cleanState);
   noteServerCamouflagePlayerUpdate(previousState, cleanState);
+  validatePlayerChestContext(id);
 
   broadcastPublicPlayerDelta(
     previousState,
@@ -15738,6 +15876,7 @@ function applyFullPlayerStateUpdate(
   );
 
   if (mapChanged && previousState?.mapId) {
+    releaseChestContextForPlayer(playerId, "map", true);
     resetServerCamouflageState(previousState, "map", true);
     resetServerPlayerPresentationState(cleanState);
     cleanState.camouflaged = false;
@@ -15750,6 +15889,7 @@ function applyFullPlayerStateUpdate(
 
   players.set(playerId, cleanState);
   noteServerCamouflagePlayerUpdate(previousState, cleanState);
+  if (!mapChanged) validatePlayerChestContext(playerId);
 
   if (mapChanged) {
     movePlayerSocketToMap(socket, cleanState.mapId);
@@ -15826,6 +15966,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.woodDoors = clampInteger(resources.woodDoors, 0, 999999, 0);
   playerState.torches = clampInteger(resources.torches, 0, 999999, 0);
   playerState.chests = clampInteger(resources.chests, 0, 999999, 0);
+  playerState.craftingTables = clampInteger(resources.craftingTables, 0, 999999, 0);
   playerState.openedTreasureIds = Array.from(new Set(
     (Array.isArray(state.openedTreasureIds) ? state.openedTreasureIds : [])
       .filter(id => typeof id === "string" && id.includes(":treasure:"))
@@ -15894,6 +16035,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
     woodDoors: playerState.woodDoors,
     torches: playerState.torches,
     chests: playerState.chests,
+    craftingTables: playerState.craftingTables,
     openedTreasureIds: playerState.openedTreasureIds.slice(0, 64),
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
@@ -16025,6 +16167,15 @@ function handleClientMessage(playerId, socket, message) {
       handleCraftRequest(playerId, socket, message);
       return;
 
+    case "chestContextOpen":
+      handleChestContextOpen(playerId, socket, message);
+      return;
+    case "chestContextClose":
+      handleChestContextClose(playerId, socket, message);
+      return;
+    case "chestTakeItem":
+      handleChestTakeItem(playerId, socket, message);
+      return;
     case "treasureOpen":
       handleTreasureOpen(playerId, socket, message);
       return;
@@ -16159,6 +16310,8 @@ wss.on("connection", socket => {
 
     const previousState =
       players.get(id);
+
+    releaseChestContextForPlayer(id, "disconnect", false);
 
     if (previousState?.mapId) {
       leavePlayerMap(

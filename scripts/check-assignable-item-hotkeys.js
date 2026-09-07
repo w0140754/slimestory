@@ -5,18 +5,18 @@ const game = fs.readFileSync("public/game.js", "utf8");
 const input = fs.readFileSync("public/client-input.js", "utf8");
 
 const checks = [
-  [input.includes('"1": 0') && input.includes('"9": 8'), "keys 1-9 select unified weapon/tool assignments"],
-  [!input.includes('player.utilityHotbarAssignments?.[Number(key) - 1]'), "keys 1-3 no longer activate utility hotbar assignments"],
-  [html.includes('data-consumable-item="healingPotion"') && html.includes('data-consumable-item="attackPotion"') && html.includes('data-consumable-item="magicPotion"'), "consumables are marked for direct Inventory use"],
-  [html.includes('Healing Potion · restores 20 HP · click to use') && !html.includes('drag to Items 1–3'), "consumable UI no longer advertises retired utility hotkeys"],
-  [game.includes("event.target.closest('[data-consumable-item]')") && game.includes('utilityElement.dataset.consumableItem') && game.includes('useConsumable(utilityItemId);'), "Inventory click directly uses consumables"],
-  [html.includes('id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"') && html.includes('id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"'), "old utility/skill rails remain hidden only for compatibility"],
-  [game.includes('document.getElementById("menuUtilityHotkeyRail")?.classList.add("context-hidden")') && game.includes('document.getElementById("menuSkillHotkeyRail")?.classList.add("context-hidden")'), "retired shortcut rails cannot become active by tab switching"],
-  [html.includes('/client-input.js?v=419') && html.includes('/game.js?v=419'), "v377 cache keys"],
+  [input.includes('"1": 0') && input.includes('"9": 8') && input.includes('"0": 9'), "keys 1-0 select unified weapon/tool assignments"],
+  [!input.includes('player.utilityHotbarAssignments?.[Number(key) - 1]'), "keys 1-3 no longer activate retired utility assignments"],
+  [html.includes('data-consumable-item="healingPotion"') && html.includes('data-consumable-item="attackPotion"') && html.includes('data-consumable-item="magicPotion"'), "consumables remain identifiable in Inventory"],
+  [game.includes('document.getElementById("inventoryDetailAction")?.addEventListener("click"') && game.includes('useConsumable(itemId);'), "consumables are used from the selected-item detail action rather than accidental grid clicks"],
+  [game.includes('topHotbar?.addEventListener("drop"') && game.includes('assignItemToHotbar(itemId, slotNumber - 1);'), "inventory items drag onto the actual HUD hotbar"],
+  [game.includes('if (!hotbarItemCanBeAssigned(itemId)) return;'), "actual hotbar rejects non-assignable inventory items such as armor"],
+  [html.includes('id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"') && html.includes('id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"'), "old utility/skill rails remain compatibility-only"],
+  [html.includes('/client-input.js?v=424') && html.includes('/game.js?v=424'), "v422 cache keys"],
 ];
 
 for (const [ok, label] of checks) {
-  if (!ok) throw new Error(`Unified hotbar / direct consumable regression: ${label}`);
+  if (!ok) throw new Error(`Unified hotbar / selected consumable regression: ${label}`);
 }
 
-console.log("Unified 1-9 weapon/tool keys and direct Inventory consumable use checks passed.");
+console.log("Unified 1-0 hotbar, drag assignment, armor rejection, and selected consumable use checks passed.");

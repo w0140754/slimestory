@@ -11,9 +11,9 @@ const config = read("public", "client-config.js");
 const game = read("public", "game.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.419");
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert.strictEqual(pkg.version, "0.6.11.424");
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
 assert.strictEqual(world.version, 414);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v391 must preserve the active coordinate world");
 

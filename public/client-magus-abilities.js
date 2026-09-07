@@ -1868,8 +1868,6 @@ function returnToJesterClone(clone) {
 }
 
 function tryCastJesterBlink() {
-  if (inventoryOpen) return false;
-
   const activeClone = getActiveJesterClone();
   if (activeClone) {
     return returnToJesterClone(activeClone);

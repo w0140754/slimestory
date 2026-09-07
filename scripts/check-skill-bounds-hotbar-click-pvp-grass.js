@@ -12,9 +12,9 @@ const clientApp = read('public', 'client-app.js');
 const html = read('public', 'index.html');
 const config = read('public', 'client-config.js');
 
-assert(server.includes('const BUILD_VERSION = "6-11-419";'), 'server build must be 6-11-406');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'), 'client build must be 6-11-406');
-assert(html.includes('/game.js?v=419') && html.includes('/client-app.js?v=419'), 'client cache keys must be v333');
+assert(server.includes('const BUILD_VERSION = "6-11-424";'), 'server build must be 6-11-406');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'), 'client build must be 6-11-406');
+assert(html.includes('/game.js?v=424') && html.includes('/client-app.js?v=424'), 'client cache keys must be v333');
 
 assert(!server.includes('clampNumber(value, -32, 672'), 'legacy 640px visual-effect clamp must be removed');
 assert(server.includes('function sanitizeVisualPoint(value, mapId, axis = "x", fallback = 0)'), 'visual point sanitizer must be map-aware');
@@ -27,9 +27,9 @@ assert(server.includes('sanitizeVisualPoint(payload.endX, mapId, "x")'), 'blink/
 assert(/#hotbar\s*\{[^}]*pointer-events:\s*auto;/s.test(html), 'top hotbar must accept pointer input');
 assert(/\.hotbar-slot\s*\{[^}]*cursor:\s*pointer;/s.test(html), 'hotbar slots should present as clickable');
 assert(game.includes('const topHotbar = document.getElementById("hotbar");'), 'top hotbar click handler missing');
-assert(game.includes('if (slotNumber >= 1 && slotNumber <= HOTBAR_SLOT_COUNT)'), 'unified 1-9 hotbar click branch missing');
-assert(game.includes('index: slotNumber - 1'), 'clicking 1-9 must select the matching weapon/tool belt slot');
-assert(game.includes('useConsumable(utilityItemId);'), 'consumables must remain directly usable from Inventory');
+assert(game.includes('if (slotNumber >= 1 && slotNumber <= HOTBAR_SLOT_COUNT)'), 'unified 1-0 hotbar click branch missing');
+assert(game.includes('index: slotNumber - 1'), 'clicking 1-0 must select the matching weapon/tool belt slot');
+assert(game.includes('document.getElementById("inventoryDetailAction")?.addEventListener("click"') && game.includes('useConsumable(itemId);'), 'consumables must remain usable from the selected Inventory detail action');
 
 // Current design audit: Magic Grass slows enemies, not players. Player movement
 // still derives slow from Wet and PvP Snare only; Rain Wet on another player is
@@ -38,4 +38,4 @@ assert(clientApp.includes('Magic Grass is caster-created control terrain: player
 assert(server.includes('for(const enemy of allSharedEnemies())') && server.includes('updateEnemyRainGrassDerivedState(enemy,now)'), 'Magic Grass membership should remain enemy-derived');
 assert(server.includes('Against another player, Wet/slow is') && server.includes('pvpPlayersCanHarm(owner, target)'), 'Rain Wet player slow must remain PvP-gated');
 
-console.log('[PASS] Wide-map effect bounds, unified clickable 1-9 hotbar, and PvP Magic Grass behavior are correct.');
+console.log('[PASS] Wide-map effect bounds, unified clickable 1-0 hotbar, and PvP Magic Grass behavior are correct.');

@@ -12,9 +12,9 @@ const input = read("public", "client-input.js");
 const network = read("public", "client-network.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.419");
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert.strictEqual(pkg.version, "0.6.11.424");
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
 assert(!game.includes('selectedBuildOrientation'), "old free-rotation state must stay retired");
 assert(!input.includes('rotateSelectedBuildPiece'), "old R-key rotation must stay retired");
 assert(network.includes('requestStructurePlacement(kind, x, y, edge = null, supportId = null)'), "edge-aware placement request missing");

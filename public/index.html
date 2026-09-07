@@ -187,6 +187,31 @@
     touch-action: none;
   }
 
+  #craftHudButton {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 20;
+    min-width: 58px;
+    height: 30px;
+    padding: 0 8px;
+    border: 2px solid #b89d68;
+    border-radius: 4px;
+    background: rgba(48, 58, 44, .92);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.34);
+    color: #fff6d4;
+    font: 700 9px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  #craftHudButton.active {
+    background: rgba(77, 88, 57, .96);
+    border-color: #e0c77b;
+    color: #fff2b5;
+  }
+
   #mobileRotatePrompt {
     position: fixed;
     inset: 0;
@@ -1220,7 +1245,7 @@
   .shop-item img {
     width: 42px;
     height: 42px;
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 2;
     object-fit: contain;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -1463,28 +1488,30 @@
     position: fixed;
     inset: 0;
     display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(10, 14, 10, 0.46);
-    pointer-events: auto;
+    pointer-events: none;
     z-index: 22;
   }
 
   #craftOverlay.open {
-    display: flex;
+    display: block;
   }
 
   #craftPanel {
-    width: min(560px, calc(100vw - 36px));
-    background: #202820;
-    border: 3px solid #9a8756;
+    position: fixed;
+    width: min(248px, calc(100vw - 24px));
+    max-height: calc(100vh - 72px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(32, 40, 32, .97);
+    border: 2px solid #9a8756;
     box-shadow:
       0 0 0 2px #433b29 inset,
-      6px 6px 0 rgba(0,0,0,.38);
+      4px 4px 0 rgba(0,0,0,.38);
     color: #fff6d4;
     font-family: monospace;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    pointer-events: auto;
   }
 
   #craftTop {
@@ -1514,34 +1541,17 @@
     cursor: pointer;
   }
 
-  #craftTabs {
-    display: flex;
-    gap: 0;
-    border-bottom: 2px solid #5f573d;
-    background: #242d24;
-  }
-
-  .craft-tab {
-    appearance: none;
-    flex: 1 1 0;
-    min-height: 30px;
-    border: 0;
-    border-right: 1px solid #5f573d;
-    background: #242d24;
-    color: #bdb58f;
-    font: 9px/1 monospace;
-    cursor: pointer;
-  }
-
-  .craft-tab:last-child { border-right: 0; }
-  .craft-tab.active { background: #3b4938; color: #fff2b5; }
-  .craft-tab:hover { filter: brightness(1.12); }
 
   #craftGrid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    padding: 12px;
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    gap: 5px;
+    padding: 7px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
 
   .craft-recipe[hidden] {
@@ -1550,25 +1560,27 @@
 
   .craft-recipe {
     appearance: none;
-    min-height: 96px;
-    border: 2px solid #5f573d;
+    flex: 0 0 auto;
+    min-height: 50px;
+    border: 1px solid #5f573d;
     background: #293329;
     color: #fff6d4;
     font-family: monospace;
     cursor: pointer;
     display: grid;
-    grid-template-columns: 40px 1fr;
-    grid-template-rows: auto auto auto;
-    column-gap: 9px;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 7px;
+    row-gap: 3px;
     align-items: center;
-    padding: 9px;
+    padding: 6px;
     text-align: left;
   }
 
   .craft-recipe > img {
-    width: 40px;
-    height: 40px;
-    grid-row: 1 / span 3;
+    width: 32px;
+    height: 32px;
+    grid-row: 1 / span 2;
     object-fit: contain;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -1608,9 +1620,23 @@
     color: #f06a64;
   }
 
+  .craft-recipe-name {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .craft-recipe-cost {
+    grid-column: 2;
+    grid-row: 2;
+    flex-wrap: wrap;
+  }
+
   .craft-recipe-status {
+    grid-column: 3;
+    grid-row: 1 / span 2;
     color: #ffd76a;
     font: 8px/1 monospace;
+    white-space: nowrap;
   }
 
   .craft-recipe:disabled {
@@ -1877,7 +1903,8 @@
     border-bottom: 2px solid #5f573d;
   }
 
-  .inventory-tab {
+  .inventory-tab,
+  .inventory-action-button {
     appearance: none;
     border: 0;
     border-right: 2px solid #5f573d;
@@ -1907,6 +1934,7 @@
 
   #inventoryClose:hover,
   .inventory-tab:hover,
+  .inventory-action-button:hover,
   .menu-item:hover,
   .equip-choice:hover {
     filter: brightness(1.14);
@@ -3149,7 +3177,8 @@
       max-height: min(600px, calc(100vh - 36px));
     }
 
-    .inventory-tab {
+    .inventory-tab,
+    .inventory-action-button {
       padding: 9px 8px;
       font-size: 11px;
     }
@@ -3908,7 +3937,8 @@
     max-height: min(780px, calc(100vh - 48px));
   }
 
-  .inventory-tab {
+  .inventory-tab,
+  .inventory-action-button {
     padding: 12px 15px;
     font-size: 14px;
   }
@@ -4179,7 +4209,8 @@
       font-size: 8px;
     }
 
-    .inventory-tab {
+    .inventory-tab,
+    .inventory-action-button {
       padding: 9px 8px;
       font-size: 11px;
     }
@@ -4243,7 +4274,8 @@
       max-height: min(920px, calc(100vh - 28px));
     }
 
-    .inventory-tab {
+    .inventory-tab,
+    .inventory-action-button {
       padding: 15px 18px;
       font-size: 16px;
     }
@@ -4753,23 +4785,25 @@
 
     #craftOverlay {
       height: 100dvh;
-      padding:
-        max(6px, env(safe-area-inset-top))
-        max(6px, env(safe-area-inset-right))
-        max(6px, env(safe-area-inset-bottom))
-        max(6px, env(safe-area-inset-left));
       box-sizing: border-box;
     }
 
     #craftPanel {
-      width: min(640px, 88vw);
-      height: min(300px, 82dvh);
-      max-height: min(300px, 82dvh);
+      width: min(188px, 43vw);
+      max-height: calc(100dvh - 48px);
       min-height: 0;
       border-width: 2px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
+    }
+
+    #craftHudButton {
+      left: max(72px, calc(env(safe-area-inset-left) + 72px));
+      top: max(10px, env(safe-area-inset-top));
+      min-width: 54px;
+      height: 34px;
+      font-size: 8px;
     }
 
     #craftTop {
@@ -4791,18 +4825,17 @@
     #craftGrid {
       flex: 1 1 auto;
       min-height: 0;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 4px;
-      padding: 5px;
+      gap: 3px;
+      padding: 4px;
       overflow-y: auto;
       overscroll-behavior: contain;
-      align-content: start;
     }
 
     .craft-recipe {
-      min-height: 52px;
-      grid-template-columns: 22px minmax(0, 1fr);
+      min-height: 42px;
+      grid-template-columns: 20px minmax(0, 1fr) auto;
       column-gap: 4px;
+      row-gap: 2px;
       padding: 4px;
       border-width: 1px;
     }
@@ -4914,7 +4947,8 @@
       overscroll-behavior-x: contain;
     }
 
-    .inventory-tab {
+    .inventory-tab,
+    .inventory-action-button {
       flex: 0 0 auto;
       min-height: 36px;
       padding: 7px 8px;
@@ -5256,6 +5290,597 @@
     }
   }
 
+
+
+  /* v423 — live overlay inventory polish. Menu has one fixed viewport-space
+     position whether Craft is open or closed, and the inventory workspace is
+     deliberately wider/shorter with larger item cards. */
+  #menuHudButton,
+  #craftHudButton {
+    position: absolute;
+    top: 10px;
+    z-index: 28;
+    min-width: 58px;
+    height: 30px;
+    padding: 0 8px;
+    border: 2px solid #b89d68;
+    border-radius: 4px;
+    background: rgba(48, 58, 44, .92);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.34);
+    color: #fff6d4;
+    font: 700 9px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  #menuHudButton { left: 10px; }
+  #craftHudButton { left: 76px; }
+
+  #menuHudButton.active,
+  #craftHudButton.active {
+    background: rgba(77, 88, 57, .96);
+    border-color: #e0c77b;
+    color: #fff2b5;
+  }
+
+  #inventoryOverlay {
+    position: fixed;
+    inset: auto;
+    z-index: 24;
+    display: none;
+    grid-template-columns: minmax(118px, 150px) minmax(520px, 680px) minmax(96px, 118px);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 50px 12px 18px;
+    box-sizing: border-box;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  #inventoryOverlay.open { display: grid; }
+
+  #inventoryPanel { display: contents; }
+  #menuItemHotkeyRail,
+  #menuUtilityHotkeyRail,
+  #menuSkillHotkeyRail { display: none !important; }
+
+  .overlay-panel-kicker {
+    color: #d7c786;
+    font: 700 8px/1 monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #inventoryDetailPanel,
+  #inventoryPage,
+  #equipmentPage {
+    pointer-events: auto;
+    background: rgba(29, 38, 29, .94);
+    border: 2px solid #7b6d49;
+    box-shadow: 0 0 0 1px #433b29 inset, 4px 4px 0 rgba(0,0,0,.32);
+    color: #fff6d4;
+    font-family: monospace;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    box-sizing: border-box;
+  }
+
+  #inventoryDetailPanel {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    min-height: 250px;
+    max-height: 76%;
+    padding: 10px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  #inventoryDetailIconWrap {
+    width: 54px;
+    height: 54px;
+    margin: 10px auto 8px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #5f573d;
+    background: rgba(18, 24, 18, .8);
+  }
+
+  #inventoryDetailIcon {
+    max-width: 44px;
+    max-height: 44px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+
+  #inventoryDetailName {
+    color: #fff2b5;
+    font: 700 11px/1.2 monospace;
+    text-align: center;
+  }
+
+  #inventoryDetailType,
+  #inventoryDetailQuantity,
+  #inventoryDetailHint {
+    margin-top: 5px;
+    color: #a9a184;
+    font: 8px/1.25 monospace;
+    text-align: center;
+  }
+
+  #inventoryDetailStats {
+    margin-top: 9px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .inventory-detail-stat {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(123,109,73,.4);
+    color: #aaa486;
+    font: 7px/1.2 monospace;
+  }
+
+  .inventory-detail-stat strong { color: #fff2b5; }
+
+  #inventoryDetailAction {
+    width: 100%;
+    margin-top: 10px;
+    padding: 7px 5px;
+    border: 1px solid #bca76c;
+    background: #3a4638;
+    color: #fff2b5;
+    font: 700 8px/1 monospace;
+    cursor: pointer;
+  }
+
+  #inventoryClose {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 3;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 2px solid #7b6d49;
+    border-radius: 50%;
+    background: #293329;
+    box-shadow: 2px 2px 0 rgba(0,0,0,.32);
+    color: #d9cfaa;
+    font: 18px/1 monospace;
+    cursor: pointer;
+  }
+
+  #inventoryPage {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    display: block !important;
+    align-self: center;
+    width: 100%;
+    height: min(340px, calc(100% - 18px));
+    min-height: 220px;
+    max-height: 76%;
+    padding: 10px;
+    border-radius: 18px;
+    overflow: visible;
+  }
+
+  #inventoryScroll {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(9, minmax(58px, 1fr));
+    grid-auto-rows: 66px;
+    gap: 7px;
+    padding: 2px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    align-content: start;
+    box-sizing: border-box;
+  }
+
+  #inventoryPage .menu-section-title,
+  #inventoryPage .inventory-empty { display: none !important; }
+
+  #inventoryResourcesGrid,
+  #inventoryConsumablesGrid,
+  #inventoryBuildingGrid,
+  #inventoryWeaponsGrid,
+  #inventoryArmorGrid,
+  #inventoryAccessoriesGrid { display: contents !important; }
+
+  #inventoryPage .menu-item {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: 66px;
+    margin: 0;
+    padding: 6px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #5f573d;
+    background: rgba(38, 48, 38, .88);
+    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #inventoryPage .menu-item:hover,
+  #inventoryPage .menu-item.inventory-selected {
+    border-color: #e1c86e;
+    background: #3b4733;
+  }
+
+  #inventoryPage .menu-item.dragging { opacity: .55; }
+  #inventoryPage .menu-item.hotbar-ineligible { opacity: 1; }
+
+  #inventoryPage .menu-item > img {
+    width: 46px;
+    height: 46px;
+    margin: 0;
+    object-fit: contain;
+  }
+
+  #inventoryPage .menu-item > span:not(.resource-menu-count):not(.inventory-stack-count) {
+    display: none !important;
+  }
+
+  #inventoryPage .resource-menu-count,
+  #inventoryPage .inventory-stack-count {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    display: block !important;
+    min-width: 15px;
+    padding: 2px 3px;
+    border: 1px solid rgba(123,109,73,.8);
+    background: rgba(18,24,18,.88);
+    color: #fff2b5;
+    font: 700 8px/1 monospace;
+    text-align: center;
+  }
+
+  #inventoryPage .menu-item[data-hotbar-slot-label]::after { display: none !important; }
+
+  #equipmentPage {
+    grid-column: 3;
+    grid-row: 1;
+    display: block !important;
+    align-self: center;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  #equipmentDockTitle { margin: 1px 0 8px; text-align: center; }
+  #equipmentPage .equipment-layout { display: block; }
+  #equipmentPage .equipment-layout > div:not(.equipped-column) { display: none !important; }
+  #equipmentPage .equipped-column { display: grid; gap: 7px; }
+
+  #equipmentPage .equipped-box {
+    position: relative;
+    width: 100%;
+    min-height: 62px;
+    padding: 17px 4px 4px;
+    border: 1px solid #5f573d;
+    background: rgba(38, 48, 38, .88);
+    color: #fff6d4;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  #equipmentPage .equipped-box.drag-over {
+    border-color: #e1c86e;
+    background: #3b4733;
+  }
+
+  #equipmentPage .equipped-slot-label {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    right: 0;
+    color: #9d9679;
+    font: 7px/1 monospace;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  #equipmentPage .equipped-box img {
+    display: block;
+    width: 32px;
+    height: 32px;
+    margin: 0 auto 2px;
+    object-fit: contain;
+  }
+
+  #equipmentPage .equipped-box > span {
+    display: block;
+    overflow: hidden;
+    color: #c9c09f;
+    font: 6px/1 monospace;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #equipmentPage .gear-panel { display: none !important; }
+
+  #hotbar .hotbar-slot.drag-over {
+    border-color: #ffe078 !important;
+    box-shadow: 0 0 0 2px rgba(255,224,120,.28), 3px 3px 0 rgba(0,0,0,.35) !important;
+  }
+
+  /* The deprecated Stats/PvP pages and old page tabs remain non-rendered only
+     as compatibility anchors for old save/UI helpers. */
+  #statsPage,
+  #pvpPage,
+  #skillsPage,
+  #talentsPage,
+  .inventory-tab { display: none !important; }
+
+  @media (max-width: 820px) {
+    #menuHudButton { display: none; }
+    #craftHudButton { left: max(72px, calc(env(safe-area-inset-left) + 72px)); }
+    #inventoryOverlay {
+      grid-template-columns: 88px minmax(0, 1fr) 76px !important;
+      grid-template-rows: minmax(0, 1fr) !important;
+      gap: 4px !important;
+      padding: max(44px, env(safe-area-inset-top)) 6px 6px !important;
+    }
+    #inventoryDetailPanel {
+      min-height: 0;
+      max-height: 100%;
+      padding: 6px;
+      border-radius: 9px;
+    }
+    #inventoryDetailIconWrap { width: 38px; height: 38px; margin: 5px auto; }
+    #inventoryDetailIcon { max-width: 31px; max-height: 31px; }
+    #inventoryDetailName { font-size: 8px; }
+    #inventoryDetailType, #inventoryDetailQuantity, #inventoryDetailHint { font-size: 6px; }
+    #inventoryDetailStats { display: none; }
+    #inventoryPage {
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
+      padding: 5px;
+      border-radius: 9px;
+    }
+    #inventoryClose {
+      top: -5px;
+      right: -5px;
+      width: 24px;
+      height: 24px;
+      font-size: 15px;
+    }
+    #inventoryScroll {
+      grid-template-columns: repeat(6, minmax(34px, 1fr));
+      grid-auto-rows: 42px;
+      gap: 3px;
+      padding: 1px;
+    }
+    #inventoryPage .menu-item { height: 42px; padding: 2px; }
+    #inventoryPage .menu-item > img { width: 28px; height: 28px; }
+    #equipmentPage { padding: 5px; border-radius: 9px; }
+    #equipmentPage .equipped-column { gap: 4px; }
+    #equipmentPage .equipped-box { min-height: 48px; padding-top: 14px; }
+    #equipmentPage .equipped-box img { width: 25px; height: 25px; }
+  }
+
+
+  /* v424 — 1–0 hotbar counts + shared Craft/Chest context panel. */
+  #menuHudButton,
+  #craftHudButton,
+  #chestHudButton {
+    position: absolute;
+    z-index: 28;
+    min-width: 58px;
+    height: 30px;
+    padding: 0 8px;
+    border: 2px solid #b89d68;
+    border-radius: 4px;
+    background: rgba(48, 58, 44, .92);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.34);
+    color: #fff6d4;
+    font: 700 9px/1 monospace;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  #menuHudButton { left: 10px; top: 10px; }
+  #craftHudButton { left: 10px; top: 48px; }
+  #chestHudButton { left: 76px; top: 48px; }
+  #chestHudButton[hidden] { display: none !important; }
+
+  #menuHudButton.active,
+  #craftHudButton.active,
+  #chestHudButton.active {
+    background: rgba(77, 88, 57, .96);
+    border-color: #e0c77b;
+    color: #fff2b5;
+  }
+
+  #chestHudButton:disabled {
+    opacity: .56;
+    cursor: default;
+  }
+
+  #hotbar .hotbar-count {
+    right: 2px;
+    bottom: 2px;
+    min-width: 8px;
+    padding: 1px 2px;
+    border-radius: 2px;
+    background: rgba(9, 11, 9, .72);
+    color: #fff6d4;
+    font: 700 8px/1 monospace;
+    text-align: right;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+  }
+
+  #craftPanel[hidden],
+  #chestPanel[hidden] { display: none !important; }
+
+  #chestPanel {
+    position: fixed;
+    width: min(248px, calc(100vw - 24px));
+    max-height: calc(100vh - 108px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(32, 40, 32, .97);
+    border: 2px solid #9a8756;
+    box-shadow: 0 0 0 2px #433b29 inset, 4px 4px 0 rgba(0,0,0,.38);
+    color: #fff6d4;
+    font-family: monospace;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: auto;
+  }
+
+  #chestTop {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    border-bottom: 2px solid #5f573d;
+    background: #293329;
+  }
+
+  #chestTitle {
+    padding: 0 12px;
+    color: #fff2b5;
+    font: 13px/1 monospace;
+  }
+
+  #chestClose {
+    appearance: none;
+    margin-left: auto;
+    width: 40px;
+    align-self: stretch;
+    border: 0;
+    border-left: 2px solid #5f573d;
+    background: #293329;
+    color: #d9cfaa;
+    font: 15px/1 monospace;
+    cursor: pointer;
+  }
+
+  #chestGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    min-height: 0;
+  }
+
+  .chest-item {
+    position: relative;
+    min-height: 72px;
+    display: grid;
+    place-items: center;
+    padding: 7px 5px 18px;
+    border: 1px solid #5f573d;
+    background: #293329;
+    color: #fff6d4;
+    cursor: grab;
+    user-select: none;
+    box-sizing: border-box;
+  }
+
+  .chest-item:active { cursor: grabbing; }
+  .chest-item.dragging { opacity: .5; }
+  .chest-item.pending { opacity: .48; pointer-events: none; }
+
+  .chest-item img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+
+  .chest-item-name {
+    position: absolute;
+    left: 3px;
+    right: 3px;
+    bottom: 4px;
+    overflow: hidden;
+    color: #cfc6a2;
+    font: 7px/1 monospace;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chest-item-count {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    min-width: 14px;
+    padding: 2px 3px;
+    background: rgba(14, 18, 14, .86);
+    color: #fff2b5;
+    font: 700 8px/1 monospace;
+    text-align: center;
+  }
+
+  #chestEmpty {
+    display: none;
+    padding: 24px 8px;
+    color: #9f9878;
+    font: 9px/1 monospace;
+    text-align: center;
+  }
+
+  #chestFooter {
+    border-top: 2px solid #5f573d;
+    padding: 8px 10px;
+    color: #9f9878;
+    font: 8px/1 monospace;
+    text-align: center;
+  }
+
+  #inventoryPage.chest-drop-ready {
+    border-color: #e1c86e !important;
+    box-shadow: 0 0 0 1px #fff0a5 inset, 4px 4px 0 rgba(0,0,0,.32) !important;
+  }
+
+  @media (max-width: 820px) {
+    #craftHudButton {
+      left: max(2px, env(safe-area-inset-left));
+      top: max(43px, calc(env(safe-area-inset-top) + 43px));
+      min-width: 56px;
+      height: 32px;
+      font-size: 8px;
+    }
+    #chestHudButton {
+      left: max(64px, calc(env(safe-area-inset-left) + 64px));
+      top: max(43px, calc(env(safe-area-inset-top) + 43px));
+      min-width: 56px;
+      height: 32px;
+      font-size: 8px;
+    }
+    #chestPanel {
+      width: min(188px, 43vw);
+      max-height: calc(100dvh - 86px);
+    }
+    #chestTop { min-height: 34px; }
+    #chestTitle { padding: 0 9px; font-size: 11px; }
+    #chestClose { width: 46px; font-size: 18px; }
+    #chestGrid { gap: 4px; padding: 5px; }
+    .chest-item { min-height: 54px; padding: 4px 3px 14px; }
+    .chest-item img { width: 30px; height: 30px; }
+    #chestFooter { display: none; }
+  }
+
 </style>
 </head>
 <body>
@@ -5343,6 +5968,9 @@
   <button id="mobileAttackButton" class="mobile-action-button" type="button" aria-label="Attack">ATK</button>
   <div id="mobileTargetHint" aria-live="polite"></div>
 </div>
+<button id="menuHudButton" type="button" aria-label="Open inventory menu" aria-pressed="false">MENU</button>
+<button id="craftHudButton" type="button" aria-label="Open crafting menu" aria-pressed="false">CRAFT</button>
+<button id="chestHudButton" type="button" aria-label="Open nearby chest" aria-pressed="false" hidden>CHEST</button>
 <button id="respawnButton" type="button">Respawn</button>
 <div id="hpBarWrap">
     <div id="hudBuffs" aria-label="Potion buffs">
@@ -5408,51 +6036,66 @@
 </div>
 
 <div id="bottomUi">
-    <div id="hotbar" aria-label="Weapons and tools 1 through 9">
+    <div id="hotbar" aria-label="Weapons and tools 1 through 0">
       <div class="hotbar-slot" id="slot1">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">1</div>
       </div>
       <div class="hotbar-slot" id="slot2">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">2</div>
       </div>
       <div class="hotbar-slot" id="slot3">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">3</div>
       </div>
       <div class="hotbar-slot" id="slot4">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">4</div>
       </div>
       <div class="hotbar-slot" id="slot5">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">5</div>
       </div>
       <div class="hotbar-slot" id="slot6">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">6</div>
       </div>
       <div class="hotbar-slot" id="slot7">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">7</div>
       </div>
       <div class="hotbar-slot" id="slot8">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">8</div>
       </div>
       <div class="hotbar-slot" id="slot9">
         <img class="hotbar-item-img" alt="" />
         <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
         <div class="hotbar-label">9</div>
+      </div>
+      <div class="hotbar-slot" id="slot10">
+        <img class="hotbar-item-img" alt="" />
+        <div class="utility-cooldown-mask"></div><div class="utility-cooldown-text"></div>
+        <span class="utility-count hotbar-count" aria-label="Inventory count"></span>
+        <div class="hotbar-label">0</div>
       </div>
     </div>
 
@@ -5460,6 +6103,16 @@
 </div>
 
 <div id="inventoryOverlay" aria-hidden="true">
+  <aside id="inventoryDetailPanel" aria-label="Selected item details">
+    <div class="overlay-panel-kicker">Selected</div>
+    <div id="inventoryDetailIconWrap"><img id="inventoryDetailIcon" alt="" /></div>
+    <div id="inventoryDetailName">Select an item</div>
+    <div id="inventoryDetailType">Inventory</div>
+    <div id="inventoryDetailQuantity">Quantity 0</div>
+    <div id="inventoryDetailStats"></div>
+    <div id="inventoryDetailHint">Click an item to inspect it.</div>
+    <button id="inventoryDetailAction" type="button" hidden>USE</button>
+  </aside>
   <div id="menuItemHotkeyRail" class="menu-hotkey-rail" aria-label="Weapon and tool hotkeys">
     <div class="menu-hotkey-rail-title">Weapons &amp; Tools</div>
     <div class="menu-hotkey-stack">
@@ -5472,6 +6125,7 @@
       <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="6" tabindex="0"><span class="menu-hotkey-key">7</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
       <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="7" tabindex="0"><span class="menu-hotkey-key">8</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
       <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="8" tabindex="0"><span class="menu-hotkey-key">9</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
+      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="9" tabindex="0"><span class="menu-hotkey-key">0</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
     </div>
     <div class="menu-hotkey-rail-help">Drag, or tap a weapon/tool then a slot · right-click to clear</div>
   </div>
@@ -5485,17 +6139,8 @@
     <div class="menu-hotkey-rail-help">Drag, or tap an item then a slot · right-click to clear</div>
   </div>
   <div id="inventoryPanel">
-    <div id="inventoryTop">
-      <button class="inventory-tab active" data-page="inventoryPage">Inventory</button>
-      <button class="inventory-tab" data-page="equipmentPage">Armor</button>
-      <button class="inventory-tab retired-system" data-page="skillsPage" aria-hidden="true" tabindex="-1">Class</button>
-      <button class="inventory-tab retired-system" data-page="talentsPage" aria-hidden="true" tabindex="-1">Talents</button>
-      <button class="inventory-tab" data-page="statsPage">Stats</button>
-      <button class="inventory-tab" data-page="pvpPage">PvP</button>
-      <button id="inventoryClose" aria-label="Close">×</button>
-    </div>
-
     <div id="inventoryPage" class="inventory-page active">
+      <button id="inventoryClose" aria-label="Close inventory">×</button>
       <div id="inventoryScroll">
       <div class="menu-section-title">Resources</div>
       <div id="inventoryResourcesGrid" class="inventory-grid">
@@ -5524,7 +6169,7 @@
           <span class="resource-menu-count" id="inventoryGoldSlimeBubbleCount">0</span>
         </div>
         <div class="menu-item resource-menu-item" data-resource-key="greenJellyCubes" title="Green Jelly Cube">
-          <img id="inventoryGreenJellyCubeImg" src="assets/green_jelly_cube.png?v=419" alt="Green Jelly Cube" />
+          <img id="inventoryGreenJellyCubeImg" src="assets/green_jelly_cube.png?v=424" alt="Green Jelly Cube" />
           <span class="resource-menu-count" id="inventoryGreenJellyCubeCount">0</span>
         </div>
       </div>
@@ -5553,12 +6198,13 @@
 
       <div class="menu-section-title">Building</div>
       <div id="inventoryBuildingGrid" class="inventory-grid">
-        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–9 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=419" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–9 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=419" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–9 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=419" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–9 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=419" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=419" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–9 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=419" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–0 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=424" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–0 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=424" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–0 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=424" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–0 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=424" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=424" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–0 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=424" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="craftingTables" data-build-item="craftingTable" data-hotbar-assignable="true" data-owned-item="craftingTable" title="Crafting Table · place it to unlock advanced recipes nearby"><img id="inventoryCraftingTableImg" src="assets/wood_bench_v2.png" alt="Crafting Table" /><span class="resource-menu-count" id="inventoryCraftingTableCount">0</span></div>
       </div>
       <div id="inventoryBuildingEmpty" class="inventory-empty">No building pieces</div>
 
@@ -5623,24 +6269,25 @@
     </div>
 
     <div id="equipmentPage" class="inventory-page">
+      <div id="equipmentDockTitle" class="overlay-panel-kicker">Equipment</div>
       <div class="equipment-layout">
         <div class="equipped-column">
-          <button type="button" class="equipped-box active" data-gear-panel="gearHeadPanel">
+          <button type="button" class="equipped-box active" data-gear-panel="gearHeadPanel" data-equipment-slot="head">
             <div class="equipped-slot-label">Head</div>
             <img id="equippedHatImg" alt="Equipped headwear" />
             <span id="equippedHatName">Hat</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearShirtPanel">
+          <button type="button" class="equipped-box" data-gear-panel="gearShirtPanel" data-equipment-slot="shirt">
             <div class="equipped-slot-label">Shirt</div>
             <img id="equippedShirtImg" alt="Equipped shirt" />
             <span id="equippedShirtName">Traveler</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearPantsPanel">
+          <button type="button" class="equipped-box" data-gear-panel="gearPantsPanel" data-equipment-slot="pants">
             <div class="equipped-slot-label">Pants</div>
             <img id="equippedPantsImg" alt="Equipped pants" />
             <span id="equippedPantsName">Traveler</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearCharmPanel">
+          <button type="button" class="equipped-box" data-gear-panel="gearCharmPanel" data-equipment-slot="charm">
             <div class="equipped-slot-label">Charms</div>
             <img id="equippedCharmImg" alt="Equipped charm" />
             <span id="equippedCharmName">Empty</span>
@@ -5815,7 +6462,7 @@
 <div class="skill-node">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" src="assets/tiger_paw_v1.png?v=419" alt="Tiger Paw" />
+                <img class="skill-node-icon" src="assets/tiger_paw_v1.png?v=424" alt="Tiger Paw" />
                 <span class="skill-node-name">Hurl moved to Tiger Paw</span>
               </div>
             </div>
@@ -6224,21 +6871,16 @@
 <div id="craftOverlay" aria-hidden="true">
   <div id="craftPanel">
     <div id="craftTop">
-      <div id="craftTitle">Crafting Table</div>
+      <div id="craftTitle">Craft</div>
       <button id="craftClose" aria-label="Close crafting menu">×</button>
     </div>
-    <div id="craftTabs" role="tablist" aria-label="Crafting categories">
-      <button type="button" class="craft-tab active" data-craft-filter="consumables">Consumables</button>
-      <button type="button" class="craft-tab" data-craft-filter="weapons">Weapons</button>
-      <button type="button" class="craft-tab" data-craft-filter="armor">Armor</button>
-      <button type="button" class="craft-tab" data-craft-filter="building">Building</button>
-    </div>
-    <div id="craftGrid">
-      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=419" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=419" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=419" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=419" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=419" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=419" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+    <div id="craftGrid" role="list" aria-label="Available crafting recipes">
+      <button class="craft-recipe" type="button" data-craft-recipe="craftingTable"><img src="assets/wood_bench_v2.png" alt="Wood Crafting Table" /><span class="craft-recipe-name">Wood Crafting Table</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=424" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=424" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=424" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=424" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=424" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=424" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="testWoodSupply"><img alt="Wood" /><span class="craft-recipe-name">Test Wood +100</span><span class="craft-recipe-cost">FREE · TEST SUPPLY</span><span class="craft-recipe-status">TAKE</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -6249,14 +6891,24 @@
       <button class="craft-recipe" type="button" data-craft-recipe="woodSword"><img id="craftWoodSwordImg" alt="Wood Sword" /><span class="craft-recipe-name">Wood Sword</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftSwordWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodBow"><img id="craftWoodBowImg" alt="Wood Bow" /><span class="craft-recipe-name">Wood Bow</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="shepherdStaff"><img id="craftShepherdStaffImg" alt="Shepherd Staff" /><span class="craft-recipe-name">Shepherd Staff</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftStaffWoodIcon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="tigerPaw"><img id="craftTigerPawImg" src="assets/tiger_paw_v1.png?v=419" alt="Tiger Paw" /><span class="craft-recipe-name">Tiger Paw</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTigerPawWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftTigerPawStoneIcon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="tigerPaw"><img id="craftTigerPawImg" src="assets/tiger_paw_v1.png?v=424" alt="Tiger Paw" /><span class="craft-recipe-name">Tiger Paw</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTigerPawWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftTigerPawStoneIcon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="woodHelm"><img id="craftWoodHelmImg" alt="Wood Helm" /><span class="craft-recipe-name">Wood Helm</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftHelmWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodChest"><img id="craftWoodChestImg" alt="Wood Chest" /><span class="craft-recipe-name">Wood Chest</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftChestWoodIcon" alt="Wood" /><span class="craft-cost-value">12</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodGreaves"><img id="craftWoodGreavesImg" alt="Wood Greaves" /><span class="craft-recipe-name">Wood Greaves</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftGreavesWoodIcon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodRing"><img id="craftWoodRingImg" alt="Wood Ring" /><span class="craft-recipe-name">Wood Ring</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftRingWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
     </div>
-    <div id="craftFooter">Choose a category and recipe · Esc to close</div>
+    <div id="craftEmpty" class="inventory-empty" style="display:none; padding:18px; text-align:center;">Gather materials. A Crafting Table unlocks advanced recipes.</div>
+    <div id="craftFooter">Recipes appear when you have the materials.</div>
+  </div>
+  <div id="chestPanel" hidden>
+    <div id="chestTop">
+      <div id="chestTitle">Chest</div>
+      <button id="chestClose" aria-label="Close chest">×</button>
+    </div>
+    <div id="chestGrid" role="list" aria-label="Chest contents"></div>
+    <div id="chestEmpty" class="inventory-empty">Empty</div>
+    <div id="chestFooter">Drag a stack into your inventory.</div>
   </div>
 </div>
 
@@ -6275,7 +6927,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=419" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=424" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -6297,36 +6949,36 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=419"></script>
-<script src="/shared/terrain-rules.js?v=419"></script>
-<script src="/shared/terrain-presentation.js?v=419"></script>
-<script src="/shared/combat-balance.js?v=419"></script>
-<script src="/shared/ability-scaling.js?v=419"></script>
-<script src="/shared/rain-field.js?v=419"></script>
-<script src="/shared/weather-rules.js?v=419"></script>
-<script src="/shared/camouflage-rules.js?v=419"></script>
-<script src="/shared/enemy-net-protocol.js?v=419"></script>
-<script src="/shared/structure-geometry.js?v=419"></script>
-<script src="/shared/structure-topology.js?v=419"></script>
-<script src="/shared/player-net-protocol.js?v=419"></script>
-<script src="/client-config.js?v=419"></script>
-<script src="/client-utils.js?v=419"></script>
-<script src="/client-world.js?v=419"></script>
-<script src="/client-maps.js?v=419"></script>
-<script src="/client-enemies.js?v=419"></script>
-<script src="/client-enemy-runtime.js?v=419"></script>
-<script src="/client-enemy-rendering.js?v=419"></script>
-<script src="/client-combat.js?v=419"></script>
-<script src="/client-abilities.js?v=419"></script>
-<script src="/client-magus-abilities.js?v=419"></script>
-<script src="/client-class-abilities.js?v=419"></script>
-<script src="/client-status.js?v=419"></script>
-<script src="/client-fire-environment.js?v=419"></script>
-<script src="/client-network.js?v=419"></script>
-<script src="/client-simulation-foundation.js?v=419"></script>
-<script src="/game.js?v=419"></script>
-<script src="/client-terrain.js?v=419"></script>
-<script src="/client-input.js?v=419"></script>
-<script src="/client-app.js?v=419"></script>
+<script src="/shared/world-content-runtime.js?v=424"></script>
+<script src="/shared/terrain-rules.js?v=424"></script>
+<script src="/shared/terrain-presentation.js?v=424"></script>
+<script src="/shared/combat-balance.js?v=424"></script>
+<script src="/shared/ability-scaling.js?v=424"></script>
+<script src="/shared/rain-field.js?v=424"></script>
+<script src="/shared/weather-rules.js?v=424"></script>
+<script src="/shared/camouflage-rules.js?v=424"></script>
+<script src="/shared/enemy-net-protocol.js?v=424"></script>
+<script src="/shared/structure-geometry.js?v=424"></script>
+<script src="/shared/structure-topology.js?v=424"></script>
+<script src="/shared/player-net-protocol.js?v=424"></script>
+<script src="/client-config.js?v=424"></script>
+<script src="/client-utils.js?v=424"></script>
+<script src="/client-world.js?v=424"></script>
+<script src="/client-maps.js?v=424"></script>
+<script src="/client-enemies.js?v=424"></script>
+<script src="/client-enemy-runtime.js?v=424"></script>
+<script src="/client-enemy-rendering.js?v=424"></script>
+<script src="/client-combat.js?v=424"></script>
+<script src="/client-abilities.js?v=424"></script>
+<script src="/client-magus-abilities.js?v=424"></script>
+<script src="/client-class-abilities.js?v=424"></script>
+<script src="/client-status.js?v=424"></script>
+<script src="/client-fire-environment.js?v=424"></script>
+<script src="/client-network.js?v=424"></script>
+<script src="/client-simulation-foundation.js?v=424"></script>
+<script src="/game.js?v=424"></script>
+<script src="/client-terrain.js?v=424"></script>
+<script src="/client-input.js?v=424"></script>
+<script src="/client-app.js?v=424"></script>
 </body>
 </html>

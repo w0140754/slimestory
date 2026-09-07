@@ -47,7 +47,7 @@ async function sendAndWait(socket, payload, type, predicate) {
       type: "persistentStateRestore",
       state: {
         resources: {
-          wood: 20,
+          wood: 30,
           stone: 1,
           whiteFlowers: 6,
           blueFlowers: 3
@@ -58,18 +58,22 @@ async function sendAndWait(socket, payload, type, predicate) {
       throw new Error("split flower persistence failed");
     }
 
-    const defaultMapId = WORLD_CONTENT.defaultPlayerLoad?.mapId;
-    const craftingTable = WORLD_CONTENT.maps?.[defaultMapId]?.npcs?.find(
-      npc => npc?.type === "craftingTable"
-    );
-    if (!craftingTable) {
-      throw new Error("default map crafting table missing");
+    const tableCraft = await sendAndWait(socket, {
+      type: "craftRequest", recipe: "craftingTable"
+    }, "craftResult", message => message.recipe === "craftingTable");
+    if (!tableCraft.success || tableCraft.totalWood !== 20 || tableCraft.totalCraftingTables !== 1) {
+      throw new Error(`portable Crafting Table craft failed: ${JSON.stringify(tableCraft)}`);
     }
 
-    socket.send(JSON.stringify({
-      type: "playerStatePatch",
-      player: { x: craftingTable.x, y: craftingTable.y }
-    }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 96, y: 96 } }));
+    await delay(80);
+    const tablePlace = await sendAndWait(socket, {
+      type: "structurePlace", kind: "craftingTable", x: 128, y: 96
+    }, "structurePlaceResult", message => message.kind === "craftingTable");
+    if (!tablePlace.success || tablePlace.totalCraftingTables !== 0) {
+      throw new Error(`portable Crafting Table placement failed: ${JSON.stringify(tablePlace)}`);
+    }
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 128, y: 116 } }));
     await delay(100);
 
     const arrows = await sendAndWait(socket, {

@@ -47,14 +47,28 @@ async function sendAndWait(socket, payload, type, predicate) {
 
     await sendAndWait(socket, {
       type: "persistentStateRestore",
-      state: { resources: { wood: 12, stone: 3 } }
+      state: { resources: { wood: 22, stone: 3 } }
     }, "persistentStateRestored");
 
-    const mapId = WORLD_CONTENT.defaultPlayerLoad?.mapId;
-    const bench = WORLD_CONTENT.maps?.[mapId]?.npcs?.find(npc => npc?.type === "craftingTable");
-    if (!bench) throw new Error("default crafting table missing");
+    const tableCraft = await sendAndWait(
+      socket,
+      { type: "craftRequest", recipe: "craftingTable" },
+      "craftResult",
+      message => message.recipe === "craftingTable"
+    );
+    if (!tableCraft.success || tableCraft.totalWood !== 12 || tableCraft.totalCraftingTables !== 1) {
+      throw new Error(`Crafting Table craft failed: ${JSON.stringify(tableCraft)}`);
+    }
 
-    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: bench.x, y: bench.y } }));
+    socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 96, y: 96 } }));
+    await delay(80);
+    const tablePlaced = await sendAndWait(
+      socket,
+      { type: "structurePlace", kind: "craftingTable", x: 80, y: 96 },
+      "structurePlaceResult",
+      message => message.kind === "craftingTable"
+    );
+    if (!tablePlaced.success) throw new Error(`Crafting Table placement failed: ${JSON.stringify(tablePlaced)}`);
     await delay(100);
 
     const tigerPaw = await sendAndWait(

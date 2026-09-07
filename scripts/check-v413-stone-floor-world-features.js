@@ -16,11 +16,11 @@ const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(pkg.version, "0.6.11.424");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-419";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
-assert(html.includes('/game.js?v=419'));
+assert(server.includes('const BUILD_VERSION = "6-11-424";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
+assert(html.includes('/game.js?v=424'));
 
 function pngDimensions(file) {
   const data = fs.readFileSync(file);
@@ -36,13 +36,13 @@ assert.strictEqual(topology.layerOf({ kind: "stoneFloor" }), topology.LAYERS.SUR
 assert(topology.SURFACE_KINDS.has("woodFloor") && topology.SURFACE_KINDS.has("stoneFloor"));
 
 assert(game.includes('const BUILD_FLOOR_STRUCTURE_KINDS = Object.freeze(["woodFloor", "stoneFloor"]);'));
-assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"]);'));
+assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'));
 assert(game.includes('stoneFloor: Object.freeze({'));
 assert(game.includes('resourceKey: "stoneFloors"'));
 assert(game.includes('structure?.kind === "stoneFloor" ? stoneFloorStructureImage : woodFloorStructureImage'));
 assert(html.includes('data-build-item="stoneFloor"'));
 assert(html.includes('id="inventoryStoneFloorCount"'));
-assert(input.includes('["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece)'));
+assert(input.includes('["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece)'));
 assert(server.includes('const BUILD_FLOOR_KINDS = Object.freeze(new Set(["woodFloor", "stoneFloor"]));'));
 assert(server.includes('stoneFloor: Object.freeze({ repeatable: true, resourceKey: "stoneFloors", outputCount: 4'));
 assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"'));
@@ -102,10 +102,11 @@ assert(game.includes("worldStructures.concat(placedStructures)"));
 assert(server.includes("TERRAIN_RULES.circleCanOccupy(definition, x, y, 5, { allowWater: false })"),
   "runtime enemy generation must reject generated ponds without authored spawn positions");
 
-assert(network.includes("requestTreasureOpen(chestId)"));
-assert(network.includes('type: "treasureOpen"'));
-assert(server.includes("function handleTreasureOpen(playerId, socket, message)"));
-assert(server.includes('type: "treasureResult"'));
+assert(network.includes("requestChestContextOpen(chestId)"));
+assert(network.includes('type: "chestContextOpen"'));
+assert(server.includes("function handleChestContextOpen(playerId, socket, message)"));
+assert(server.includes('type: "chestContextResult"'));
+assert(server.includes("function handleTreasureOpen(playerId, socket, message)"), "legacy treasure packet alias should remain routed into the new chest context model");
 assert(!server.includes("treasureHeartbeat"));
 
 console.log(`v413 Stone Floor + world feature retention check passed on v414: ${generatedBuildingCount} generated building(s), ${generatedTreasureCount} real treasure chest(s), ponds/meadows/tree rings/stone patches.`);

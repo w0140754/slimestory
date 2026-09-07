@@ -162,21 +162,16 @@ function buildClientMapRegistry() {
   }
 
   // Compatibility handles for older rendering/interaction helpers that still
-  // exist outside the retired map system. Only Marnie and the crafting table
-  // are live in the coordinate-grid spawn; the others stay harmlessly off-map.
-  const spawnMapId = WORLD_CONTENT?.worldGrid?.startMapId || "world_p0_p0";
-  const spawnDefinition = WORLD_CONTENT?.maps?.[spawnMapId] || {};
-  const spawnNpcs = Array.isArray(spawnDefinition.npcs) ? spawnDefinition.npcs : [];
-  const marnie = spawnNpcs.find(npc => npc?.type === "shopkeeper") || { x: 174, y: 190, interactionRadius: 24 };
-  const crafting = spawnNpcs.find(npc => npc?.type === "craftingTable") || { x: 226, y: 190, interactionRadius: 24 };
+  // exist outside the retired map system. v420 removes the starter Marnie NPC
+  // and static bench, so all legacy spawn fixtures remain harmlessly off-map.
   const offMapNpc = () => ({ x: -10000, y: -10000, interactionRadius: 0 });
 
   const spawnMapX = x => x;
   const spawnMapY = y => y;
-  const tutorialNpc = { ...marnie };
+  const tutorialNpc = offMapNpc();
   const hunterNpc = offMapNpc();
   const jesterNpc = offMapNpc();
-  const woodCraftBench = { ...crafting };
+  const woodCraftBench = offMapNpc();
   const classResetCrystal = offMapNpc();
 
   return {
