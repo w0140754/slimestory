@@ -11,6 +11,18 @@
   const WORLD_GRID_MAP_WIDTH = 400;
   const WORLD_GRID_MAP_HEIGHT = 400;
 
+  // v414: the live server supplies a per-world generation seed through the
+  // environment before loading this shared generator. Browser clients receive
+  // the exact resolved WORLD_CONTENT object from the server runtime endpoint,
+  // so both sides still use one canonical world without extra replication.
+  // A zero/default seed intentionally preserves the old v413 deterministic
+  // layout for regression fixtures and offline tooling.
+  const WORLD_GENERATION_SEED = (() => {
+    if (typeof process === "undefined" || !process?.env) return 0;
+    const parsed = Number(process.env.SLIME_STORY_WORLD_SEED);
+    return Number.isFinite(parsed) ? (Math.trunc(parsed) >>> 0) : 0;
+  })();
+
   function worldGridAxisToken(value) {
     const n = Math.trunc(Number(value) || 0);
     return n < 0 ? `m${Math.abs(n)}` : `p${n}`;
@@ -26,6 +38,9 @@
       Math.imul((Math.trunc(y) + 2027), 19349663) ^
       Math.imul((Math.trunc(salt) + 4099), 83492791)
     ) >>> 0;
+    if (WORLD_GENERATION_SEED !== 0) {
+      h ^= Math.imul((WORLD_GENERATION_SEED + 0x9e3779b9) >>> 0, 2246822519) >>> 0;
+    }
     h ^= h >>> 16;
     h = Math.imul(h, 0x7feb352d) >>> 0;
     h ^= h >>> 15;
@@ -164,11 +179,13 @@
           featureType: "stonePatch"
         });
       });
-      environment.sceneryRocks.push({
+      // v414: generated scenery should be real gameplay content. Use the
+      // existing mineable rock entity instead of an untouchable scenery rock.
+      environment.rocks.push({
         id: `${mapId}:stone-patch:rock:1`,
         x: reservation.x + 26,
         y: reservation.y - 22,
-        collision: { width: 10, height: 8 }
+        variant: "plain"
       });
     }
 
@@ -299,13 +316,16 @@
 
       const treasureRoll = worldGridHash(x, y, 1325 + houseIndex * 19) % 1000;
       if (treasureRoll < (ruin ? 220 : 380)) {
-        npcs.push({
+        structures.push({
           id: `${mapId}:treasure:${houseIndex}`,
-          type: "treasureChest",
-          name: "Old Chest",
+          mapId,
+          kind: "chest",
           x: cx,
           y: cy,
-          interactionRadius: 22,
+          worldGenerated: true,
+          treasure: true,
+          opened: false,
+          featureType: ruin ? "ruin" : "house",
           featureId: feature?.id || null
         });
       }
@@ -322,19 +342,45 @@
     }
 
     if (distance > 0) {
-      const scenicTypes = ["pond", "meadow", "treeRing", "stonePatch"];
-      const scenicCount = 1 + ((worldGridHash(x, y, 611) % 100) < 38 ? 1 : 0);
-      const startType = worldGridHash(x, y, 612) % scenicTypes.length;
-      for (let index = 0; index < scenicCount; index += 1) {
-        const type = scenicTypes[(startType + index * 2) % scenicTypes.length];
-        const radius = type === "pond" ? 48 : type === "treeRing" ? 52 : 44;
-        const reservation = reserveFeaturePoint(type, radius, 68);
-        if (!reservation) continue;
-        addFeature(type, reservation);
-        if (type === "pond") addPond(reservation);
-        else if (type === "meadow") addMeadow(reservation);
-        else if (type === "treeRing") addTreeRing(reservation);
-        else if (type === "stonePatch") addStoneFloorPatch(reservation);
+      if (WORLD_GENERATION_SEED === 0) {
+        // Keep the v413 fixture layout available to retained regression tests.
+        const scenicTypes = ["pond", "meadow", "treeRing", "stonePatch"];
+        const scenicCount = 1 + ((worldGridHash(x, y, 611) % 100) < 38 ? 1 : 0);
+        const startType = worldGridHash(x, y, 612) % scenicTypes.length;
+        for (let index = 0; index < scenicCount; index += 1) {
+          const type = scenicTypes[(startType + index * 2) % scenicTypes.length];
+          const radius = type === "pond" ? 48 : type === "treeRing" ? 52 : 44;
+          const reservation = reserveFeaturePoint(type, radius, 68);
+          if (!reservation) continue;
+          addFeature(type, reservation);
+          if (type === "pond") addPond(reservation);
+          else if (type === "meadow") addMeadow(reservation);
+          else if (type === "treeRing") addTreeRing(reservation);
+          else if (type === "stonePatch") addStoneFloorPatch(reservation);
+        }
+      } else {
+        // v414 live worlds use independent rarity rolls. Tree rings are a
+        // distinctive landmark and intentionally much rarer than ponds. Cap
+        // scenic features at two per map so a map can also simply breathe.
+        const candidates = [
+          { type: "pond", threshold: 330, salt: 611, radius: 48 },
+          { type: "meadow", threshold: 230, salt: 613, radius: 44 },
+          { type: "stonePatch", threshold: 220, salt: 615, radius: 44 },
+          { type: "treeRing", threshold: 80, salt: 617, radius: 52 }
+        ]
+          .filter(entry => (worldGridHash(x, y, entry.salt) % 1000) < entry.threshold)
+          .sort((a, b) => worldGridHash(x, y, a.salt + 100) - worldGridHash(x, y, b.salt + 100))
+          .slice(0, 2);
+
+        for (const entry of candidates) {
+          const reservation = reserveFeaturePoint(entry.type, entry.radius, 68);
+          if (!reservation) continue;
+          addFeature(entry.type, reservation);
+          if (entry.type === "pond") addPond(reservation);
+          else if (entry.type === "meadow") addMeadow(reservation);
+          else if (entry.type === "treeRing") addTreeRing(reservation);
+          else if (entry.type === "stonePatch") addStoneFloorPatch(reservation);
+        }
       }
     }
 
@@ -455,8 +501,9 @@
   });
 
   return Object.freeze({
-    version: 413,
-    schemaVersion: 1,
+    version: 414,
+    schemaVersion: 2,
+    worldSeed: WORLD_GENERATION_SEED >>> 0,
     worldGrid,
     defaultPlayerLoad: Object.freeze({ mapId: worldGrid.startMapId, spawnId: "center" }),
     maps

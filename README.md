@@ -1,3 +1,65 @@
+## v6-11-419 — Persistent Rain Wetness
+
+- Fixed map-wide weather Wet expiring visually/locally while the player was still standing outside in active rain.
+- Local player Wet now refreshes continuously from the same deterministic `worldSeed + map + game time` weather rule used by the server. Automatic roofs still provide shelter.
+- Active mobs and remote players on the current map use the same client-side rain/roof derivation, so their Wet presentation also remains continuous during long storms.
+- The authoritative server still refreshes exposed player/enemy Wet at its existing low 0.6-second cadence; this change does **not** add periodic Wet packets or a weather heartbeat.
+- Existing water Wet, Rain Cloud Wet, fire extinguishing, roof shelter, weather duration, lighting, AI, building, and network cadence are otherwise unchanged.
+- Regression: **33 syntax targets + 106 retained checks/smokes** pass, including dedicated v419 rain-Wet continuity coverage. Server startup and `/health` pass as build **6-11-419** / world content **414** / combat balance **30**.
+
+## v6-11-418 — Atmosphere, Building & Weather
+
+- Removed the old per-map **placed-structure ceiling**. Building is now limited by normal ownership, range, support, occupancy, and collision rules rather than an arbitrary 96-piece cap.
+- Reworked the deepest part of night to be **nearly black** (`0.992` peak ambient alpha). The local player gets only a tiny faint visibility pocket so movement remains possible without a Torch; this natural visibility is client-local and is **not** emitted by remote players in multiplayer.
+- Reduced ordinary mob night awareness to a short **64 px acquire / 96 px disengage** range. Spawn/night-only Slimes retain stronger night pressure but now use finite **104 / 144 px** ranges instead of global acquisition. No new AI network channel or cadence was added.
+- Fixed generated meadow/feature interaction registration. Procedural meadow flowers/grass, tree-ring trees, and stone-feature rocks now validate against the canonical seeded world definition rather than an old ID-prefix assumption, so generated scenery remains fully interactive.
+- Loosened automatic-door traversal so a player already moving through the real doorway channel cannot be trapped/rejected when the door state changes. Adjacent Wood Walls remain solid.
+- Wood Walls and Wood Doors may now be placed on **boundaries between two floor tiles**, including inside an already roofed building. Doors still require supporting flanking walls. This enables interior rooms/partitions and cave-like layouts.
+- Completed roof regions now have their own **dim daytime interior ambient layer**. Existing Torch/wall/roof occlusion remains the real local-light system. Open exterior doors add a small soft daylight spill into the revealed interior as a presentation bonus.
+- Passing cloud shadows were upgraded from simple blobs to broader **irregular cloud banks with wisps/penumbra**, while painted tree sunlight shadows still fade out completely at night.
+- Added deterministic **map-wide rain weather** derived from world seed + map + absolute game time. Rain can last from short showers to multi-hour in-game storms, visually falls across the exposed map, makes exposed players/mobs Wet, extinguishes burning mutable vegetation, and respects automatic roofs as shelter. Weather requires **no heartbeat/polling stream**; client and server derive it from the shared clock/seed and only resulting gameplay state changes use existing replication.
+- Existing v409-v412 Torch/wall/roof lighting behavior, v414 mutable procedural world/chests, and v415-v416 Tiger Paw/Hurl behavior are preserved.
+- Regression: **33 syntax targets + 105 retained checks/smokes** pass, including updated WebSocket coverage for canonical generated grass, anti-stuck door traversal, editable completed roofs, internal floor-to-floor boundaries, night hostility, mutable generated structures, and Tiger Paw crafting. Server startup and `/health` pass as build **6-11-418** / world content **414** / combat balance **30**.
+
+## v6-11-417 — Passing Cloud Shadows
+
+- Added occasional **client-only passing cloud shadows** during daylight. Broad low-alpha cloud banks drift in world space across ground, scenery, mobs, players, and visible roofs, then fade naturally in/out. They are cosmetic only: no server state, no packets, no polling, no heartbeat, and no change to gameplay weather.
+- Cloud shadows fade away through dusk and are fully absent at night. When the local player is inside a completed enclosed building and its roof is hidden, the revealed interior floor is clipped out of the cloud-shadow pass so outdoor clouds do not visibly pass through the room.
+- Existing painted **tree canopy ground shadows now fade with daylight and disappear at night**, including the fire-resistant/perimeter tree variant. Tree sprites, wind sway, collision, camouflage cover, burning/falling, and lighting behavior are otherwise unchanged.
+- The v409-v412 torch/wall/roof lighting pipeline is untouched. No world generation, chest, Tiger Paw/Hurl, enemy AI, map replication, or network cadence changes.
+
+- Regression: **32 syntax targets + 104 retained checks/smokes** pass, including dedicated v417 atmosphere coverage plus the full retained WebSocket suite. Server startup and `/health` pass as build **6-11-417** / world content **414** / combat balance **30**.
+
+## v6-11-416 — Tiger Paw Crafting Freeze Fix
+
+- Fixed the Tiger Paw crafting button getting stuck on **WORKING** in online play. v415 added the recipe to the client but missed the matching authoritative server recipe, so the server silently ignored `craftRequest: tigerPaw` and never returned a result.
+- Added the authoritative **8 Wood + 2 Stone** Tiger Paw recipe to the server. Successful crafting now spends the resources and returns the normal `craftResult`, allowing the client to grant/equip the Tiger Paw exactly like other crafted equipment.
+- Hardened crafting protocol failure handling: unknown server recipes now return an explicit `invalidRecipe` result instead of silently dropping the request, and the client clears a matching pending craft as soon as a result arrives. This prevents future recipe-table mismatches from freezing the crafting UI.
+- No combat, Hurl targeting, world generation, lighting, enemy AI, map traffic, or networking cadence changes.
+
+## v6-11-415 — Tiger Paw Hurl Weapon
+
+- Starts from the completed v6-11-414 Mutable Random World & Treasure Chests build.
+- Retires Hurl as a standalone Bruiser skill and moves its grab/carry/throw loop to the new **Tiger Paw** weapon.
+- Tiger Paw primary attack grabs the nearest valid hurlable **mob only** within the existing Hurl grab range; loose rocks are no longer selectable or throwable through Hurl.
+- While carrying a mob, primary attack keeps the existing aimed throw behavior, collision, landing damage, and multiplayer replication.
+- The server authoritatively requires Tiger Paw to start a mob grab and rejects new rock Hurl requests, so an old/modified client cannot restore rock targeting.
+- Tiger Paw is a common crafting-table weapon (**8 Wood + 2 Stone**) and can be assigned to normal 1–9 weapon hotkeys. The former Hurl icon is reused as temporary Tiger Paw UI art; no separate held sprite is drawn.
+- Mobile AUTO intentionally leaves Tiger Paw manual so it cannot grab a mob and then stall with it overhead.
+- No lighting, procedural-world, generated-structure, chest, enemy-spawn, or network-cadence systems were changed.
+- Regression: **32 syntax targets + 101 retained checks/smokes** pass, including the dedicated v415 Tiger Paw wiring/server-authority check and the full retained WebSocket suite. Server startup and `/health` pass as build **6-11-415** / world content **414** / combat balance **30**.
+
+## v6-11-414 — Mutable Random World & Treasure Chests
+
+- Fixed the procedural-world seed bug. Normal server/world startup now creates a fresh random **32-bit world seed**, and that seed is folded into map biomes, scenery/features, generated houses/ruins, and treasure layout. The resolved seed is included in the runtime `WORLD_CONTENT` served to clients, so client and server still use the exact same world without sending individual generated terrain pieces. Setting `SLIME_STORY_WORLD_SEED` explicitly reproduces a chosen world for testing/debugging.
+- Rebalanced live scenic rolls so distinctive **Tree Rings are genuinely rare** instead of appearing as a routine map feature. Ponds remain the most common terrain landmark, with meadows and stone patches uncommon; each non-spawn map is capped at two scenic features. The old v413 seed-0 layout remains available only as the deterministic regression fixture.
+- Converted generated Treasure Chests from special NPC scenery into real **OBJECT-layer structures**. The user-authored 16×16 closed/open chest sprites are now used directly. Opening a treasure chest changes its shared world state to the open sprite and awards the treasure once for that world/session.
+- Opened generated chests can be **harvested with the Pickaxe**, drop an actual **Chest** item, enter inventory, be assigned to the 1–9 build hotbar, and be placed again on any valid floor. Re-placed empty chests can be opened/closed with `F`; no storage inventory is added yet.
+- Generated houses/ruins and stone patches are now fully mutable through the normal building salvage path. Generated Wood Floors, Stone Floors, Wood Walls, Wood Doors, and Chests can be Pickaxed and drop the exact corresponding build item. Generated stone-feature rocks use the existing mineable Rock entity instead of untouchable scenery. Existing trees, grass, and flowers continue using their established interactive systems; ponds remain terrain/water.
+- Procedural content is still the immutable seed baseline; only player changes are retained as compact **map-local mutation deltas** (`removedWorldStructureIds` / `worldStructureStates`). Live `structureRemoved` / `structureState` events are broadcast only to players on that same map. A player entering the map receives its current deltas once. There is no mutation polling, heartbeat, global world-edit broadcast, or repeated full generated-map snapshot.
+- The completed v412 lighting and v411 roof topology are unchanged.
+- Regression: **32 syntax targets + 100 retained checks/smokes** pass, including deterministic same-seed / different-seed generation, Stone Floor retention, shared chest open state, generated chest harvest → pickup → re-place/toggle, generated house-wall salvage, map re-entry mutation replay, and zero cross-map mutation broadcasts. Server startup and `/health` pass as build **6-11-414** / world content **414**; two unpinned startup checks produced different world seeds.
+
 ## v6-11-413 — Stone Floor & World Features
 
 - Added the user-authored **16×16 Stone Floor** as a full building surface. It is craftable at the Crafting Table as **Stone Floor ×4 for 2 Stone**, hotbar-assignable, persistent, reclaimable, and follows the same placement/support/roof/collision rules as Wood Floor. Wood Walls, Wood Doors, floor-mounted Torches, and the existing layered occupancy system all work on Stone Floor.

@@ -329,6 +329,19 @@ function updatePlayerStatusAndTimers(dt) {
     applyLocalWetStatus(player, player.wetDuration || GAME_CONFIG.player.wetDuration);
   }
 
+  // v419: map rain is deterministic on every client, so exposed players can
+  // refresh their own Wet timer locally instead of waiting for repeated
+  // server packets. This keeps Wet continuous for the entire time the player
+  // remains outdoors in rain while preserving automatic-roof shelter.
+  if (
+    typeof currentMapIsRaining === "function" &&
+    currentMapIsRaining() &&
+    (typeof pointUnderAutomaticRoof !== "function" ||
+      !pointUnderAutomaticRoof(player.x, player.y))
+  ) {
+    applyLocalWetStatus(player, player.wetDuration || GAME_CONFIG.player.wetDuration);
+  }
+
   tickTimer(player, "hurlReachTime", dt);
   const attackWasActive = player.attackTime > 0;
   tickTimer(player, "attackTime", dt);
@@ -512,15 +525,23 @@ function updateEnemySystems(dt) {
     profile.update(dt);
   }
 
-  // Enemy Wet from open water is derived locally from the same authored
-  // terrain geometry the server uses. This mirrors the existing Rain approach
-  // and avoids a noisy wetTime packet every simulation tick.
-  if (typeof terrainEntityTouchesWater === "function") {
-    for (const { enemy } of activeEnemyRecords()) {
-      if (!enemy?.alive || enemy.carriedBy || (Number(enemy.hurlTime) || 0) > 0) continue;
-      if (terrainEntityTouchesWater(enemy.x, enemy.y, currentMapId, 4)) {
-        applyLocalWetStatus(enemy, enemy.wetDuration || GAME_CONFIG.status.enemyWetDuration);
-      }
+  // Enemy Wet from open water and deterministic map rain is derived locally
+  // from the same authored world state the server uses. Refreshing the status
+  // locally prevents the 3-second visual timer from expiring during a long
+  // shower without adding a rain heartbeat or wetTime refresh stream.
+  const mapRaining =
+    typeof currentMapIsRaining === "function" && currentMapIsRaining();
+  for (const { enemy } of activeEnemyRecords()) {
+    if (!enemy?.alive || enemy.carriedBy || (Number(enemy.hurlTime) || 0) > 0) continue;
+    const inWater =
+      typeof terrainEntityTouchesWater === "function" &&
+      terrainEntityTouchesWater(enemy.x, enemy.y, currentMapId, 4);
+    const exposedToRain =
+      mapRaining &&
+      (typeof pointUnderAutomaticRoof !== "function" ||
+        !pointUnderAutomaticRoof(enemy.x, enemy.y));
+    if (inWater || exposedToRain) {
+      applyLocalWetStatus(enemy, enemy.wetDuration || GAME_CONFIG.status.enemyWetDuration);
     }
   }
 }
@@ -1354,11 +1375,13 @@ class GameRenderer {
       drawPrototypeIslandGroundLayer(renderCamera.x, renderCamera.y);
       drawSortedWorldLayer(renderCamera.x, renderCamera.y);
       drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
+      drawCloudShadows(renderCamera.x, renderCamera.y);
       drawForegroundLayer(renderCamera.x, renderCamera.y);
     } else {
       drawGroundLayer(renderCamera.x, renderCamera.y);
       drawSortedWorldLayer(renderCamera.x, renderCamera.y);
       drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
+      drawCloudShadows(renderCamera.x, renderCamera.y);
       drawForegroundLayer(renderCamera.x, renderCamera.y);
     }
 
@@ -1372,6 +1395,7 @@ class GameRenderer {
 
     drawBuildPlacementPreview(renderCamera.x, renderCamera.y);
     drawWorldLightingOverlay();
+    drawMapRainOverlay();
     drawPickaxeStructureTargetHighlight(renderCamera.x, renderCamera.y);
     drawMapTransitionCover();
   }

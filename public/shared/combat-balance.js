@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 29;
+    const VERSION = 30;
     const MIN_DAMAGE = 1;
     const ELEMENT_TYPES = Object.freeze(["neutral", "fire", "water", "air", "earth"]);
     const LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL = 0.05;
@@ -195,6 +195,18 @@
         dexScale: 0.10,
         luckScale: 0.05,
         intScale: 0.45
+      }),
+      Object.freeze({
+        id: "weapon_tigerPaw",
+        name: "Tiger Paw",
+        damageType: "physical",
+        attackSpeed: "quick",
+        attackPower: 0,
+        magicPower: 0,
+        strengthScale: 0,
+        dexScale: 0,
+        luckScale: 0,
+        intScale: 0
       })
     ]);
 

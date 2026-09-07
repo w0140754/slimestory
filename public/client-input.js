@@ -163,7 +163,7 @@ function beginMobileBuildCursorForSelectedPiece() {
   clearMobilePointTargetMode();
   if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
 
-  const leadDistance = (["woodFloor", "stoneFloor"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 24 : 18;
+  const leadDistance = (["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 24 : 18;
   const aimLength = Math.hypot(mobileAimDx, mobileAimDy) || 1;
   setMobileBuildCursorWorldPoint(
     player.x + (mobileAimDx / aimLength) * leadDistance,
@@ -181,7 +181,7 @@ function nudgeMobileBuildCursor(dx, dy) {
 
   // Floor cells live on the 16px build grid. Wall/Door targeting needs the
   // half-cell step so one tap can move from a floor centre to a specific edge.
-  const step = (["woodFloor", "stoneFloor"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 16 : 8;
+  const step = (["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 16 : 8;
   return setMobileBuildCursorWorldPoint(
     cursor.x + Number(dx) * step,
     cursor.y + Number(dy) * step
@@ -621,7 +621,7 @@ function updateMobileAutoAttack() {
 
   // v377: Fire Wand and Rain Wand own aimed/channelled primary actions. AUTO
   // intentionally stays off those actions so it cannot choose cast locations.
-  if (weapon === "wand" || weapon === "rainWand") return false;
+  if (weapon === "wand" || weapon === "rainWand" || weapon === "tigerPaw") return false;
 
   const target = mobileEnemyTarget(
     weapon === "bow"
@@ -898,8 +898,8 @@ function installMobileControls() {
       spawnFloatingText(player.x, player.y - 27, "EQUIP A WEAPON", "#ffe38b", 0.72);
       return;
     }
-    if (!mobileAutoAttackEnabled && (weapon === "wand" || weapon === "rainWand")) {
-      spawnFloatingText(player.x, player.y - 27, "MANUAL CAST", "#ffe38b", 0.72);
+    if (!mobileAutoAttackEnabled && (weapon === "wand" || weapon === "rainWand" || weapon === "tigerPaw")) {
+      spawnFloatingText(player.x, player.y - 27, weapon === "tigerPaw" ? "MANUAL HURL" : "MANUAL CAST", "#ffe38b", 0.72);
       return;
     }
     setMobileAutoAttackEnabled(!mobileAutoAttackEnabled);

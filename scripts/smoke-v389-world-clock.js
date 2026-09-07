@@ -43,7 +43,7 @@ async function connect() {
   try {
     await delay(500);
     const first = await connect();
-    if (first.welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
+    if (first.welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
     const clock1 = first.welcome.worldClock;
     if (!clock1 || clock1.realMsPerGameMinute !== 500) throw new Error(`invalid world clock: ${JSON.stringify(clock1)}`);
     if (!Number.isFinite(clock1.gameMinutes) || clock1.gameMinutes < 480 || clock1.gameMinutes > 490) {

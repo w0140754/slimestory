@@ -10,9 +10,9 @@ const server = read('server.js');
 const config = read('public', 'client-config.js');
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-413";'), 'server build must be 6-11-406');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'), 'client build must be 6-11-406');
-assert(html.includes('/client-enemy-rendering.js?v=413'), 'enemy renderer cache key must be v340');
+assert(server.includes('const BUILD_VERSION = "6-11-419";'), 'server build must be 6-11-406');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'), 'client build must be 6-11-406');
+assert(html.includes('/client-enemy-rendering.js?v=419'), 'enemy renderer cache key must be v340');
 assert(readme.includes('## v6-11-339 — Crab renderer hardening'), 'historical README v339 changelog missing');
 
 const start = renderer.indexOf('function drawCrab(');

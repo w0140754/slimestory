@@ -8,10 +8,10 @@ const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 const pkg = require(path.join(root, "package.json"));
 const geometry = require(path.join(root, "public", "shared", "structure-geometry.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.413");
-assert(read("server.js").includes('const BUILD_VERSION = "6-11-413";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
-assert(read("public", "index.html").includes('/shared/structure-geometry.js?v=413'));
+assert.strictEqual(pkg.version, "0.6.11.419");
+assert(read("server.js").includes('const BUILD_VERSION = "6-11-419";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert(read("public", "index.html").includes('/shared/structure-geometry.js?v=419'));
 
 const horizontal = { kind: "woodWall", axis: "horizontal", x: 64, y: 80 };
 const vertical = { kind: "woodWall", axis: "vertical", x: 64, y: 80 };
@@ -33,7 +33,7 @@ assert(server.includes('mountSide: STRUCTURE_GEOMETRY.sideOfBoundary('));
 assert(game.includes('return STRUCTURE_GEOMETRY.collisionRect(structure, 2);'));
 assert(game.includes('STRUCTURE_GEOMETRY.lightBarrierSegment(structure, 0.4)'));
 assert(game.includes('return STRUCTURE_GEOMETRY.drawSortY(structure);'));
-assert(game.includes('restoreStructureFacadeAmbient(bufferCtx, alpha);'));
+assert(game.includes('restoreStructureFacadeAmbient(bufferCtx, alpha, interiorRegion, interiorAlpha);'));
 assert(game.includes('visibleFaceSide && sourceSide !== visibleFaceSide'));
 assert(game.includes('STRUCTURE_GEOMETRY.offsetBoundaryPointToSide('));
 assert(!game.includes('sourceSide !== viewerSide'));

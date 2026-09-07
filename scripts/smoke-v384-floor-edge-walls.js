@@ -26,7 +26,7 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 2, woodWalls: 3 } } }));
@@ -43,12 +43,12 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
       floorIds.push(result.structureId);
     }
 
-    // v392 retires internal floor-to-floor walls. The old shared east/west
-    // boundary test now proves that the interior edge remains open.
+    // v418 restores internal floor-to-floor boundaries so rooms/partitions can be built.
     let pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
     socket.send(JSON.stringify({ type: "structurePlace", kind: "woodWall", x: 128, y: 96, edge: "east" }));
     const interior = await pending;
-    if (interior.success || interior.reason !== "interiorEdge") throw new Error("internal floor-to-floor wall was not rejected");
+    if (!interior.success) throw new Error(`internal floor-to-floor wall was rejected: ${JSON.stringify(interior)}`);
+    const interiorWallId = interior.structureId;
 
     const wallBroadcastPending = waitForMessage(socket, "structurePlaced", m => m.structure?.kind === "woodWall");
     pending = waitForMessage(socket, "structurePlaceResult", m => m.kind === "woodWall");
@@ -80,12 +80,17 @@ function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) 
     destroy = await destroyPending;
     if (!destroy.success) throw new Error("attached wall could not be removed first");
 
+    destroyPending = waitForMessage(socket, "structureDestroyResult", m => m.structureId === interiorWallId);
+    socket.send(JSON.stringify({ type: "structureDestroy", structureId: interiorWallId }));
+    destroy = await destroyPending;
+    if (!destroy.success) throw new Error("internal attached wall could not be removed");
+
     destroyPending = waitForMessage(socket, "structureDestroyResult", m => m.structureId === floorIds[0]);
     socket.send(JSON.stringify({ type: "structureDestroy", structureId: floorIds[0] }));
     destroy = await destroyPending;
-    if (!destroy.success) throw new Error("floor remained blocked after attached wall was removed");
+    if (!destroy.success) throw new Error("floor remained blocked after all attached walls were removed");
 
     socket.close();
-    console.log("v384 compatibility smoke passed under v392 rules: internal edges stay open, perimeter walls normalize/dedupe, floor support is enforced, and attached walls must be removed before floors.");
+    console.log("v384 retained compatibility smoke passed under v418 rules: internal edges accept walls, boundaries normalize/dedupe, floor support is enforced, and attached walls must be removed before floors.");
   } finally { server.kill("SIGTERM"); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -199,16 +199,18 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=413");
-const torchImage = loadImage("assets/torch_v1.png?v=413");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=419");
+const torchImage = loadImage("assets/torch_v1.png?v=419");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=413");
-const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=413");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=413");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=413");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=413");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=419");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=419");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=419");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=419");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=419");
+const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=419");
+const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=419");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -224,6 +226,9 @@ const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
+// v415: Tiger Paw inherits the retired Hurl art as a compact inventory/hotbar
+// icon. It is treated like a hand weapon, so no separate held sprite is drawn.
+const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=419");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -3956,7 +3961,7 @@ const player = {
   firstRaisedLeg: "left",
 
   // Equipped tool / attack state.
-  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe, 12 Sapgem Wand
+  weaponIndex: -1, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe, 12 Sapgem Wand, 13 Tiger Paw
 
   // Bow draw/release state, including close-range bow melee fallback.
   bowDrawing: false,
@@ -4126,9 +4131,10 @@ const player = {
   woodWalls: 0,
   woodDoors: 0,
   torches: 0,
+  chests: 0,
 
-  // Static treasure chests are world content. Only opened chest IDs persist;
-  // they are not part of routine multiplayer replication.
+  // Legacy per-character opened-treasure IDs are retained only for old saves.
+  // v414 chest open state is shared map mutation state.
   openedTreasureIds: new Set(),
 
   // Count-based item ownership. Missing/zero means not owned.
@@ -4238,8 +4244,8 @@ const player = {
 const HOTBAR_SLOT_COUNT = 9;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
-const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"]);
-const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"]);
+const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand", "tigerPaw"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -4257,7 +4263,8 @@ const WEAPON_ITEM_IDS = [
   "weapon_lostKey",
   "weapon_hugeSunflower",
   "weapon_pickaxe",
-  "weapon_sapgemWand"
+  "weapon_sapgemWand",
+  "weapon_tigerPaw"
 ];
 
 const HAT_ITEM_IDS = [
@@ -4337,6 +4344,15 @@ const CRAFT_RECIPES = Object.freeze({
     category: "weapons",
     ingredients: Object.freeze({ wood: 10 }),
     storyKey: "shepherdStaffCrafted",
+    repeatable: true
+  }),
+  tigerPaw: Object.freeze({
+    name: "Tiger Paw",
+    itemId: "weapon_tigerPaw",
+    equipType: "weapon",
+    equipIndex: 13,
+    category: "weapons",
+    ingredients: Object.freeze({ wood: 8, stone: 2 }),
     repeatable: true
   }),
   woodHelm: Object.freeze({
@@ -4542,6 +4558,7 @@ const SHOP_ITEMS = [
 function shopImageForItemId(itemId) {
   if (itemId === "woodFloor") return document.getElementById("inventoryWoodFloorImg");
   if (itemId === "stoneFloor") return document.getElementById("inventoryStoneFloorImg");
+  if (itemId === "chest") return document.getElementById("inventoryChestImg");
   if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
   if (itemId === "woodDoor") return document.getElementById("inventoryWoodDoorImg");
   if (itemId === "torch") return torchImage;
@@ -4756,6 +4773,7 @@ function hotbarItemInventoryCount(itemId) {
   if (itemId === "woodWall") return Math.max(0, Math.floor(Number(player.woodWalls) || 0));
   if (itemId === "woodDoor") return Math.max(0, Math.floor(Number(player.woodDoors) || 0));
   if (itemId === "torch") return Math.max(0, Math.floor(Number(player.torches) || 0));
+  if (itemId === "chest") return Math.max(0, Math.floor(Number(player.chests) || 0));
   return 0;
 }
 
@@ -4765,6 +4783,7 @@ function hotbarItemDisplayName(itemId) {
   if (itemId === "woodWall") return "Wood Wall";
   if (itemId === "woodDoor") return "Wood Door";
   if (itemId === "torch") return "Torch";
+  if (itemId === "chest") return "Chest";
   const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
   if (weaponIndex >= 0) return weaponDisplayName(weaponIndex);
   return itemId || "Item";
@@ -5055,8 +5074,7 @@ function nearbySpawnInteraction() {
 
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     const type = npc?.type;
-    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal", "treasureChest"].includes(type)) continue;
-    if (type === "treasureChest" && player.openedTreasureIds?.has(String(npc.id || ""))) continue;
+    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal"].includes(type)) continue;
     candidates.push({
       kind: "placedNpc",
       npcType: type,
@@ -5064,6 +5082,21 @@ function nearbySpawnInteraction() {
       x: Number(npc.x) || 0,
       y: Number(npc.y) || 0,
       radius: Math.max(8, Number(npc.interactionRadius) || (type === "classResetCrystal" ? 28 : 24))
+    });
+  }
+
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "chest") continue;
+    // Looted treasure stays visibly open and can still be harvested with the
+    // pickaxe, but does not keep showing a redundant OPEN prompt. Player-placed
+    // empty chests can be opened/closed as a simple object interaction.
+    if (structure.treasure && structure.opened) continue;
+    candidates.push({
+      kind: "chestStructure",
+      structure,
+      x: Number(structure.x) || 0,
+      y: Number(structure.y) || 0,
+      radius: 24
     });
   }
 
@@ -5662,6 +5695,12 @@ function interactWithNearbyObject() {
 
   breakShadowHide();
 
+  if (interaction.kind === "chestStructure") {
+    const chest = interaction.structure;
+    if (chest?.treasure) return Boolean(onlineClient?.requestTreasureOpen(chest.id));
+    return Boolean(onlineClient?.requestChestToggle(chest?.id));
+  }
+
   if (interaction.kind === "npc") {
     interactWithTutorialNpc();
     return true;
@@ -6051,6 +6090,7 @@ function weaponTypeForShopItem(itemId) {
   if (itemId === "weapon_axe") return "Axe";
   if (itemId === "weapon_pickaxe") return "Pickaxe";
   if (itemId === "weapon_katana") return "Katana";
+  if (itemId === "weapon_tigerPaw") return "Hurl";
   if (["weapon_sword", "weapon_oldSword"].includes(itemId)) return "Sword";
   return "Weapon";
 }
@@ -6127,6 +6167,9 @@ function itemDetailData(itemId) {
     }
     if ((Number(weaponProfile.magicPower) || 0) > 0) {
       rows.push(["Magic Power", `${weaponProfile.magicPower}`]);
+    }
+    if (itemId === "weapon_tigerPaw") {
+      rows.push(["Primary", "Grab / throw mobs"]);
     }
     const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
     const isBowWeapon = typeof COMBAT_BALANCE.isBowWeaponIndex === "function"
@@ -7942,6 +7985,7 @@ function weaponDisplayName(style) {
   if (style === "lostKeyWand") return "Tournesol";
   if (style === "sunflowerWand") return "Tabatha's Key";
   if (style === "sapgemWand") return "Sapgem Wand";
+  if (style === "tigerPaw") return "Tiger Paw";
   if (style === "katana") return "Katana";
   if (style === "oldSword") return "Sword";
   if (style === "bow") return "Wood Bow";
@@ -8113,6 +8157,7 @@ function weaponImageForIndex(index) {
   if (index === 10) return hugeSunflowerWandImage;
   if (index === 11) return pickaxeImage;
   if (index === 12) return sapgemWandImage;
+  if (index === 13) return tigerPawImage;
   return swordImage;
 }
 
@@ -8308,6 +8353,7 @@ function updateInventoryUi() {
   const woodWallCount = document.getElementById("inventoryWoodWallCount");
   const woodDoorCount = document.getElementById("inventoryWoodDoorCount");
   const torchCount = document.getElementById("inventoryTorchCount");
+  const chestCount = document.getElementById("inventoryChestCount");
   const arrowHud = document.getElementById("arrowHud");
   const arrowHudCount = document.getElementById("arrowHudCount");
 
@@ -8327,6 +8373,7 @@ function updateInventoryUi() {
   if (woodWallCount) woodWallCount.textContent = `${player.woodWalls}`;
   if (woodDoorCount) woodDoorCount.textContent = `${player.woodDoors}`;
   if (torchCount) torchCount.textContent = `${player.torches}`;
+  if (chestCount) chestCount.textContent = `${player.chests}`;
   if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
   if (arrowHud) {
     arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
@@ -8814,7 +8861,8 @@ function buildLocalCharacterSave() {
       stoneFloors: Math.max(0, Math.floor(Number(player.stoneFloors) || 0)),
       woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0)),
       woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0)),
-      torches: Math.max(0, Math.floor(Number(player.torches) || 0))
+      torches: Math.max(0, Math.floor(Number(player.torches) || 0)),
+      chests: Math.max(0, Math.floor(Number(player.chests) || 0))
     },
 
     items: validSavedItemIds(player.items),
@@ -8957,6 +9005,7 @@ function applyLocalCharacterSave(save) {
   player.woodWalls = clampLocalSaveInteger(save.resources?.woodWalls, 0, 999999, 0);
   player.woodDoors = clampLocalSaveInteger(save.resources?.woodDoors, 0, 999999, 0);
   player.torches = clampLocalSaveInteger(save.resources?.torches, 0, 999999, 0);
+  player.chests = clampLocalSaveInteger(save.resources?.chests, 0, 999999, 0);
   player.openedTreasureIds = new Set(
     (Array.isArray(save.openedTreasureIds) ? save.openedTreasureIds : [])
       .filter(id => typeof id === "string" && id.includes(":treasure:"))
@@ -9123,7 +9172,8 @@ function persistentServerBootstrapPayload() {
       stoneFloors: player.stoneFloors,
       woodWalls: player.woodWalls,
       woodDoors: player.woodDoors,
-      torches: player.torches
+      torches: player.torches,
+      chests: player.chests
     },
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
@@ -10049,6 +10099,8 @@ document.querySelectorAll(".stat-plus").forEach(button => {
 // PLAYER BUILDING (v384 edge-wall model)
 // -----------------------------------------------------------------------------
 const placedStructuresByMap = new Map();
+const removedWorldStructureIdsByMap = new Map();
+const worldStructureStatesByMap = new Map();
 let placedStructureRevision = 0;
 const BUILD_GRID_SIZE = 16;
 const BUILD_PLACE_RANGE = 96;
@@ -10076,7 +10128,15 @@ function worldGeneratedStructuresForMap(mapId = currentMapId) {
   const structures = typeof WORLD_CONTENT !== "undefined"
     ? WORLD_CONTENT.maps?.[mapId]?.structures
     : null;
-  return Array.isArray(structures) ? structures : [];
+  if (!Array.isArray(structures)) return [];
+  const removed = removedWorldStructureIdsByMap.get(mapId) || new Set();
+  const states = worldStructureStatesByMap.get(mapId) || new Map();
+  return structures
+    .filter(structure => structure?.id && !removed.has(structure.id))
+    .map(structure => {
+      const state = states.get(structure.id);
+      return state ? { ...structure, ...state } : structure;
+    });
 }
 
 function currentMapStructures() {
@@ -10098,9 +10158,20 @@ function currentMapStructures() {
   return structures;
 }
 
-function applyStructureSnapshot(mapId, structures) {
+function applyStructureSnapshot(mapId, structures, removedWorldStructureIds = [], worldStructureStates = []) {
   if (typeof mapId !== "string") return;
   placedStructuresByMap.set(mapId, Array.isArray(structures) ? structures.map(item => ({ ...item })) : []);
+  removedWorldStructureIdsByMap.set(mapId, new Set(
+    (Array.isArray(removedWorldStructureIds) ? removedWorldStructureIds : [])
+      .filter(id => typeof id === "string" && id)
+  ));
+  const stateMap = new Map();
+  for (const entry of Array.isArray(worldStructureStates) ? worldStructureStates : []) {
+    if (!entry?.id) continue;
+    const { id, ...state } = entry;
+    stateMap.set(id, { ...state });
+  }
+  worldStructureStatesByMap.set(mapId, stateMap);
   placedStructureRevision += 1;
 }
 
@@ -10118,13 +10189,51 @@ function applyStructureRemoved(mapId, structureId) {
   if (!mapId || !structureId) return false;
   const list = placedStructuresByMap.get(mapId) || [];
   const next = list.filter(item => item.id !== structureId);
-  if (next.length === list.length) return false;
-  placedStructuresByMap.set(mapId, next);
+  let changed = next.length !== list.length;
+  if (changed) {
+    placedStructuresByMap.set(mapId, next);
+  } else {
+    const worldDefinition = WORLD_CONTENT?.maps?.[mapId]?.structures?.find(item => item?.id === structureId);
+    if (worldDefinition) {
+      let removed = removedWorldStructureIdsByMap.get(mapId);
+      if (!removed) {
+        removed = new Set();
+        removedWorldStructureIdsByMap.set(mapId, removed);
+      }
+      if (!removed.has(structureId)) {
+        removed.add(structureId);
+        worldStructureStatesByMap.get(mapId)?.delete(structureId);
+        changed = true;
+      }
+    }
+  }
+  if (!changed) return false;
   placedStructureRevision += 1;
   if (localDoorPassageId === structureId) {
     localDoorPassageId = null;
     localDoorPassageUntil = 0;
   }
+  return true;
+}
+
+function applyStructureState(mapId, structureId, state) {
+  if (!mapId || !structureId || !state || typeof state !== "object") return false;
+  const placed = placedStructuresByMap.get(mapId) || [];
+  const dynamic = placed.find(item => item?.id === structureId);
+  if (dynamic) {
+    Object.assign(dynamic, state);
+    placedStructureRevision += 1;
+    return true;
+  }
+  const worldDefinition = WORLD_CONTENT?.maps?.[mapId]?.structures?.find(item => item?.id === structureId);
+  if (!worldDefinition) return false;
+  let states = worldStructureStatesByMap.get(mapId);
+  if (!states) {
+    states = new Map();
+    worldStructureStatesByMap.set(mapId, states);
+  }
+  states.set(structureId, { ...(states.get(structureId) || {}), ...state });
+  placedStructureRevision += 1;
   return true;
 }
 
@@ -10141,6 +10250,19 @@ function drawStructureFloor(structure, camX, camY, alpha = 1) {
 
 function drawWoodFloor(structure, camX, camY, alpha = 1) {
   drawStructureFloor(structure, camX, camY, alpha);
+}
+
+function drawChestStructure(structure, camX, camY, alpha = 1) {
+  const screenX = Math.round(Number(structure?.x) - camX);
+  const screenY = Math.round(Number(structure?.y) - camY);
+  const image = structure?.opened ? chestOpenStructureImage : chestClosedStructureImage;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "rgba(30, 24, 18, .28)";
+  ctx.fillRect(screenX - 7, screenY, 14, 2);
+  ctx.drawImage(image, screenX - 8, screenY - 16, 16, 16);
+  ctx.restore();
 }
 
 function torchDisplayWorldPosition(structure) {
@@ -10376,25 +10498,17 @@ function localDoorPassageActive(structure) {
 
 function doorAllowsLocalPlayerStep(structure, fromX, fromY, toX, toY, playerRadius = 4) {
   if (structure?.kind !== "woodDoor") return false;
-  const now = performance.now();
   const tangential = Math.min(
     doorTangentialDistance(structure, fromX, fromY),
     doorTangentialDistance(structure, toX, toY)
   );
   if (tangential > 8 + playerRadius + 2) return false;
 
-  if (localDoorPassageId === structure.id && now <= localDoorPassageUntil) {
-    localDoorPassageUntil = now + DOOR_PASSAGE_MS;
-    return true;
-  }
-
-  const before = doorPerpendicularDistance(structure, fromX, fromY);
-  const after = doorPerpendicularDistance(structure, toX, toY);
-  const steppingToward = before <= DOOR_ADJACENT_DISTANCE && after < before - 0.01;
-  if (!steppingToward) return false;
-
+  // v418: the automatic door itself never traps the local player. The wall
+  // pieces flanking the doorway still provide the solid frame, while any step
+  // travelling through the door channel refreshes the open/passage state.
   localDoorPassageId = structure.id;
-  localDoorPassageUntil = now + DOOR_PASSAGE_MS;
+  localDoorPassageUntil = performance.now() + DOOR_PASSAGE_MS;
   return true;
 }
 
@@ -10570,6 +10684,19 @@ function pointInsideRoofRegion(region, worldX, worldY) {
   ));
 }
 
+function pointUnderAutomaticRoof(worldX, worldY) {
+  const x = Number(worldX);
+  const y = Number(worldY);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  const floorX = Math.round(x / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const floorY = Math.round(y / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  if (Math.abs(x - floorX) > 8 || Math.abs(y - floorY) > 8) return false;
+  const key = structureCellKey(floorX, floorY);
+  return automaticRoofRegions().some(region =>
+    region?.floorKeys?.has(key) || pointInsideRoofRegion(region, x, y)
+  );
+}
+
 function playerInsideRoofRegion(region) {
   return pointInsideRoofRegion(region, player.x, player.y);
 }
@@ -10714,6 +10841,10 @@ function addPlayerStructureDrawables(drawables, camX, camY) {
       addDrawable(drawables, sortY, () => drawPlacedTorch(structure, camX, camY));
       continue;
     }
+    if (structure.kind === "chest") {
+      addDrawable(drawables, Number(structure.y), () => drawChestStructure(structure, camX, camY));
+      continue;
+    }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
     addDrawable(drawables, wallDrawSortY(structure), () => {
       if (structure.kind === "woodDoor") drawWoodDoor(structure, camX, camY);
@@ -10724,6 +10855,12 @@ function addPlayerStructureDrawables(drawables, camX, camY) {
 
 function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
   for (const structure of currentMapStructures()) {
+    if (structure.kind === "chest") {
+      const left = Number(structure.x) - 7;
+      const top = Number(structure.y) - 8;
+      if (circleRectCollision(x, y, playerRadius, left, top, 14, 8)) return true;
+      continue;
+    }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
     const rect = wallCollisionRect(structure);
     if (!circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) continue;
@@ -10746,6 +10883,15 @@ function pickaxeStructurePointerBounds(structure) {
       top: display.y - 16,
       right: display.x + 8,
       bottom: display.y + 2
+    };
+  }
+
+  if (structure?.kind === "chest") {
+    return {
+      left: Number(structure.x) - 8,
+      top: Number(structure.y) - 16,
+      right: Number(structure.x) + 8,
+      bottom: Number(structure.y)
     };
   }
 
@@ -10799,7 +10945,7 @@ function playerStructurePickaxeTarget() {
   let bestPriority = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || structure.worldGenerated || !["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(structure.kind)) continue;
+    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(structure.kind)) continue;
 
     // Player position is only a reach gate. It must never decide which placed
     // piece wins when several structures are in range; the cursor does that.
@@ -10816,7 +10962,7 @@ function playerStructurePickaxeTarget() {
     // If the pointer overlaps a wall/door facade and the floor behind it,
     // prefer the visible edge structure. Otherwise choose whichever structure
     // is geometrically closest to the cursor, independent of player distance.
-    const priority = structure.kind === "torch"
+    const priority = ["torch", "chest"].includes(structure.kind)
       ? 0
       : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)
         ? 1
@@ -10849,6 +10995,13 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
   if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure.kind)) {
     const left = Math.round(Number(structure.x) - camX - 8);
     const top = Math.round(Number(structure.y) - camY - 8);
+    ctx.fillRect(left, top, 16, 1);
+    ctx.fillRect(left, top + 15, 16, 1);
+    ctx.fillRect(left, top, 1, 16);
+    ctx.fillRect(left + 15, top, 1, 16);
+  } else if (structure.kind === "chest") {
+    const left = Math.round(Number(structure.x) - camX - 8);
+    const top = Math.round(Number(structure.y) - camY - 16);
     ctx.fillRect(left, top, 16, 1);
     ctx.fillRect(left, top + 15, 16, 1);
     ctx.fillRect(left, top, 1, 16);
@@ -10904,11 +11057,12 @@ function buildPieceCount(kind) {
   if (kind === "woodWall") return Math.max(0, Number(player.woodWalls) || 0);
   if (kind === "woodDoor") return Math.max(0, Number(player.woodDoors) || 0);
   if (kind === "torch") return Math.max(0, Number(player.torches) || 0);
+  if (kind === "chest") return Math.max(0, Number(player.chests) || 0);
   return 0;
 }
 
 function beginBuildPlacement(kind) {
-  if (!["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  if (!["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(kind) || buildPieceCount(kind) <= 0) return false;
   selectedBuildPiece = kind;
   // Selecting a build piece from the hotbar/mouse wheel must not clear held
   // movement input. Only close the inventory when it is actually open.
@@ -11038,13 +11192,11 @@ function rawWallPlacementCandidate(worldX, worldY) {
 
 function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
   const candidate = rawWallPlacementCandidate(worldX, worldY);
-  if (!candidate || floorBelongsToCompletedRoof(candidate.floor)) return null;
-  // v392: walls/doors are perimeter pieces only. Internal edges between two
-  // floor cells are intentionally unavailable, which prevents clunky room
-  // partitions and multiple wall faces being stacked around one floor tile.
-  if (floorExistsAcrossBuildEdge(candidate.floorX, candidate.floorY, candidate.edge)) return null;
-  // A door is a deliberate opening in an established wall run: it needs a
-  // same-axis Wood Wall immediately on both sides before it can be placed.
+  if (!candidate) return null;
+  // v418: boundaries may sit between two floor tiles. This enables interior
+  // partitions, rooms, cave-like layouts, and later editing inside an already
+  // completed roof without treating adjacent floor as an invalid placement.
+  // A door is still a deliberate opening in an established wall run.
   if (kind === "woodDoor" && !doorCandidateHasFlankingWalls(candidate)) return null;
   return candidate;
 }
@@ -11110,6 +11262,22 @@ function torchWallSupportAtWorldPoint(worldX, worldY) {
   return best;
 }
 
+function chestPlacementCandidate(worldX, worldY) {
+  const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const floor = currentMapStructures().find(structure =>
+    BUILD_FLOOR_STRUCTURE_KINDS.includes(structure?.kind) &&
+    Math.abs(Number(structure.x) - x) < 1 &&
+    Math.abs(Number(structure.y) - y) < 1
+  ) || null;
+  const occupied = currentMapStructures().some(structure =>
+    STRUCTURE_TOPOLOGY.layerOf(structure) === STRUCTURE_TOPOLOGY.LAYERS.OBJECT &&
+    Math.abs(Number(structure.x) - x) < 1 &&
+    Math.abs(Number(structure.y) - y) < 1
+  );
+  return { x, y, valid: Boolean(floor) && !occupied };
+}
+
 function torchPlacementCandidate(worldX, worldY) {
   const wall = torchWallSupportAtWorldPoint(worldX, worldY);
   if (wall) {
@@ -11162,6 +11330,15 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
     return true;
   }
 
+  if (selectedBuildPiece === "chest") {
+    const candidate = chestPlacementCandidate(worldX, worldY);
+    if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement("chest", candidate.x, candidate.y);
+    }
+    return true;
+  }
+
   if (selectedBuildPiece === "torch") {
     const candidate = torchPlacementCandidate(worldX, worldY);
     if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
@@ -11210,6 +11387,14 @@ function drawBuildPlacementPreview(camX, camY) {
     const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };
     if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, inRange ? 0.42 : 0.18);
     else drawWoodWall(preview, camX, camY, inRange ? 0.42 : 0.18);
+    return;
+  }
+
+  if (selectedBuildPiece === "chest") {
+    const candidate = chestPlacementCandidate(worldX, worldY);
+    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
+    drawChestStructure({ kind: "chest", x: candidate.x, y: candidate.y, opened: false }, camX, camY, valid ? 0.7 : 0.22);
+    if (!valid) drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, false);
     return;
   }
 
@@ -11280,6 +11465,7 @@ let worldTime = 0;
 const WORLD_CLOCK_MINUTES_PER_DAY = 24 * 60;
 const WORLD_CLOCK_DEFAULT_REAL_MS_PER_GAME_MINUTE = 500;
 let worldClockAnchorGameMinutes = 8 * 60;
+let worldClockAnchorAbsoluteGameMinutes = 8 * 60;
 let worldClockAnchorLocalMs = performance.now();
 let worldClockRealMsPerGameMinute = WORLD_CLOCK_DEFAULT_REAL_MS_PER_GAME_MINUTE;
 let worldClockLastHudMinute = null;
@@ -11288,6 +11474,9 @@ function applyWorldClockSnapshot(snapshot) {
   if (!snapshot || !Number.isFinite(Number(snapshot.gameMinutes))) return false;
   const realMsPerGameMinute = Number(snapshot.realMsPerGameMinute);
   worldClockAnchorGameMinutes = ((Number(snapshot.gameMinutes) % WORLD_CLOCK_MINUTES_PER_DAY) + WORLD_CLOCK_MINUTES_PER_DAY) % WORLD_CLOCK_MINUTES_PER_DAY;
+  worldClockAnchorAbsoluteGameMinutes = Number.isFinite(Number(snapshot.absoluteGameMinutes))
+    ? Number(snapshot.absoluteGameMinutes)
+    : worldClockAnchorGameMinutes;
   worldClockAnchorLocalMs = performance.now();
   worldClockRealMsPerGameMinute = Number.isFinite(realMsPerGameMinute) && realMsPerGameMinute > 0
     ? realMsPerGameMinute
@@ -11297,12 +11486,36 @@ function applyWorldClockSnapshot(snapshot) {
   return true;
 }
 
-function currentWorldClockMinutes() {
+function currentWorldClockAbsoluteMinutes() {
   const elapsedRealMs = Math.max(0, performance.now() - worldClockAnchorLocalMs);
-  return (
-    worldClockAnchorGameMinutes +
-    elapsedRealMs / Math.max(1, worldClockRealMsPerGameMinute)
-  ) % WORLD_CLOCK_MINUTES_PER_DAY;
+  return worldClockAnchorAbsoluteGameMinutes +
+    elapsedRealMs / Math.max(1, worldClockRealMsPerGameMinute);
+}
+
+function currentWorldClockMinutes() {
+  const absoluteMinutes = currentWorldClockAbsoluteMinutes();
+  return ((absoluteMinutes % WORLD_CLOCK_MINUTES_PER_DAY) + WORLD_CLOCK_MINUTES_PER_DAY) % WORLD_CLOCK_MINUTES_PER_DAY;
+}
+
+function currentMapRainIntensity() {
+  if (typeof WEATHER_RULES === "undefined" || !WEATHER_RULES?.rainIntensity) return 0;
+  return WEATHER_RULES.rainIntensity(
+    Number(WORLD_CONTENT?.worldSeed) || 0,
+    currentMapId,
+    currentWorldClockAbsoluteMinutes()
+  );
+}
+
+function currentMapIsRaining() {
+  if (typeof WEATHER_RULES === "undefined") return false;
+  if (typeof WEATHER_RULES.isRaining === "function") {
+    return WEATHER_RULES.isRaining(
+      Number(WORLD_CONTENT?.worldSeed) || 0,
+      currentMapId,
+      currentWorldClockAbsoluteMinutes()
+    );
+  }
+  return currentMapRainIntensity() > 0.04;
 }
 
 function worldClockPhase(minutes = currentWorldClockMinutes()) {
@@ -11313,15 +11526,19 @@ function worldClockPhase(minutes = currentWorldClockMinutes()) {
   return "DUSK";
 }
 
+const WORLD_DARKNESS_COLOR = "#020307";
+const INTERIOR_DAY_AMBIENT_ALPHA = 0.54;
+const LOCAL_NIGHT_SIGHT_RADIUS = 28;
+
 function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
   const hour = minutes / 60;
 
-  // v407: push the established torch-driven night look substantially darker.
-  // Darkness ramps through the evening, peaks near midnight, then eases toward
-  // the existing 05:00 dawn; light sources now matter on every map at night.
-  const duskNightAlpha = 0.60;
-  const midnightAlpha = 0.92;
-  const preDawnAlpha = 0.62;
+  // v418: midnight is now effectively black away from local/placed light. The
+  // ramp still leaves dusk and dawn readable while making torches genuinely
+  // necessary during the deepest part of the night.
+  const duskNightAlpha = 0.68;
+  const midnightAlpha = 0.992;
+  const preDawnAlpha = 0.72;
 
   if (hour >= 20) {
     const t = Math.max(0, Math.min(1, (hour - 20) / 4));
@@ -11338,6 +11555,251 @@ function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
     return duskNightAlpha * ((hour - 18) / 2);
   }
   return 0;
+}
+
+function activeInteriorAmbientAlpha(outdoorAlpha = worldClockLightingAlpha()) {
+  // Finished roof regions are dim even at noon. As outdoor darkness overtakes
+  // the room's baseline, use the stronger value rather than double-darkening.
+  return Math.max(INTERIOR_DAY_AMBIENT_ALPHA, Math.max(0, Number(outdoorAlpha) || 0));
+}
+
+// v417: ordinary painted ground shadows belong to sunlight, not ambient
+// darkness. Fade them through dusk/dawn and remove them completely once the
+// night lighting reaches its established 20:00 level. This is presentation
+// only and never enters multiplayer state.
+function worldClockSunShadowFactor(minutes = currentWorldClockMinutes()) {
+  const darkness = worldClockLightingAlpha(minutes);
+  return Math.max(0, Math.min(1, 1 - darkness / 0.68));
+}
+
+// Passing cloud shadows are intentionally client-only atmosphere. They do not
+// represent gameplay weather and therefore require no server state, heartbeat,
+// or replication. A pass is generated only occasionally during daylight and
+// moves in world space so walking/camera motion does not pin it to the screen.
+const CLOUD_SHADOW_MIN_GAP_SECONDS = 30;
+const CLOUD_SHADOW_MAX_GAP_SECONDS = 62;
+let cloudShadowPass = null;
+let cloudShadowNextAt = 12 + Math.random() * 18;
+let cloudShadowMapId = null;
+
+function cloudShadowDaylightFactor(minutes = currentWorldClockMinutes()) {
+  const sunFactor = worldClockSunShadowFactor(minutes);
+  // Keep them subtle around dawn/dusk and absent at night.
+  return Math.max(0, Math.min(1, (sunFactor - 0.12) / 0.88));
+}
+
+function scheduleNextCloudShadow(now = worldTime) {
+  cloudShadowNextAt = now + CLOUD_SHADOW_MIN_GAP_SECONDS +
+    Math.random() * (CLOUD_SHADOW_MAX_GAP_SECONDS - CLOUD_SHADOW_MIN_GAP_SECONDS);
+}
+
+function beginCloudShadowPass(camX, camY) {
+  const duration = 10 + Math.random() * 6;
+  const direction = Math.random() < 0.5 ? 1 : -1;
+  const margin = 130;
+  const startX = direction > 0
+    ? camX - margin
+    : camX + VIEW_W + margin;
+  const startY = camY + 24 + Math.random() * Math.max(28, VIEW_H - 48);
+  const travel = VIEW_W + margin * 2 + 180;
+  const bankCount = 2 + Math.floor(Math.random() * 3);
+  const banks = [];
+
+  for (let bankIndex = 0; bankIndex < bankCount; bankIndex += 1) {
+    const pointCount = 12 + Math.floor(Math.random() * 5);
+    const radial = [];
+    for (let pointIndex = 0; pointIndex < pointCount; pointIndex += 1) {
+      const wave = Math.sin(pointIndex * 1.73 + bankIndex * 0.8) * 0.10;
+      radial.push(0.82 + wave + Math.random() * 0.24);
+    }
+    banks.push({
+      ox: (bankIndex - (bankCount - 1) / 2) * (64 + Math.random() * 34) + (Math.random() - 0.5) * 24,
+      oy: (Math.random() - 0.5) * 42,
+      rx: 76 + Math.random() * 58,
+      ry: 20 + Math.random() * 24,
+      angle: (Math.random() - 0.5) * 0.22,
+      alpha: 0.035 + Math.random() * 0.026,
+      radial
+    });
+  }
+
+  const wisps = Array.from({ length: 3 + Math.floor(Math.random() * 4) }, (_, index) => ({
+    ox: (index - 2) * (42 + Math.random() * 25) + (Math.random() - 0.5) * 35,
+    oy: 18 + (Math.random() - 0.5) * 58,
+    rx: 34 + Math.random() * 50,
+    ry: 6 + Math.random() * 11,
+    angle: (Math.random() - 0.5) * 0.35,
+    alpha: 0.018 + Math.random() * 0.018
+  }));
+
+  cloudShadowPass = {
+    mapId: currentMapId,
+    startedAt: worldTime,
+    duration,
+    startX,
+    startY,
+    vx: direction * travel / duration,
+    vy: (Math.random() - 0.5) * 4,
+    banks,
+    wisps
+  };
+}
+
+function traceIrregularCloudBank(pathCtx, centerX, centerY, bank, scale = 1) {
+  const radial = Array.isArray(bank?.radial) ? bank.radial : [];
+  if (radial.length < 3) return false;
+  const points = radial.map((radiusFactor, index) => {
+    const angle = index / radial.length * Math.PI * 2;
+    return {
+      x: Math.cos(angle) * bank.rx * scale * radiusFactor,
+      y: Math.sin(angle) * bank.ry * scale * radiusFactor
+    };
+  });
+
+  pathCtx.save();
+  pathCtx.translate(centerX, centerY);
+  pathCtx.rotate(bank.angle || 0);
+  pathCtx.beginPath();
+  const firstMid = {
+    x: (points[points.length - 1].x + points[0].x) * 0.5,
+    y: (points[points.length - 1].y + points[0].y) * 0.5
+  };
+  pathCtx.moveTo(firstMid.x, firstMid.y);
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    const midpointX = (current.x + next.x) * 0.5;
+    const midpointY = (current.y + next.y) * 0.5;
+    pathCtx.quadraticCurveTo(current.x, current.y, midpointX, midpointY);
+  }
+  pathCtx.closePath();
+  pathCtx.fill();
+  pathCtx.restore();
+  return true;
+}
+
+function applyCloudShadowInteriorClip(camX, camY) {
+  const interiorRegion = typeof activeInteriorRoofRegion === "function"
+    ? activeInteriorRoofRegion()
+    : null;
+  if (!interiorRegion?.floors?.length) return;
+
+  // The roof is hidden while the local player is inside. Cut that revealed
+  // room out of the overhead-cloud layer so an outdoor cloud cannot visibly
+  // pass through a closed building interior.
+  ctx.beginPath();
+  ctx.rect(0, 0, VIEW_W, VIEW_H);
+  for (const floor of interiorRegion.floors) {
+    const x = Number(floor?.x);
+    const y = Number(floor?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    ctx.rect(
+      Math.floor(x - camX - 8),
+      Math.floor(y - camY - 8),
+      16,
+      16
+    );
+  }
+  ctx.clip("evenodd");
+}
+
+function drawCloudShadows(camX, camY) {
+  if (cloudShadowMapId !== currentMapId) {
+    cloudShadowMapId = currentMapId;
+    cloudShadowPass = null;
+    scheduleNextCloudShadow(worldTime + 4 + Math.random() * 8);
+  }
+
+  const rainSuppression = Math.max(0, 1 - currentMapRainIntensity() * 1.2);
+  const daylight = cloudShadowDaylightFactor() * rainSuppression;
+  if (daylight <= 0.001) return;
+
+  if (!cloudShadowPass && worldTime >= cloudShadowNextAt) {
+    beginCloudShadowPass(camX, camY);
+  }
+  if (!cloudShadowPass) return;
+
+  const age = worldTime - cloudShadowPass.startedAt;
+  if (age >= cloudShadowPass.duration || cloudShadowPass.mapId !== currentMapId) {
+    cloudShadowPass = null;
+    scheduleNextCloudShadow();
+    return;
+  }
+
+  const fadeIn = Math.min(1, Math.max(0, age / 1.1));
+  const fadeOut = Math.min(1, Math.max(0, (cloudShadowPass.duration - age) / 1.4));
+  const passAlpha = daylight * fadeIn * fadeOut;
+  const centerX = cloudShadowPass.startX + cloudShadowPass.vx * age - camX;
+  const centerY = cloudShadowPass.startY + cloudShadowPass.vy * age - camY;
+
+  ctx.save();
+  applyCloudShadowInteriorClip(camX, camY);
+  ctx.fillStyle = "#182b24";
+
+  for (const bank of cloudShadowPass.banks || []) {
+    const x = centerX + bank.ox;
+    const y = centerY + bank.oy;
+    if (x + bank.rx * 1.3 < -12 || x - bank.rx * 1.3 > VIEW_W + 12 ||
+        y + bank.ry * 1.5 < -12 || y - bank.ry * 1.5 > VIEW_H + 12) continue;
+
+    // Irregular stretched banks avoid the obvious "pile of circles" look. A
+    // larger faint pass creates the penumbra, then a denser inner silhouette
+    // gives the cloud body subtle mottled variation without blur filters.
+    ctx.globalAlpha = passAlpha * bank.alpha * 0.42;
+    traceIrregularCloudBank(ctx, x, y, bank, 1.16);
+    ctx.globalAlpha = passAlpha * bank.alpha;
+    traceIrregularCloudBank(ctx, x, y, bank, 1);
+  }
+
+  for (const wisp of cloudShadowPass.wisps || []) {
+    const x = centerX + wisp.ox;
+    const y = centerY + wisp.oy;
+    ctx.globalAlpha = passAlpha * wisp.alpha;
+    ctx.beginPath();
+    ctx.ellipse(x, y, wisp.rx, wisp.ry, wisp.angle || 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawMapRainOverlay() {
+  const intensity = currentMapRainIntensity();
+  if (intensity <= 0.01) return;
+
+  const particleCount = Math.max(18, Math.round(58 * intensity));
+  const seedPrefix = `${Number(WORLD_CONTENT?.worldSeed) || 0}:${currentMapId}:rain`;
+
+  ctx.save();
+  // When the local player reveals a roofed interior, cut that room out of the
+  // screen-space rain pass. The server uses the same roof topology as shelter
+  // for Wet status, so the visual and gameplay rules agree.
+  applyCloudShadowInteriorClip(currentCamX, currentCamY);
+
+  // A rainy map is just a touch flatter/dimmer during the day. The separate
+  // night/interior lighting pass still owns actual darkness and torch carving.
+  ctx.globalAlpha = 0.035 * intensity;
+  ctx.fillStyle = "#2b3944";
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+  ctx.fillStyle = "#b8cad2";
+  for (let index = 0; index < particleCount; index += 1) {
+    const seedX = stableTorchLightSeed(`${seedPrefix}:${index}:x`) / (Math.PI * 2);
+    const seedY = stableTorchLightSeed(`${seedPrefix}:${index}:y`) / (Math.PI * 2);
+    const seedSpeed = stableTorchLightSeed(`${seedPrefix}:${index}:s`) / (Math.PI * 2);
+    const speed = 62 + seedSpeed * 48;
+    const drift = 10 + seedSpeed * 8;
+    const xSpan = VIEW_W + 28;
+    const ySpan = VIEW_H + 24;
+    let y = (seedY * ySpan + worldTime * speed) % ySpan - 12;
+    let x = (seedX * xSpan - worldTime * drift + Math.floor((seedY * ySpan + worldTime * speed) / ySpan) * 19) % xSpan - 14;
+    if (x < -14) x += xSpan;
+    ctx.globalAlpha = intensity * (0.13 + seedSpeed * 0.10);
+    const length = 3 + Math.round(seedSpeed * 3);
+    ctx.fillRect(Math.round(x), Math.round(y), 1, length);
+    if (seedSpeed > 0.62) ctx.fillRect(Math.round(x - 1), Math.round(y + length - 1), 1, 1);
+  }
+  ctx.restore();
 }
 
 function formatWorldClock(minutes = currentWorldClockMinutes()) {
@@ -11656,6 +12118,126 @@ function structureInteriorBoundarySide(structure, region) {
   return north ? "north" : "south";
 }
 
+function appendInteriorGroundPath(pathCtx, region, camX = currentCamX, camY = currentCamY) {
+  if (!pathCtx || !region?.floors?.length) return false;
+  let appended = false;
+  for (const floor of region.floors) {
+    const x = Number(floor?.x);
+    const y = Number(floor?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    pathCtx.rect(
+      Math.floor(x - camX - 8),
+      Math.floor(y - camY - 8),
+      16,
+      16
+    );
+    appended = true;
+  }
+  return appended;
+}
+
+function restoreActiveInteriorAmbient(bufferCtx, region, alpha) {
+  if (!bufferCtx || !region?.floors?.length || alpha <= 0.001) return;
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  if (!appendInteriorGroundPath(bufferCtx, region)) {
+    bufferCtx.restore();
+    return;
+  }
+  bufferCtx.clip();
+  bufferCtx.clearRect(0, 0, VIEW_W, VIEW_H);
+  bufferCtx.globalCompositeOperation = "source-over";
+  bufferCtx.globalAlpha = alpha;
+  bufferCtx.fillStyle = WORLD_DARKNESS_COLOR;
+  bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+  bufferCtx.restore();
+}
+
+function carveLocalPlayerNightSight(bufferCtx, outdoorAlpha) {
+  if (!bufferCtx || player?.hp <= 0 || outdoorAlpha <= 0.42) return;
+  const visibility = Math.max(0, Math.min(1, (outdoorAlpha - 0.42) / 0.57));
+  if (visibility <= 0.001) return;
+  const originX = Number(player.x);
+  const originY = Number(player.y) - 5;
+  const polygon = torchLightVisibilityPolygon(
+    originX,
+    Number(player.y),
+    LOCAL_NIGHT_SIGHT_RADIUS + 4,
+    "local-night-sight"
+  );
+  if (!polygon.length) return;
+
+  const screenX = originX - currentCamX;
+  const screenY = originY - currentCamY;
+  const gradient = bufferCtx.createRadialGradient(
+    screenX, screenY, 0,
+    screenX, screenY, LOCAL_NIGHT_SIGHT_RADIUS
+  );
+  gradient.addColorStop(0, `rgba(0,0,0,${(0.34 * visibility).toFixed(3)})`);
+  gradient.addColorStop(0.45, `rgba(0,0,0,${(0.18 * visibility).toFixed(3)})`);
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  bufferCtx.moveTo(polygon[0].x - currentCamX, polygon[0].y - currentCamY);
+  for (let index = 1; index < polygon.length; index += 1) {
+    bufferCtx.lineTo(polygon[index].x - currentCamX, polygon[index].y - currentCamY);
+  }
+  bufferCtx.closePath();
+  bufferCtx.clip();
+  bufferCtx.globalCompositeOperation = "destination-out";
+  bufferCtx.fillStyle = gradient;
+  bufferCtx.fillRect(
+    screenX - LOCAL_NIGHT_SIGHT_RADIUS,
+    screenY - LOCAL_NIGHT_SIGHT_RADIUS,
+    LOCAL_NIGHT_SIGHT_RADIUS * 2,
+    LOCAL_NIGHT_SIGHT_RADIUS * 2
+  );
+  bufferCtx.restore();
+}
+
+function carveOpenDoorDaylight(bufferCtx, region, outdoorAlpha) {
+  if (!bufferCtx || !region?.floors?.length) return;
+  const daylight = Math.max(0, Math.min(1, 1 - outdoorAlpha / 0.68));
+  if (daylight <= 0.02) return;
+  const doors = currentMapStructures().filter(structure =>
+    structure?.kind === "woodDoor" &&
+    structureBelongsToRoofFacade(structure, region) &&
+    doorVisuallyOpen(structure)
+  );
+  if (!doors.length) return;
+
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  if (!appendInteriorGroundPath(bufferCtx, region)) {
+    bufferCtx.restore();
+    return;
+  }
+  bufferCtx.clip();
+  bufferCtx.globalCompositeOperation = "destination-out";
+
+  for (const door of doors) {
+    const side = structureInteriorBoundarySide(door, region);
+    if (!side) continue;
+    let offsetX = 0;
+    let offsetY = 0;
+    if (side === "north") offsetY = -10;
+    else if (side === "south") offsetY = 10;
+    else if (side === "west") offsetX = -10;
+    else if (side === "east") offsetX = 10;
+    const x = Number(door.x) + offsetX - currentCamX;
+    const y = Number(door.y) + offsetY - currentCamY;
+    const radius = 38;
+    const gradient = bufferCtx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, `rgba(0,0,0,${(0.78 * daylight).toFixed(3)})`);
+    gradient.addColorStop(0.45, `rgba(0,0,0,${(0.42 * daylight).toFixed(3)})`);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+    bufferCtx.fillStyle = gradient;
+    bufferCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+  bufferCtx.restore();
+}
+
 function visibleStructureLightFaceSide(structure) {
   // v409: a stationary wall no longer asks which side the local player happens
   // to be standing on. For a completed roofed room, the roof reveal state tells
@@ -11673,14 +12255,13 @@ function visibleStructureLightFaceSide(structure) {
     : oppositeStructureBoundarySide(interiorSide);
 }
 
-function restoreStructureFacadeAmbient(bufferCtx, alpha) {
-  // v408 separates the vertical wall surface from the ground-plane light mask.
-  // General light rays illuminate open ground up to the physical boundary; wall
-  // sprites get their own receiver pass below. This prevents a tall wall sprite
-  // from visually carrying exterior light into a revealed room.
+function restoreStructureFacadeAmbient(bufferCtx, alpha, interiorRegion = activeInteriorRoofRegion(), interiorAlpha = activeInteriorAmbientAlpha(alpha)) {
+  // v408/v418: wall facades remain their own receiver surface. When the local
+  // player is inside a completed room, its interior-facing walls inherit the
+  // room's darker ambient baseline instead of noon-bright outdoor ambience.
   bufferCtx.save();
   bufferCtx.globalCompositeOperation = "source-over";
-  bufferCtx.fillStyle = "#101827";
+  bufferCtx.fillStyle = WORLD_DARKNESS_COLOR;
   for (const structure of currentMapStructures()) {
     if (!structureBlocksLight(structure)) continue;
     const rect = structureFacadeWorldRect(structure);
@@ -11689,8 +12270,11 @@ function restoreStructureFacadeAmbient(bufferCtx, alpha) {
     const y = Math.round(rect.y - currentCamY);
     const width = Math.ceil(rect.width);
     const height = Math.ceil(rect.height);
+    const structureAlpha = interiorRegion && structureBelongsToRoofFacade(structure, interiorRegion)
+      ? interiorAlpha
+      : alpha;
     bufferCtx.clearRect(x, y, width, height);
-    bufferCtx.globalAlpha = alpha;
+    bufferCtx.globalAlpha = structureAlpha;
     bufferCtx.fillRect(x, y, width, height);
   }
   bufferCtx.restore();
@@ -11728,7 +12312,7 @@ function restoreVisibleRoofSurfaceAmbient(bufferCtx, alpha, regions = visibleRoo
   bufferCtx.clearRect(0, 0, VIEW_W, VIEW_H);
   bufferCtx.globalCompositeOperation = "source-over";
   bufferCtx.globalAlpha = alpha;
-  bufferCtx.fillStyle = "#101827";
+  bufferCtx.fillStyle = WORLD_DARKNESS_COLOR;
   bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
   bufferCtx.restore();
 }
@@ -11899,16 +12483,29 @@ function carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceS
 
 function drawWorldLightingOverlay() {
   const minutes = currentWorldClockMinutes();
-  const alpha = worldClockLightingAlpha(minutes);
-  if (alpha <= 0.001) return;
+  const nightAlpha = worldClockLightingAlpha(minutes);
+  const rainDimAlpha = currentMapRainIntensity() * 0.08;
+  const alpha = Math.max(nightAlpha, rainDimAlpha);
+  const interiorRegion = activeInteriorRoofRegion();
+  const interiorAlpha = interiorRegion ? activeInteriorAmbientAlpha(alpha) : 0;
+  if (alpha <= 0.001 && !interiorRegion) return;
 
   const bufferCtx = ensureWorldLightingBuffer();
   bufferCtx.clearRect(0, 0, VIEW_W, VIEW_H);
   bufferCtx.globalCompositeOperation = "source-over";
-  bufferCtx.globalAlpha = alpha;
-  bufferCtx.fillStyle = "#101827";
-  bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+  if (alpha > 0.001) {
+    bufferCtx.globalAlpha = alpha;
+    bufferCtx.fillStyle = WORLD_DARKNESS_COLOR;
+    bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
   bufferCtx.globalAlpha = 1;
+
+  // v418: a revealed roofed room owns a separate ambient layer. This lets a
+  // building (and later a stone cave using the same topology) stay naturally
+  // dim even at noon without changing outdoor lighting rules.
+  if (interiorRegion) {
+    restoreActiveInteriorAmbient(bufferCtx, interiorRegion, interiorAlpha);
+  }
 
   // v408: every torch, whether placed or held by either player, enters one
   // client-side light pipeline. Placed torches still use shared structures;
@@ -11927,11 +12524,17 @@ function drawWorldLightingOverlay() {
     );
   }
 
+  // The local player gets a tiny, faint night-vision pocket so pitch-black
+  // exploration is still possible without a Torch. This is intentionally NOT
+  // added to collectTorchLightSources(), so remote players never emit or share
+  // this natural visibility bubble on multiplayer clients.
+  carveLocalPlayerNightSight(bufferCtx, nightAlpha);
+
   // General rays model the ground plane only. Reset wall/door facade pixels to
   // ambient darkness, then explicitly light the visible face from same-side
   // sources. Physical boundary, visual depth and surface lighting are now three
   // separate concerns instead of three interpretations of one rectangle.
-  restoreStructureFacadeAmbient(bufferCtx, alpha);
+  restoreStructureFacadeAmbient(bufferCtx, alpha, interiorRegion, interiorAlpha);
   for (const structure of currentMapStructures()) {
     if (!structureBlocksLight(structure)) continue;
     const visibleFaceSide = visibleStructureLightFaceSide(structure);
@@ -11952,6 +12555,13 @@ function drawWorldLightingOverlay() {
   // still illuminate that roof normally.
   for (const source of torchSources) {
     carveTorchRoofSurfaceLight(bufferCtx, source, visibleRoofRegions);
+  }
+
+  // Cherry-on-top daylight spill: an automatic door that is currently open
+  // cuts a small soft patch into the interior ambient layer. Closed doors and
+  // walls continue to block the normal light-visibility polygons.
+  if (interiorRegion) {
+    carveOpenDoorDaylight(bufferCtx, interiorRegion, nightAlpha);
   }
 
   ctx.save();
@@ -13669,6 +14279,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     }
   } else if (
     currentWeapon &&
+    currentWeapon !== "tigerPaw" &&
     !carryingEnemy &&
     !snareSetupActive
   ) {
@@ -14051,27 +14662,7 @@ function drawPlacedNpc(npc, camX, camY) {
     const opened = player.openedTreasureIds?.has(String(npc.id || ""));
     ctx.fillStyle = "rgba(30, 24, 18, .28)";
     ctx.fillRect(screenX - 7, screenY, 14, 2);
-    // Tiny procedural pixel chest: avoids another asset/request while keeping
-    // generated treasure visually distinct from NPCs.
-    ctx.fillStyle = "#3f2617";
-    ctx.fillRect(screenX - 7, screenY - 9, 14, 9);
-    ctx.fillStyle = "#8e5927";
-    ctx.fillRect(screenX - 6, screenY - 8, 12, 7);
-    ctx.fillStyle = "#c38a3f";
-    ctx.fillRect(screenX - 6, screenY - 7, 12, 2);
-    ctx.fillStyle = "#d8b45a";
-    ctx.fillRect(screenX - 1, screenY - 6, 2, 4);
-    if (opened) {
-      ctx.fillStyle = "#2b1b12";
-      ctx.fillRect(screenX - 6, screenY - 13, 12, 3);
-      ctx.fillStyle = "#8e5927";
-      ctx.fillRect(screenX - 5, screenY - 14, 10, 2);
-    } else {
-      ctx.fillStyle = "#58351e";
-      ctx.fillRect(screenX - 6, screenY - 10, 12, 3);
-      ctx.fillStyle = "#a86c2e";
-      ctx.fillRect(screenX - 5, screenY - 11, 10, 2);
-    }
+    ctx.drawImage(opened ? chestOpenStructureImage : chestClosedStructureImage, screenX - 8, screenY - 16, 16, 16);
     return;
   }
 
@@ -14350,12 +14941,12 @@ function drawInteractionPrompt(
 
   const placedKind = interaction.kind === "placedNpc" ? interaction.npcType : null;
   const promptText =
-    interaction.kind === "bench" || placedKind === "craftingTable"
-      ? "F CRAFT"
-      : interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
-        ? "F RESET"
-        : placedKind === "treasureChest"
-          ? "F OPEN"
+    interaction.kind === "chestStructure"
+      ? (interaction.structure?.opened ? "F CLOSE" : "F OPEN")
+      : interaction.kind === "bench" || placedKind === "craftingTable"
+        ? "F CRAFT"
+        : interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
+          ? "F RESET"
           : "F TALK";
 
   drawStaticPixelText(
@@ -14507,7 +15098,7 @@ function drawRemotePlayer(
   player.weaponIndex = Number.isFinite(remote.weaponIndex)
     ? remote.weaponIndex
     : -1;
-  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(remote.heldBuildPiece)
+  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(remote.heldBuildPiece)
     ? remote.heldBuildPiece
     : null;
 

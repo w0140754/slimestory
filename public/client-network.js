@@ -418,6 +418,7 @@ class OnlineClient {
       if (Number.isFinite(message.woodDoors)) player.woodDoors = Math.max(0, Math.floor(message.woodDoors));
       if (Number.isFinite(message.greenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.greenJellyCubes));
       if (Number.isFinite(message.torches)) player.torches = Math.max(0, Math.floor(message.torches));
+      if (Number.isFinite(message.chests)) player.chests = Math.max(0, Math.floor(message.chests));
       if (Array.isArray(message.openedTreasureIds)) {
         player.openedTreasureIds = new Set(
           message.openedTreasureIds
@@ -867,7 +868,12 @@ class OnlineClient {
     }
 
     if (message.type === "structureSnapshot") {
-      applyStructureSnapshot(message.mapId, message.structures);
+      applyStructureSnapshot(
+        message.mapId,
+        message.structures,
+        message.removedWorldStructureIds,
+        message.worldStructureStates
+      );
       return;
     }
 
@@ -881,9 +887,14 @@ class OnlineClient {
       return;
     }
 
+    if (message.type === "structureState") {
+      applyStructureState(message.mapId, message.structureId, message.state);
+      return;
+    }
+
     if (message.type === "structureDestroyResult") {
       if (!message.success) {
-        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : message.reason === "wallAttached" ? "REMOVE WALL FIRST" : "TOO FAR";
+        const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : message.reason === "wallAttached" ? "REMOVE WALL FIRST" : message.reason === "objectAttached" ? "REMOVE OBJECT FIRST" : message.reason === "openFirst" ? "OPEN CHEST FIRST" : "TOO FAR";
         spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.7);
       }
       return;
@@ -895,6 +906,7 @@ class OnlineClient {
       if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
       if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
       if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
+      if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
       // v389: invalid building placement is intentionally quiet. The placement
       // preview already communicates where a piece can go; failed clicks should
       // not spam floating BLOCKED / PLACE ON FLOOR / TOO FAR notes.
@@ -948,7 +960,6 @@ class OnlineClient {
 
     if (message.type === "treasureResult") {
       const chestId = typeof message.chestId === "string" ? message.chestId : "";
-      if (chestId) player.openedTreasureIds?.add(chestId);
       if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
       if (Number.isFinite(message.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
       if (Number.isFinite(message.totalStone)) player.stone = Math.max(0, Math.floor(message.totalStone));
@@ -2033,6 +2044,20 @@ class OnlineClient {
     return true;
   }
 
+  requestChestToggle(chestId) {
+    if (
+      typeof chestId !== "string" ||
+      !chestId ||
+      !this.connected ||
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
+    this.socket.send(JSON.stringify({ type: "chestToggle", chestId }));
+    return true;
+  }
+
   requestCraft(recipe) {
     if (
       !recipe ||
@@ -2134,10 +2159,18 @@ class OnlineClient {
   }
 
   handleCraftResult(message) {
+    // Clear the matching pending state as soon as the server answers. This keeps
+    // the crafting menu recoverable even if client/server recipe metadata ever
+    // drifts again.
+    if (player.benchCraftPending === message.recipe) {
+      player.benchCraftPending = null;
+    }
+
     const recipe =
       CRAFT_RECIPES[message.recipe];
 
     if (!recipe) {
+      updateCraftingUi();
       return;
     }
 
@@ -2158,6 +2191,7 @@ class OnlineClient {
     if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
     if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
+    if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
 
     if (Number.isFinite(message.totalArrows)) {
       player.arrows = Math.max(0, Math.floor(message.totalArrows));
@@ -2320,6 +2354,7 @@ class OnlineClient {
     if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
     if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
+    if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
 
     if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
       player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
@@ -3660,6 +3695,19 @@ class OnlineClient {
         0,
         (Number(remote.wetTime) || 0) - dt
       );
+
+      // v419: remote players on this map derive map-rain Wet from the same
+      // deterministic weather/roof geometry as the local player. This is
+      // presentation/state continuity only and requires no periodic packet.
+      if (
+        remote.mapId === currentMapId &&
+        typeof currentMapIsRaining === "function" &&
+        currentMapIsRaining() &&
+        (typeof pointUnderAutomaticRoof !== "function" ||
+          !pointUnderAutomaticRoof(remote.x, remote.y))
+      ) {
+        applyLocalWetStatus(remote, GAME_CONFIG.player.wetDuration);
+      }
 
       remote.burnTime = Math.max(
         0,

@@ -29,7 +29,7 @@ async function place(socket, kind, x, y, edge = null) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 5, woodWalls: 8, woodDoors: 2 } } }));
@@ -37,13 +37,13 @@ async function place(socket, kind, x, y, edge = null) {
     socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 144, y: 112, weaponIndex: -1 } }));
     await delay(80);
 
-    // Two neighboring floors: the shared edge must stay open.
+    // Two neighboring floors: v418 deliberately allows a wall on the shared edge.
     for (const x of [128, 144]) {
       const result = await place(socket, "woodFloor", x, 96);
       if (!result.success) throw new Error(`floor placement failed at ${x},96: ${JSON.stringify(result)}`);
     }
     let result = await place(socket, "woodWall", 128, 96, "east");
-    if (result.success || result.reason !== "interiorEdge") throw new Error(`internal wall was accepted: ${JSON.stringify(result)}`);
+    if (!result.success) throw new Error(`internal floor-to-floor wall was rejected: ${JSON.stringify(result)}`);
 
     // Three floors in a row create a perimeter long enough for a centered door.
     for (const x of [128, 144, 160]) {
@@ -69,6 +69,6 @@ async function place(socket, kind, x, y, edge = null) {
     if (!result.success) throw new Error(`door with two flanking walls was rejected: ${JSON.stringify(result)}`);
 
     socket.close();
-    console.log("v392 WebSocket smoke passed: internal floor-to-floor wall rejected, unsupported door rejected, and door accepted only after same-axis walls exist on both sides.");
+    console.log("v392 retained WebSocket smoke passed: internal floor-to-floor wall accepted, unsupported door rejected, and door accepted after flanking walls exist.");
   } finally { server.kill("SIGTERM"); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

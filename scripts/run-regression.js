@@ -4,6 +4,9 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const root = path.join(__dirname, "..");
 
+// Pin the legacy deterministic fixture for regression unless a test explicitly overrides it.
+if (!Object.prototype.hasOwnProperty.call(process.env, "SLIME_STORY_WORLD_SEED")) process.env.SLIME_STORY_WORLD_SEED = "0";
+
 function walkJs(dir) {
   const out = [];
   if (!fs.existsSync(dir)) return out;

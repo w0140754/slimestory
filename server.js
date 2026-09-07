@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-413";
+const BUILD_VERSION = "6-11-419";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -20,6 +20,17 @@ const WORLD_CLOCK_SERVER_STARTED_AT = Date.now();
 const WORLD_CLOCK_MINUTES_PER_DAY = 24 * 60;
 const WORLD_CLOCK_NIGHT_START_MINUTE = 20 * 60;
 const WORLD_CLOCK_SUNRISE_MINUTE = 5 * 60;
+
+// v414: every live server boot creates a fresh procedural world unless a seed
+// is explicitly supplied (useful for regression/reproduction). The resolved
+// WORLD_CONTENT object is still served verbatim to browsers, so random world
+// generation adds no gameplay heartbeat or per-feature replication traffic.
+const WORLD_GENERATION_SEED = (() => {
+  const configured = Number(process.env.SLIME_STORY_WORLD_SEED);
+  if (Number.isFinite(configured)) return Math.trunc(configured) >>> 0;
+  return crypto.randomBytes(4).readUInt32LE(0) >>> 0;
+})();
+process.env.SLIME_STORY_WORLD_SEED = String(WORLD_GENERATION_SEED);
 
 function serverWorldClockAbsoluteGameMinutes(now = Date.now()) {
   const elapsedRealMs = Math.max(0, now - WORLD_CLOCK_SERVER_STARTED_AT);
@@ -41,14 +52,28 @@ function serverWorldClockSnapshot(now = Date.now()) {
   return {
     serverNowMs: now,
     gameMinutes: normalizedServerWorldClockMinutes(now),
+    absoluteGameMinutes: serverWorldClockAbsoluteGameMinutes(now),
     realMsPerGameMinute: WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE
   };
+}
+
+function serverMapRainIntensity(mapId, now = Date.now()) {
+  return WEATHER_RULES.rainIntensity(
+    WORLD_GENERATION_SEED,
+    mapId,
+    serverWorldClockAbsoluteGameMinutes(now)
+  );
+}
+
+function serverMapIsRaining(mapId, now = Date.now()) {
+  return serverMapRainIntensity(mapId, now) > 0.04;
 }
 
 const WORLD_CONTENT = require("./public/shared/world-content.js");
 const TERRAIN_RULES = require("./public/shared/terrain-rules.js");
 const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
 const RAIN_FIELD = require("./public/shared/rain-field.js");
+const WEATHER_RULES = require("./public/shared/weather-rules.js");
 const ABILITY_SCALING = require("./public/shared/ability-scaling.js");
 const CAMOUFLAGE_RULES = require("./public/shared/camouflage-rules.js");
 const ENEMY_NET_PROTOCOL = require("./public/shared/enemy-net-protocol.js");
@@ -682,11 +707,15 @@ const ENEMY_AGGRO_PROVOKED = "provoked";
 const ENEMY_AGGRO_PROXIMITY = "proximity";
 const ENEMY_ENGAGEMENT_RADIUS = 120;
 const ENEMY_ENGAGEMENT_MEMORY_SECONDS = 3.5;
-// v407: ordinary mobs become hostile at night, but only within a bounded
-// detection radius so distant passive mobs remain on the cheap intent stream.
-// A slightly larger disengage radius prevents rapid active/passive thrashing.
-const NIGHT_HOSTILE_DETECTION_RADIUS = 208;
-const NIGHT_HOSTILE_DISENGAGE_RADIUS = 248;
+// v418: darkness reduces practical enemy awareness instead of waking the
+// entire map. Ordinary mobs only notice nearby players at night; night-only
+// slimes remain more alert, but they no longer acquire every player globally.
+// Wider disengage radii keep the existing sticky target behavior without
+// producing rapid active/passive network churn.
+const NIGHT_HOSTILE_DETECTION_RADIUS = 64;
+const NIGHT_HOSTILE_DISENGAGE_RADIUS = 96;
+const NIGHT_ONLY_DETECTION_RADIUS = 104;
+const NIGHT_ONLY_DISENGAGE_RADIUS = 144;
 
 // -----------------------------------------------------------------------------
 // GENERIC SERVER ENEMY RUNTIME METADATA
@@ -1961,7 +1990,6 @@ const sharedStructuresByMap = new Map();
 let nextSharedStructureId = 1;
 let structureNavRevision = 0;
 const combinedStructuresCache = new Map();
-const MAX_STRUCTURES_PER_MAP = 96;
 const BUILD_GRID_SIZE = 16;
 const BUILD_FLOOR_KINDS = Object.freeze(new Set(["woodFloor", "stoneFloor"]));
 const BUILD_PLACE_RANGE = 96;
@@ -2022,9 +2050,74 @@ function serverDoorCurrentlyOpen(structure, now = Date.now()) {
   return false;
 }
 
+// v414 mutable procedural structures. WORLD_CONTENT remains the immutable
+// seeded baseline; only map-local differences are retained here. That lets a
+// generated house/stone patch behave exactly like player-built structure
+// pieces without rebroadcasting or serializing the whole baseline map.
+const removedWorldStructureIdsByMap = new Map();
+const worldStructureStatesByMap = new Map();
+
+function removedWorldStructureIdsForMap(mapId) {
+  return removedWorldStructureIdsByMap.get(mapId) || new Set();
+}
+
+function worldStructureStatesForMap(mapId) {
+  return worldStructureStatesByMap.get(mapId) || new Map();
+}
+
+function worldGeneratedStructureDefinitionById(mapId, structureId) {
+  const structures = WORLD_CONTENT.maps?.[mapId]?.structures;
+  if (!Array.isArray(structures)) return null;
+  return structures.find(structure => structure?.id === structureId) || null;
+}
+
 function worldGeneratedStructuresOnMap(mapId) {
   const structures = WORLD_CONTENT.maps?.[mapId]?.structures;
-  return Array.isArray(structures) ? structures : [];
+  if (!Array.isArray(structures)) return [];
+  const removed = removedWorldStructureIdsForMap(mapId);
+  const states = worldStructureStatesForMap(mapId);
+  return structures
+    .filter(structure => structure?.id && !removed.has(structure.id))
+    .map(structure => {
+      const state = states.get(structure.id);
+      return state ? { ...structure, ...state } : structure;
+    });
+}
+
+function setWorldGeneratedStructureState(mapId, structureId, patch) {
+  if (!worldGeneratedStructureDefinitionById(mapId, structureId)) return null;
+  if (removedWorldStructureIdsForMap(mapId).has(structureId)) return null;
+  let states = worldStructureStatesByMap.get(mapId);
+  if (!states) {
+    states = new Map();
+    worldStructureStatesByMap.set(mapId, states);
+  }
+  const next = { ...(states.get(structureId) || {}), ...(patch || {}) };
+  states.set(structureId, next);
+  structureNavRevision += 1;
+  return next;
+}
+
+function removeWorldGeneratedStructure(mapId, structureId) {
+  const structure = worldGeneratedStructuresOnMap(mapId).find(item => item?.id === structureId);
+  if (!structure) return null;
+  let removed = removedWorldStructureIdsByMap.get(mapId);
+  if (!removed) {
+    removed = new Set();
+    removedWorldStructureIdsByMap.set(mapId, removed);
+  }
+  removed.add(structureId);
+  worldStructureStatesByMap.get(mapId)?.delete(structureId);
+  structureNavRevision += 1;
+  return structure;
+}
+
+function worldStructureMutationSnapshot(mapId) {
+  const states = worldStructureStatesForMap(mapId);
+  return {
+    removedWorldStructureIds: [...removedWorldStructureIdsForMap(mapId)],
+    worldStructureStates: [...states.entries()].map(([id, state]) => ({ id, ...state }))
+  };
 }
 
 function dynamicStructuresOnMap(mapId) {
@@ -2044,9 +2137,9 @@ function structuresOnMap(mapId) {
 }
 
 function structureSnapshot(mapId) {
-  // World-generated structures are already part of the immutable WORLD_CONTENT
-  // bundle on both client and server, so only player-made deltas cross the
-  // WebSocket. This keeps map variety effectively zero-idle-traffic.
+  // Only player-made structures cross as full records. Procedural baseline
+  // geometry is already in WORLD_CONTENT; its tiny mutation list is included
+  // separately by sendMapSceneSync when a player enters this map.
   return dynamicStructuresOnMap(mapId).map(structure => ({
     id: structure.id,
     mapId: structure.mapId,
@@ -2059,6 +2152,10 @@ function structureSnapshot(mapId) {
       mountType: structure.mountType,
       ...(structure.mountAxis ? { mountAxis: structure.mountAxis } : {}),
       ...(structure.mountSide ? { mountSide: structure.mountSide } : {})
+    } : {}),
+    ...(structure.kind === "chest" ? {
+      opened: Boolean(structure.opened),
+      treasure: Boolean(structure.treasure)
     } : {})
   }));
 }
@@ -2066,6 +2163,9 @@ function structureSnapshot(mapId) {
 function structureRect(structure) {
   if (STRUCTURE_GEOMETRY.isBoundaryStructure(structure)) {
     return STRUCTURE_GEOMETRY.collisionRect(structure, 2);
+  }
+  if (structure?.kind === "chest") {
+    return { x: Number(structure.x) - 7, y: Number(structure.y) - 8, width: 14, height: 8 };
   }
   return { x: structure.x - 8, y: structure.y - 8, width: 16, height: 16 };
 }
@@ -2211,29 +2311,23 @@ function serverDoorTangentialDistance(structure, x, y) {
 function serverDoorAllowsPlayerStep(playerId, structure, fromX, fromY, toX, toY, radius = 4) {
   if (structure?.kind !== "woodDoor") return false;
   const now = Date.now();
-  const passage = playerDoorPassages.get(playerId);
   const tangential = Math.min(
     serverDoorTangentialDistance(structure, fromX, fromY),
     serverDoorTangentialDistance(structure, toX, toY)
   );
   if (tangential > 8 + radius + 2) return false;
 
-  if (passage?.doorId === structure.id && passage.expiresAt >= now) {
-    passage.expiresAt = now + DOOR_PASSAGE_MS;
-    return true;
-  }
-
-  const before = serverDoorPerpendicularDistance(structure, fromX, fromY);
-  const after = serverDoorPerpendicularDistance(structure, toX, toY);
-  if (!(before <= DOOR_ADJACENT_DISTANCE && after < before - 0.01)) return false;
-
+  // v418: automatic doors are always traversable by players through their
+  // actual doorway channel. Adjacent wall pieces still block side-stepping
+  // around the opening, but the door collider itself can no longer close onto
+  // or reject a diagonal player step and leave somebody wedged in the frame.
   playerDoorPassages.set(playerId, { doorId: structure.id, expiresAt: now + DOOR_PASSAGE_MS });
   return true;
 }
 
 function serverPlayerStepHitsStructureWall(playerId, mapId, fromX, fromY, toX, toY, radius = 4) {
   for (const structure of structuresOnMap(mapId)) {
-    if (!["woodWall", "woodDoor"].includes(structure.kind)) continue;
+    if (!["woodWall", "woodDoor", "chest"].includes(structure.kind)) continue;
     if (!circleRectHit(toX, toY, radius, structureRect(structure))) continue;
     if (
       structure.kind === "woodDoor" &&
@@ -2310,6 +2404,15 @@ function floorRemovalWouldOrphanBoundary(mapId, floor) {
     if (!wallTouchesFloor(structure, floor.x, floor.y)) return false;
     return !floorsSupportingBoundary(mapId, structure).some(otherFloor => otherFloor.id !== floor.id);
   });
+}
+
+function floorRemovalWouldOrphanObject(mapId, floor) {
+  if (!BUILD_FLOOR_KINDS.has(floor?.kind)) return false;
+  return structuresOnMap(mapId).some(structure =>
+    structure?.kind === "chest" &&
+    Math.abs(Number(structure.x) - Number(floor.x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(floor.y)) < 1
+  );
 }
 
 function floorAcrossBuildEdge(mapId, floorX, floorY, edge) {
@@ -2448,10 +2551,10 @@ function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
 
 function handleStructurePlaceRequest(playerId, socket, message) {
   const playerState = players.get(playerId);
-  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "stoneFloor" ? "stoneFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : message?.kind === "torch" ? "torch" : null;
+  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "stoneFloor" ? "stoneFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : message?.kind === "torch" ? "torch" : message?.kind === "chest" ? "chest" : null;
   if (!playerState || playerState.hp <= 0 || !kind || !worldGridMetaForMap(playerState.mapId)) return;
 
-  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "stoneFloor" ? "stoneFloors" : kind === "woodWall" ? "woodWalls" : kind === "woodDoor" ? "woodDoors" : "torches";
+  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "stoneFloor" ? "stoneFloors" : kind === "woodWall" ? "woodWalls" : kind === "woodDoor" ? "woodDoors" : kind === "chest" ? "chests" : "torches";
   const dimensions = mapWorldDimensions(playerState.mapId);
   const floorX = Math.round(clampNumber(message.x, 0, dimensions.width, playerState.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const floorY = Math.round(clampNumber(message.y, 0, dimensions.height, playerState.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
@@ -2467,13 +2570,16 @@ function handleStructurePlaceRequest(playerId, socket, message) {
 
   if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
   else if ((kind === "woodWall" || kind === "woodDoor") && (!wall || !floorStructureAt(playerState.mapId, floorX, floorY))) reason = "needsFloor";
-  else if ((kind === "woodWall" || kind === "woodDoor") && roofedFloorKeysOnMap(playerState.mapId).has(buildFloorKey(floorX, floorY))) reason = "roofed";
-  else if ((kind === "woodWall" || kind === "woodDoor") && floorAcrossBuildEdge(playerState.mapId, floorX, floorY, edge)) reason = "interiorEdge";
+  else if (kind === "chest" && !floorStructureAt(playerState.mapId, floorX, floorY)) reason = "needsFloor";
+  else if (kind === "chest" && structuresOnMap(playerState.mapId).some(structure =>
+    STRUCTURE_TOPOLOGY.layerOf(structure) === STRUCTURE_TOPOLOGY.LAYERS.OBJECT &&
+    Math.abs(Number(structure.x) - floorX) < 1 &&
+    Math.abs(Number(structure.y) - floorY) < 1
+  )) reason = "objectOccupied";
   else if (kind === "woodDoor" && !doorHasFlankingWalls(playerState.mapId, wall)) reason = "doorNeedsWalls";
   else if (kind === "torch" && requestedSupportId && !torchSupport) reason = "invalidSupport";
   else if (kind === "torch" && torchSupport && attachedTorchForSupport(playerState.mapId, torchSupport.id)) reason = "supportOccupied";
   else if (Math.hypot(placementX - playerState.x, placementY - playerState.y) > BUILD_PLACE_RANGE) reason = "tooFar";
-  else if (dynamicStructuresOnMap(playerState.mapId).length >= MAX_STRUCTURES_PER_MAP) reason = "mapLimit";
   else if (kind === "torch" && torchSupport) {
     // v406: a torch mounted to a valid player-built support is allowed to share
     // that support's space. The support already passed world/NPC placement
@@ -2482,7 +2588,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
 
   if (reason) {
     sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors,
-      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches });
+      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches, totalChests: playerState.chests });
     return;
   }
 
@@ -2494,6 +2600,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
     x: placementX,
     y: placementY,
     ...((kind === "woodWall" || kind === "woodDoor") ? { axis: wall.axis } : {}),
+    ...(kind === "chest" ? { opened: false, treasure: false } : {}),
     ...(kind === "torch" ? (
       torchSupport
         ? {
@@ -2519,7 +2626,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
 
   broadcastToMap(structure.mapId, { type: "structurePlaced", structure });
   sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors,
-      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches });
+      totalStoneFloors: playerState.stoneFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches, totalChests: playerState.chests });
 }
 
 function removeSharedStructure(structureId) {
@@ -2534,6 +2641,29 @@ function removeSharedStructure(structureId) {
     if (passage?.doorId === structureId) playerDoorPassages.delete(playerId);
   }
   return structure;
+}
+
+function removeAnyStructure(structureId, mapId = null) {
+  const dynamic = sharedStructures.get(structureId);
+  if (dynamic) return removeSharedStructure(structureId);
+  const candidateMapId = mapId || Array.from(ALLOWED_MAPS).find(id =>
+    worldGeneratedStructureDefinitionById(id, structureId)
+  );
+  return candidateMapId ? removeWorldGeneratedStructure(candidateMapId, structureId) : null;
+}
+
+function structureById(mapId, structureId) {
+  return structuresOnMap(mapId).find(structure => structure?.id === structureId) || null;
+}
+
+function broadcastStructureState(structure, state) {
+  if (!structure?.mapId || !structure?.id) return;
+  broadcastToMap(structure.mapId, {
+    type: "structureState",
+    mapId: structure.mapId,
+    structureId: structure.id,
+    state: { ...(state || {}) }
+  });
 }
 
 function broadcastRemovedStructureAsLoot(removed, reason = "mined") {
@@ -2565,7 +2695,7 @@ function removeDoorsOrphanedByWall(removedWall) {
   for (const door of candidates) {
     // If another valid wall still supports the same endpoint, the door remains.
     if (doorHasFlankingWalls(removedWall.mapId, door)) continue;
-    const removedDoor = removeSharedStructure(door.id);
+    const removedDoor = removeAnyStructure(door.id, removedWall.mapId);
     if (!removedDoor) continue;
     removedDoors.push(removedDoor);
     broadcastRemovedStructureAsLoot(removedDoor, "supportRemoved");
@@ -2576,22 +2706,21 @@ function removeDoorsOrphanedByWall(removedWall) {
 function handleStructureDestroyRequest(playerId, socket, message) {
   const playerState = players.get(playerId);
   const structureId = typeof message?.structureId === "string" ? message.structureId : "";
-  const structure = sharedStructures.get(structureId);
-  if (!playerState || playerState.hp <= 0 || !structure) return;
+  if (!playerState || playerState.hp <= 0 || !structureId) return;
+  const structure = structureById(playerState.mapId, structureId);
+  if (!structure) return;
 
   let reason = null;
-  if (playerState.mapId !== structure.mapId) reason = "wrongMap";
-  else if (playerState.weaponIndex !== 11) reason = "needPickaxe";
+  if (playerState.weaponIndex !== 11) reason = "needPickaxe";
+  else if (structure.kind === "chest" && structure.treasure && !structure.opened) reason = "openFirst";
 
   if (reason) {
     sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
     return;
   }
 
-  // v406: mounted torches are a protective attachment layer. Pickaxing the
-  // supporting wall/floor removes and drops the torch first; the support is
-  // left untouched for a later swing. This also prevents support-deletion
-  // cascades from silently eating a torch item.
+  // v406/v414: mounted torches are a protective attachment layer even when
+  // their supporting floor/wall came from procedural world generation.
   if (BUILD_FLOOR_KINDS.has(structure.kind) || structure.kind === "woodWall") {
     const attachedTorch = attachedTorchForSupport(structure.mapId, structure.id);
     if (attachedTorch) {
@@ -2599,7 +2728,7 @@ function handleStructureDestroyRequest(playerId, socket, message) {
         sendJson(socket, { type: "structureDestroyResult", success: false, reason: "tooFar", structureId });
         return;
       }
-      const removedTorch = removeSharedStructure(attachedTorch.id);
+      const removedTorch = removeAnyStructure(attachedTorch.id, structure.mapId);
       if (!removedTorch) return;
       broadcastRemovedStructureAsLoot(removedTorch, "supportPickaxeFirst");
       sendJson(socket, {
@@ -2615,13 +2744,14 @@ function handleStructureDestroyRequest(playerId, socket, message) {
   }
 
   if (BUILD_FLOOR_KINDS.has(structure.kind) && floorRemovalWouldOrphanBoundary(structure.mapId, structure)) reason = "wallAttached";
+  else if (BUILD_FLOOR_KINDS.has(structure.kind) && floorRemovalWouldOrphanObject(structure.mapId, structure)) reason = "objectAttached";
   else if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) reason = "tooFar";
   if (reason) {
     sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
     return;
   }
 
-  const removed = removeSharedStructure(structureId);
+  const removed = removeAnyStructure(structureId, structure.mapId);
   if (!removed) return;
 
   broadcastRemovedStructureAsLoot(removed, "mined");
@@ -3021,6 +3151,21 @@ function flushEnvironmentPatches() {
   flushRockMotionPatches();
 }
 
+function canonicalEnvironmentDefinition(mapId, kind, entityId) {
+  const environment = WORLD_CONTENT.maps?.[mapId]?.environment || null;
+  const collectionName = kind === "tree"
+    ? "trees"
+    : kind === "grass"
+      ? "tallGrass"
+      : kind === "flower"
+        ? "harvestFlowers"
+        : kind === "rock"
+          ? "rocks"
+          : null;
+  if (!environment || !collectionName || !Array.isArray(environment[collectionName])) return null;
+  return environment[collectionName].find(definition => definition?.id === entityId) || null;
+}
+
 function sanitizeEnvironmentCatalogEntity(mapId, source) {
   if (
     !source ||
@@ -3032,17 +3177,18 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
 
   const id = String(source.id || "");
   const kind = source.kind;
+  const canonical = id ? canonicalEnvironmentDefinition(mapId, kind, id) : null;
 
-  if (
-    !id ||
-    !id.startsWith(`${mapId}:${kind}:`)
-  ) {
-    return null;
-  }
+  // v418: validate mutable scenery against the server's canonical seeded world
+  // definition instead of assuming IDs have the old `${mapId}:${kind}:...`
+  // shape. Procedural meadows/tree rings/stone features intentionally use
+  // feature-specific IDs, and the old prefix gate made those visible but
+  // silently non-interactive.
+  if (!canonical) return null;
 
   const dimensions = mapWorldDimensions(mapId);
-  const x = clampNumber(source.x, 0, dimensions.width, 0);
-  const y = clampNumber(source.y, 0, dimensions.height, 0);
+  const x = clampNumber(canonical.x, 0, dimensions.width, 0);
+  const y = clampNumber(canonical.y, 0, dimensions.height, 0);
 
   if (kind === "tree") {
     return {
@@ -3072,13 +3218,13 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       reseedAt: 0,
 
       canopyVariant: clampInteger(
-        source.canopyVariant,
+        canonical.canopyVariant,
         0,
         8,
         0
       ),
-      fireImmune: Boolean(source.fireImmune),
-      nonInteractive: Boolean(source.nonInteractive)
+      fireImmune: Boolean(canonical.fireImmune),
+      nonInteractive: Boolean(canonical.nonInteractive)
     };
   }
 
@@ -3095,7 +3241,7 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       burnTime: 0,
       burnDuration: 1.05,
       regrowAt: 0,
-      width: clampNumber(source.width, 6, 40, 13)
+      width: clampNumber(canonical.width, 6, 40, 13)
     };
   }
 
@@ -3109,7 +3255,7 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       homeX: x,
       homeY: y,
       variant:
-        source.variant === "grass"
+        canonical.variant === "grass"
           ? "grass"
           : "plain",
       hp: 3,
@@ -3148,7 +3294,7 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
     regrowAt: 0,
 
     flowerType:
-      source.flowerType === "blue"
+      canonical.type === "blue"
         ? "blue"
         : "white"
   };
@@ -3292,7 +3438,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(kind)) {
     return null;
   }
 
@@ -3423,6 +3569,8 @@ function handleResourcePickup(
     playerState.woodDoors += 1;
   } else if (resource.kind === "torch") {
     playerState.torches += 1;
+  } else if (resource.kind === "chest") {
+    playerState.chests += 1;
   }
 
   broadcastToMap(resource.mapId, {
@@ -3443,6 +3591,7 @@ function handleResourcePickup(
     totalWoodWalls: playerState.woodWalls,
     totalWoodDoors: playerState.woodDoors,
     totalTorches: playerState.torches,
+    totalChests: playerState.chests,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
@@ -3454,6 +3603,10 @@ const CRAFT_RECIPES = Object.freeze({
   woodSword: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodSwordCrafted", repeatable: true }),
   woodBow: Object.freeze({ ingredients: Object.freeze({ wood: 8 }), stateKey: "woodBowCrafted", repeatable: true }),
   shepherdStaff: Object.freeze({ ingredients: Object.freeze({ wood: 10 }), stateKey: "shepherdStaffCrafted", repeatable: true }),
+  // v416: Tiger Paw must exist in the authoritative recipe table too. In v415
+  // the client knew this recipe but the server silently ignored it, leaving the
+  // crafting button stuck in its pending/WORKING state forever.
+  tigerPaw: Object.freeze({ ingredients: Object.freeze({ wood: 8, stone: 2 }), repeatable: true }),
   woodHelm: Object.freeze({ ingredients: Object.freeze({ wood: 8, stone: 2 }), stateKey: "woodHelmCrafted", repeatable: true }),
   woodChest: Object.freeze({ ingredients: Object.freeze({ wood: 12, stone: 3 }), stateKey: "woodChestCrafted", repeatable: true }),
   woodGreaves: Object.freeze({ ingredients: Object.freeze({ wood: 10, stone: 2 }), stateKey: "woodGreavesCrafted", repeatable: true }),
@@ -3495,26 +3648,39 @@ function treasureRewardHash(text) {
   return hash >>> 0;
 }
 
+function updateChestStructureState(structure, patch) {
+  if (!structure?.id || !structure?.mapId || structure.kind !== "chest") return null;
+  const dynamic = sharedStructures.get(structure.id);
+  let nextState;
+  if (dynamic) {
+    Object.assign(dynamic, patch || {});
+    nextState = { opened: Boolean(dynamic.opened) };
+  } else {
+    const state = setWorldGeneratedStructureState(structure.mapId, structure.id, patch || {});
+    if (!state) return null;
+    nextState = { opened: Boolean(state.opened) };
+  }
+  broadcastStructureState(structure, nextState);
+  return nextState;
+}
+
+function playerNearChest(playerState, chest) {
+  if (!playerState || !chest || chest.kind !== "chest") return false;
+  return Math.hypot(
+    Number(playerState.x) - Number(chest.x),
+    Number(playerState.y) - Number(chest.y)
+  ) <= 40;
+}
+
 function handleTreasureOpen(playerId, socket, message) {
   const playerState = players.get(playerId);
   const chestId = typeof message?.chestId === "string" ? message.chestId : "";
   if (!playerState || !chestId) return;
 
-  const chest = (WORLD_CONTENT.maps[playerState.mapId]?.npcs || []).find(
-    npc => npc?.type === "treasureChest" && npc?.id === chestId
-  );
-  if (!chest) return;
+  const chest = structureById(playerState.mapId, chestId);
+  if (!chest || chest.kind !== "chest" || !chest.treasure || !playerNearChest(playerState, chest)) return;
 
-  const x = Number(chest.x);
-  const y = Number(chest.y);
-  const interactionRadius = Math.max(8, Number(chest.interactionRadius) || 22);
-  if (!Number.isFinite(x) || !Number.isFinite(y) ||
-      Math.hypot(playerState.x - x, playerState.y - y) > Math.max(40, interactionRadius + 16)) {
-    return;
-  }
-
-  if (!Array.isArray(playerState.openedTreasureIds)) playerState.openedTreasureIds = [];
-  if (playerState.openedTreasureIds.includes(chestId)) {
+  if (chest.opened) {
     sendJson(socket, {
       type: "treasureResult",
       chestId,
@@ -3527,19 +3693,20 @@ function handleTreasureOpen(playerId, socket, message) {
     return;
   }
 
-  const hash = treasureRewardHash(chestId);
+  // Include the world seed so the same map/chest coordinate does not always
+  // contain the same reward across newly generated worlds.
+  const hash = treasureRewardHash(`${WORLD_CONTENT.worldSeed}:${chestId}`);
   const rewardCoins = 12 + (hash % 14);
   const rewardStone = 1 + ((hash >>> 8) % 3);
   const rewardWood = ((hash >>> 16) % 100) < 45 ? 1 + ((hash >>> 24) % 2) : 0;
 
-  playerState.openedTreasureIds.push(chestId);
-  if (playerState.openedTreasureIds.length > 64) playerState.openedTreasureIds.splice(0, playerState.openedTreasureIds.length - 64);
+  if (!updateChestStructureState(chest, { opened: true })) return;
   playerState.coins += rewardCoins;
   playerState.stone += rewardStone;
   playerState.wood += rewardWood;
 
-  // One request and one response only. Static chests never poll, broadcast, or
-  // join the routine world replication stream.
+  // One map-local state event plus the private reward response. There is no
+  // chest polling/heartbeat and players on other maps receive nothing.
   sendJson(socket, {
     type: "treasureResult",
     chestId,
@@ -3551,6 +3718,17 @@ function handleTreasureOpen(playerId, socket, message) {
     totalWood: playerState.wood,
     totalStone: playerState.stone
   });
+}
+
+function handleChestToggle(playerId, socket, message) {
+  const playerState = players.get(playerId);
+  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
+  if (!playerState || !chestId) return;
+  const chest = structureById(playerState.mapId, chestId);
+  if (!chest || chest.kind !== "chest" || chest.treasure || !playerNearChest(playerState, chest)) return;
+  const opened = !Boolean(chest.opened);
+  if (!updateChestStructureState(chest, { opened })) return;
+  sendJson(socket, { type: "chestToggleResult", success: true, chestId, opened });
 }
 
 const BEACH_QUEST_FIRST_CRAB_GOAL = 10;
@@ -3815,10 +3993,30 @@ function handleCraftRequest(
   const recipe =
     CRAFT_RECIPES[recipeId];
 
-  if (
-    !playerState ||
-    !recipe
-  ) {
+  if (!playerState) {
+    return;
+  }
+
+  // Never leave a connected client waiting forever if its recipe table and the
+  // server recipe table somehow get out of sync. v415 exposed exactly this
+  // failure mode with Tiger Paw.
+  if (!recipe) {
+    sendJson(socket, {
+      type: "craftResult",
+      recipe: recipeId,
+      success: false,
+      reason: "invalidRecipe",
+      totalWood: playerState.wood,
+      totalStone: playerState.stone,
+      totalArrows: playerState.arrows,
+      totalWoodFloors: playerState.woodFloors,
+      totalStoneFloors: playerState.stoneFloors,
+      totalWoodWalls: playerState.woodWalls,
+      totalWoodDoors: playerState.woodDoors,
+      totalGreenJellyCubes: playerState.greenJellyCubes,
+      totalTorches: playerState.torches,
+      totalChests: playerState.chests
+    });
     return;
   }
 
@@ -3838,7 +4036,8 @@ function handleCraftRequest(
       totalWoodWalls: playerState.woodWalls,
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
-      totalTorches: playerState.torches
+      totalTorches: playerState.torches,
+      totalChests: playerState.chests
     });
     return;
   }
@@ -3860,7 +4059,8 @@ function handleCraftRequest(
       totalWoodWalls: playerState.woodWalls,
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
-      totalTorches: playerState.torches
+      totalTorches: playerState.torches,
+      totalChests: playerState.chests
     });
     return;
   }
@@ -3885,7 +4085,8 @@ function handleCraftRequest(
       totalWoodWalls: playerState.woodWalls,
       totalWoodDoors: playerState.woodDoors,
       totalGreenJellyCubes: playerState.greenJellyCubes,
-      totalTorches: playerState.torches
+      totalTorches: playerState.torches,
+      totalChests: playerState.chests
     });
     return;
   }
@@ -3918,7 +4119,8 @@ function handleCraftRequest(
     totalWoodWalls: playerState.woodWalls,
     totalWoodDoors: playerState.woodDoors,
     totalGreenJellyCubes: playerState.greenJellyCubes,
-    totalTorches: playerState.torches
+    totalTorches: playerState.torches,
+    totalChests: playerState.chests
   });
 }
 
@@ -4004,6 +4206,8 @@ function handleArrowUse(playerId, socket) {
   });
 }
 
+const TIGER_PAW_WEAPON_INDEX = 13;
+
 const FIRST_NPC_X = 190;
 const FIRST_NPC_Y = 100;
 const MARNIE_WOOD_GOAL = 10;
@@ -4043,7 +4247,7 @@ const SHOP_ITEM_IDS = new Set(
 // no longer sells them and most are intentionally unavailable for now.
 const SHOP_PURCHASE_HISTORY_ITEM_IDS = new Set([
   "weapon_sword", "weapon_axe", "weapon_katana", "weapon_oldSword", "weapon_bow", "weapon_dreamcatcher",
-  "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand", "weapon_pickaxe",
+  "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand", "weapon_pickaxe", "weapon_tigerPaw",
   "weapon_wand", "weapon_rainWand",
   "hat_original", "hat_blueCap", "hat_wizard", "hat_jester", "hat_ninja", "hat_knight", "hat_bandana", "hat_ranger", "hat_wood", "hat_arcanist", "hat_greencap",
   "shirt_traveler", "shirt_jester", "shirt_ninja", "shirt_knight", "shirt_ranger", "shirt_wood", "shirt_arcanist", "shirt_greencap",
@@ -4935,6 +5139,10 @@ function handleRockHurlAction(
   action,
   payload
 ) {
+  // v415 Tiger Paw is mob-only. Retain the legacy rock simulation code below
+  // for old state/protocol compatibility, but reject new grab/throw requests.
+  if (action === "hurlGrab" || action === "hurlThrow") return;
+
   const playerState = players.get(playerId);
 
   if (
@@ -7116,11 +7324,13 @@ function resolveEnemyAggroTarget(
       target.y - enemy.y
     );
 
-    const retentionRadius = ordinaryNightHostile
-      ? NIGHT_HOSTILE_DISENGAGE_RADIUS
-      : ENEMY_ENGAGEMENT_RADIUS;
+    const retentionRadius = relentlessNightAggro
+      ? NIGHT_ONLY_DISENGAGE_RADIUS
+      : ordinaryNightHostile
+        ? NIGHT_HOSTILE_DISENGAGE_RADIUS
+        : ENEMY_ENGAGEMENT_RADIUS;
 
-    if (relentlessNightAggro || targetDistance <= retentionRadius) {
+    if (targetDistance <= retentionRadius) {
       refreshEnemyEngagement(enemy, target.id);
     } else {
       enemy.aggroEngagementTime = Math.max(
@@ -7141,7 +7351,7 @@ function resolveEnemyAggroTarget(
     (enemyUsesProximityAggro(enemy) || relentlessNightAggro || ordinaryNightHostile)
   ) {
     const acquireRadius = relentlessNightAggro
-      ? Infinity
+      ? NIGHT_ONLY_DETECTION_RADIUS
       : ordinaryNightHostile
         ? NIGHT_HOSTILE_DETECTION_RADIUS
         : Math.max(0, Number(enemy.detectionRadius) || 0);
@@ -12853,6 +13063,8 @@ function handleGenericEnemyHurlAction(
   ensureServerEnemyHurlState(enemy);
 
   if (action === "hurlGrab") {
+    // v415: Hurl belongs to Tiger Paw and targets mobs only.
+    if (playerState.weaponIndex !== TIGER_PAW_WEAPON_INDEX) return;
     if (enemy.carriedBy || enemy.hurlTime > 0) return;
 
     if (playerCarriesAnyHurlObject(playerId)) {
@@ -13311,6 +13523,70 @@ function serverPointTouchesWater(mapId, x, y, radius = 3) {
   return false;
 }
 
+function serverPointUnderAutomaticRoof(mapId, x, y) {
+  if (!mapId || !Number.isFinite(Number(x)) || !Number.isFinite(Number(y))) return false;
+  const floorX = Math.round(Number(x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const floorY = Math.round(Number(y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  if (Math.abs(Number(x) - floorX) > 8 || Math.abs(Number(y) - floorY) > 8) return false;
+  return roofedFloorKeysOnMap(mapId).has(buildFloorKey(floorX, floorY));
+}
+
+let mapWeatherWetRefreshTimer = 0;
+const MAP_WEATHER_WET_REFRESH_SECONDS = 0.6;
+
+function refreshServerMapWeatherWetness(dt, now = Date.now()) {
+  mapWeatherWetRefreshTimer -= Math.max(0, Number(dt) || 0);
+  if (mapWeatherWetRefreshTimer > 0) return;
+  mapWeatherWetRefreshTimer += MAP_WEATHER_WET_REFRESH_SECONDS;
+
+  const rainingMaps = new Set();
+  for (const target of players.values()) {
+    if (target.hp <= 0) continue;
+    if (!rainingMaps.has(target.mapId) && serverMapIsRaining(target.mapId, now)) {
+      rainingMaps.add(target.mapId);
+    }
+  }
+  if (rainingMaps.size === 0) return;
+
+  for (const target of players.values()) {
+    if (
+      target.hp > 0 &&
+      rainingMaps.has(target.mapId) &&
+      !serverPointUnderAutomaticRoof(target.mapId, target.x, target.y)
+    ) {
+      applyServerPlayerWet(target, STATUS_RULES.playerWetDuration);
+    }
+  }
+
+  for (const enemy of allSharedEnemies()) {
+    if (
+      !enemyMapSimulationActive(enemy.mapId) ||
+      !enemy.alive ||
+      enemy.returningHome ||
+      !rainingMaps.has(enemy.mapId) ||
+      serverPointUnderAutomaticRoof(enemy.mapId, enemy.x, enemy.y)
+    ) {
+      continue;
+    }
+    const wasWet = enemy.wetTime > 0;
+    applyServerEnemyWet(enemy, STATUS_RULES.enemyWetDuration);
+    if (!wasWet && enemy.wetTime > 0) rainDiagnostics.enemyWetEnters += 1;
+  }
+
+  // Rain extinguishes mutable vegetation/flowers on occupied rainy maps. This
+  // only dirties entities that were actually burning; there is no weather
+  // heartbeat or map-wide replication stream.
+  for (const mapId of rainingMaps) {
+    for (const entity of environmentEntitiesOnMap(mapId)) {
+      if (entity.kind === "tree") {
+        if (entity.canopyBurnTime > 0) extinguishEnvironmentEntity(entity);
+      } else if (entity.burnTime > 0) {
+        extinguishEnvironmentEntity(entity);
+      }
+    }
+  }
+}
+
 function refreshServerWaterWetness() {
   for (const target of players.values()) {
     if (
@@ -13357,6 +13633,7 @@ setInterval(() => {
   tickSharedEnemySnareStatuses(dt);
   tickServerPlayerBurns(dt);
   refreshServerWaterWetness();
+  refreshServerMapWeatherWetness(dt, now);
   tickServerPlayerWetTimers(dt);
   tickServerPlayerPresentation(dt);
   tickServerCamouflage();
@@ -14398,8 +14675,8 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     previous?.level || 1
   );
   const sanitizedClassId = null; // v377: classes are retired.
-  const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, 12, -1);
-  const sanitizedHeldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"].includes(source.heldBuildPiece)
+  const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, TIGER_PAW_WEAPON_INDEX, -1);
+  const sanitizedHeldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"].includes(source.heldBuildPiece)
     ? source.heldBuildPiece
     : null;
   const dimensions = mapWorldDimensions(mapId);
@@ -14477,6 +14754,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     torches: previous && Number.isFinite(previous.torches)
       ? previous.torches
+      : 0,
+
+    chests: previous && Number.isFinite(previous.chests)
+      ? previous.chests
       : 0,
 
     // Opened static treasure IDs are progression state only. They are never
@@ -15091,7 +15372,8 @@ function sendMapSceneSync(
   sendJson(socket, {
     type: "structureSnapshot",
     mapId,
-    structures: structureSnapshot(mapId)
+    structures: structureSnapshot(mapId),
+    ...worldStructureMutationSnapshot(mapId)
   });
 
   sendJson(socket, {
@@ -15281,6 +15563,7 @@ const server = http.createServer((req, res) => {
       sharedResources: sharedResources.size,
       sharedCoins: sharedCoins.size,
       worldContentVersion: WORLD_CONTENT.version,
+      worldSeed: WORLD_CONTENT.worldSeed,
       combatBalanceVersion:
         COMBAT_BALANCE.version
     });
@@ -15328,7 +15611,7 @@ const server = http.createServer((req, res) => {
         const source = injectRuntimeWorldContentUrl(
           htmlSource,
           BUILD_VERSION,
-          WORLD_CONTENT.version
+          `${WORLD_CONTENT.version}-${WORLD_CONTENT.worldSeed}`
         );
         const headers = {
           "Content-Type": "text/html; charset=utf-8",
@@ -15542,6 +15825,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.woodWalls = clampInteger(resources.woodWalls, 0, 999999, 0);
   playerState.woodDoors = clampInteger(resources.woodDoors, 0, 999999, 0);
   playerState.torches = clampInteger(resources.torches, 0, 999999, 0);
+  playerState.chests = clampInteger(resources.chests, 0, 999999, 0);
   playerState.openedTreasureIds = Array.from(new Set(
     (Array.isArray(state.openedTreasureIds) ? state.openedTreasureIds : [])
       .filter(id => typeof id === "string" && id.includes(":treasure:"))
@@ -15609,6 +15893,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
     woodWalls: playerState.woodWalls,
     woodDoors: playerState.woodDoors,
     torches: playerState.torches,
+    chests: playerState.chests,
     openedTreasureIds: playerState.openedTreasureIds.slice(0, 64),
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
@@ -15743,6 +16028,9 @@ function handleClientMessage(playerId, socket, message) {
     case "treasureOpen":
       handleTreasureOpen(playerId, socket, message);
       return;
+    case "chestToggle":
+      handleChestToggle(playerId, socket, message);
+      return;
 
     case "structurePlace":
       handleStructurePlaceRequest(playerId, socket, message);
@@ -15818,6 +16106,7 @@ wss.on("connection", socket => {
     pvpCombatUntil: initialState.pvpCombatUntil,
     worldContentVersion:
       WORLD_CONTENT.version,
+    worldSeed: WORLD_CONTENT.worldSeed,
     combatBalanceVersion:
       COMBAT_BALANCE.version
   });

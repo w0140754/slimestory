@@ -33,7 +33,7 @@ async function moveToMap(socket, mapId, x, y) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-413" || welcome.worldContentVersion !== 413) throw new Error("unexpected v413 server/world marker");
+    if (welcome.buildVersion !== "6-11-419" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { stone: 10, woodWalls: 1 } } }));
@@ -59,32 +59,35 @@ async function moveToMap(socket, mapId, x, y) {
     const wall = await wallPending;
     if (!wall.success) throw new Error(`Stone Floor did not support normal wall placement: ${JSON.stringify(wall)}`);
 
-    const houseEntry = Object.entries(WORLD_CONTENT.maps).find(([, map]) => (map.npcs || []).some(npc => npc.type === "treasureChest"));
-    if (!houseEntry) throw new Error("deterministic v413 world has no treasure house");
+    const houseEntry = Object.entries(WORLD_CONTENT.maps).find(([, map]) => (map.structures || []).some(s => s.kind === "chest" && s.treasure));
+    if (!houseEntry) throw new Error("seed-0 world has no treasure house");
     const [houseMapId, houseMap] = houseEntry;
-    const chest = houseMap.npcs.find(npc => npc.type === "treasureChest");
-    if (houseMap.grid.x !== -1 || houseMap.grid.y !== -1) throw new Error(`unexpected current treasure corner ${houseMapId}`);
+    const chest = houseMap.structures.find(s => s.kind === "chest" && s.treasure);
 
     await moveToMap(socket, "world_m1_p0", 384, 200);
     const staticSnapshotPending = waitForMessage(socket, "structureSnapshot", m => m.mapId === houseMapId);
     await moveToMap(socket, houseMapId, chest.x, chest.y);
     const staticSnapshot = await staticSnapshotPending;
     if ((staticSnapshot.structures || []).some(item => item.worldGenerated || String(item.id || "").includes(":house:"))) {
-      throw new Error("world-generated house leaked into websocket structure snapshot");
+      throw new Error("world-generated baseline leaked into dynamic structure snapshot");
+    }
+    if (!Array.isArray(staticSnapshot.removedWorldStructureIds) || !Array.isArray(staticSnapshot.worldStructureStates)) {
+      throw new Error("map-entry mutation delta fields missing");
     }
 
+    const statePending = waitForMessage(socket, "structureState", m => m.structureId === chest.id && m.state?.opened === true);
     const treasurePending = waitForMessage(socket, "treasureResult", m => m.chestId === chest.id);
     socket.send(JSON.stringify({ type: "treasureOpen", chestId: chest.id }));
-    const treasure = await treasurePending;
-    if (!treasure.success || treasure.rewardCoins < 12 || treasure.rewardStone < 1) throw new Error(`treasure reward failed: ${JSON.stringify(treasure)}`);
+    const [state, treasure] = await Promise.all([statePending, treasurePending]);
+    if (!state || !treasure.success || treasure.rewardCoins < 12 || treasure.rewardStone < 1) throw new Error(`treasure reward failed: ${JSON.stringify(treasure)}`);
 
     const repeatPending = waitForMessage(socket, "treasureResult", m => m.chestId === chest.id);
     socket.send(JSON.stringify({ type: "treasureOpen", chestId: chest.id }));
     const repeat = await repeatPending;
-    if (repeat.success || repeat.reason !== "alreadyOpened") throw new Error("treasure chest could be looted twice in one character session");
+    if (repeat.success || repeat.reason !== "alreadyOpened") throw new Error("shared treasure chest could be looted twice");
 
     socket.close();
-    console.log("v413 WebSocket smoke passed: Stone Floor craft/place/wall support + private one-shot treasure, while generated house geometry stays out of structure snapshots.");
+    console.log("v413 retained WebSocket smoke passed on v414: Stone Floor craft/place/support + real shared treasure chest open state + compact map mutation sync.");
   } finally {
     server.kill("SIGTERM");
   }

@@ -44,13 +44,13 @@ async function connect() {
   try {
     await delay(500);
     const first = await connect();
-    if (first.welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
+    if (first.welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
     const restoredPending = waitForMessage(first.socket, "persistentStateRestored");
     first.socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 3, woodWalls: 2, woodDoors: 1 } } }));
     await restoredPending;
 
     const observer = await connect();
-    if (observer.welcome.buildVersion !== "6-11-413") throw new Error(`unexpected observer build ${observer.welcome.buildVersion}`);
+    if (observer.welcome.buildVersion !== "6-11-419") throw new Error(`unexpected observer build ${observer.welcome.buildVersion}`);
 
     // Free visible testing supply is server-authoritative and only usable at the crafting table.
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 226, y: 190, weaponIndex: -1 } }));
@@ -100,20 +100,24 @@ async function connect() {
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 141, y: 96 } }));
     await movePending;
 
-    // Once the passage expires, merely being adjacent and moving parallel must NOT reopen it.
+    // v418 anti-stuck: after the old passage timer expires, movement that is
+    // still inside the actual doorway channel remains valid instead of letting
+    // the automatic door close/reject the player mid-crossing.
     await delay(620);
-    const noMove = expectNoPlayerMove(observer.socket, id);
+    movePending = waitForMessage(observer.socket, "playerMove", m =>
+      m.id === id && Number(m.p?.[1]) === 97
+    );
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 141, y: 97 } }));
-    await noMove;
+    await movePending;
 
-    // Moving away from the closed boundary remains possible.
+    // Moving away from the boundary remains possible too.
     movePending = waitForMessage(observer.socket, "playerMove", m => m.id === id && Number(m.p?.[0]) === 142);
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 142, y: 96 } }));
     await movePending;
 
     first.socket.close();
     observer.socket.close();
-    console.log("v388 WebSocket smoke passed: Test Wood grants exactly 100, deliberate adjacent stepping opens a player door passage, and idle adjacency/parallel movement does not reopen it.");
+    console.log("v388 WebSocket smoke passed under v418 anti-stuck rules: Test Wood grants exactly 100 and the real doorway channel remains traversable even after the old passage timer expires.");
   } finally {
     server.kill("SIGTERM");
   }

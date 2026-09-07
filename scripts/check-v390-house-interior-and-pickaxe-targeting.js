@@ -13,10 +13,10 @@ const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.413");
-assert(server.includes('const BUILD_VERSION = "6-11-413";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
-assert.strictEqual(world.version, 413);
+assert.strictEqual(pkg.version, "0.6.11.419");
+assert(server.includes('const BUILD_VERSION = "6-11-419";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert.strictEqual(world.version, 414);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v390 must preserve the active coordinate world");
 
 assert(game.includes("const HOUSE_FOREGROUND_ALPHA = 0.34;"), "foreground wall fade alpha missing");
@@ -30,10 +30,10 @@ assert(!game.includes('"PLACE ON FLOOR"'), "local PLACE ON FLOOR tip should be r
 assert(!game.includes('"CONNECT TO BUILD"'), "local CONNECT TO BUILD tip should be retired");
 assert(!network.includes('message.reason === "blocked" ? "BLOCKED"'), "server placement failures must remain quiet on the client");
 
-assert(game.includes("function floorBelongsToCompletedRoof("), "client completed-roof placement guard missing");
-assert(game.includes("if (!candidate || floorBelongsToCompletedRoof(candidate.floor)) return null;"), "roofed floor must not offer wall/door placement preview");
+assert(game.includes("function floorBelongsToCompletedRoof("), "completed-roof topology helper missing");
+assert(!game.includes("if (!candidate || floorBelongsToCompletedRoof(candidate.floor)) return null;"), "roofed interiors must allow later partition placement");
 assert(server.includes("function roofedFloorKeysOnMap("), "server authoritative roofed-floor detector missing");
-assert(server.includes('reason = "roofed";'), "server must reject wall/door placement inside a roofed building");
+assert(!server.includes('reason = "roofed";'), "server must not lock wall/door placement after a roof forms");
 
 assert(game.includes("function playerStructurePickaxeTarget("), "shared Pickaxe target selector missing");
 assert(game.includes("function drawPickaxeStructureTargetHighlight("), "Pickaxe target highlight renderer missing");
@@ -41,4 +41,4 @@ assert(game.includes('equippedWeapon() !== "pickaxe"'), "target highlight must o
 assert(app.includes("drawPickaxeStructureTargetHighlight(renderCamera.x, renderCamera.y);"), "Pickaxe target highlight must be part of the render pass");
 assert(game.includes("function playerStructurePickaxeTarget("), "Pickaxe target selector must remain shared by preview/attack code");
 
-console.log("v390 house/build targeting checks passed: invisible interior roof, foreground-only fade, silent invalid placement, roof-completion wall lock, and exact Pickaxe target highlighting.");
+console.log("v390 retained house/build targeting checks passed: invisible interior roof, foreground-only fade, editable roofed interiors, and exact Pickaxe target highlighting.");

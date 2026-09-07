@@ -71,7 +71,7 @@ async function moveAndGetSlimes(socket, mapId, x, y) {
     await delay(500);
     const hunter = await connectAtSpawn();
     sockets.push(hunter.socket);
-    if (hunter.welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${hunter.welcome.buildVersion}`);
+    if (hunter.welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${hunter.welcome.buildVersion}`);
 
     const outerMap = "world_p1_p0";
     const initial = await moveAndGetSlimes(hunter.socket, outerMap, 16, 200);
@@ -81,9 +81,9 @@ async function moveAndGetSlimes(socket, mapId, x, y) {
     if (!ordinary.length) throw new Error("no ordinary runtime slime available for night hostility smoke");
 
     const target = ordinary[0];
-    // Put the player well inside the 208 px night detection radius, but not in
+    // Put the player inside the new short 64 px night detection radius, but not in
     // contact range, so acquisition—not collision damage—is what promotes it.
-    const px = Math.max(12, Math.min(388, Number(target.x) + 150));
+    const px = Math.max(12, Math.min(388, Number(target.x) + 48));
     const py = Math.max(12, Math.min(388, Number(target.y)));
     hunter.socket.send(JSON.stringify({
       type: "playerState",
@@ -101,7 +101,7 @@ async function moveAndGetSlimes(socket, mapId, x, y) {
       throw new Error("ordinary runtime slime did not acquire a nearby player at night");
     }
 
-    console.log(`v407 night-hostility smoke passed: ordinary outer-map slime acquired a player from bounded night detection (target=${target.id}).`);
+    console.log(`v407 night-hostility smoke passed: ordinary outer-map slime acquired a player from short bounded night detection (target=${target.id}).`);
   } finally {
     for (const socket of sockets) {
       try { socket.close(); } catch {}

@@ -11,10 +11,10 @@ const html = read("public", "index.html");
 const enemyRuntime = read("public", "client-enemy-runtime.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.413");
-assert.strictEqual(world.version, 413);
-assert(server.includes('const BUILD_VERSION = "6-11-413";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
+assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(world.version, 414);
+assert(server.includes('const BUILD_VERSION = "6-11-419";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
 
 // Door placement accepts a 90-degree wall at either endpoint, client + server.
 assert(game.includes("function doorCandidateHasFlankingWalls(candidate)"));

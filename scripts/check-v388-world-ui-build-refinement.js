@@ -14,10 +14,10 @@ const html = read("public", "index.html");
 const server = read("server.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.413");
-assert(server.includes('const BUILD_VERSION = "6-11-413";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
-assert.strictEqual(world.version, 413);
+assert.strictEqual(pkg.version, "0.6.11.419");
+assert(server.includes('const BUILD_VERSION = "6-11-419";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert.strictEqual(world.version, 414);
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");
 
@@ -46,7 +46,7 @@ assert(game.includes('structure.kind === "torch"') && game.includes("BUILD_EDGE_
 
 assert(!game.includes("AUTO_DOOR_OPEN_RADIUS") && !server.includes("AUTO_DOOR_OPEN_RADIUS"), "proximity-only doors must stay retired");
 assert(game.includes("function doorAllowsLocalPlayerStep("), "client directional door rule missing");
-assert(game.includes("after < before - 0.01"), "client door must require a step toward the boundary");
+assert(game.includes("travelling through the door channel refreshes the open/passage state") && game.includes("localDoorPassageUntil = performance.now() + DOOR_PASSAGE_MS;"), "client doorway anti-stuck traversal rule missing");
 assert(server.includes("function serverDoorAllowsPlayerStep("), "server directional door rule missing");
 assert(server.includes("const playerDoorPassages = new Map();"), "server passage window state missing");
 assert(server.includes("serverPlayerStepHitsStructureWall(id, mapId"), "authoritative movement is not using directional door collision");
@@ -63,4 +63,4 @@ assert(game.includes("if (inside) continue;"), "completed-house roof must disapp
 assert(app.includes("drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);"), "roof renderer must be wired over the sorted world layer");
 assert(!server.includes("roofSnapshot") && !server.includes("roofPlaced"), "automatic roofs must not add network state/heartbeat traffic");
 
-console.log("v388 world/UI/build refinement checks passed: HUD cleanup, gliding minimap, mobile transition scale, readable assignment rail, debug retirement, Pickaxe priority, directional doors, Test Wood, and zero-network automatic roofs.");
+console.log("v388 retained world/UI/build checks passed: HUD cleanup, gliding minimap, Pickaxe priority, anti-stuck automatic doors, Test Wood, and zero-network automatic roofs.");

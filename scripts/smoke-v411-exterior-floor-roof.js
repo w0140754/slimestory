@@ -32,7 +32,7 @@ async function place(socket, kind, x, y, edge = null) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 3, woodWalls: 7 } } }));
@@ -56,13 +56,16 @@ async function place(socket, kind, x, y, edge = null) {
     const porch = await place(socket, "woodFloor", 160, 96);
     if (!porch.success) throw new Error(`exterior floor placement failed: ${JSON.stringify(porch)}`);
 
+    // v418 also allows editing a completed interior boundary. The topology
+    // unit test continues to prove the porch remains outside the roof region;
+    // this live test verifies that adding the porch does not block later edits.
     const interiorAttempt = await place(socket, "woodWall", 128, 96, "east");
-    if (interiorAttempt.success || interiorAttempt.reason !== "roofed") {
-      throw new Error(`exterior floor invalidated enclosed roof topology: ${JSON.stringify(interiorAttempt)}`);
+    if (!interiorAttempt.success) {
+      throw new Error(`completed house could not accept an internal partition after porch placement: ${JSON.stringify(interiorAttempt)}`);
     }
 
     socket.close();
-    console.log("v411 exterior-floor WebSocket smoke passed: a floor placed immediately outside a completed wall remains a porch and does not invalidate the enclosed roof.");
+    console.log("v411/v418 exterior-floor WebSocket smoke passed: exterior porch placement succeeds and the completed building remains editable afterward.");
   } finally {
     server.kill("SIGTERM");
   }

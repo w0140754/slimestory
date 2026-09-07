@@ -11,11 +11,11 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.413");
-assert.strictEqual(world.version, 413);
-assert(server.includes('const BUILD_VERSION = "6-11-413";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
-assert(html.includes('/game.js?v=413'));
+assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(world.version, 414);
+assert(server.includes('const BUILD_VERSION = "6-11-419";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert(html.includes('/game.js?v=419'));
 
 // v399: the server must recognize the same near-door state the client already
 // presents as open, so enemies can use the doorway before the player crosses it.

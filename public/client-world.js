@@ -44,24 +44,24 @@ function loadImage(src) {
 // -----------------------------------------------------------------------------
 // Split tree parts. Both are 32x48 and share the same bottom-centre anchor.
 const treeTrunkImage = new Image();
-treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=413";
+treeTrunkImage.src = "assets/interactive_tree_trunk_damaged_v376.png?v=419";
 
 const treeCanopyImages = [];
 
 const treeCanopyImage = new Image();
-treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=413";
+treeCanopyImage.src = "assets/interactive_tree_canopy_v376.png?v=419";
 treeCanopyImages.push(treeCanopyImage);
 
 const treeCanopyImageVariantB = new Image();
-treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=413";
+treeCanopyImageVariantB.src = "assets/interactive_tree_canopy_v376_flip.png?v=419";
 treeCanopyImages.push(treeCanopyImageVariantB);
 
 const fireResistantTreeTrunkImage = new Image();
-fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=413";
+fireResistantTreeTrunkImage.src = "assets/fire_immune_tree_trunk_v1.png?v=419";
 const fireResistantTreeCanopyImage = new Image();
-fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=413";
+fireResistantTreeCanopyImage.src = "assets/fire_immune_tree_canopy_v1.png?v=419";
 const fireResistantTreeCanopyFlippedImage = new Image();
-fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=413";
+fireResistantTreeCanopyFlippedImage.src = "assets/fire_immune_tree_canopy_v1_flip.png?v=419";
 
 const rockPlainImage = loadImage("assets/rock_plain.png");
 const rockGrassImage = loadImage("assets/rock_grass.png");
@@ -79,10 +79,10 @@ function getTreeCanopyImage(tree) {
 }
 
 const treeDamagedTrunkImage = new Image();
-treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=413";
+treeDamagedTrunkImage.src = "assets/interactive_tree_trunk_v376.png?v=419";
 
 const treeStumpImage = new Image();
-treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=413";
+treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=419";
 
 const trees = [
   // Loose trees around the central clearing.
@@ -656,14 +656,19 @@ function drawTree(tree, camX, camY) {
     const shadowX = screenX + 3 + Math.round(sway * 1);
     const shadowY = screenY + 2;
 
-    ctx.save();
-    ctx.globalAlpha = 0.16;
-    ctx.fillStyle = "#203b24";
-    ctx.fillRect(shadowX - 10, shadowY - 4, 18, 2);
-    ctx.fillRect(shadowX - 13, shadowY - 2, 25, 2);
-    ctx.fillRect(shadowX - 15, shadowY,     28, 2);
-    ctx.fillRect(shadowX - 11, shadowY + 2, 20, 2);
-    ctx.restore();
+    const daylightShadowFactor = typeof worldClockSunShadowFactor === "function"
+      ? worldClockSunShadowFactor()
+      : 1;
+    if (daylightShadowFactor > 0.001) {
+      ctx.save();
+      ctx.globalAlpha = 0.16 * daylightShadowFactor;
+      ctx.fillStyle = "#203b24";
+      ctx.fillRect(shadowX - 10, shadowY - 4, 18, 2);
+      ctx.fillRect(shadowX - 13, shadowY - 2, 25, 2);
+      ctx.fillRect(shadowX - 15, shadowY,     28, 2);
+      ctx.fillRect(shadowX - 11, shadowY + 2, 20, 2);
+      ctx.restore();
+    }
 
     // Keep the base planted, but let the upper trunk bend with the canopy so
     // the whole fire-resistant tree participates in the wind animation.
@@ -750,6 +755,10 @@ function drawTree(tree, camX, camY) {
   // It sways slightly with the leaves and fades away as fire consumes them.
   if (!tree.canopyBurned) {
     let shadowAlpha = 0.16;
+    const daylightShadowFactor = typeof worldClockSunShadowFactor === "function"
+      ? worldClockSunShadowFactor()
+      : 1;
+    shadowAlpha *= daylightShadowFactor;
 
     if (tree.canopyBurnTime > 0) {
       const burnProgress =

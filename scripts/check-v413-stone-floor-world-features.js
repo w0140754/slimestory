@@ -16,11 +16,11 @@ const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.413");
-assert.strictEqual(world.version, 413);
-assert(server.includes('const BUILD_VERSION = "6-11-413";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'));
-assert(html.includes('/game.js?v=413'));
+assert.strictEqual(pkg.version, "0.6.11.419");
+assert.strictEqual(world.version, 414);
+assert(server.includes('const BUILD_VERSION = "6-11-419";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'));
+assert(html.includes('/game.js?v=419'));
 
 function pngDimensions(file) {
   const data = fs.readFileSync(file);
@@ -36,16 +36,16 @@ assert.strictEqual(topology.layerOf({ kind: "stoneFloor" }), topology.LAYERS.SUR
 assert(topology.SURFACE_KINDS.has("woodFloor") && topology.SURFACE_KINDS.has("stoneFloor"));
 
 assert(game.includes('const BUILD_FLOOR_STRUCTURE_KINDS = Object.freeze(["woodFloor", "stoneFloor"]);'));
-assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"]);'));
+assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"]);'));
 assert(game.includes('stoneFloor: Object.freeze({'));
 assert(game.includes('resourceKey: "stoneFloors"'));
 assert(game.includes('structure?.kind === "stoneFloor" ? stoneFloorStructureImage : woodFloorStructureImage'));
 assert(html.includes('data-build-item="stoneFloor"'));
 assert(html.includes('id="inventoryStoneFloorCount"'));
-assert(input.includes('["woodFloor", "stoneFloor"].includes(selectedBuildPiece)'));
+assert(input.includes('["woodFloor", "stoneFloor", "chest"].includes(selectedBuildPiece)'));
 assert(server.includes('const BUILD_FLOOR_KINDS = Object.freeze(new Set(["woodFloor", "stoneFloor"]));'));
 assert(server.includes('stoneFloor: Object.freeze({ repeatable: true, resourceKey: "stoneFloors", outputCount: 4'));
-assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch"'));
+assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"'));
 
 const featureTypes = new Set();
 let generatedBuildingCount = 0;
@@ -62,7 +62,7 @@ for (const [mapId, map] of Object.entries(world.maps)) {
       assert(Math.abs(map.grid.x) === world.worldGrid.radius && Math.abs(map.grid.y) === world.worldGrid.radius,
         `${mapId} generated building must be corner-only`);
       const local = structures.filter(item => item.featureType === feature.type);
-      assert(local.length > 0, `${mapId} ${feature.type} must be backed by static structures`);
+      assert(local.length > 0, `${mapId} ${feature.type} must be backed by real structures`);
       assert(local.every(item => item.worldGenerated === true && item.mapId === mapId));
       if (feature.type === "house") {
         completeHouseCount += 1;
@@ -71,49 +71,41 @@ for (const [mapId, map] of Object.entries(world.maps)) {
       }
     }
   }
-  for (const npc of map.npcs || []) {
-    if (npc.type !== "treasureChest") continue;
+  for (const chest of structures.filter(item => item.kind === "chest" && item.treasure)) {
     generatedTreasureCount += 1;
-    assert(typeof npc.id === "string" && npc.id.includes(":treasure:"));
-    const houseFeature = features.find(feature => feature.id === npc.featureId);
+    assert(typeof chest.id === "string" && chest.id.includes(":treasure:"));
+    assert.strictEqual(chest.worldGenerated, true);
+    const houseFeature = features.find(feature => feature.id === chest.featureId);
     assert(houseFeature && ["house", "ruin"].includes(houseFeature.type), "treasure must belong to a generated building");
-    assert(Math.hypot(npc.x - houseFeature.x, npc.y - houseFeature.y) <= 24, "treasure must be inside the generated building footprint");
+    assert(Math.hypot(chest.x - houseFeature.x, chest.y - houseFeature.y) <= 24, "treasure must be inside the generated building footprint");
   }
-  for (const region of map.terrain?.regions || []) {
-    if (region.type === "water") pondCount += 1;
-  }
+  for (const region of map.terrain?.regions || []) if (region.type === "water") pondCount += 1;
   for (const structure of structures.filter(item => item.featureType === "stonePatch")) {
     assert.strictEqual(structure.kind, "stoneFloor", "stone patches must reuse the real buildable Stone Floor surface");
   }
 }
 
 assert(generatedBuildingCount >= 0 && generatedBuildingCount <= 2, "world generation must contain at most two rare houses/ruins total");
-assert(completeHouseCount >= 1, "current deterministic world should expose a complete house for regression coverage");
-assert(generatedTreasureCount >= 1, "current deterministic world should expose at least one treasure house for regression coverage");
-for (const type of ["pond", "meadow", "treeRing", "stonePatch"]) {
-  assert(featureTypes.has(type), `current coordinate world must exercise ${type}`);
-}
+assert(completeHouseCount >= 1, "seed-0 fixture should expose a complete house for regression coverage");
+assert(generatedTreasureCount >= 1, "seed-0 fixture should expose at least one treasure chest for regression coverage");
+for (const type of ["pond", "meadow", "treeRing", "stonePatch"]) assert(featureTypes.has(type), `seed-0 fixture must exercise ${type}`);
 assert(pondCount >= 3, "pond features must compile to existing water terrain regions");
 
-// Map variety is immutable world content. It must be available to both sides
-// without adding the generated structures to map-entry or idle websocket data.
+// Generated content remains baseline world data; only mutations are synchronized.
 assert(server.includes("function worldGeneratedStructuresOnMap(mapId)"));
-assert(server.includes("function dynamicStructuresOnMap(mapId)"));
-assert(server.includes("return dynamicStructuresOnMap(mapId).map(structure => ({"));
-assert(server.includes("keeps map variety effectively zero-idle-traffic"));
+assert(server.includes("function worldStructureMutationSnapshot(mapId)"));
+assert(server.includes("removedWorldStructureIds"));
+assert(server.includes("worldStructureStates"));
 assert(game.includes("function worldGeneratedStructuresForMap(mapId = currentMapId)"));
+assert(game.includes("removedWorldStructureIdsByMap"));
 assert(game.includes("worldStructures.concat(placedStructures)"));
 assert(server.includes("TERRAIN_RULES.circleCanOccupy(definition, x, y, 5, { allowWater: false })"),
-  "runtime enemy generation must reject new pond water without authored spawn positions");
+  "runtime enemy generation must reject generated ponds without authored spawn positions");
 
-// Treasure is event-driven: one interaction request + one private response,
-// with opened IDs carried only by local/persistent progression state.
 assert(network.includes("requestTreasureOpen(chestId)"));
 assert(network.includes('type: "treasureOpen"'));
 assert(server.includes("function handleTreasureOpen(playerId, socket, message)"));
 assert(server.includes('type: "treasureResult"'));
-assert(server.includes("Static chests never poll, broadcast, or"));
-assert(!server.includes("treasureSnapshot"));
 assert(!server.includes("treasureHeartbeat"));
 
-console.log(`v413 Stone Floor + world features check passed: ${generatedBuildingCount} generated building(s), ${generatedTreasureCount} treasure chest(s), ponds/meadows/tree rings/stone patches, and static zero-idle-traffic map variety.`);
+console.log(`v413 Stone Floor + world feature retention check passed on v414: ${generatedBuildingCount} generated building(s), ${generatedTreasureCount} real treasure chest(s), ponds/meadows/tree rings/stone patches.`);

@@ -1168,6 +1168,16 @@ function executePrimaryAttackCommand(payload) {
     return;
   }
 
+  if (currentWeapon === "tigerPaw") {
+    updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
+    tryCastHurl();
+    player.attackTime = 0.12;
+    player.attackCooldown = 0.25;
+    player.slashTime = 0;
+    player.shadowCritAttack = false;
+    return;
+  }
+
   // A committed primary attack breaks Camouflage immediately even on a whiff.
   // The authoritative server grants the short ambush token on this transition.
   consumeCamouflageOpening();

@@ -929,17 +929,8 @@ function findNearestHurlableRock(
 function findNearestHurlableTarget(
   maxDistance = HURL_GRAB_RANGE
 ) {
-  const enemyTarget =
-    findNearestHurlableEnemy(maxDistance);
-  const rockTarget =
-    findNearestHurlableRock(maxDistance);
-
-  if (!enemyTarget) return rockTarget;
-  if (!rockTarget) return enemyTarget;
-
-  return rockTarget.distance < enemyTarget.distance
-    ? rockTarget
-    : enemyTarget;
+  // v415 Tiger Paw targets mobs only. Loose rocks are deliberately excluded.
+  return findNearestHurlableEnemy(maxDistance);
 }
 
 function sendHurlEnemyAction(enemy, action, payload = {}) {
@@ -977,7 +968,10 @@ function sendHurlRockAction(rock, action, payload = {}) {
 }
 
 function tryCastHurl() {
-  // Hurl takes priority over bow draw state.
+  // v415: Hurl is no longer a standalone skill. It belongs to Tiger Paw.
+  if (equippedWeapon() !== "tigerPaw") return false;
+
+  // Tiger Paw takes priority over bow draw state.
   if (player.bowDrawing) {
     player.bowDrawing = false;
     player.bowDrawAmount = 0;
@@ -1020,31 +1014,16 @@ function tryCastHurl() {
     return true;
   }
 
-  if (target.kind === "rock") {
-    sendHurlRockAction(
-      target.entity,
-      "hurlGrab"
-    );
-  } else {
-    sendHurlEnemyAction(
-      target.entity,
-      "hurlGrab"
-    );
-  }
+  sendHurlEnemyAction(
+    target.entity,
+    "hurlGrab"
+  );
 
   return true;
 }
 
 function tryThrowCarriedHurlObject(aimAngle) {
-  const rock = getLocalCarriedRock();
-  if (rock) {
-    return sendHurlRockAction(
-      rock,
-      "hurlThrow",
-      { aimAngle }
-    );
-  }
-
+  // v415 Tiger Paw throws carried mobs only.
   const enemy = getLocalCarriedEnemy();
   if (!enemy) return false;
 

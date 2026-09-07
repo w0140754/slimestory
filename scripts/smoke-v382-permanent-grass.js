@@ -1,11 +1,20 @@
 const { spawn } = require("child_process");
 const path = require("path");
 const WebSocket = require("ws");
+process.env.SLIME_STORY_WORLD_SEED = "0";
+const WORLD_CONTENT = require("../public/shared/world-content.js");
 
 const PORT = 33482;
 const URL = `ws://127.0.0.1:${PORT}/ws`;
 const MAP_ID = "world_p0_p0";
-const GRASS_ID = `${MAP_ID}:grass:test-permanent`;
+const CANONICAL_GRASS = (WORLD_CONTENT.maps?.[MAP_ID]?.environment?.tallGrass || [])
+  .map(grass => ({ grass, distance: Math.hypot(Number(grass.x) - 96, Number(grass.y) - 96) }))
+  .sort((a, b) => a.distance - b.distance)[0]?.grass;
+if (!CANONICAL_GRASS) throw new Error("seeded smoke fixture has no grass");
+const GRASS_ID = CANONICAL_GRASS.id;
+const GRASS_X = Number(CANONICAL_GRASS.x);
+const GRASS_Y = Number(CANONICAL_GRASS.y);
+const GRASS_WIDTH = Number(CANONICAL_GRASS.width) || 13;
 
 function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) {
   const queuedIndex = (socket.__messageQueue || []).findIndex(message => message.type === type && predicate(message));
@@ -35,20 +44,20 @@ async function connect() {
   });
   await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
   const welcome = await waitForMessage(socket, "welcome");
-  if (welcome.buildVersion !== "6-11-413") throw new Error(`unexpected build ${welcome.buildVersion}`);
+  if (welcome.buildVersion !== "6-11-419") throw new Error(`unexpected build ${welcome.buildVersion}`);
   return socket;
 }
 
 async function run() {
-  const server = spawn(process.execPath, ["server.js"], { cwd: path.join(__dirname, ".."), env: { ...process.env, PORT: String(PORT) }, stdio: ["ignore", "pipe", "pipe"] });
+  const server = spawn(process.execPath, ["server.js"], { cwd: path.join(__dirname, ".."), env: { ...process.env, PORT: String(PORT), SLIME_STORY_WORLD_SEED: "0" }, stdio: ["ignore", "pipe", "pipe"] });
   let stderr = ""; server.stderr.on("data", chunk => { stderr += String(chunk); });
   try {
     await new Promise(resolve => setTimeout(resolve, 300));
     const owner = await connect();
-    owner.send(JSON.stringify({ type: "playerStatePatch", player: { mapId: MAP_ID, x: 96, y: 96, weaponIndex: 0, attackAimAngle: 0 } }));
+    owner.send(JSON.stringify({ type: "playerStatePatch", player: { mapId: MAP_ID, x: GRASS_X - 16, y: GRASS_Y + 3, weaponIndex: 0, attackAimAngle: 0 } }));
     await new Promise(resolve => setTimeout(resolve, 80));
 
-    owner.send(JSON.stringify({ type: "environmentCatalog", mapId: MAP_ID, entities: [{ id: GRASS_ID, kind: "grass", x: 112, y: 96, width: 13 }] }));
+    owner.send(JSON.stringify({ type: "environmentCatalog", mapId: MAP_ID, entities: [{ id: GRASS_ID, kind: "grass", x: GRASS_X, y: GRASS_Y, width: GRASS_WIDTH }] }));
     await new Promise(resolve => setTimeout(resolve, 100));
 
     const cutPatch = waitForMessage(owner, "environmentPatch", m => m.mapId === MAP_ID && Array.isArray(m.entities) && m.entities.some(e => e.id === GRASS_ID && e.cut === true));
@@ -56,7 +65,7 @@ async function run() {
     await cutPatch;
 
     // Re-registering the default catalog must not resurrect authoritative cut state.
-    owner.send(JSON.stringify({ type: "environmentCatalog", mapId: MAP_ID, entities: [{ id: GRASS_ID, kind: "grass", x: 112, y: 96, width: 13 }] }));
+    owner.send(JSON.stringify({ type: "environmentCatalog", mapId: MAP_ID, entities: [{ id: GRASS_ID, kind: "grass", x: GRASS_X, y: GRASS_Y, width: GRASS_WIDTH }] }));
     await new Promise(resolve => setTimeout(resolve, 80));
 
     const observer = await connect();

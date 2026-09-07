@@ -11,10 +11,10 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-413";'), "server build must be v377");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'), "client build must be v377");
-assert.strictEqual(pkg.version, "0.6.11.413", "package version must be v377");
-assert(html.includes('/game.js?v=413') && html.includes('/client-input.js?v=413'), "v377 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-419";'), "server build must be v377");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'), "client build must be v377");
+assert.strictEqual(pkg.version, "0.6.11.419", "package version must be v377");
+assert(html.includes('/game.js?v=419') && html.includes('/client-input.js?v=419'), "v377 cache keys missing");
 
 assert(html.includes('translateX(-50%) scale(.84)'), "mobile top weapon/tool hotbar was not enlarged");
 assert(html.includes('height: min(300px, 82dvh)') && html.includes('#craftGrid {\n      flex: 1 1 auto;'), "compact mobile crafting panel missing");

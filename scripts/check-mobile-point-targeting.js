@@ -16,10 +16,10 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-413";'), "server build must be v355");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-413";'), "client build must be v355");
-assert.strictEqual(pkg.version, "0.6.11.413", "package version must be v355");
-assert(html.includes('/client-input.js?v=413') && html.includes('/client-magus-abilities.js?v=413'), "v355 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-419";'), "server build must be v355");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-419";'), "client build must be v355");
+assert.strictEqual(pkg.version, "0.6.11.419", "package version must be v355");
+assert(html.includes('/client-input.js?v=419') && html.includes('/client-magus-abilities.js?v=419'), "v355 cache keys missing");
 
 assert(html.includes('id="mobileTargetHint"'), "mobile target hint missing");
 assert(html.includes('body.mobile-point-targeting #mobileTargetHint'), "mobile target hint styling missing");
