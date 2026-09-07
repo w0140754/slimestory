@@ -12,12 +12,12 @@ const network = read("public", "client-network.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.407");
-assert(server.includes('const BUILD_VERSION = "6-11-407";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
+assert.strictEqual(pkg.version, "0.6.11.410");
+assert(server.includes('const BUILD_VERSION = "6-11-410";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
 
 assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall", "woodDoor", "torch"]);'), "Wood Door must join the unified build hotbar list");
-assert(game.includes("if (remotePlayerDrawDepth <= 0 && selectedBuildPiece) return null;"), "build selection must render the local player empty-handed");
+assert(game.includes("if (heldBuildPieceForCurrentDraw()) return null;"), "build selection must render local and replicated remote build holders empty-handed");
 assert(game.includes("function structureFadeAlpha(structure, alpha = 1)"), "wall visibility fade helper missing");
 assert(game.includes(": 0.58);"), "ordinary wall fade should retain canopy-style partial transparency");
 assert(!game.includes("AUTO_DOOR_OPEN_RADIUS"), "v388 must not restore proximity-only auto doors");

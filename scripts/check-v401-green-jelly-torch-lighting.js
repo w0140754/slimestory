@@ -14,10 +14,10 @@ const enemies = read("public", "client-enemies.js");
 const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.407");
-assert.strictEqual(world.version, 407);
-assert(server.includes('const BUILD_VERSION = "6-11-407";'));
-assert(html.includes('/game.js?v=407'));
+assert.strictEqual(pkg.version, "0.6.11.410");
+assert.strictEqual(world.version, 410);
+assert(server.includes('const BUILD_VERSION = "6-11-410";'));
+assert(html.includes('/game.js?v=410'));
 
 // Green Jelly Cube loot + crafting.
 assert(fs.existsSync(path.join(root, "public", "assets", "green_jelly_cube.png")));

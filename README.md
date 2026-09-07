@@ -1,3 +1,32 @@
+## v6-11-410 — Roof Surface Lighting Occlusion Fix
+
+- Fixed the small exterior-roof light leak visible when a Torch is burning inside a completed building. The roof is now treated as its own projected lighting surface instead of inheriting light carved into the ground or hidden wall sprites underneath it.
+- Visible roof pixels are reset to ambient darkness **after** wall-facade lighting is resolved, matching the real render order where the roof is drawn on top of the walls. This specifically prevents an illuminated interior/back-wall rectangle from appearing as a bright band across the outside roof.
+- Interior Torch sources are classified from their existing visibility origin and cannot re-light any exterior roof surface. This covers both placed wall/floor Torches and held Torches inside an enclosed room without adding any network traffic.
+- Exterior Torches still receive an explicit roof-surface lighting pass, so fixing the interior leak does not simply make roofs permanently immune to nearby outside light.
+- Preserved v409 wall-surface propagation, v408 canonical structure geometry, existing Torch radius/flicker/night darkness, roof reveal behavior, building placement/collision, world definitions, runtime enemy generation/spawning, and networking cadence.
+- Regression: **31 syntax targets + 93 retained checks/smokes** pass, including a new v410 roof-surface ordering/interior-source regression. Server startup and `/health` pass as build **6-11-410** / world content **410**.
+
+## v6-11-409 — Wall Torch Surface Lighting Fix
+
+- Fixed wall-mounted Torch illumination changing when the local player walks to a different side of a wall. Stationary wall lighting is no longer keyed to the player's side of each individual wall segment.
+- Completed roofed structures now choose the illuminated wall face from the existing interior/exterior roof-reveal state. Standalone or incomplete walls keep their single visible facade available to nearby Torch light without introducing a hidden opposite-face dependency.
+- Wall-face line-of-sight now traces to a point just outside the **near face** of the canonical wall boundary instead of the wall centerline. This prevents the mounted Torch's own support wall—and coplanar neighboring wall collisions—from prematurely blocking the facade-light ray.
+- As a result, mounted Torch light can spread continuously across adjacent connected horizontal or vertical wall segments while ordinary ground-plane light remains blocked by the same canonical wall/closed-door barrier used in v408.
+- The shared structure geometry API now exposes `offsetBoundaryPointToSide()` and advances to geometry API version 2. No world generation, enemy spawning, building placement, Torch radius, darkness curve, networking cadence, or server-authoritative collision rules were changed.
+- Regression: **31 syntax targets + 92 retained checks/smokes** pass, including a new v409 wall-surface lighting regression covering horizontal and vertical coplanar propagation. Server startup and `/health` pass as build **6-11-409** / world content **409**.
+
+## v6-11-408 — Structure Geometry Refactor
+
+- Consolidated Wood Wall and Wood Door geometry into a new shared `structure-geometry.js` module used by both server and client. Boundary segments, collision rectangles, draw-sort depth, boundary-side tests, and light barriers now derive from the same canonical structure coordinates instead of being recreated independently by each subsystem.
+- Separated **physical blocking**, **visual held-item occlusion**, and **light-surface rendering**. Combat/projectile collision continues to use authoritative physical geometry, while held-item draw order can remain visually in front of a wall when the player is below it without weakening wall collision.
+- Reworked Torch lighting around the canonical boundary model. General light still stops at Wood Walls and closed Wood Doors, then visible wall/door faces receive a separate same-side light pass. This lets a wall-mounted Torch illuminate the face it is attached to while preventing an exterior light source from brightening the opposite/interior wall face.
+- Wall-mounted Torch side metadata now uses the same shared boundary-side helper on the server and client, eliminating separate placement/light interpretations of north/south/east/west wall sides.
+- Added durable, change-only multiplayer replication for `heldBuildPiece`. Other players can now see a player holding a Torch, and every client derives that remote held Torch's wall-occluded light locally. Holding/unholding sends a player-state change only; there is **no new Torch heartbeat or continuous lighting packet stream**.
+- Remote held build items now use the same empty-hand/held-item rendering rules and wall visual-occlusion path as the local player. Placed Torch replication and attachment/reclaim behavior are unchanged.
+- Preserves v407 bounded all-map night hostility, deeper midnight darkness, Spawn's special night-Slime pressure, v406 mounted Torches, v405 single-target basic attacks/staggered Slime hops, and all existing building/world generation systems. World definitions are unchanged apart from the 407→408 build marker.
+- Regression: **31 syntax targets + 91 retained checks/smokes** pass, including a new shared-geometry check and a WebSocket smoke proving held Torch hold/unhold state reaches another client as a change-only player-state delta. Server startup and `/health` pass as build 6-11-408.
+
 ## v6-11-407 — Night Hostility & Lighting Polish
 
 - Held-item visual occlusion now follows the same world Y-sort used for wall/player draw order. A wall can still block the attack mechanically, but if the player is standing below/in front of that wall the held sword/tool/torch remains visible in front instead of being clipped away.

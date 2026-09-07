@@ -10,10 +10,10 @@ const game = read("public", "game.js");
 const config = read("public", "client-config.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.407");
-assert(server.includes('const BUILD_VERSION = "6-11-407";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
-assert.strictEqual(world.version, 407);
+assert.strictEqual(pkg.version, "0.6.11.410");
+assert(server.includes('const BUILD_VERSION = "6-11-410";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
+assert.strictEqual(world.version, 410);
 
 assert(server.includes("function floorAcrossBuildEdge(mapId, floorX, floorY, edge)"));
 assert(server.includes('reason = "interiorEdge"'));

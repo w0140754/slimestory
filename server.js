@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-407";
+const BUILD_VERSION = "6-11-410";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -53,6 +53,7 @@ const ABILITY_SCALING = require("./public/shared/ability-scaling.js");
 const CAMOUFLAGE_RULES = require("./public/shared/camouflage-rules.js");
 const ENEMY_NET_PROTOCOL = require("./public/shared/enemy-net-protocol.js");
 const PLAYER_NET_PROTOCOL = require("./public/shared/player-net-protocol.js");
+const STRUCTURE_GEOMETRY = require("./public/shared/structure-geometry.js");
 const {
   browserRuntimeWorldContentSource,
   injectRuntimeWorldContentUrl
@@ -2033,11 +2034,8 @@ function structureSnapshot(mapId) {
 }
 
 function structureRect(structure) {
-  if (["woodWall", "woodDoor"].includes(structure?.kind)) {
-    if (structure.axis === "vertical") {
-      return { x: structure.x - 1, y: structure.y - 8, width: 2, height: 16 };
-    }
-    return { x: structure.x - 8, y: structure.y - 1, width: 16, height: 2 };
+  if (STRUCTURE_GEOMETRY.isBoundaryStructure(structure)) {
+    return STRUCTURE_GEOMETRY.collisionRect(structure, 2);
   }
   return { x: structure.x - 8, y: structure.y - 8, width: 16, height: 16 };
 }
@@ -2529,10 +2527,12 @@ function handleStructurePlaceRequest(playerId, socket, message) {
             supportId: torchSupport.id,
             mountType: torchSupport.kind === "woodWall" ? "wall" : "floor",
             ...(torchSupport.kind === "woodWall" ? {
-              mountAxis: torchSupport.axis === "vertical" ? "vertical" : "horizontal",
-              mountSide: torchSupport.axis === "vertical"
-                ? (playerState.x < Number(torchSupport.x) ? "west" : "east")
-                : (playerState.y < Number(torchSupport.y) ? "north" : "south")
+              mountAxis: STRUCTURE_GEOMETRY.axisOf(torchSupport),
+              mountSide: STRUCTURE_GEOMETRY.sideOfBoundary(
+                torchSupport,
+                playerState.x,
+                playerState.y
+              )
             } : {})
           }
         : { mountType: "ground" }
@@ -14350,6 +14350,9 @@ function sanitizePlayerState(id, source = {}, previous = null) {
   );
   const sanitizedClassId = null; // v377: classes are retired.
   const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, 12, -1);
+  const sanitizedHeldBuildPiece = ["woodFloor", "woodWall", "woodDoor", "torch"].includes(source.heldBuildPiece)
+    ? source.heldBuildPiece
+    : null;
   const dimensions = mapWorldDimensions(mapId);
   let sanitizedX = authoritativeDead && previous && Number.isFinite(previous.x)
     ? previous.x
@@ -14537,6 +14540,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     pantsIndex: clampInteger(source.pantsIndex, -1, 7, -1),
     charmIndex: clampInteger(source.charmIndex, -1, 0, -1),
     weaponIndex: sanitizedWeaponIndex,
+    heldBuildPiece: sanitizedHeldBuildPiece,
 
     // Progression remains client-owned for now, but server damage uses these
     // sanitized values instead of trusting a client-supplied damage number.
@@ -14671,6 +14675,7 @@ function publicPlayerState(playerState) {
     pantsIndex: playerState.pantsIndex,
     charmIndex: playerState.charmIndex,
     weaponIndex: playerState.weaponIndex,
+    heldBuildPiece: playerState.heldBuildPiece || null,
 
     walkTime: playerState.walkTime,
     firstRaisedLeg: playerState.firstRaisedLeg,

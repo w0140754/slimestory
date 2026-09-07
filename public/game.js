@@ -199,15 +199,15 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=407");
-const torchImage = loadImage("assets/torch_v1.png?v=407");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=410");
+const torchImage = loadImage("assets/torch_v1.png?v=410");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=407");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=407");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=407");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=407");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=410");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=410");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=410");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=410");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -7583,11 +7583,16 @@ let remotePlayerDrawDepth = 0;
 // setupSkillTreeUi/updateHotbar run before the lower building helper section initializes.
 let selectedBuildPiece = null;
 
+function heldBuildPieceForCurrentDraw() {
+  return remotePlayerDrawDepth > 0
+    ? (typeof player.heldBuildPiece === "string" ? player.heldBuildPiece : null)
+    : selectedBuildPiece;
+}
+
 function equippedWeapon() {
-  // v386: build pieces are actions, not weapons. Keep the equipped weapon index
-  // intact for quick return, but render/use the local player as empty-handed
-  // while Wood Floor/Wall/Door placement is selected.
-  if (remotePlayerDrawDepth <= 0 && selectedBuildPiece) return null;
+  // v408: build/held presentation is replicated as durable change-only player
+  // state. Local and remote players therefore use the same held-item rule.
+  if (heldBuildPieceForCurrentDraw()) return null;
 
   if (player.weaponIndex < 0) {
     return null;
@@ -10098,18 +10103,19 @@ function torchVisibilityWorldPosition(structure) {
   const light = torchLightWorldPosition(structure);
   if (structure?.mountType !== "wall") return light;
 
-  const x = Number(structure.x);
-  const y = Number(structure.y);
-  if (structure.mountAxis === "vertical") {
-    return {
-      x: x + (structure.mountSide === "west" ? -1.5 : 1.5),
-      y: light.y
-    };
+  // v408: mounting-side information is interpreted through the shared
+  // structure geometry module instead of re-deriving wall axes here. The
+  // visible flame may sit on the painted facade, but light visibility always
+  // begins just on the side the torch is physically mounted to.
+  const offset = STRUCTURE_GEOMETRY.offsetPointToSide(
+    { ...structure, axis: structure.mountAxis || structure.axis },
+    structure.mountSide,
+    2.25
+  );
+  if (STRUCTURE_GEOMETRY.axisOf({ axis: structure.mountAxis || structure.axis }) === "vertical") {
+    return { x: offset.x, y: light.y };
   }
-  return {
-    x: light.x,
-    y: y + (structure.mountSide === "north" ? -1.5 : 1.5)
-  };
+  return { x: light.x, y: offset.y };
 }
 
 function drawPlacedTorch(structure, camX, camY, alpha = 1) {
@@ -10130,10 +10136,7 @@ function drawPlacedTorch(structure, camX, camY, alpha = 1) {
 }
 
 function wallCollisionRect(structure) {
-  if (structure?.axis === "vertical") {
-    return { x: Number(structure.x) - 1, y: Number(structure.y) - 8, width: 2, height: 16 };
-  }
-  return { x: Number(structure.x) - 8, y: Number(structure.y) - 1, width: 16, height: 2 };
+  return STRUCTURE_GEOMETRY.collisionRect(structure, 2);
 }
 
 function structureEdgeNeighbor(structure, direction) {
@@ -10151,32 +10154,7 @@ function structureEdgeNeighbor(structure, direction) {
 }
 
 function segmentRectIntersectionT(x1, y1, x2, y2, rect, padding = 0) {
-  const minX = Number(rect.x) - padding;
-  const maxX = Number(rect.x) + Number(rect.width) + padding;
-  const minY = Number(rect.y) - padding;
-  const maxY = Number(rect.y) + Number(rect.height) + padding;
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  let tMin = 0;
-  let tMax = 1;
-
-  for (const [start, delta, low, high] of [
-    [x1, dx, minX, maxX],
-    [y1, dy, minY, maxY]
-  ]) {
-    if (Math.abs(delta) < 0.000001) {
-      if (start < low || start > high) return null;
-      continue;
-    }
-    let a = (low - start) / delta;
-    let b = (high - start) / delta;
-    if (a > b) [a, b] = [b, a];
-    tMin = Math.max(tMin, a);
-    tMax = Math.min(tMax, b);
-    if (tMin > tMax) return null;
-  }
-
-  return tMin >= 0 && tMin <= 1 ? tMin : null;
+  return STRUCTURE_GEOMETRY.segmentRectIntersectionT(x1, y1, x2, y2, rect, padding);
 }
 
 function structureWallImpactPoint(fromX, fromY, toX, toY, padding = 0) {
@@ -10220,7 +10198,7 @@ function applyHeldItemStructureVisibilityClip(camX, camY) {
   const sourceY = Number(player?.y);
   if (![sourceX, sourceY].every(Number.isFinite)) return;
 
-  const polygon = torchLightVisibilityPolygon(sourceX, sourceY, 42, "held-item-local");
+  const polygon = torchLightVisibilityPolygon(sourceX, sourceY, 42, "held-item");
   if (!polygon?.length) return;
 
   ctx.beginPath();
@@ -10602,6 +10580,32 @@ function roofRegionVisuallyCoversLocalPlayer(region) {
   });
 }
 
+function appendRoofRegionSurfacePath(pathCtx, region, camX, camY) {
+  if (!pathCtx || !region?.floors?.length) return false;
+  const floorKeys = region.floorKeys || new Set(
+    region.floors.map(floor => structureCellKey(floor.x, floor.y))
+  );
+
+  let appended = false;
+  for (const floor of region.floors) {
+    const fx = Number(floor.x);
+    const fy = Number(floor.y);
+    if (!Number.isFinite(fx) || !Number.isFinite(fy)) continue;
+
+    const north = !floorKeys.has(structureCellKey(fx, fy - BUILD_GRID_SIZE));
+    const south = !floorKeys.has(structureCellKey(fx, fy + BUILD_GRID_SIZE));
+    const west = !floorKeys.has(structureCellKey(fx - BUILD_GRID_SIZE, fy));
+    const east = !floorKeys.has(structureCellKey(fx + BUILD_GRID_SIZE, fy));
+    const left = fx - 8 - (west ? ROOF_OVERHANG : 0) - camX;
+    const top = fy - 40 - (north ? ROOF_OVERHANG : 0) - camY;
+    const width = 16 + (west ? ROOF_OVERHANG : 0) + (east ? ROOF_OVERHANG : 0);
+    const height = 16 + (north ? ROOF_OVERHANG : 0) + (south ? ROOF_OVERHANG : 0);
+    pathCtx.rect(left, top, width, height);
+    appended = true;
+  }
+  return appended;
+}
+
 function drawAutomaticStructureRoofs(camX, camY) {
   for (const region of automaticRoofRegions()) {
     const inside = playerInsideRoofRegion(region);
@@ -10682,7 +10686,7 @@ function drawAutomaticStructureRoofs(camX, camY) {
 }
 
 function wallDrawSortY(structure) {
-  return Number(structure.y) + (structure?.axis === "vertical" ? 8 : 0);
+  return STRUCTURE_GEOMETRY.drawSortY(structure);
 }
 
 function addPlayerStructureDrawables(drawables, camX, camY) {
@@ -10901,6 +10905,9 @@ function beginBuildPlacement(kind) {
   }
   updateCanvasCursor();
   if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();
+  // v408: this is a change-only durable presentation field; it sends only when
+  // the player changes what they are holding, not every frame.
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) onlineClient.sendLocalState(true);
   return true;
 }
 
@@ -10911,6 +10918,7 @@ function cancelBuildPlacement(quiet = false) {
   if (!quiet) spawnFloatingText(player.x, player.y - 30, "BUILD CANCELLED", "#d9c9a0", 0.65);
   updateCanvasCursor();
   if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();
+  if (typeof onlineClient !== "undefined" && onlineClient?.connected) onlineClient.sendLocalState(true);
   return true;
 }
 
@@ -11367,39 +11375,20 @@ function torchLightBlockingSegments(sourceX, sourceY, radius) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
     if (Math.hypot(x - sourceX, y - sourceY) > maxDistance) continue;
 
-    if (structure.axis === "vertical") {
-      segments.push({
-        id: structure.id,
-        x1: x,
-        y1: y - 8,
-        x2: x,
-        y2: y + 8
-      });
-    } else {
-      segments.push({
-        id: structure.id,
-        x1: x - 8,
-        y1: y,
-        x2: x + 8,
-        y2: y
-      });
-    }
+    // v408: light, collision and attack blocking now start from the same
+    // canonical boundary segment. A tiny tangential overlap seals connected
+    // corners against floating-point/ray gaps without making the wall thicker.
+    const boundary = STRUCTURE_GEOMETRY.lightBarrierSegment(structure, 0.4);
+    if (!boundary) continue;
+    segments.push({ id: structure.id, ...boundary });
   }
   return segments;
 }
 
 function raySegmentIntersectionDistance(originX, originY, rayX, rayY, segment) {
-  const segX = segment.x2 - segment.x1;
-  const segY = segment.y2 - segment.y1;
-  const cross = rayX * segY - rayY * segX;
-  if (Math.abs(cross) < 0.000001) return null;
-
-  const qx = segment.x1 - originX;
-  const qy = segment.y1 - originY;
-  const t = (qx * segY - qy * segX) / cross;
-  const u = (qx * rayY - qy * rayX) / cross;
-  if (t < 0.08 || u < -0.0001 || u > 1.0001) return null;
-  return t;
+  return STRUCTURE_GEOMETRY.raySegmentIntersectionDistance(
+    originX, originY, rayX, rayY, segment, 0.08
+  );
 }
 
 function heldItemOcclusionAllowsStructure(structure, sourceY) {
@@ -11414,13 +11403,13 @@ function heldItemOcclusionAllowsStructure(structure, sourceY) {
 
 function torchLightVisibilityPolygon(sourceX, sourceY, radius, cacheKey = null) {
   let blockers = torchLightBlockingSegments(sourceX, sourceY, radius);
-  if (cacheKey === "held-item-local") {
+  if (cacheKey === "held-item") {
     const structuresById = new Map(currentMapStructures().map(structure => [structure?.id, structure]));
     blockers = blockers.filter(segment =>
       heldItemOcclusionAllowsStructure(structuresById.get(segment.id), sourceY)
     );
   }
-  const signature = `${currentMapId}:${placedStructureRevision}:${cacheKey === "held-item-local" ? "held" : "light"}:${blockers.map(segment => segment.id).sort().join(",")}`;
+  const signature = `${currentMapId}:${placedStructureRevision}:${cacheKey === "held-item" ? "held" : "light"}:${blockers.map(segment => segment.id).sort().join(",")}`;
 
   if (cacheKey) {
     const cached = torchLightVisibilityCache.get(cacheKey);
@@ -11531,45 +11520,363 @@ function carveTorchLight(
 
 }
 
-function carveMountedTorchWallFaceLight(bufferCtx, structure) {
-  if (!bufferCtx || structure?.kind !== "torch" || structure?.mountType !== "wall") return;
-  const support = currentMapStructures().find(item => item?.id === structure.supportId);
-  if (!support || support.kind !== "woodWall") return;
+function stableTorchLightSeed(value) {
+  const text = String(value ?? "torch");
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 0xffffffff * Math.PI * 2;
+}
 
-  const light = torchLightWorldPosition(structure);
-  const screenX = light.x - currentCamX;
-  const screenY = light.y - currentCamY;
-  const gradient = bufferCtx.createRadialGradient(screenX, screenY, 0, screenX, screenY, 34);
-  gradient.addColorStop(0, "rgba(0,0,0,0.88)");
-  gradient.addColorStop(0.48, "rgba(0,0,0,0.58)");
-  gradient.addColorStop(1, "rgba(0,0,0,0)");
+function collectTorchLightSources() {
+  const sources = [];
 
-  const sx = Math.round(Number(support.x) - currentCamX);
-  const sy = Math.round(Number(support.y) - currentCamY);
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "torch") continue;
+    const light = torchLightWorldPosition(structure);
+    const visibility = torchVisibilityWorldPosition(structure);
+    sources.push({
+      key: `placed:${structure.id}`,
+      x: light.x,
+      y: light.y,
+      visibilityX: visibility.x,
+      visibilityY: visibility.y,
+      radius: 82,
+      seed: Number(structure.x) * 0.021 + Number(structure.y) * 0.013,
+      structure
+    });
+  }
+
+  if (selectedBuildPiece === "torch" && buildPieceCount("torch") > 0 && player.hp > 0) {
+    sources.push({
+      key: "held:local",
+      x: Number(player.x),
+      y: Number(player.y) - 10,
+      visibilityX: Number(player.x),
+      visibilityY: Number(player.y),
+      radius: 74,
+      seed: 9.7,
+      ownerId: (typeof onlineClient !== "undefined" ? onlineClient?.localPlayerId : null) || "local"
+    });
+  }
+
+  const remotes = typeof onlineClient !== "undefined" ? onlineClient?.remotePlayers : null;
+  if (remotes?.values) {
+    for (const remote of remotes.values()) {
+      if (
+        remote?.mapId !== currentMapId ||
+        remote?.heldBuildPiece !== "torch" ||
+        remote?.isDead ||
+        Number(remote?.hp) <= 0
+      ) continue;
+      const rx = Number(remote.x);
+      const ry = Number(remote.y);
+      if (!Number.isFinite(rx) || !Number.isFinite(ry)) continue;
+      sources.push({
+        key: `held:${remote.id}`,
+        x: rx,
+        y: ry - 10,
+        visibilityX: rx,
+        visibilityY: ry,
+        radius: 74,
+        seed: stableTorchLightSeed(remote.id),
+        ownerId: remote.id
+      });
+    }
+  }
+
+  return sources;
+}
+
+function structureBlocksLight(structure) {
+  return Boolean(
+    structure?.kind === "woodWall" ||
+    (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure))
+  );
+}
+
+function structureFacadeWorldRect(structure) {
+  return STRUCTURE_GEOMETRY.facadeRect(structure, {
+    upperJoin: structure?.axis === "vertical" && verticalWallHasUpperHorizontalJoin(structure)
+  });
+}
+
+function oppositeStructureBoundarySide(side) {
+  if (side === "north") return "south";
+  if (side === "south") return "north";
+  if (side === "west") return "east";
+  if (side === "east") return "west";
+  return null;
+}
+
+function structureInteriorBoundarySide(structure, region) {
+  if (!structure || !region?.floors) return null;
+  const floorKeys = region.floorKeys || new Set(
+    region.floors.map(floor => structureCellKey(floor.x, floor.y))
+  );
+  const x = Number(structure.x);
+  const y = Number(structure.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+  if (STRUCTURE_GEOMETRY.axisOf(structure) === "vertical") {
+    const west = floorKeys.has(structureCellKey(x - 8, y));
+    const east = floorKeys.has(structureCellKey(x + 8, y));
+    if (west === east) return null;
+    return west ? "west" : "east";
+  }
+
+  const north = floorKeys.has(structureCellKey(x, y - 8));
+  const south = floorKeys.has(structureCellKey(x, y + 8));
+  if (north === south) return null;
+  return north ? "north" : "south";
+}
+
+function visibleStructureLightFaceSide(structure) {
+  // v409: a stationary wall no longer asks which side the local player happens
+  // to be standing on. For a completed roofed room, the roof reveal state tells
+  // us whether the rendered facade represents the interior or exterior face.
+  // Standalone/incomplete walls have no hidden opposite facade, so either side
+  // may illuminate the one surface that is actually drawn.
+  const region = automaticRoofRegions().find(candidate =>
+    structureBelongsToRoofFacade(structure, candidate)
+  );
+  if (!region) return null;
+  const interiorSide = structureInteriorBoundarySide(structure, region);
+  if (!interiorSide) return null;
+  return playerInsideRoofRegion(region)
+    ? interiorSide
+    : oppositeStructureBoundarySide(interiorSide);
+}
+
+function restoreStructureFacadeAmbient(bufferCtx, alpha) {
+  // v408 separates the vertical wall surface from the ground-plane light mask.
+  // General light rays illuminate open ground up to the physical boundary; wall
+  // sprites get their own receiver pass below. This prevents a tall wall sprite
+  // from visually carrying exterior light into a revealed room.
+  bufferCtx.save();
+  bufferCtx.globalCompositeOperation = "source-over";
+  bufferCtx.fillStyle = "#101827";
+  for (const structure of currentMapStructures()) {
+    if (!structureBlocksLight(structure)) continue;
+    const rect = structureFacadeWorldRect(structure);
+    if (!rect) continue;
+    const x = Math.round(rect.x - currentCamX);
+    const y = Math.round(rect.y - currentCamY);
+    const width = Math.ceil(rect.width);
+    const height = Math.ceil(rect.height);
+    bufferCtx.clearRect(x, y, width, height);
+    bufferCtx.globalAlpha = alpha;
+    bufferCtx.fillRect(x, y, width, height);
+  }
+  bufferCtx.restore();
+}
+
+function visibleRoofLightingRegions() {
+  return automaticRoofRegions().filter(region => !playerInsideRoofRegion(region));
+}
+
+function restoreVisibleRoofSurfaceAmbient(bufferCtx, alpha, regions = visibleRoofLightingRegions()) {
+  if (!bufferCtx || !regions.length) return;
+
+  // v410: roofs are a separate rendered surface, just like wall facades. The
+  // ground-plane Torch mask is computed in world coordinates, while roof art
+  // is projected upward on screen. Without resetting that projected surface,
+  // an interior Torch can accidentally punch a bright band through the roof
+  // even though its world-space rays correctly stop at the enclosing walls.
   bufferCtx.save();
   bufferCtx.beginPath();
-  if (support.axis === "vertical") {
-    const extension = verticalWallHasUpperHorizontalJoin(support) ? 16 : 0;
-    const height = 32 + extension;
-    const top = sy + 9 - height;
-    // Only the painted wall facade is brightened. The geometric boundary still
-    // blocks the normal light polygon, so this cannot leak through the wall.
-    bufferCtx.rect(sx - 2, top, 4, height);
-  } else {
-    bufferCtx.rect(sx - 8, sy - 31, 16, 32);
+  let hasPath = false;
+  for (const region of regions) {
+    hasPath = appendRoofRegionSurfacePath(
+      bufferCtx,
+      region,
+      currentCamX,
+      currentCamY
+    ) || hasPath;
   }
+  if (!hasPath) {
+    bufferCtx.restore();
+    return;
+  }
+
+  bufferCtx.clip();
+  bufferCtx.clearRect(0, 0, VIEW_W, VIEW_H);
+  bufferCtx.globalCompositeOperation = "source-over";
+  bufferCtx.globalAlpha = alpha;
+  bufferCtx.fillStyle = "#101827";
+  bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+  bufferCtx.restore();
+}
+
+function torchSourceInsideAnyRoofRegion(source, roofRegions) {
+  if (!source) return false;
+  const worldX = Number(source.visibilityX);
+  const worldY = Number(source.visibilityY);
+  if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) return false;
+  return roofRegions.some(region => pointInsideRoofRegion(region, worldX, worldY));
+}
+
+function carveTorchRoofSurfaceLight(bufferCtx, source, regions) {
+  if (!bufferCtx || !source || !regions?.length) return;
+
+  const allRoofRegions = automaticRoofRegions();
+  // Interior light belongs to the revealed room, not to the exterior roof
+  // plane. Skipping it here also prevents a Torch inside one enclosed room
+  // from lighting the roof of a nearby structure through its own walls.
+  if (torchSourceInsideAnyRoofRegion(source, allRoofRegions)) return;
+
+  const worldX = Number(source.x);
+  const worldY = Number(source.y);
+  if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) return;
+
+  const seed = Number(source.seed) || 0;
+  const flicker =
+    Math.sin(worldTime * 12.7 + seed) * 2.2 +
+    Math.sin(worldTime * 19.3 + seed * 0.37) * 1.2;
+  const lightRadius = Math.max(34, source.radius + flicker);
+  const screenX = worldX - currentCamX;
+  const screenY = worldY - currentCamY;
+  const gradient = bufferCtx.createRadialGradient(
+    screenX,
+    screenY,
+    0,
+    screenX,
+    screenY,
+    lightRadius
+  );
+  gradient.addColorStop(0, "rgba(0,0,0,0.98)");
+  gradient.addColorStop(0.24, "rgba(0,0,0,0.94)");
+  gradient.addColorStop(0.62, "rgba(0,0,0,0.58)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  let hasPath = false;
+  for (const region of regions) {
+    hasPath = appendRoofRegionSurfacePath(
+      bufferCtx,
+      region,
+      currentCamX,
+      currentCamY
+    ) || hasPath;
+  }
+  if (!hasPath) {
+    bufferCtx.restore();
+    return;
+  }
+
   bufferCtx.clip();
   bufferCtx.globalCompositeOperation = "destination-out";
   bufferCtx.fillStyle = gradient;
-  bufferCtx.fillRect(screenX - 34, screenY - 34, 68, 68);
+  bufferCtx.fillRect(
+    screenX - lightRadius,
+    screenY - lightRadius,
+    lightRadius * 2,
+    lightRadius * 2
+  );
+  bufferCtx.restore();
+}
+
+function lightPathToStructureFaceClear(source, targetStructure, sourceSide) {
+  const boundaryTarget = STRUCTURE_GEOMETRY.closestPointOnBoundary(
+    targetStructure,
+    source.visibilityX,
+    source.visibilityY
+  );
+  if (!boundaryTarget || !sourceSide) return false;
+
+  // v409: trace to the *near face* of the wall instead of its centerline.
+  // A ray aimed at the centerline immediately intersected the mounted Torch's
+  // own support (and every coplanar neighbor), so only the single support panel
+  // could receive light. Keeping the receiver probe just outside the physical
+  // collision thickness lets light travel continuously along connected wall
+  // faces while the normal ground-light polygon still stops at the wall plane.
+  const target = STRUCTURE_GEOMETRY.offsetBoundaryPointToSide(
+    targetStructure,
+    boundaryTarget,
+    sourceSide,
+    1.35
+  );
+  if (!target) return false;
+
+  for (const structure of currentMapStructures()) {
+    if (structure === targetStructure || structure?.id === targetStructure?.id) continue;
+    if (!structureBlocksLight(structure)) continue;
+    const rect = STRUCTURE_GEOMETRY.collisionRect(structure, 2);
+    const t = STRUCTURE_GEOMETRY.segmentRectIntersectionT(
+      source.visibilityX,
+      source.visibilityY,
+      target.x,
+      target.y,
+      rect,
+      0.05
+    );
+    if (t !== null && t > 0.001 && t < 0.995) return false;
+  }
+  return true;
+}
+
+function carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceSide = null) {
+  if (!bufferCtx || !source || !structureBlocksLight(structure)) return;
+  const closest = STRUCTURE_GEOMETRY.closestPointOnBoundary(
+    structure,
+    source.visibilityX,
+    source.visibilityY
+  );
+  if (!closest) return;
+  if (Math.hypot(closest.x - source.visibilityX, closest.y - source.visibilityY) > source.radius + 20) return;
+
+  // A solid wall has two conceptual faces even though the pixel sprite is one
+  // tall facade. v409 removes the per-wall local-player side test that made a
+  // fixed Torch switch the same wall on/off as the player walked around it.
+  // Completed houses use their stable interior/exterior facade state instead.
+  const sourceSide = STRUCTURE_GEOMETRY.sideOfBoundary(
+    structure,
+    source.visibilityX,
+    source.visibilityY
+  );
+  if (!sourceSide) return;
+  if (visibleFaceSide && sourceSide !== visibleFaceSide) return;
+  if (!lightPathToStructureFaceClear(source, structure, sourceSide)) return;
+
+  const rect = structureFacadeWorldRect(structure);
+  if (!rect) return;
+  const screenX = source.x - currentCamX;
+  const screenY = source.y - currentCamY;
+  const faceRadius = Math.min(source.radius, 54);
+  const gradient = bufferCtx.createRadialGradient(
+    screenX, screenY, 0,
+    screenX, screenY, faceRadius
+  );
+  gradient.addColorStop(0, "rgba(0,0,0,0.94)");
+  gradient.addColorStop(0.42, "rgba(0,0,0,0.72)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  bufferCtx.rect(
+    rect.x - currentCamX,
+    rect.y - currentCamY,
+    rect.width,
+    rect.height
+  );
+  bufferCtx.clip();
+  bufferCtx.globalCompositeOperation = "destination-out";
+  bufferCtx.fillStyle = gradient;
+  bufferCtx.fillRect(
+    screenX - faceRadius,
+    screenY - faceRadius,
+    faceRadius * 2,
+    faceRadius * 2
+  );
   bufferCtx.restore();
 }
 
 function drawWorldLightingOverlay() {
   const minutes = currentWorldClockMinutes();
   const alpha = worldClockLightingAlpha(minutes);
-  // v406: remove the experimental house-only darkness layer. The world clock
-  // owns ambient darkness again, while real light sources provide contrast.
   if (alpha <= 0.001) return;
 
   const bufferCtx = ensureWorldLightingBuffer();
@@ -11580,43 +11887,48 @@ function drawWorldLightingOverlay() {
   bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
   bufferCtx.globalAlpha = 1;
 
-  // Placed torches are ordinary change-only structures, so lighting adds no
-  // network heartbeat. Each client derives the soft light locally from the
-  // structure snapshot it already has.
-  for (const structure of currentMapStructures()) {
-    if (structure?.kind !== "torch") continue;
-    const light = torchLightWorldPosition(structure);
-    const visibilityOrigin = torchVisibilityWorldPosition(structure);
+  // v408: every torch, whether placed or held by either player, enters one
+  // client-side light pipeline. Placed torches still use shared structures;
+  // held torches use the already change-only replicated heldBuildPiece field.
+  const torchSources = collectTorchLightSources();
+  for (const source of torchSources) {
     carveTorchLight(
       bufferCtx,
-      light.x,
-      light.y,
-      82,
-      Number(structure.x) * 0.021 + Number(structure.y) * 0.013,
-      `placed:${structure.id}`,
-      visibilityOrigin.x,
-      visibilityOrigin.y
+      source.x,
+      source.y,
+      source.radius,
+      source.seed,
+      source.key.startsWith("placed:") ? source.key : null,
+      source.visibilityX,
+      source.visibilityY
     );
-    carveMountedTorchWallFaceLight(bufferCtx, structure);
   }
 
-  // Selecting a torch keeps it in hand while the same build cursor remains
-  // available for placement. Keep the logical light source on the player's
-  // side of a nearby house boundary even when the visible flame sprite reaches
-  // across that boundary.
-  if (selectedBuildPiece === "torch" && buildPieceCount("torch") > 0) {
-    const lightX = Number(player.x);
-    const lightY = Number(player.y) - 10;
-    let visibilityX = lightX;
-    let visibilityY = lightY;
-    const insideRegion = automaticRoofRegions().find(region =>
-      pointInsideRoofRegion(region, Number(player.x), Number(player.y))
-    );
-    if (insideRegion && !pointInsideRoofRegion(insideRegion, visibilityX, visibilityY)) {
-      visibilityX = Number(player.x);
-      visibilityY = Number(player.y);
+  // General rays model the ground plane only. Reset wall/door facade pixels to
+  // ambient darkness, then explicitly light the visible face from same-side
+  // sources. Physical boundary, visual depth and surface lighting are now three
+  // separate concerns instead of three interpretations of one rectangle.
+  restoreStructureFacadeAmbient(bufferCtx, alpha);
+  for (const structure of currentMapStructures()) {
+    if (!structureBlocksLight(structure)) continue;
+    const visibleFaceSide = visibleStructureLightFaceSide(structure);
+    for (const source of torchSources) {
+      carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceSide);
     }
-    carveTorchLight(bufferCtx, lightX, lightY, 74, 9.7, null, visibilityX, visibilityY);
+  }
+
+  // Roof art is rendered after wall facades, so its lighting receiver must also
+  // be resolved after facade lighting. This masks both ground-light projection
+  // and any hidden wall-face illumination underneath the visible roof.
+  const visibleRoofRegions = visibleRoofLightingRegions();
+  restoreVisibleRoofSurfaceAmbient(bufferCtx, alpha, visibleRoofRegions);
+
+  // Exterior roofs are another explicit receiver surface. Re-light them only
+  // from Torch sources that are not inside an enclosed roof region so interior
+  // light cannot appear on the outside roof while nearby exterior Torches can
+  // still illuminate that roof normally.
+  for (const source of torchSources) {
+    carveTorchRoofSurfaceLight(bufferCtx, source, visibleRoofRegions);
   }
 
   ctx.save();
@@ -12672,7 +12984,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
 
   const drawHeldArmWithStructureClip = (drawArm) => {
     ctx.save();
-    if (!reflectionMode && remotePlayerDrawDepth === 0) {
+    if (!reflectionMode) {
       applyHeldItemStructureVisibilityClip(camX, camY);
     }
     drawArm();
@@ -13208,7 +13520,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
 
     const drawClippedBowStringSegment = (from, to) => {
       ctx.save();
-      if (!reflectionMode && remotePlayerDrawDepth === 0) {
+      if (!reflectionMode) {
         applyHeldItemStructureVisibilityClip(camX, camY);
       }
       drawPixelLine(
@@ -13229,7 +13541,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     // string rather than letting it float through a blocked wall.
     if (stringGrab > 0.45) {
       ctx.save();
-      if (!reflectionMode && remotePlayerDrawDepth === 0) {
+      if (!reflectionMode) {
         applyHeldItemStructureVisibilityClip(camX, camY);
       }
       ctx.fillStyle = "#eee5c5";
@@ -13243,7 +13555,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     }
 
     ctx.save();
-    if (!reflectionMode && remotePlayerDrawDepth === 0) {
+    if (!reflectionMode) {
       applyHeldItemStructureVisibilityClip(camX, camY);
     }
 
@@ -13386,7 +13698,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
           : 0;
 
     ctx.save();
-    if (!reflectionMode && remotePlayerDrawDepth === 0) {
+    if (!reflectionMode) {
       applyHeldItemStructureVisibilityClip(camX, camY);
     }
     ctx.translate(
@@ -13407,10 +13719,10 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   // v401: a selected Torch is both a placeable build piece and a carried light.
   // Build selection intentionally suppresses normal weapons, so drawing it here
   // gives the player a simple "hold or place" interaction without another mode.
+  const heldBuildPiece = heldBuildPieceForCurrentDraw();
   if (
-    remotePlayerDrawDepth === 0 &&
-    selectedBuildPiece === "torch" &&
-    buildPieceCount("torch") > 0 &&
+    heldBuildPiece === "torch" &&
+    (remotePlayerDrawDepth > 0 || buildPieceCount("torch") > 0) &&
     !carryingEnemy &&
     !snareSetupActive
   ) {
@@ -14010,6 +14322,7 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "shirtIndex",
   "pantsIndex",
   "weaponIndex",
+  "heldBuildPiece",
   "walkTime",
   "wasMoving",
   "firstRaisedLeg",
@@ -14141,6 +14454,9 @@ function drawRemotePlayer(
   player.weaponIndex = Number.isFinite(remote.weaponIndex)
     ? remote.weaponIndex
     : -1;
+  player.heldBuildPiece = ["woodFloor", "woodWall", "woodDoor", "torch"].includes(remote.heldBuildPiece)
+    ? remote.heldBuildPiece
+    : null;
 
   player.walkTime = Number(remote.walkTime) || 0;
   player.wasMoving = false;

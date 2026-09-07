@@ -13,25 +13,27 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const game = read("public", "game.js");
 
-assert.strictEqual(pkg.version, "0.6.11.407");
-assert.strictEqual(world.version, 407);
-assert(server.includes('const BUILD_VERSION = "6-11-407";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
-assert(html.includes('/game.js?v=407'));
+assert.strictEqual(pkg.version, "0.6.11.410");
+assert.strictEqual(world.version, 410);
+assert(server.includes('const BUILD_VERSION = "6-11-410";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
+assert(html.includes('/game.js?v=410'));
 
 // Gameplay wall collision remains unchanged, while held-item visual occlusion
 // now follows the same Y-sort that decides whether the wall is actually in
 // front of or behind the player.
 assert(game.includes("function heldItemOcclusionAllowsStructure(structure, sourceY)"));
 assert(game.includes("return wallDrawSortY(structure) > Number(sourceY) + 0.01;"));
-assert(game.includes('if (cacheKey === "held-item-local")'));
+assert(game.includes('if (cacheKey === "held-item")'));
 assert(game.includes('applyHeldItemStructureVisibilityClip(camX, camY)'));
 
-// A wall-mounted torch may brighten the painted facade it is attached to, but
-// normal visibility rays still stop at the geometric wall boundary.
-assert(game.includes("function carveMountedTorchWallFaceLight(bufferCtx, structure)"));
-assert(game.includes("carveMountedTorchWallFaceLight(bufferCtx, structure);"));
-assert(game.includes('support.kind !== "woodWall"'));
+// A wall-mounted torch may brighten painted wall faces while normal visibility
+// rays still stop at the geometric wall boundary. v409 replaces the rejected
+// per-wall viewer-side toggle with stable facade-state selection.
+assert(game.includes("function restoreStructureFacadeAmbient(bufferCtx, alpha)"));
+assert(game.includes("function carveTorchStructureFaceLight(bufferCtx, source, structure"));
+assert(game.includes("visibleFaceSide && sourceSide !== visibleFaceSide"));
+assert(!game.includes("sourceSide !== viewerSide"));
 assert(game.includes('bufferCtx.globalCompositeOperation = "destination-out";'));
 
 // Night is deliberately darker than v406.

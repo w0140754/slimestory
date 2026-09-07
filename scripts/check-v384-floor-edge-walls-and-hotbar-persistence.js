@@ -10,10 +10,11 @@ const game = read("public", "game.js");
 const network = read("public", "client-network.js");
 const input = read("public", "client-input.js");
 const config = read("public", "client-config.js");
+const geometry = require(path.join(root, "public", "shared", "structure-geometry.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.407");
-assert(server.includes('const BUILD_VERSION = "6-11-407";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
+assert.strictEqual(pkg.version, "0.6.11.410");
+assert(server.includes('const BUILD_VERSION = "6-11-410";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
 
 // Build hotbar persistence.
 assert(game.includes('return itemId && hotbarAssignmentCanPersist(itemId)'), "saved hotbar restore must accept persistent build items");
@@ -32,8 +33,10 @@ assert(!input.includes('rotateSelectedBuildPiece'), "old rotation key must remai
 // Tall visuals + thin authoritative collision.
 assert(game.includes('ctx.drawImage(woodWallStructureImage, left, top, 16, 32);'), "horizontal wall must render the authored 16x32 sprite at the existing projected height");
 assert(game.includes('const height = 32 + cornerExtension;') && game.includes('ctx.drawImage(woodWallStructureImage, left, top, 4, 32);'), "vertical side wall must retain narrow projected sprite art with v385 corner extension support");
-assert(game.includes('width: 2, height: 16') && game.includes('width: 16, height: 2'), "client wall collision must be thin edge geometry");
-assert(server.includes('width: 2, height: 16') && server.includes('width: 16, height: 2'), "server wall collision must match client edge geometry");
+assert(game.includes('STRUCTURE_GEOMETRY.collisionRect(structure, 2)'), "client wall collision must use canonical thin edge geometry");
+assert(server.includes('STRUCTURE_GEOMETRY.collisionRect(structure, 2)'), "server wall collision must use the same canonical edge geometry");
+assert.deepStrictEqual(geometry.collisionRect({ kind: "woodWall", axis: "vertical", x: 8, y: 8 }, 2), { x: 7, y: 0, width: 2, height: 16 });
+assert.deepStrictEqual(geometry.collisionRect({ kind: "woodWall", axis: "horizontal", x: 8, y: 8 }, 2), { x: 0, y: 7, width: 16, height: 2 });
 assert(server.includes('function normalizedWallFromFloorEdge'), "server normalized edge model missing");
 assert(server.includes('structure.axis === wall.axis'), "shared edge identity must include axis");
 assert(server.includes('reason = "needsFloor"'), "wall must require an existing floor");

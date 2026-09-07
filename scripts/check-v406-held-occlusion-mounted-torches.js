@@ -16,23 +16,23 @@ const network = read("public", "client-network.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.407");
-assert.strictEqual(world.version, 407);
-assert(server.includes('const BUILD_VERSION = "6-11-407";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-407";'));
-assert(html.includes('/game.js?v=407'));
+assert.strictEqual(pkg.version, "0.6.11.410");
+assert.strictEqual(world.version, 410);
+assert(server.includes('const BUILD_VERSION = "6-11-410";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-410";'));
+assert(html.includes('/game.js?v=410'));
 
 // The experimental house-only darkness and v405 wall-face carve are gone.
 assert(!game.includes("function enclosedInteriorDarknessAlpha("));
 assert(!game.includes("function drawEnclosedInteriorDarkness("));
 assert(!game.includes("function carveInteriorFacingWallLight("));
-assert(game.includes("v406: remove the experimental house-only darkness layer"));
+assert(game.includes("function drawWorldLightingOverlay()"));
 
 // All local held layers share one player-centered wall visibility mask instead
 // of separate pose probes. This includes arms, ordinary weapons, bow/string,
 // and the carried torch.
 assert(game.includes("function applyHeldItemStructureVisibilityClip(camX, camY)"));
-assert(game.includes('torchLightVisibilityPolygon(sourceX, sourceY, 42, "held-item-local")'));
+assert(game.includes('torchLightVisibilityPolygon(sourceX, sourceY, 42, "held-item")'));
 assert(!game.includes("function heldStructureClipProbe("));
 assert(!game.includes("function applyHeldWeaponStructureClip("));
 assert((game.match(/applyHeldItemStructureVisibilityClip\(camX, camY\)/g) || []).length >= 6);
@@ -43,8 +43,8 @@ assert(game.includes("drawClippedBowStringSegment(nock, tipB);"));
 // on the player's interior side of a boundary.
 assert(game.includes("visibilityOriginX = worldX"));
 assert(game.includes("visibilityOriginY = worldY"));
-assert(game.includes("visibilityX = Number(player.x)"));
-assert(game.includes("visibilityY = Number(player.y)"));
+assert(game.includes("visibilityX: Number(player.x)"));
+assert(game.includes("visibilityY: Number(player.y)"));
 
 // Torch attachment pipeline: floor/wall support targeting on client, supportId
 // on the wire/server, mount metadata in snapshots, and attachment-first reclaim.

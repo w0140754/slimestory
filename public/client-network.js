@@ -3321,6 +3321,7 @@ class OnlineClient {
       pantsIndex: player.pantsIndex,
       charmIndex: player.charmIndex,
       weaponIndex: player.weaponIndex,
+      heldBuildPiece: typeof selectedBuildPiece === "string" ? selectedBuildPiece : null,
 
       // Progression is still client-owned in this prototype, but combat damage
       // is calculated server-side from these sanitized values.
