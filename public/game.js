@@ -199,18 +199,18 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=427");
-const torchImage = loadImage("assets/torch_v1.png?v=427");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=428");
+const torchImage = loadImage("assets/torch_v1.png?v=428");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=427");
-const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=427");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=427");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=427");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=427");
-const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=427");
-const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=427");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=428");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=428");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=428");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=428");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=428");
+const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=428");
+const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=428");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -228,7 +228,7 @@ const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
 // v415: Tiger Paw inherits the retired Hurl art as a compact inventory/hotbar
 // icon. It is treated like a hand weapon, so no separate held sprite is drawn.
-const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=427");
+const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=428");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";

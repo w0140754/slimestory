@@ -16,7 +16,7 @@ const checks = [
   [game.includes('stackCount.textContent = `${count}`;') && game.includes('stackCount.hidden = false;'), "owned inventory cells show simple quantities including one"],
   [game.includes('function renderInventoryOverlaySelection()') && html.includes('id="inventoryDetailPanel"'), "highlighted inventory item populates the new detail panel"],
   [enemies.includes('inventoryWoodRingImg') && enemies.includes('inventoryWoodRingImg.src = woodRingImage.src'), "wood ring icon wiring retained"],
-  [html.includes('/game.js?v=427') && html.includes('/client-enemies.js?v=427'), "v422 inventory cache keys"],
+  [html.includes('/game.js?v=428') && html.includes('/client-enemies.js?v=428'), "v422 inventory cache keys"],
 ];
 
 for (const [ok, label] of checks) {

@@ -12,11 +12,11 @@ const game = read("public", "game.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.427");
+assert.strictEqual(pkg.version, "0.6.11.428");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-427";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
-assert(html.includes('/game.js?v=427'));
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(html.includes('/game.js?v=428'));
 
 // v399 made player proximity authoritative for enemy doorway collision.
 assert(server.includes("const DOOR_SERVER_OPEN_DISTANCE = 14;"));

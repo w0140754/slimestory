@@ -13,10 +13,10 @@ const network = read("public", "client-network.js");
 const server = read("server.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.427");
-assert(server.includes('const BUILD_VERSION = "6-11-427";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
-assert(html.includes('?v=427'), "client cache markers must advance to v421");
+assert.strictEqual(pkg.version, "0.6.11.428");
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(html.includes('?v=428'), "client cache markers must advance to v421");
 
 // Crafting is now a first-class HUD action rather than an inventory submenu.
 assert(html.includes('id="craftHudButton"'), "top-level CRAFT HUD button missing");

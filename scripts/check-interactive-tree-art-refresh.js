@@ -9,12 +9,12 @@ const exists = (...parts) => fs.existsSync(path.join(root, ...parts));
 const pkg = JSON.parse(read("package.json"));
 const world = read("public", "client-world.js");
 
-assert.strictEqual(pkg.version, "0.6.11.427", "package version must be 0.6.11.427");
-assert(world.includes('assets/interactive_tree_canopy_v376.png?v=427'), 'interactive tree canopy cache key missing');
-assert(world.includes('assets/interactive_tree_canopy_v376_flip.png?v=427'), 'interactive tree flipped canopy cache key missing');
-assert(world.includes('assets/interactive_tree_trunk_v376.png?v=427'), 'interactive tree trunk cache key missing');
-assert(world.includes('assets/interactive_tree_trunk_damaged_v376.png?v=427'), 'interactive tree damaged trunk cache key missing');
-assert(world.includes('assets/interactive_tree_stump_v376.png?v=427'), 'interactive tree stump cache key missing');
+assert.strictEqual(pkg.version, "0.6.11.428", "package version must be 0.6.11.428");
+assert(world.includes('assets/interactive_tree_canopy_v376.png?v=428'), 'interactive tree canopy cache key missing');
+assert(world.includes('assets/interactive_tree_canopy_v376_flip.png?v=428'), 'interactive tree flipped canopy cache key missing');
+assert(world.includes('assets/interactive_tree_trunk_v376.png?v=428'), 'interactive tree trunk cache key missing');
+assert(world.includes('assets/interactive_tree_trunk_damaged_v376.png?v=428'), 'interactive tree damaged trunk cache key missing');
+assert(world.includes('assets/interactive_tree_stump_v376.png?v=428'), 'interactive tree stump cache key missing');
 
 for (const asset of [
   'interactive_tree_canopy_v376.png',

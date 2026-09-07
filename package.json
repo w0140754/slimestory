@@ -1,6 +1,6 @@
 {
   "name": "slime-story-online",
-  "version": "0.6.11.427",
+  "version": "0.6.11.428",
   "private": true,
   "description": "Slime Story: server-authoritative multiplayer browser action RPG prototype",
   "main": "server.js",

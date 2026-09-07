@@ -13,10 +13,10 @@ const input = read("public", "client-input.js");
 const game = read("public", "game.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.427");
-assert(server.includes('const BUILD_VERSION = "6-11-427";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
-assert(html.includes('/client-input.js?v=427') && html.includes('/game.js?v=427'));
+assert.strictEqual(pkg.version, "0.6.11.428");
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(html.includes('/client-input.js?v=428') && html.includes('/game.js?v=428'));
 
 assert(input.includes("function updateMobilePrimaryActionButton()"), "contextual mobile primary button updater missing");
 assert(input.includes('button.textContent = buildMode ? "PLACE" : "ATK";'), "mobile build mode must relabel ATK to PLACE");

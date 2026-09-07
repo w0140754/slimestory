@@ -29,7 +29,7 @@ async function place(socket, kind, x, y, edge = null) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-427") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-428") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 2, woodWalls: 2, woodDoors: 1 } } }));

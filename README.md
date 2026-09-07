@@ -1,3 +1,17 @@
+## v6-11-428 — Mobile Inventory Layout Rebuild
+
+- Starts from the completed **v6-11-427 Chest & Mobile Interaction Polish** build. Desktop Inventory/Equipment/Craft/Chest presentation and all gameplay systems are preserved unchanged.
+- Rebuilt the landscape mobile Inventory/Equipment presentation around the actual iOS failure shown in testing. The phone layout no longer relies on the desktop `display: contents` grid relationship, which Safari was laying out unpredictably and causing Equipment to wander between the left and center of the screen.
+- Mobile now uses a concrete two-row Inventory container: a compact **horizontal Head / Shirt / Pants / Charms strip** across the top and the scrollable item grid underneath it.
+- The retired in-menu **1–0 assignment rail is forcibly hidden on touch devices**. Hotkey assignment continues to use the real live HUD hotbar, avoiding the giant duplicate row that was appearing across the bottom of the screen.
+- The duplicate desktop **MENU** button is also forcibly hidden on touch devices, leaving only the dedicated mobile MENU control.
+- The live mobile workspace reserves explicit HUD lanes instead of covering the whole screen: left space remains available for movement/Menu/Craft/Chest, the real 1–0 hotbar remains visible at the top, right space remains available for Attack/Auto/Interact, and the HP area remains clear at the bottom.
+- Opening Craft or Chest moves the Inventory workspace to a fixed second position beside the context panel rather than allowing either panel to reflow or shove Equipment around.
+- Mobile item cards remain touch-sized and the inventory has its own vertical scrolling. Existing mobile tap-to-hotbar assignment, tap-to-loot, STORE, LOOT ALL, armor equip, chest storage, and live-gameplay behavior are unchanged.
+- The mobile real 1–0 HUD is slightly more compact so all ten assignment targets remain usable after slot 0 was added.
+- World content remains **414** and combat balance remains **30**. `/health` passes as **6-11-428 / world 414 / combat balance 30**.
+- Regression: **33 syntax targets + 120 retained checks/smokes** pass (**91 static checks + 29 WebSocket/offline smokes**), including the new v428 mobile-layout guard plus the full retained multiplayer suite.
+
 ## v6-11-427 — Chest & Mobile Interaction Polish
 
 - Starts from the completed **v6-11-426 Interaction & Safety Polish** build and preserves the live Inventory/Craft/Chest overlay model, 1–0 hotbar, five-slot chest storage, exclusive chest ownership, universal item transfer/drop architecture, runtime generation, and existing multiplayer systems.

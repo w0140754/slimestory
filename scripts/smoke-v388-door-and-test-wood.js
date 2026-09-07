@@ -44,13 +44,13 @@ async function connect() {
   try {
     await delay(500);
     const first = await connect();
-    if (first.welcome.buildVersion !== "6-11-427") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
+    if (first.welcome.buildVersion !== "6-11-428") throw new Error(`unexpected build ${first.welcome.buildVersion}`);
     const restoredPending = waitForMessage(first.socket, "persistentStateRestored");
     first.socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { woodFloors: 3, woodWalls: 2, woodDoors: 1 } } }));
     await restoredPending;
 
     const observer = await connect();
-    if (observer.welcome.buildVersion !== "6-11-427") throw new Error(`unexpected observer build ${observer.welcome.buildVersion}`);
+    if (observer.welcome.buildVersion !== "6-11-428") throw new Error(`unexpected observer build ${observer.welcome.buildVersion}`);
 
     // Free visible testing supply is server-authoritative and only usable at the crafting table.
     first.socket.send(JSON.stringify({ type: "playerStatePatch", player: { x: 226, y: 190, weaponIndex: -1 } }));

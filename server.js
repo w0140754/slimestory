@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-427";
+const BUILD_VERSION = "6-11-428";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
