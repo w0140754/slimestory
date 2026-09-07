@@ -21,8 +21,8 @@ function buildClientEnemyFoundation() {
   arrowResourceImage.src = "./assets/arrow_resource.png";
 
   const goldSlimeBubbleLootImage = loadImage("assets/big_gold_slime_bubble_loot_v1.png");
-  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=424");
-  const torchLootImage = loadImage("assets/torch_v1.png?v=424");
+  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=427");
+  const torchLootImage = loadImage("assets/torch_v1.png?v=427");
 
   const woodImage = new Image();
   woodImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAe0lEQVQ4T2NkoBAwwllkgkFmgJI4y3+42/CAey//wF0OZ4A0ZwZqMZy99pRBSpQHJowVbDjyFG4ImIBpfv76I4OkKD+cxgVA8jBD4AYE2EgzPHv9BWw7SDMvDxdMPQb4/OUbw/T111ANoMgFIEBRGMAARbFALhg1gIEBAEAwSRFp34JXAAAAEGRlQkc1OERFQTUyNzFDOURCMUM4CKL2nwAAAABJRU5ErkJgggAA";
@@ -404,12 +404,12 @@ function buildClientEnemyFoundation() {
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
   const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=372");
-  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=424");
-  const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=424");
-  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=424");
-  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=424");
-  const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=424");
-  const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=424");
+  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=427");
+  const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=427");
+  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=427");
+  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=427");
+  const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=427");
+  const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=427");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated
@@ -474,6 +474,7 @@ function buildClientEnemyFoundation() {
     if (kind === "coin") return coinImage;
     if (kind === "wood") return woodImage;
     if (kind === "flower") return flowerLootImage(options.flowerType || "white");
+    if (kind === "inventoryItem" && typeof inventoryTransferImageForToken === "function") return inventoryTransferImageForToken(options.itemToken);
     return SPECIAL_RESOURCE_DROP_PROFILES[kind]?.image || null;
   }
 
@@ -581,9 +582,41 @@ function buildClientEnemyFoundation() {
     }
   }
 
+  const DROP_DIGIT_PIXELS = Object.freeze({
+    "0": ["111","101","101","101","111"], "1": ["010","110","010","010","111"],
+    "2": ["111","001","111","100","111"], "3": ["111","001","111","001","111"],
+    "4": ["101","101","111","001","001"], "5": ["111","100","111","001","111"],
+    "6": ["111","100","111","101","111"], "7": ["111","001","010","010","010"],
+    "8": ["111","101","111","101","111"], "9": ["111","101","111","001","111"]
+  });
+
+  function drawDroppedItemPixelCount(label, rightX, bottomY) {
+    const chars = String(label).slice(-5).split("");
+    const width = chars.length * 4 - 1;
+    const left = Math.round(rightX - width);
+    const top = Math.round(bottomY - 5);
+    ctx.save();
+    ctx.fillStyle = "rgba(15,18,15,.92)";
+    ctx.fillRect(left - 1, top - 1, width + 2, 7);
+    ctx.fillStyle = "#fff2b5";
+    chars.forEach((char, charIndex) => {
+      const rows = DROP_DIGIT_PIXELS[char];
+      if (!rows) return;
+      rows.forEach((row, y) => {
+        for (let x = 0; x < 3; x += 1) {
+          if (row[x] === "1") ctx.fillRect(left + charIndex * 4 + x, top + y, 1, 1);
+        }
+      });
+    });
+    ctx.restore();
+  }
+
   function drawSpecialResourceDrop(drop, camX, camY, index) {
-    const profile = SPECIAL_RESOURCE_DROP_PROFILES[drop.kind];
-    if (!profile?.image) return;
+    const baseProfile = SPECIAL_RESOURCE_DROP_PROFILES[drop.kind];
+    const dynamicImage = drop.kind === "inventoryItem" && typeof inventoryTransferImageForToken === "function" ? inventoryTransferImageForToken(drop.itemToken) : null;
+    const profile = baseProfile || (dynamicImage ? { image: dynamicImage, shadowWidth: 8 } : null);
+    const image = dynamicImage || profile?.image;
+    if (!image) return;
 
     const bob = Math.round(
       Math.sin(worldTime * 4.8 + index * 1.25) * 1
@@ -603,12 +636,19 @@ function buildClientEnemyFoundation() {
     );
 
     ctx.drawImage(
-      profile.image,
+      image,
       screenX - Math.floor(drawWidth / 2),
       screenY - (drawHeight - 1) + bob,
       drawWidth,
       drawHeight
     );
+    if (drop.kind === "inventoryItem" && Math.max(1, Number(drop.itemCount) || 1) > 1) {
+      drawDroppedItemPixelCount(
+        String(Math.max(1, Math.floor(Number(drop.itemCount) || 1))),
+        screenX + Math.floor(drawWidth / 2),
+        screenY - 2 + bob
+      );
+    }
   }
 
   bigGoldSlimeImage.addEventListener("load", () => {

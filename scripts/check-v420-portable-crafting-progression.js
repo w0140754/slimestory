@@ -16,9 +16,9 @@ const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.424");
-assert(server.includes('const BUILD_VERSION = "6-11-424";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
+assert.strictEqual(pkg.version, "0.6.11.427");
+assert(server.includes('const BUILD_VERSION = "6-11-427";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
 
 const spawn = world.maps?.world_p0_p0;
 assert(spawn, "coordinate spawn missing");

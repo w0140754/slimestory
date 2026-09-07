@@ -191,30 +191,35 @@
 
     function addMeadow(reservation) {
       if (!reservation) return;
-      const grassSpokes = 15;
-      for (let index = 0; index < grassSpokes; index += 1) {
-        const angle = (index / grassSpokes) * Math.PI * 2 + random() * 0.28;
-        const radius = 8 + random() * Math.max(8, reservation.radius - 10);
-        environment.tallGrass.push({
-          id: `${mapId}:meadow:grass:${index + 1}`,
-          x: Math.round(reservation.x + Math.cos(angle) * radius),
-          y: Math.round(reservation.y + Math.sin(angle) * radius * 0.72),
-          phase: Number((random() * 6.28).toFixed(2)),
-          width: 11 + Math.floor(random() * 6),
-          flowerType: index % 5 === 0 ? (index % 10 === 0 ? "blue" : "white") : null
-        });
+      // v426: meadows now read as square tile-like patches instead of oval
+      // radial blobs. The grass itself keeps tiny organic jitter/sway.
+      const centerX = Math.round(reservation.x / 16) * 16;
+      const centerY = Math.round(reservation.y / 16) * 16;
+      const cells = [-24, -8, 8, 24];
+      let index = 0;
+      for (const dx of cells) {
+        for (const dy of cells) {
+          index += 1;
+          environment.tallGrass.push({
+            id: `${mapId}:meadow:grass:${index}`,
+            x: centerX + dx + Math.floor(random() * 5) - 2,
+            y: centerY + dy + Math.floor(random() * 5) - 2,
+            phase: Number((random() * 6.28).toFixed(2)),
+            width: 11 + Math.floor(random() * 6),
+            flowerType: null
+          });
+        }
       }
-      for (let index = 0; index < 6; index += 1) {
-        const angle = (index / 6) * Math.PI * 2 + 0.35;
-        const radius = 14 + (index % 3) * 8;
+      const flowerOffsets = [[-24,-24],[8,-24],[24,-8],[24,24],[-8,24],[-24,8]];
+      flowerOffsets.forEach(([dx, dy], flowerIndex) => {
         environment.harvestFlowers.push({
-          id: `${mapId}:meadow:flower:${index + 1}`,
-          x: Math.round(reservation.x + Math.cos(angle) * radius),
-          y: Math.round(reservation.y + Math.sin(angle) * radius * 0.72),
+          id: `${mapId}:meadow:flower:${flowerIndex + 1}`,
+          x: centerX + dx,
+          y: centerY + dy,
           phase: Number((random() * 6.28).toFixed(2)),
-          type: index % 2 === 0 ? "white" : "blue"
+          type: flowerIndex % 2 === 0 ? "white" : "blue"
         });
-      }
+      });
     }
 
     function addTreeRing(reservation) {

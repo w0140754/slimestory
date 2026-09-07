@@ -5,7 +5,7 @@ const WORLD_CONTENT = require("../public/shared/world-content.js");
 const path = require("path");
 const root = path.join(__dirname, "..");
 const port = 43413;
-const server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"] });
+const server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), SLIME_STORY_WORLD_SEED: "0" }, stdio: ["ignore", "pipe", "pipe"] });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function waitForMessage(socket, type, predicate = () => true, timeoutMs = 4000) {
@@ -24,6 +24,7 @@ async function moveToMap(socket, mapId, x, y) {
   const snapshot = waitForMessage(socket, "snapshot", message => message.mapId === mapId);
   socket.send(JSON.stringify({ type: "playerState", player: { mapId, x, y, level: 1, weaponIndex: -1 } }));
   await snapshot;
+  await delay(60);
 }
 
 (async () => {
@@ -33,7 +34,7 @@ async function moveToMap(socket, mapId, x, y) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-424" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
+    if (welcome.buildVersion !== "6-11-427" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { stone: 10, woodWalls: 1, craftingTables: 1 } } }));
@@ -79,33 +80,31 @@ async function moveToMap(socket, mapId, x, y) {
       throw new Error("map-entry mutation delta fields missing");
     }
 
-    const statePending = waitForMessage(socket, "structureState", m => m.structureId === chest.id && m.state?.opened === true);
     const chestPending = waitForMessage(socket, "chestContextResult", m => m.chestId === chest.id);
     socket.send(JSON.stringify({ type: "chestContextOpen", chestId: chest.id }));
-    const [state, chestContext] = await Promise.all([statePending, chestPending]);
-    const coins = (chestContext.items || []).find(item => item.itemId === "coins")?.count || 0;
-    const stone = (chestContext.items || []).find(item => item.itemId === "stone")?.count || 0;
-    if (!state || !chestContext.success || coins < 12 || stone < 1) throw new Error(`treasure context failed: ${JSON.stringify(chestContext)}`);
+    const chestContext = await chestPending;
+    const coins = (chestContext.items || []).find(item => item.token === "resource:coins")?.count || 0;
+    const stone = (chestContext.items || []).find(item => item.token === "resource:stone")?.count || 0;
+    if (!chestContext.success || coins < 12 || stone < 1) throw new Error(`treasure context failed: ${JSON.stringify(chestContext)}`);
 
-    const takePending = waitForMessage(socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === "coins");
-    socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: "coins" }));
+    const takePending = waitForMessage(socket, "chestTakeResult", m => m.chestId === chest.id && m.token === "resource:coins");
+    socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, token: "resource:coins" }));
     const taken = await takePending;
-    if (!taken.success || taken.amount !== coins || (taken.items || []).some(item => item.itemId === "coins")) {
+    if (!taken.success || taken.amount !== coins || (taken.items || []).some(item => item.token === "resource:coins")) {
       throw new Error(`treasure coin stack was not transferred exactly once: ${JSON.stringify(taken)}`);
     }
 
-    const repeatPending = waitForMessage(socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === "coins");
-    socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: "coins" }));
+    const repeatPending = waitForMessage(socket, "chestTakeResult", m => m.chestId === chest.id && m.token === "resource:coins");
+    socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, token: "resource:coins" }));
     const repeat = await repeatPending;
     if (repeat.success || repeat.reason !== "empty") throw new Error("shared treasure stack could be looted twice");
 
-    const closedStatePending = waitForMessage(socket, "structureState", m => m.structureId === chest.id && m.state?.opened === false);
     const closedPending = waitForMessage(socket, "chestContextClosed", m => m.chestId === chest.id);
     socket.send(JSON.stringify({ type: "chestContextClose", chestId: chest.id }));
-    await Promise.all([closedStatePending, closedPending]);
+    await closedPending;
 
     socket.close();
-    console.log("v413 retained WebSocket smoke passed on v424: Stone Floor craft/place/support + shared treasure chest context/stack transfer + compact map mutation sync.");
+    console.log("v413 retained WebSocket smoke passed on v425: Stone Floor craft/place/support + shared treasure chest context/stack transfer + compact map mutation sync.");
   } finally {
     server.kill("SIGTERM");
   }

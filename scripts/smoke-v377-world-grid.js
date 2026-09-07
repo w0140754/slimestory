@@ -59,7 +59,7 @@ async function moveToMap(socket, mapId, x = 320, y = 200) {
     });
 
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-424") {
+    if (welcome.buildVersion !== "6-11-427") {
       throw new Error(`unexpected build ${welcome.buildVersion}`);
     }
     await initialSnapshotPending;

@@ -12,9 +12,9 @@ const network = read("public", "client-network.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.424");
-assert(server.includes('const BUILD_VERSION = "6-11-424";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
+assert.strictEqual(pkg.version, "0.6.11.427");
+assert(server.includes('const BUILD_VERSION = "6-11-427";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
 
 assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'), "Wood Door must join the unified build hotbar list");
 assert(game.includes("if (heldBuildPieceForCurrentDraw()) return null;"), "build selection must render local and replicated remote build holders empty-handed");
@@ -45,7 +45,7 @@ assert(server.includes("function serverDoorAllowsPlayerStep("), "server directio
 assert(server.includes("serverPlayerStepHitsStructureWall(id, mapId"), "authoritative movement must use directional door passage collision");
 assert(server.includes("function enemyMapPointAllowed(enemy, x, y, padding = 0,"), "enemy occupancy path missing");
 assert(server.includes("navigationPlanning = false") && server.includes("ignoreStructureDoors: Boolean(navigationPlanning)") && server.includes("{ includeDoors: !ignoreStructureDoors }"), "enemy navigation may plan through doors while actual movement retains door collision");
-assert(server.includes('if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(kind))'), "Wood Door must be valid shared reclaim loot");
+assert(server.includes('if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable", "inventoryItem"].includes(kind))'), "Wood Door must be valid shared reclaim loot");
 assert(server.includes('} else if (resource.kind === "woodDoor") {'), "Wood Door pickup restoration missing");
 assert(network.includes('["woodWall", "woodDoor"].includes(kind)'), "network edge payload must support doors");
 assert(network.includes("totalWoodDoors"), "network door resource sync missing");

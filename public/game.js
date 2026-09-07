@@ -199,18 +199,18 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=424");
-const torchImage = loadImage("assets/torch_v1.png?v=424");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=427");
+const torchImage = loadImage("assets/torch_v1.png?v=427");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=424");
-const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=424");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=424");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=424");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=424");
-const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=424");
-const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=424");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=427");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=427");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=427");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=427");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=427");
+const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=427");
+const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=427");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -228,7 +228,7 @@ const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
 // v415: Tiger Paw inherits the retired Hurl art as a compact inventory/hotbar
 // icon. It is treated like a hand weapon, so no separate held sprite is drawn.
-const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=424");
+const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=427");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -4336,6 +4336,10 @@ const ALL_EQUIPMENT_ITEM_IDS = new Set([
 ]);
 
 const CRAFT_RECIPES = Object.freeze({
+  recoveryPickaxe: Object.freeze({
+    name: "Recovery Pickaxe", itemId: "weapon_pickaxe", equipType: "weapon", equipIndex: 11,
+    category: "weapons", station: "hand", ingredients: Object.freeze({}), repeatable: true, recoveryOnly: true
+  }),
   craftingTable: Object.freeze({
     name: "Wood Crafting Table",
     resourceKey: "craftingTables",
@@ -5361,6 +5365,7 @@ function craftRecipeCurrentlyAvailable(recipe) {
   return Boolean(
     recipe &&
     !recipe.testSupply &&
+    (!recipe.recoveryOnly || !playerOwnsItem(recipe.itemId)) &&
     craftRecipeStationAvailable(recipe) &&
     craftRecipeHasIngredients(recipe)
   );
@@ -5373,7 +5378,6 @@ function craftRecipeOffline(recipeId) {
   const beforeHotbarCounts = hotbarAssignableAcquisitionSnapshot();
   const ingredients = recipe.ingredients || { wood: recipe.cost };
   if (!craftRecipeHasIngredients(recipe)) {
-    spawnFloatingText(player.x, player.y - 28, "MISSING INGREDIENTS", "#f08a7f", 0.9);
     return;
   }
 
@@ -5393,14 +5397,7 @@ function craftRecipeOffline(recipeId) {
 
   autoAssignNewlyAcquiredHotbarItems(beforeHotbarCounts);
 
-  spawnFloatingText(
-    player.x,
-    player.y - 28,
-    `${recipe.name.toUpperCase()} CRAFTED!`,
-    "#ffe38b",
-    1.2
-  );
-
+  // v427: crafting is deliberately quiet. Recipe state/count changes provide feedback.
   updateCraftingUi();
   updateInventoryUi();
   updateHotbar();
@@ -5412,7 +5409,6 @@ function tryCraftRecipe(recipeId) {
 
   if (!recipe || !craftingOpen || player.benchCraftPending) return;
   if (!craftRecipeStationAvailable(recipe)) {
-    spawnFloatingText(player.x, player.y - 28, "NEED CRAFTING TABLE", "#ffe38b", 0.9);
     updateCraftingUi();
     return;
   }
@@ -5537,63 +5533,57 @@ function syncContextOverlayVisibility() {
   if (open) syncCraftPanelToViewport();
 }
 
-function chestContextItemName(itemId) {
-  if (itemId === "coins") return "Coins";
-  if (itemId === "wood") return "Wood";
-  if (itemId === "stone") return "Stone";
-  return itemId || "Item";
-}
-
-function chestContextItemImage(itemId) {
-  if (itemId === "coins") return coinImage;
-  if (itemId === "wood") return woodImage;
-  if (itemId === "stone") return typeof rockLootableImage !== "undefined" ? rockLootableImage : null;
-  return null;
-}
-
+function chestContextItemName(token) { return inventoryTransferName(token); }
+function chestContextItemImage(token) { return inventoryTransferImageForToken(token); }
 function normalizedChestContextItems(items) {
-  return (Array.isArray(items) ? items : [])
-    .map(item => ({
-      itemId: typeof item?.itemId === "string" ? item.itemId : "",
-      count: Math.max(0, Math.floor(Number(item?.count) || 0))
-    }))
-    .filter(item => ["coins", "wood", "stone"].includes(item.itemId) && item.count > 0);
+  return (Array.isArray(items) ? items : []).map(item => { const legacy = typeof item?.itemId === "string" ? item.itemId : ""; const token = typeof item?.token === "string" ? item.token : legacy ? `resource:${legacy}` : ""; return { token, count: Math.max(0, Math.floor(Number(item?.count) || 0)) }; }).filter(item => inventoryTransferTokenParts(item.token) && item.count > 0).slice(0, Math.max(1, chestContextSlotLimit));
 }
-
 function renderChestContextUi() {
   const grid = document.getElementById("chestGrid");
   const empty = document.getElementById("chestEmpty");
+  const footer = document.getElementById("chestFooter");
+  const lootAll = document.getElementById("chestLootAll");
   if (!grid) return;
-
   grid.replaceChildren();
   const items = normalizedChestContextItems(chestContextItems);
-
+  const chestBusy = Boolean(chestTakePendingItemId || chestTakeAllPending || chestStorePendingToken);
   for (const item of items) {
     const card = document.createElement("div");
     card.className = "chest-item";
-    card.dataset.chestItem = item.itemId;
-    card.draggable = chestContextOpen && chestTakePendingItemId !== item.itemId;
-    card.classList.toggle("pending", chestTakePendingItemId === item.itemId);
-    card.title = `Drag ${chestContextItemName(item.itemId)} into your inventory`;
-
+    card.dataset.chestItem = item.token;
+    card.draggable = chestContextOpen && !chestBusy;
+    card.classList.toggle("pending", chestTakeAllPending || chestTakePendingItemId === item.token);
+    card.title = `Drag or double-click ${chestContextItemName(item.token)} to take it`;
     const image = document.createElement("img");
-    const itemImage = chestContextItemImage(item.itemId);
+    const itemImage = chestContextItemImage(item.token);
     if (itemImage?.src) image.src = itemImage.src;
-    image.alt = chestContextItemName(item.itemId);
-
+    image.alt = chestContextItemName(item.token);
     const count = document.createElement("span");
     count.className = "chest-item-count";
     count.textContent = `${item.count}`;
-
     const name = document.createElement("span");
     name.className = "chest-item-name";
-    name.textContent = chestContextItemName(item.itemId);
-
+    name.textContent = chestContextItemName(item.token);
     card.append(image, count, name);
     grid.append(card);
   }
-
-  if (empty) empty.style.display = items.length ? "none" : "block";
+  for (let i = items.length; i < chestContextSlotLimit; i++) {
+    const slot = document.createElement("div");
+    slot.className = "chest-item chest-empty-slot";
+    slot.setAttribute("aria-label", "Empty chest slot");
+    grid.append(slot);
+  }
+  if (empty) empty.style.display = "none";
+  if (footer) footer.textContent = `${items.length} / ${chestContextSlotLimit} slots · Drag stacks both ways.`;
+  const storeSelected = document.getElementById("chestStoreSelected");
+  if (storeSelected) {
+    const selectedToken = selectedOverlayInventoryToken || "";
+    storeSelected.disabled = !chestContextOpen || chestBusy || !inventoryTransferTokenParts(selectedToken) || inventoryTransferCount(selectedToken) <= 0;
+  }
+  if (lootAll) {
+    lootAll.disabled = !chestContextOpen || items.length === 0 || chestBusy;
+    lootAll.textContent = chestTakeAllPending ? "LOOTING..." : "LOOT ALL";
+  }
 }
 
 function updateChestHudButton() {
@@ -5620,8 +5610,11 @@ function closeChestContext(sendRequest = true, reason = "closed") {
   pendingChestContextId = null;
   chestContextItems = [];
   chestTakePendingItemId = null;
+  chestTakeAllPending = false;
+  chestStorePendingToken = null;
   draggingChestItemId = null;
   document.getElementById("inventoryPage")?.classList.remove("chest-drop-ready");
+  document.getElementById("chestPanel")?.classList.remove("inventory-drop-ready");
   renderChestContextUi();
   updateChestHudButton();
   syncContextOverlayVisibility();
@@ -5675,8 +5668,9 @@ function applyChestContextResult(message) {
   activeChestContextId = chestId;
   chestContextOpen = true;
   chestContextBusyId = null;
+  chestContextSlotLimit = Math.max(1, Math.floor(Number(message.slotLimit) || 5));
   chestContextItems = normalizedChestContextItems(message.items);
-  chestTakePendingItemId = null;
+  chestTakePendingItemId = null; chestTakeAllPending = false; chestStorePendingToken = null;
 
   // The player's inventory is the drop target, so surface it automatically.
   setInventoryOpen(true);
@@ -5692,20 +5686,36 @@ function applyChestContextClosed(message) {
 }
 
 function applyChestTakeResult(message) {
+  const chestId=typeof message?.chestId==="string"?message.chestId:""; if(chestId&&chestId!==activeChestContextId)return; const token=typeof message?.token==="string"?message.token:""; chestTakePendingItemId=null; if(Number.isFinite(message?.slotLimit))chestContextSlotLimit=Math.max(1,Math.floor(message.slotLimit)); if(Array.isArray(message?.items))chestContextItems=normalizedChestContextItems(message.items); const parts=inventoryTransferTokenParts(token); if(message?.success&&parts?.type==="resource"&&Number.isFinite(message.playerCount))player[parts.id]=Math.max(0,Math.floor(Number(message.playerCount))); else if(message?.success&&parts?.type==="item")applyInventoryTransferDelta(token,Math.max(1,Math.floor(Number(message.amount)||1)),{autoAssign:true}); renderChestContextUi();updateInventoryUi();updateHotbar();saveLocalCharacterState(true);
+}
+function applyChestTakeAllResult(message) {
   const chestId = typeof message?.chestId === "string" ? message.chestId : "";
   if (chestId && chestId !== activeChestContextId) return;
-
+  chestTakeAllPending = false;
   chestTakePendingItemId = null;
+  if (Number.isFinite(message?.slotLimit)) chestContextSlotLimit = Math.max(1, Math.floor(message.slotLimit));
   if (Array.isArray(message?.items)) chestContextItems = normalizedChestContextItems(message.items);
-  if (Number.isFinite(message?.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
-  if (Number.isFinite(message?.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
-  if (Number.isFinite(message?.totalStone)) player.stone = Math.max(0, Math.floor(message.totalStone));
-
+  if (message?.success && Array.isArray(message.transfers)) {
+    for (const transfer of message.transfers) {
+      const token = typeof transfer?.token === "string" ? transfer.token : "";
+      const parts = inventoryTransferTokenParts(token);
+      const amount = Math.max(1, Math.floor(Number(transfer?.amount) || 1));
+      if (parts?.type === "resource" && Number.isFinite(transfer?.playerCount)) {
+        player[parts.id] = Math.max(0, Math.floor(Number(transfer.playerCount)));
+      } else if (parts?.type === "item") {
+        applyInventoryTransferDelta(token, amount, { autoAssign: true });
+      }
+    }
+  }
   renderChestContextUi();
   updateInventoryUi();
   updateHotbar();
   saveLocalCharacterState(true);
 }
+function applyChestStoreResult(message) {
+  const chestId=typeof message?.chestId==="string"?message.chestId:"";if(chestId&&chestId!==activeChestContextId)return;const token=typeof message?.token==="string"?message.token:"";const wasPending=chestStorePendingToken===token;chestStorePendingToken=null;if(Number.isFinite(message?.slotLimit))chestContextSlotLimit=Math.max(1,Math.floor(message.slotLimit));if(Array.isArray(message?.items))chestContextItems=normalizedChestContextItems(message.items);if(message?.success&&wasPending){const parts=inventoryTransferTokenParts(token);if(parts?.type==="resource"&&Number.isFinite(message.playerCount))player[parts.id]=Math.max(0,Math.floor(Number(message.playerCount)));else if(parts?.type==="item")applyInventoryTransferDelta(token,-Math.max(1,Math.floor(Number(message.amount)||1)));}else if(!message?.success&&message?.reason==="full")showMenuFeedback("CHEST FULL","#ffe38b",0.9);document.getElementById("chestPanel")?.classList.remove("inventory-drop-ready");renderChestContextUi();updateInventoryUi();updateHotbar();saveLocalCharacterState(true);
+}
+function applyInventoryDropResult(message){const token=typeof message?.token==="string"?message.token:"";if(!token||inventoryDropPendingToken!==token)return;inventoryDropPendingToken=null;if(!message?.success)return;const parts=inventoryTransferTokenParts(token);if(parts?.type==="resource"&&Number.isFinite(message.playerCount)){player[parts.id]=Math.max(0,Math.floor(Number(message.playerCount)));updateInventoryUi();updateHotbar();saveLocalCharacterState(true);}else if(parts?.type==="item")applyInventoryTransferDelta(token,-Math.max(1,Math.floor(Number(message.amount)||1)));}
 
 function updateNearbyChestContext() {
   const target = (player.isDead || shopOpen || classResetConfirmOpen || beachQuestOpen)
@@ -8090,6 +8100,7 @@ function updateHotbar() {
 
     slot.classList.toggle("active", available && (selectedBuildPiece ? selectedBuildPiece === itemId : equippedItemId === itemId));
     slot.classList.remove("cooling-down", "buff-active");
+    slot.draggable = Boolean(inventoryOpen && assigned && available);
 
     if (image) {
       image.classList.toggle(
@@ -8101,7 +8112,7 @@ function updateHotbar() {
         if (itemImage) image.src = itemImage.src;
         image.alt = hotbarItemDisplayName(itemId);
         image.style.visibility = "visible";
-        slot.title = `${hotbarItemDisplayName(itemId)} · key ${hotbarKeyLabel(slotIndex)} · ${BUILD_HOTBAR_ITEMS.includes(itemId) ? "click to build" : "click to equip"}`;
+        slot.title = `${hotbarItemDisplayName(itemId)} · key ${hotbarKeyLabel(slotIndex)} · ${inventoryOpen ? "drag to move/swap · " : ""}${BUILD_HOTBAR_ITEMS.includes(itemId) ? "click to build" : "click to equip"}`;
       } else {
         image.removeAttribute("src");
         image.alt = "";
@@ -8155,8 +8166,14 @@ let activeChestContextId = null;
 let pendingChestContextId = null;
 let chestContextBusyId = null;
 let chestContextItems = [];
+let chestContextSlotLimit = 5;
 let chestTakePendingItemId = null;
+let chestTakeAllPending = false;
+let chestStorePendingToken = null;
 let draggingChestItemId = null;
+let draggingInventoryToken = null;
+let inventoryDropPendingToken = null;
+let inventoryDropDraft = null;
 let classResetConfirmOpen = false;
 let beachQuestOpen = false;
 let rewardToastTimer = null;
@@ -8591,9 +8608,35 @@ const INVENTORY_RESOURCE_META = Object.freeze({
 
 function inventoryOverlayCellToken(element) {
   if (!element) return null;
-  if (element.dataset.ownedItem) return `item:${element.dataset.ownedItem}`;
   if (element.dataset.resourceKey) return `resource:${element.dataset.resourceKey}`;
+  if (element.dataset.ownedItem) return `item:${element.dataset.ownedItem}`;
   return null;
+}
+
+function inventoryTransferTokenParts(token) {
+  const clean = typeof token === "string" ? token : "";
+  if (clean.startsWith("resource:")) { const id = clean.slice(9); return Object.prototype.hasOwnProperty.call(INVENTORY_RESOURCE_META, id) ? { type: "resource", id, token: clean } : null; }
+  if (clean.startsWith("item:")) { const id = clean.slice(5); return ALL_EQUIPMENT_ITEM_IDS.has(id) ? { type: "item", id, token: clean } : null; }
+  return null;
+}
+function inventoryTransferCount(token) { const parts = inventoryTransferTokenParts(token); if (!parts) return 0; return parts.type === "resource" ? Math.max(0, Math.floor(Number(player[parts.id]) || 0)) : inventoryItemCount(parts.id); }
+function inventoryTransferName(token) { const parts = inventoryTransferTokenParts(token); if (!parts) return "Item"; return parts.type === "resource" ? (INVENTORY_RESOURCE_META[parts.id]?.name || parts.id) : (itemDetailData(parts.id)?.name || itemDisplayNameForId(parts.id)); }
+function inventoryTransferImageForToken(token) {
+  const cell = inventoryOverlayCellForToken(token); const image = cell?.querySelector("img"); if (image?.src) return image;
+  const parts = inventoryTransferTokenParts(token); if (!parts) return null;
+  if (parts.type === "item") return shopImageForItemId(parts.id);
+  if (parts.id === "coins") return coinImage; if (parts.id === "wood") return woodImage; if (parts.id === "stone") return typeof rockLootableImage !== "undefined" ? rockLootableImage : null;
+  if (parts.id === "arrows") return arrowResourceImage; if (parts.id === "healingPotions") return healingPotionImage; if (parts.id === "attackPotions") return attackPotionImage; if (parts.id === "magicPotions") return magicPotionImage; return null;
+}
+function applyInventoryTransferDelta(token, delta, options = {}) {
+  const parts = inventoryTransferTokenParts(token); if (!parts || !Number.isFinite(Number(delta)) || Number(delta) === 0) return false; const amount = Math.trunc(Number(delta));
+  if (parts.type === "resource") player[parts.id] = Math.max(0, Math.floor(Number(player[parts.id]) || 0) + amount);
+  else {
+    const next = Math.max(0, inventoryItemCount(parts.id) + amount); player.items[parts.id] = next;
+    if (next <= 0) { delete player.items[parts.id]; for (let i=0;i<player.hotbarAssignments.length;i++) if (player.hotbarAssignments[i] === parts.id) player.hotbarAssignments[i] = null; if (weaponItemIdForIndex(player.weaponIndex) === parts.id) player.weaponIndex = -1; if (HAT_ITEM_IDS[player.hatIndex] === parts.id) player.hatIndex=-1; if (SHIRT_ITEM_IDS[player.shirtIndex] === parts.id) player.shirtIndex=-1; if (PANTS_ITEM_IDS[player.pantsIndex] === parts.id) player.pantsIndex=-1; if (CHARM_ITEM_IDS[player.charmIndex] === parts.id) player.charmIndex=-1; }
+    else if (amount > 0 && options.autoAssign) autoAssignHotbarItem(parts.id);
+  }
+  sanitizeHotbarAssignments(); updateInventoryUi(); updateHotbar(); saveLocalCharacterState(true); return true;
 }
 
 function inventoryOverlayCellForToken(token) {
@@ -8606,8 +8649,8 @@ function inventoryOverlayCellForToken(token) {
 
 function inventoryOverlayCellCount(element) {
   if (!element) return 0;
-  if (element.dataset.ownedItem) return Math.max(0, inventoryItemCount(element.dataset.ownedItem));
   if (element.dataset.resourceKey) return Math.max(0, Math.floor(Number(player[element.dataset.resourceKey]) || 0));
+  if (element.dataset.ownedItem) return Math.max(0, inventoryItemCount(element.dataset.ownedItem));
   return 0;
 }
 
@@ -9850,6 +9893,8 @@ function setInventoryOpen(open) {
   hudButton?.setAttribute("aria-pressed", inventoryOpen ? "true" : "false");
 
   updateInventoryUi();
+  updateHotbar();
+  if (!inventoryOpen && inventoryDropDraft) closeInventoryDropQuantityPicker();
   if (inventoryOpen) syncInventoryOverlayToViewport();
 }
 
@@ -9913,20 +9958,16 @@ document.getElementById("chestHudButton")?.addEventListener("click", () => {
 
 window.addEventListener("wheel", event => {
   if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
-
-  if (!Number.isFinite(event.deltaY) || Math.abs(event.deltaY) < 1) {
-    return;
-  }
-
-  const direction = event.deltaY > 0 ? 1 : -1;
-  if (!cycleHotbarSelection(direction)) {
-    return;
-  }
-
-  event.preventDefault();
+  if (!Number.isFinite(event.deltaY) || Math.abs(event.deltaY) < 1) return;
+  const panel = event.target?.closest?.("#inventoryPage, #craftPanel, #chestPanel, #dropQuantityPanel");
+  if (panel) { const scrollTarget = panel.id === "inventoryPage" ? document.getElementById("inventoryScroll") : panel.id === "craftPanel" ? document.getElementById("craftGrid") : panel.id === "chestPanel" ? document.getElementById("chestGrid") : null; if (scrollTarget) scrollTarget.scrollTop += event.deltaY; event.preventDefault(); return; }
+  const direction=event.deltaY>0?1:-1;if(!cycleHotbarSelection(direction))return;event.preventDefault();
 }, { passive: false });
 
 const topHotbar = document.getElementById("hotbar");
+// v427: the canvas owns right-click. Suppress the browser image/context menu
+// so right-click never selects/saves the rendered game surface.
+canvas?.addEventListener("contextmenu", event => event.preventDefault());
 topHotbar?.addEventListener("click", event => {
   if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
 
@@ -9937,6 +9978,10 @@ topHotbar?.addEventListener("click", event => {
   if (!Number.isInteger(slotNumber)) return;
 
   if (slotNumber >= 1 && slotNumber <= HOTBAR_SLOT_COUNT) {
+    if (inventoryOpen && selectedHotbarInventoryItemId && hotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) {
+      assignItemToHotbar(selectedHotbarInventoryItemId, slotNumber - 1);
+      return;
+    }
     inputController.queueCommand("equipWeapon", {
       index: slotNumber - 1
     });
@@ -10164,63 +10209,98 @@ document.getElementById("craftGrid").addEventListener("click", event => {
 
 const inventoryPageElement = document.getElementById("inventoryPage");
 const chestGridElement = document.getElementById("chestGrid");
-
-chestGridElement?.addEventListener("dragstart", event => {
-  const card = event.target.closest("[data-chest-item]");
-  if (!card || !chestContextOpen || !activeChestContextId || chestTakePendingItemId) {
-    event.preventDefault();
-    return;
-  }
-  const itemId = card.dataset.chestItem || "";
-  if (!itemId) {
-    event.preventDefault();
-    return;
-  }
-  draggingChestItemId = itemId;
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("application/x-slime-chest-item", itemId);
-  event.dataTransfer.setData("text/plain", itemId);
-  card.classList.add("dragging");
-});
-
-chestGridElement?.addEventListener("dragend", event => {
-  event.target.closest("[data-chest-item]")?.classList.remove("dragging");
-  draggingChestItemId = null;
-  inventoryPageElement?.classList.remove("chest-drop-ready");
-});
-
-inventoryPageElement?.addEventListener("dragover", event => {
-  if (!draggingChestItemId || !chestContextOpen || !activeChestContextId || chestTakePendingItemId) return;
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
-  inventoryPageElement.classList.add("chest-drop-ready");
-});
-
-inventoryPageElement?.addEventListener("dragleave", event => {
-  if (!inventoryPageElement.contains(event.relatedTarget)) {
-    inventoryPageElement.classList.remove("chest-drop-ready");
-  }
-});
-
-inventoryPageElement?.addEventListener("drop", event => {
-  if (!draggingChestItemId || !chestContextOpen || !activeChestContextId || chestTakePendingItemId) return;
-  event.preventDefault();
-  inventoryPageElement.classList.remove("chest-drop-ready");
-  const itemId = event.dataTransfer.getData("application/x-slime-chest-item") || draggingChestItemId;
-  draggingChestItemId = null;
-  if (!["coins", "wood", "stone"].includes(itemId)) return;
-  chestTakePendingItemId = itemId;
+const chestPanelElement = document.getElementById("chestPanel");
+function requestChestTakeToken(token) {
+  if (!chestContextOpen || !activeChestContextId || chestTakePendingItemId || chestTakeAllPending || chestStorePendingToken) return false;
+  if (!inventoryTransferTokenParts(token)) return false;
+  chestTakePendingItemId = token;
   renderChestContextUi();
-  if (!onlineClient?.requestChestTakeItem(activeChestContextId, itemId)) {
+  if (!onlineClient?.requestChestTakeItem(activeChestContextId, token)) {
     chestTakePendingItemId = null;
     renderChestContextUi();
+    return false;
   }
+  return true;
+}
+
+function requestChestTakeAll() {
+  if (!chestContextOpen || !activeChestContextId || chestTakePendingItemId || chestTakeAllPending || chestStorePendingToken) return false;
+  if (normalizedChestContextItems(chestContextItems).length === 0) return false;
+  chestTakeAllPending = true;
+  renderChestContextUi();
+  if (!onlineClient?.requestChestTakeAll(activeChestContextId)) {
+    chestTakeAllPending = false;
+    renderChestContextUi();
+    return false;
+  }
+  return true;
+}
+
+function requestStoreSelectedInventoryStackInChest() {
+  const token = selectedOverlayInventoryToken || "";
+  const count = inventoryTransferCount(token);
+  if (!chestContextOpen || !activeChestContextId || chestTakePendingItemId || chestTakeAllPending || chestStorePendingToken) return false;
+  if (!inventoryTransferTokenParts(token) || count <= 0) return false;
+  chestStorePendingToken = token;
+  renderChestContextUi();
+  if (!onlineClient?.requestChestStoreItem(activeChestContextId, token, count)) {
+    chestStorePendingToken = null;
+    renderChestContextUi();
+    return false;
+  }
+  return true;
+}
+
+chestGridElement?.addEventListener("dragstart",event=>{const card=event.target.closest("[data-chest-item]");if(!card||!chestContextOpen||!activeChestContextId||chestTakePendingItemId||chestTakeAllPending||chestStorePendingToken){event.preventDefault();return;}const token=card.dataset.chestItem||"";if(!inventoryTransferTokenParts(token)){event.preventDefault();return;}draggingChestItemId=token;event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("application/x-slime-chest-item",token);event.dataTransfer.setData("text/plain",token);card.classList.add("dragging");});
+chestGridElement?.addEventListener("dragend",event=>{event.target.closest("[data-chest-item]")?.classList.remove("dragging");draggingChestItemId=null;inventoryPageElement?.classList.remove("chest-drop-ready");});
+chestGridElement?.addEventListener("dblclick", event => {
+  const card = event.target.closest("[data-chest-item]");
+  if (!card || !chestGridElement.contains(card)) return;
+  event.preventDefault();
+  requestChestTakeToken(card.dataset.chestItem || "");
 });
+chestGridElement?.addEventListener("click", event => {
+  if (!mobileControlsEnabled) return;
+  const card = event.target.closest("[data-chest-item]");
+  if (!card || !chestGridElement.contains(card)) return;
+  requestChestTakeToken(card.dataset.chestItem || "");
+});
+document.getElementById("chestLootAll")?.addEventListener("click", requestChestTakeAll);
+document.getElementById("chestStoreSelected")?.addEventListener("click", requestStoreSelectedInventoryStackInChest);
+inventoryPageElement?.addEventListener("dragover",event=>{if(!draggingChestItemId||!chestContextOpen||!activeChestContextId||chestTakePendingItemId)return;event.preventDefault();event.dataTransfer.dropEffect="move";inventoryPageElement.classList.add("chest-drop-ready");});
+inventoryPageElement?.addEventListener("dragleave",event=>{if(!inventoryPageElement.contains(event.relatedTarget))inventoryPageElement.classList.remove("chest-drop-ready");});
+inventoryPageElement?.addEventListener("drop",event=>{if(!draggingChestItemId||!chestContextOpen||!activeChestContextId||chestTakePendingItemId||chestTakeAllPending)return;event.preventDefault();inventoryPageElement.classList.remove("chest-drop-ready");const token=event.dataTransfer.getData("application/x-slime-chest-item")||draggingChestItemId;draggingChestItemId=null;requestChestTakeToken(token);});
+chestPanelElement?.addEventListener("dragover",event=>{if(!draggingInventoryToken||!chestContextOpen||!activeChestContextId||chestStorePendingToken)return;event.preventDefault();event.dataTransfer.dropEffect="move";chestPanelElement.classList.add("inventory-drop-ready");});
+chestPanelElement?.addEventListener("dragleave",event=>{if(!chestPanelElement.contains(event.relatedTarget))chestPanelElement.classList.remove("inventory-drop-ready");});
+chestPanelElement?.addEventListener("drop",event=>{if(!draggingInventoryToken||!chestContextOpen||!activeChestContextId||chestStorePendingToken)return;event.preventDefault();chestPanelElement.classList.remove("inventory-drop-ready");const token=event.dataTransfer.getData("application/x-slime-inventory-token")||draggingInventoryToken;draggingInventoryToken=null;const count=inventoryTransferCount(token);if(!inventoryTransferTokenParts(token)||count<=0)return;chestStorePendingToken=token;renderChestContextUi();if(!onlineClient?.requestChestStoreItem(activeChestContextId,token,count)){chestStorePendingToken=null;renderChestContextUi();}});
 
 inventoryPageElement?.addEventListener("click", event => {
   const cell = event.target.closest(".menu-item");
   if (!cell || !inventoryPageElement.contains(cell) || cell.style.display === "none") return;
   selectInventoryOverlayCell(cell);
+  if (chestContextOpen) renderChestContextUi();
+});
+
+function quickEquipArmorFromInventoryCell(cell) {
+  const itemId = cell?.dataset?.ownedItem || "";
+  const slot = equipmentSlotForInventoryItem(itemId);
+  if (!slot) return false;
+  selectInventoryOverlayCell(cell);
+  return equipInventoryArmorItemToSlot(itemId, slot);
+}
+
+inventoryPageElement?.addEventListener("contextmenu", event => {
+  const cell = event.target.closest(".menu-item[data-owned-item]");
+  if (!cell || !inventoryPageElement.contains(cell) || !equipmentSlotForInventoryItem(cell.dataset.ownedItem)) return;
+  event.preventDefault();
+  quickEquipArmorFromInventoryCell(cell);
+});
+
+inventoryPageElement?.addEventListener("dblclick", event => {
+  const cell = event.target.closest(".menu-item[data-owned-item]");
+  if (!cell || !inventoryPageElement.contains(cell) || !equipmentSlotForInventoryItem(cell.dataset.ownedItem)) return;
+  event.preventDefault();
+  quickEquipArmorFromInventoryCell(cell);
 });
 
 inventoryPageElement?.addEventListener("dragstart", event => {
@@ -10232,7 +10312,7 @@ inventoryPageElement?.addEventListener("dragstart", event => {
 
   selectInventoryOverlayCell(cell);
   const itemId = cell.dataset.ownedItem || "";
-  const token = inventoryOverlayCellToken(cell) || "";
+  const token = inventoryOverlayCellToken(cell) || ""; draggingInventoryToken = token;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("application/x-slime-inventory-token", token);
   event.dataTransfer.setData("application/x-slime-inventory-item", itemId);
@@ -10244,10 +10324,85 @@ inventoryPageElement?.addEventListener("dragstart", event => {
 });
 
 inventoryPageElement?.addEventListener("dragend", event => {
-  event.target.closest(".menu-item")?.classList.remove("dragging");
-  document.querySelectorAll("#hotbar .hotbar-slot.drag-over, #equipmentPage .equipped-box.drag-over")
-    .forEach(slot => slot.classList.remove("drag-over"));
+  event.target.closest(".menu-item")?.classList.remove("dragging"); draggingInventoryToken = null; chestPanelElement?.classList.remove("inventory-drop-ready");
+  document.querySelectorAll("#hotbar .hotbar-slot.drag-over, #equipmentPage .equipped-box.drag-over").forEach(slot => slot.classList.remove("drag-over"));
 });
+function closeInventoryDropQuantityPicker() {
+  inventoryDropDraft = null;
+  const overlay = document.getElementById("dropQuantityOverlay");
+  overlay?.classList.remove("open");
+  overlay?.setAttribute("aria-hidden", "true");
+}
+
+function inventoryDropQuantityValue() {
+  if (!inventoryDropDraft) return 0;
+  const input = document.getElementById("dropQuantityInput");
+  const max = Math.max(1, Math.floor(Number(inventoryDropDraft.maxCount) || 1));
+  const value = Math.max(1, Math.min(max, Math.floor(Number(input?.value) || 1)));
+  if (input) input.value = String(value);
+  return value;
+}
+
+function openInventoryDropQuantityPicker(token, maxCount, worldX, worldY, clientX, clientY) {
+  const parts = inventoryTransferTokenParts(token);
+  const max = Math.max(1, Math.floor(Number(maxCount) || 1));
+  if (!parts || max <= 0) return false;
+  if (max === 1) {
+    inventoryDropPendingToken = token;
+    if (!onlineClient?.requestInventoryDrop(token, 1, worldX, worldY)) inventoryDropPendingToken = null;
+    return true;
+  }
+  inventoryDropDraft = { token, maxCount: max, worldX, worldY };
+  const overlay = document.getElementById("dropQuantityOverlay");
+  const panel = document.getElementById("dropQuantityPanel");
+  const title = document.getElementById("dropQuantityTitle");
+  const owned = document.getElementById("dropQuantityOwned");
+  const input = document.getElementById("dropQuantityInput");
+  if (title) title.textContent = `Drop ${inventoryTransferName(token)}`;
+  if (owned) owned.textContent = `Owned ${max}`;
+  if (input) { input.max = String(max); input.value = "1"; }
+  overlay?.classList.add("open");
+  overlay?.setAttribute("aria-hidden", "false");
+  if (panel) {
+    const width = 176, height = 142;
+    panel.style.left = `${Math.max(6, Math.min(window.innerWidth - width - 6, Number(clientX) + 10))}px`;
+    panel.style.top = `${Math.max(6, Math.min(window.innerHeight - height - 6, Number(clientY) - 30))}px`;
+  }
+  input?.focus({ preventScroll: true });
+  input?.select();
+  return true;
+}
+
+function confirmInventoryDropQuantity() {
+  if (!inventoryDropDraft || inventoryDropPendingToken) return false;
+  const { token, worldX, worldY } = inventoryDropDraft;
+  const amount = inventoryDropQuantityValue();
+  closeInventoryDropQuantityPicker();
+  inventoryDropPendingToken = token;
+  if (!onlineClient?.requestInventoryDrop(token, amount, worldX, worldY)) { inventoryDropPendingToken = null; return false; }
+  return true;
+}
+
+canvas?.addEventListener("dragover",event=>{if(!draggingInventoryToken||inventoryDropPendingToken||inventoryDropDraft)return;event.preventDefault();event.dataTransfer.dropEffect="move";});
+canvas?.addEventListener("drop",event=>{
+  if(!draggingInventoryToken||inventoryDropPendingToken||inventoryDropDraft)return;
+  event.preventDefault();
+  const token=event.dataTransfer.getData("application/x-slime-inventory-token")||draggingInventoryToken;
+  const count=inventoryTransferCount(token);
+  draggingInventoryToken=null;
+  if(!inventoryTransferTokenParts(token)||count<=0)return;
+  const pointer=getCanvasPointerPosition(event);
+  const camera=getCameraPosition();
+  openInventoryDropQuantityPicker(token,count,camera.x+pointer.x,camera.y+pointer.y,event.clientX,event.clientY);
+});
+
+document.getElementById("dropQuantityMinus")?.addEventListener("click",()=>{const input=document.getElementById("dropQuantityInput");if(input){input.value=String(Math.max(1,inventoryDropQuantityValue()-1));}});
+document.getElementById("dropQuantityPlus")?.addEventListener("click",()=>{const input=document.getElementById("dropQuantityInput");if(input&&inventoryDropDraft){input.value=String(Math.min(inventoryDropDraft.maxCount,inventoryDropQuantityValue()+1));}});
+document.getElementById("dropQuantityMax")?.addEventListener("click",()=>{const input=document.getElementById("dropQuantityInput");if(input&&inventoryDropDraft)input.value=String(inventoryDropDraft.maxCount);});
+document.getElementById("dropQuantityCancel")?.addEventListener("click",closeInventoryDropQuantityPicker);
+document.getElementById("dropQuantityConfirm")?.addEventListener("click",confirmInventoryDropQuantity);
+document.getElementById("dropQuantityInput")?.addEventListener("input",inventoryDropQuantityValue);
+document.getElementById("dropQuantityInput")?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();event.stopPropagation();confirmInventoryDropQuantity();}else if(event.key==="Escape"){event.preventDefault();event.stopPropagation();closeInventoryDropQuantityPicker();}});
 
 document.getElementById("inventoryDetailAction")?.addEventListener("click", event => {
   const itemId = event.currentTarget.dataset.consumableItem;
@@ -10303,7 +10458,29 @@ liveEquipmentDock?.addEventListener("contextmenu", event => {
   unequipInventoryArmorSlot(slot.dataset.equipmentSlot);
 });
 
-// The real world HUD hotbar is the only assignment target in v422.
+// v426: while Inventory is open, assigned HUD hotbar slots are draggable too.
+// assignItemToHotbar already performs the actual move/swap semantics.
+topHotbar?.addEventListener("dragstart", event => {
+  const slot = event.target.closest(".hotbar-slot");
+  if (!inventoryOpen || !slot || !topHotbar.contains(slot)) { event.preventDefault(); return; }
+  const slotNumber = Number(String(slot.id || "").replace("slot", ""));
+  const slotIndex = slotNumber - 1;
+  const itemId = player.hotbarAssignments?.[slotIndex] || "";
+  if (!hotbarItemCanBeAssigned(itemId)) { event.preventDefault(); return; }
+  selectedHotbarInventoryItemId = itemId;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("application/x-slime-item", itemId);
+  event.dataTransfer.setData("application/x-slime-hotbar-source", String(slotIndex));
+  event.dataTransfer.setData("text/plain", itemId);
+  slot.classList.add("dragging");
+});
+
+topHotbar?.addEventListener("dragend", event => {
+  event.target.closest(".hotbar-slot")?.classList.remove("dragging");
+  topHotbar.querySelectorAll(".hotbar-slot.drag-over").forEach(slot => slot.classList.remove("drag-over"));
+});
+
+// The real world HUD hotbar remains the assignment target.
 topHotbar?.addEventListener("dragover", event => {
   const slot = event.target.closest(".hotbar-slot");
   if (!slot) return;
@@ -11917,13 +12094,6 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
     return true;
   }
 
-  if (selectedBuildPiece === "craftingTable") {
-    const candidate = craftingTablePlacementCandidate(worldX, worldY);
-    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
-    drawCraftingTableStructure({ kind: "craftingTable", x: candidate.x, y: candidate.y }, camX, camY, valid ? 0.72 : 0.22);
-    if (!valid) drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, false);
-    return;
-  }
 
   if (selectedBuildPiece === "chest") {
     const candidate = chestPlacementCandidate(worldX, worldY);
@@ -11982,6 +12152,19 @@ function drawBuildPlacementPreview(camX, camY) {
     const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };
     if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, inRange ? 0.42 : 0.18);
     else drawWoodWall(preview, camX, camY, inRange ? 0.42 : 0.18);
+    return;
+  }
+
+  if (selectedBuildPiece === "craftingTable") {
+    const candidate = craftingTablePlacementCandidate(worldX, worldY);
+    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
+    drawCraftingTableStructure(
+      { kind: "craftingTable", x: candidate.x, y: candidate.y },
+      camX,
+      camY,
+      valid ? 0.72 : 0.22
+    );
+    if (!valid) drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, false);
     return;
   }
 

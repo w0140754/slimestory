@@ -15,11 +15,11 @@ const game = read("public", "game.js");
 const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.424");
-assert(server.includes('const BUILD_VERSION = "6-11-424";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
-assert(html.includes('/shared/weather-rules.js?v=424'));
-assert(html.indexOf('/shared/weather-rules.js?v=424') < html.indexOf('/game.js?v=424'));
+assert.strictEqual(pkg.version, "0.6.11.427");
+assert(server.includes('const BUILD_VERSION = "6-11-427";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
+assert(html.includes('/shared/weather-rules.js?v=427'));
+assert(html.indexOf('/shared/weather-rules.js?v=427') < html.indexOf('/game.js?v=427'));
 
 // No arbitrary build-count ceiling: placement is still range/resource/collision
 // validated, but long-lived player settlements are not stopped at 96 pieces.

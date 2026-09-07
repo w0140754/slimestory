@@ -15,10 +15,10 @@ const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.424");
-assert(server.includes('const BUILD_VERSION = "6-11-424";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-424";'));
-assert(html.includes('/game.js?v=424'));
+assert.strictEqual(pkg.version, "0.6.11.427");
+assert(server.includes('const BUILD_VERSION = "6-11-427";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-427";'));
+assert(html.includes('/game.js?v=427'));
 
 // Unified assignment belt is now the complete number row 1-0.
 assert(game.includes("const HOTBAR_SLOT_COUNT = 10;"));
@@ -41,7 +41,7 @@ assert(html.includes('#chestHudButton { left: 76px; top: 48px; }'));
 assert(html.includes('id="chestHudButton"'));
 assert(html.includes('id="chestPanel" hidden'));
 assert(html.includes('id="chestGrid"'));
-assert(html.includes("Drag a stack into your inventory."));
+assert(html.includes("Drag stacks both ways."));
 
 // Chests are no longer part of the F-key interaction list. Proximity drives a
 // short-range context transition and Chest/Craft share one panel position.
@@ -65,14 +65,15 @@ assert(game.includes("setInventoryOpen(true);"), "successful chest open should e
 
 // Dragging a chest stack into Inventory requests an authoritative whole-stack
 // transfer rather than mutating client inventory directly.
-assert(game.includes('event.dataTransfer.setData("application/x-slime-chest-item", itemId)'));
+assert(game.includes('event.dataTransfer.setData("application/x-slime-chest-item",token)'));
 assert(game.includes('event.dataTransfer.getData("application/x-slime-chest-item")'));
-assert(game.includes("onlineClient?.requestChestTakeItem(activeChestContextId, itemId)"));
+assert(game.includes("function requestChestTakeToken(token)"));
+assert(game.includes("onlineClient?.requestChestTakeItem(activeChestContextId, token)"));
 assert(network.includes("requestChestContextOpen(chestId)"));
 assert(network.includes('type: "chestContextOpen"'));
 assert(network.includes("requestChestContextClose(chestId)"));
 assert(network.includes('type: "chestContextClose"'));
-assert(network.includes("requestChestTakeItem(chestId, itemId)"));
+assert(network.includes("requestChestTakeItem(chestId, token)"));
 assert(network.includes('type: "chestTakeItem"'));
 assert(network.includes('message.type === "chestContextResult"'));
 assert(network.includes('message.type === "chestContextClosed"'));
@@ -92,10 +93,10 @@ assert(server.includes("updateChestStructureState(chest, { opened: true });"));
 assert(server.includes("updateChestStructureState(chest, { opened: false });"));
 assert(server.includes("function handleChestTakeItem(playerId, socket, message)"));
 assert(server.includes('reason: "notOwner"'));
-assert(server.includes("inventory[itemId] = 0;"));
-assert(server.includes("coins: 12 + (hash % 14)"));
-assert(server.includes("stone: 1 + ((hash >>> 8) % 3)"));
-assert(server.includes("wood: ((hash >>> 16) % 100) < 45 ? 1 + ((hash >>> 24) % 2) : 0"));
+assert(server.includes("inventory.splice(index, 1);"));
+assert(server.includes('token: "resource:coins", count: 12 + (hash % 14)'));
+assert(server.includes('token: "resource:stone", count: 1 + ((hash >>> 8) % 3)'));
+assert(server.includes("const wood = ((hash >>> 16) % 100) < 45 ? 1 + ((hash >>> 24) % 2) : 0;"));
 assert(server.includes('structure.kind === "chest" && chestLockOwner(structure.id)'));
 assert(server.includes('reason = "inUse"'));
 assert(server.includes('reason = "lootFirst"'));

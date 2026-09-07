@@ -55,7 +55,7 @@ async function move(socket, mapId, x, y) {
     await delay(450);
     const a = await connect();
     const b = await connect();
-    if (a.welcome.buildVersion !== "6-11-424" || b.welcome.buildVersion !== "6-11-424") {
+    if (a.welcome.buildVersion !== "6-11-427" || b.welcome.buildVersion !== "6-11-427") {
       throw new Error("unexpected v424 welcome");
     }
 
@@ -83,8 +83,8 @@ async function move(socket, mapId, x, y) {
     const busy = await busyPending;
     if (busy.success || busy.reason !== "busy") throw new Error(`second player bypassed chest lock: ${JSON.stringify(busy)}`);
 
-    const deniedTakePending = waitForMessage(b.socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === "coins");
-    b.socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: "coins" }));
+    const deniedTakePending = waitForMessage(b.socket, "chestTakeResult", m => m.chestId === chest.id);
+    b.socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, token: "resource:coins" }));
     const deniedTake = await deniedTakePending;
     if (deniedTake.success || deniedTake.reason !== "notOwner") throw new Error(`second player bypassed loot ownership: ${JSON.stringify(deniedTake)}`);
 

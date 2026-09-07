@@ -975,6 +975,14 @@ class OnlineClient {
       return;
     }
 
+    if (message.type === "chestTakeAllResult") {
+      applyChestTakeAllResult(message);
+      return;
+    }
+
+    if (message.type === "chestStoreResult") { applyChestStoreResult(message); return; }
+    if (message.type === "inventoryDropResult") { applyInventoryDropResult(message); return; }
+
     if (message.type === "treasureResult") {
       const chestId = typeof message.chestId === "string" ? message.chestId : "";
       if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
@@ -1682,6 +1690,8 @@ class OnlineClient {
         flowerType:
           serverResource.flowerType ||
           "white",
+        itemToken: typeof serverResource.itemToken === "string" ? serverResource.itemToken : null,
+        itemCount: Math.max(1, Math.floor(Number(serverResource.itemCount) || 1)),
         ownerId: typeof serverResource.ownerId === "string" ? serverResource.ownerId : null,
         life: Math.max(
           0,
@@ -1831,7 +1841,7 @@ class OnlineClient {
 
       if (
         !resource ||
-        !SPECIAL_RESOURCE_DROP_PROFILES[resource.kind] ||
+        !(SPECIAL_RESOURCE_DROP_PROFILES[resource.kind] || resource.kind === "inventoryItem") ||
         resource.mapId !== currentMapId ||
         resource.life <= 0
       ) {
@@ -1884,7 +1894,7 @@ class OnlineClient {
         continue;
       }
 
-      if (SPECIAL_RESOURCE_DROP_PROFILES[resource.kind]) {
+      if (SPECIAL_RESOURCE_DROP_PROFILES[resource.kind] || resource.kind === "inventoryItem") {
         let drop = specialResourceDrops.find(
           item => item.entityId === resource.id
         );
@@ -1894,6 +1904,8 @@ class OnlineClient {
             x: resource.x,
             y: resource.y,
             kind: resource.kind,
+            itemToken: resource.itemToken || null,
+            itemCount: Math.max(1, Math.floor(Number(resource.itemCount) || 1)),
             life: resource.life,
             shared: true,
             entityId: resource.id,
@@ -1904,6 +1916,8 @@ class OnlineClient {
         } else {
           drop.x = resource.x;
           drop.y = resource.y;
+          drop.itemToken = resource.itemToken || null;
+          drop.itemCount = Math.max(1, Math.floor(Number(resource.itemCount) || 1));
           drop.life = resource.life;
           drop.mapId = resource.mapId;
         }
@@ -1959,6 +1973,12 @@ class OnlineClient {
       resourceId
     }));
 
+    return true;
+  }
+
+  requestInventoryDrop(token, count, x, y) {
+    if (typeof token !== "string" || !token || !Number.isFinite(Number(count)) || Number(count) <= 0 || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "inventoryDrop", token, count: Math.floor(Number(count)), x, y }));
     return true;
   }
 
@@ -2070,19 +2090,21 @@ class OnlineClient {
     return true;
   }
 
-  requestChestTakeItem(chestId, itemId) {
-    if (
-      typeof chestId !== "string" ||
-      !chestId ||
-      typeof itemId !== "string" ||
-      !itemId ||
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-    this.socket.send(JSON.stringify({ type: "chestTakeItem", chestId, itemId }));
+  requestChestTakeItem(chestId, token) {
+    if (typeof chestId !== "string" || !chestId || typeof token !== "string" || !token || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "chestTakeItem", chestId, token }));
+    return true;
+  }
+
+  requestChestTakeAll(chestId) {
+    if (typeof chestId !== "string" || !chestId || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "chestTakeAll", chestId }));
+    return true;
+  }
+
+  requestChestStoreItem(chestId, token, count) {
+    if (typeof chestId !== "string" || !chestId || typeof token !== "string" || !token || !Number.isFinite(Number(count)) || Number(count) <= 0 || !this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: "chestStoreItem", chestId, token, count: Math.floor(Number(count)) }));
     return true;
   }
 
@@ -2214,6 +2236,14 @@ class OnlineClient {
     player.benchCraftPending = null;
     const beforeHotbarCounts = hotbarAssignableAcquisitionSnapshot();
 
+    if (message.resourceKind === "inventoryItem" && typeof message.itemToken === "string") {
+      const token = message.itemToken;
+      const amount = Math.max(1, Math.floor(Number(message.itemCount) || 1));
+      const parts = inventoryTransferTokenParts(token);
+      if (parts?.type === "resource" && Number.isFinite(message.playerCount)) player[parts.id] = Math.max(0, Math.floor(Number(message.playerCount)));
+      else if (parts?.type === "item") applyInventoryTransferDelta(token, amount, { autoAssign: true });
+    }
+
     if (Number.isFinite(message.totalWood)) {
       player.wood = message.totalWood;
     }
@@ -2271,51 +2301,21 @@ class OnlineClient {
 
       autoAssignNewlyAcquiredHotbarItems(beforeHotbarCounts);
 
-      spawnFloatingText(
-        player.x,
-        player.y - 28,
-        recipe.testSupply ? "+100 TEST WOOD" : `${recipe.name.toUpperCase()} CRAFTED!`,
-        "#ffe38b",
-        1.2
-      );
-
+      // v427: crafting is deliberately quiet. The recipe card/count changes are
+      // the feedback; no world-space success popup is emitted.
       updateCraftingUi();
       updateInventoryUi();
       updateHotbar();
       return;
     }
 
-    if (message.reason === "missingIngredients" || message.reason === "needWood") {
-      spawnFloatingText(
-        player.x,
-        player.y - 28,
-        "MISSING INGREDIENTS",
-        "#ffe38b",
-        0.9
-      );
-    } else if (message.reason === "alreadyCrafted") {
-      // v422: legacy one-time recipe reconciliation is silent. Repeatable
-      // recipes such as Crafting Tables never show an "already crafted" toast.
+    // v427: all craft-result popups are silent. Legacy one-time recipe
+    // reconciliation still repairs the local ownership state when necessary.
+    if (message.reason === "alreadyCrafted") {
       if (recipe.storyKey) player.story[recipe.storyKey] = true;
       if (recipe.itemId && !playerOwnsItem(recipe.itemId)) grantInventoryItem(recipe.itemId, 1);
       updateInventoryUi();
       updateHotbar();
-    } else if (message.reason === "tooFar") {
-      spawnFloatingText(
-        player.x,
-        player.y - 28,
-        "MOVE CLOSER",
-        "#ffe38b",
-        0.9
-      );
-    } else {
-      spawnFloatingText(
-        player.x,
-        player.y - 28,
-        "CRAFT FAILED",
-        "#ffe38b",
-        0.9
-      );
     }
 
     updateCraftingUi();
@@ -2347,7 +2347,8 @@ class OnlineClient {
         pickupVisual.y,
         {
           entityId: message.resourceId,
-          flowerType: pickupVisual.type
+          flowerType: pickupVisual.type,
+          itemToken: pickupVisual.itemToken || message.itemToken || null
         }
       );
     }

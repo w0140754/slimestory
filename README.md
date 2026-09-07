@@ -1,3 +1,45 @@
+## v6-11-427 — Chest & Mobile Interaction Polish
+
+- Starts from the completed **v6-11-426 Interaction & Safety Polish** build and preserves the live Inventory/Craft/Chest overlay model, 1–0 hotbar, five-slot chest storage, exclusive chest ownership, universal item transfer/drop architecture, runtime generation, and existing multiplayer systems.
+- Added **LOOT ALL** to the Chest context. One server-authoritative request transfers every chest stack the player can receive, clears the chest atomically, updates player totals, and is harmless when used on an already-empty chest.
+- Added faster individual looting: on desktop, **double-click a chest stack** to move it into Inventory; on touch/mobile, tapping a chest stack performs the same take action. Existing desktop drag-to-inventory remains available.
+- Rebuilt the **mobile Inventory/Equipment layout** instead of squeezing the desktop three-column workspace onto a phone. Mobile uses larger touch-friendly inventory cards, a compact equipment column, internal scrolling, and reserves space for an open Craft/Chest context panel so the two interfaces no longer cover each other.
+- Added mobile interaction fallbacks that do not depend on HTML drag-and-drop: select an Inventory item and tap a **1–0 hotbar slot** to assign/swap it; while Chest is open, select an Inventory stack and tap **STORE** to move that stack into the chest. Tap-to-take and LOOT ALL cover the opposite direction.
+- Disabled the browser's native **right-click context menu on the game canvas** and disabled canvas text/image selection, preventing accidental browser highlighting / “Save image as” menus during play. Inventory UI right-click remains available for quick armor equip.
+- Made **crafting feedback deliberately silent**. Craft success/failure/station-result floating popups are removed from both online and offline crafting paths; recipe availability and inventory/count changes provide the feedback instead.
+- Fixed the **Crafting Table placement ghost**. The build preview now renders the actual translucent Crafting Table sprite and validity alpha instead of falling through to the generic Wood Floor preview.
+- The v426 square meadow-generation change is preserved, but **single grass placement visuals were intentionally left unchanged** in this pass.
+- World content remains **414** and combat balance remains **30**. Server startup and `/health` pass as build **6-11-427** / world content **414** / combat balance **30**.
+- Regression: **33 syntax targets + 119 retained checks/smokes** pass. This includes 90 static checks and 29 live/offline smokes; dedicated v427 WebSocket coverage proves mixed chest stacks Loot All in one authoritative operation, chest-empty state, restored player totals, and safe repeated Loot All on an empty chest.
+
+## v6-11-426 — Interaction & Safety Polish
+
+- Starts from the completed **v6-11-425 Storage, Dropping & Recovery Polish** build and preserves the live Inventory/Craft/Chest overlay model, five-slot chest storage, generic item transfer path, 1–0 hotbar, runtime world generation, and existing multiplayer chest ownership.
+- Dragging an inventory stack into the world now opens a compact **Drop Quantity** picker whenever the stack contains more than one item. It defaults to 1 and provides − / + / MAX / CANCEL / DROP controls; single-item stacks still drop immediately. The resulting world stack remains one server-authoritative shared pickup.
+- Replaced the oversized/blurry canvas stack-count font on dropped items with a tiny **3×5 pixel-digit counter** and compact backing, keeping counts readable at the game's pixel scale.
+- Fixed the destructive chest edge case: **every non-empty chest** is now protected from Pickaxe reclaim, including player-built storage chests. A chest containing any stored item returns `LOOT CHEST FIRST`; only empty, closed/unowned chests can be reclaimed. Empty removed chest-storage records are also cleaned up.
+- Added **safe spawn/respawn/map-entry relocation** around solid player-built structures. If the intended entry point overlaps a Wood Wall, Chest, or Crafting Table, the server searches nearby build-grid positions and places the player at the first clear point instead of spawning them trapped inside the obstruction. Ordinary movement collision remains unchanged.
+- Reduced the player's Wet movement penalty from **25% to 15%** (`0.75×` → `0.85×` movement speed). Enemy Wet tuning is unchanged.
+- Changed generated **meadow / tall-grass patches to square, tile-like 4×4 formations** with slight per-clump jitter so they better match the world's increasingly tile-based visual language. Runtime world-content version remains **414**.
+- Added **quick armor equip** from Inventory: right-click or double-click an owned Head/Shirt/Pants/Charm item to equip it directly to its matching slot. Existing drag-to-equipment behavior remains available.
+- The actual HUD **1–0 hotbar is now draggable while Inventory/Menu is open**. Drag an assigned slot onto another hotbar slot to move it; if the destination is occupied, the two assignments swap. Inventory-to-hotbar dragging and armor hotbar rejection remain unchanged.
+- Crafting Tables remain fully **repeatable**. A dedicated multiplayer regression now crafts two consecutive tables and requires totals 1 then 2, explicitly preventing the old `alreadyCrafted` behavior from returning for this recipe. The v426 cache/version bump also forces fresh client scripts rather than reusing stale menu code.
+- Interior-darkness rendering was **intentionally left unchanged** in this pass, per the request to defer the more complicated lighting issue.
+- World content remains **414** and combat balance remains **30**.
+- Regression: **33 syntax targets + 117 retained checks/smokes** pass. New v426 coverage specifically proves the quantity/drop wiring, universal chest reclaim protection, safe-spawn relocation, gentler Wet value, square meadows, quick armor equip, live hotbar swaps, two consecutive Crafting Table crafts, and non-empty player-built chest reclaim rejection.
+
+## v6-11-425 — Storage, Dropping & Recovery Polish
+
+- Starts from the user-tested **v6-11-424 Chest Context & 1–0 Hotbar** baseline and preserves the exclusive chest-owner/open-sprite lifecycle.
+- Basic chests now provide **5 stack slots**. Any visible inventory stack can be dragged into the active Chest context, and chest stacks can be dragged back into Inventory. Matching item/resource stacks merge into their existing slot even when all five slots are occupied; a sixth distinct stack is rejected as full.
+- Generalized chest storage beyond the old Coins/Wood/Stone treasure payload. Resources, consumables, building pieces, weapons, armor, accessories, and other owned inventory items all use one generic transfer-token path while existing hotbar/equipment eligibility rules remain separate.
+- Enabled **drag-out world dropping for every visible inventory stack**. Dropping onto the game world creates one shared server-authoritative inventory-item pickup; collecting it restores the same item/count. Resource counts remain server authoritative, while equipment counts retain the project's existing browser-owned equipment model.
+- Mouse-wheel input is now **UI-aware**: while the pointer is over Inventory, Craft, or Chest, the wheel scrolls that hovered panel and does not cycle the 1–0 hotbar. Wheel hotbar cycling remains unchanged over the game world/HUD outside those panels.
+- Fixed the Spawn-area build dead spot: non-solid **floor tiles may now be placed beneath the player**, so standing on the intended tile no longer makes that floor position invalid. Player occupancy still blocks solid walls/doors/objects. The issue was the generic player-occupancy placement rule, not a retired NPC footprint.
+- Added a free **Recovery Pickaxe** hand recipe that is visible/craftable only when the player owns no Pickaxe. The current project has no separate Hammer item or Hammer behavior, and Pickaxe is the established reclaim tool, so this provides the requested anti-stuck recovery path without inventing a second overlapping tool.
+- Treasure reward quantities, chest proximity, one-player-at-a-time locking, open/closed shared chest visuals, empty-before-reclaim protection, runtime world generation, world content **414**, and combat balance **30** remain unchanged.
+- Regression: **33 syntax targets + 115 retained checks/smokes** pass across the complete retained suite, including dedicated v425 multiplayer coverage for five-slot capacity, full rejection, same-stack merging, chest withdrawal, and shared world-drop round-tripping.
+
 ## v6-11-424 — Chest Context & 1–0 Hotbar
 
 - Starts from the completed **v6-11-423 Inventory Layout Polish** with the new live Inventory/Equipment overlay architecture preserved.

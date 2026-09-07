@@ -37,8 +37,8 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     await delay(500);
     const actor = await connect();
     const observer = await connect();
-    if (actor.welcome.buildVersion !== "6-11-424" || actor.welcome.worldSeed !== 0) throw new Error("unexpected actor welcome");
-    if (observer.welcome.buildVersion !== "6-11-424") throw new Error("unexpected observer welcome");
+    if (actor.welcome.buildVersion !== "6-11-427" || actor.welcome.worldSeed !== 0) throw new Error("unexpected actor welcome");
+    if (observer.welcome.buildVersion !== "6-11-427") throw new Error("unexpected observer welcome");
 
     const houseEntry = Object.entries(WORLD_CONTENT.maps).find(([, map]) => (map.structures || []).some(s => s.kind === "chest" && s.treasure));
     if (!houseEntry) throw new Error("seed-0 fixture missing generated treasure house");
@@ -93,10 +93,10 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     actor.socket.send(JSON.stringify({ type: "chestContextOpen", chestId: chest.id }));
     const [, reopened] = await Promise.all([reopenStatePending, reopenPending]);
     for (const item of reopened.items || []) {
-      const takePending = waitForMessage(actor.socket, "chestTakeResult", m => m.chestId === chest.id && m.itemId === item.itemId);
-      actor.socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, itemId: item.itemId }));
+      const takePending = waitForMessage(actor.socket, "chestTakeResult", m => m.chestId === chest.id && m.token === item.token);
+      actor.socket.send(JSON.stringify({ type: "chestTakeItem", chestId: chest.id, token: item.token }));
       const taken = await takePending;
-      if (!taken.success || taken.amount !== item.count) throw new Error(`failed to transfer ${item.itemId}: ${JSON.stringify(taken)}`);
+      if (!taken.success || taken.amount !== item.count) throw new Error(`failed to transfer ${item.token}: ${JSON.stringify(taken)}`);
     }
     const inUsePending = waitForMessage(actor.socket, "structureDestroyResult", m => m.structureId === chest.id);
     actor.socket.send(JSON.stringify({ type: "structureDestroy", structureId: chest.id }));
@@ -158,7 +158,7 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     if (observerMutations.length !== 0) throw new Error(`other-map observer received ${observerMutations.length} generated-world mutation(s)`);
 
     actor.socket.close(); observer.socket.close();
-    console.log("v414 mutable generated-world WebSocket smoke passed on v424: context loot/reclaim gating, pickup/re-place/context state, generated house wall salvage, compact re-entry deltas, and zero cross-map mutation broadcasts.");
+    console.log("v414 mutable generated-world WebSocket smoke passed on v425: context loot/reclaim gating, pickup/re-place/context state, generated house wall salvage, compact re-entry deltas, and zero cross-map mutation broadcasts.");
   } finally {
     server.kill("SIGTERM");
   }
