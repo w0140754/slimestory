@@ -13,10 +13,10 @@ const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.394");
-assert(server.includes('const BUILD_VERSION = "6-11-394";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
-assert.strictEqual(world.version, 394);
+assert.strictEqual(pkg.version, "0.6.11.406");
+assert(server.includes('const BUILD_VERSION = "6-11-406";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
+assert.strictEqual(world.version, 406);
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");
 
@@ -41,7 +41,7 @@ for (const retired of ["grantBowVisualTest", "grantDebugProgressionPoints", "req
 assert(!input.includes('key === "f8"') && !input.includes('key === "f9"'), "F8/F9 debug hotkeys must stay removed");
 
 assert(game.includes("let bestPriority = Infinity;"), "Pickaxe structure priority missing");
-assert(game.includes("BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind) ? 0 : 1"), "Pickaxe must prioritize walls/doors over floors");
+assert(game.includes('structure.kind === "torch"') && game.includes("BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)") && game.includes(": 2;"), "Pickaxe priority must keep mounted torches first, walls/doors over floors");
 
 assert(!game.includes("AUTO_DOOR_OPEN_RADIUS") && !server.includes("AUTO_DOOR_OPEN_RADIUS"), "proximity-only doors must stay retired");
 assert(game.includes("function doorAllowsLocalPlayerStep("), "client directional door rule missing");

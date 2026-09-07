@@ -1,3 +1,125 @@
+## v6-11-406 — Held Occlusion & Mounted Torches
+
+- Removed the experimental house-only interior-darkness overlay entirely. Ambient darkness is once again owned by the normal world day/night lighting, with real Torch sources providing the contrast.
+- Reverted the v405 wall-face lighting carve so placed Torch occlusion uses the proven v402 wall/closed-door visibility polygon without the extra interior-wall exception.
+- Rebuilt local held-equipment occlusion around one player-centered visibility mask. Held arms, ordinary weapons/tools, Bow sprite/string/nock, and the carried Torch now share the same wall/closed-door occlusion path instead of separate pose probes.
+- Carried-Torch lighting keeps the visible flame center but can use a safe visibility origin on the player's side of a nearby house boundary, preventing the room from going dark just because the visible flame reaches across the wall.
+- Torches can now be placed normally on open ground, mounted on a Wood Floor, or mounted on a Wood Wall. Wall mounts store which side the placing player was on so their wall-occluded lighting starts from the correct side of the boundary.
+- A Wood Floor or Wood Wall with an attached Torch is protected by an attachment-first Pickaxe rule: the first removal attempt reclaims/drops the Torch and leaves the support intact; a later swing can remove the support normally.
+- One Torch may be attached to a given Floor/Wall support at a time. Mounted Torches remain cosmetic/non-colliding and use the existing shared structure replication only; no new lighting or attachment heartbeat was added.
+- Retains v405 desynchronized Slime hopping and single-target basic attacks, v404 first-snapshot fake-death prevention, v403 night-Slime roaming, v402 structure AI/building dependency rules, and all existing world/combat systems.
+- Regression: **30 syntax targets + 87 retained checks/smokes** pass, including the new mounted-Torch WebSocket lifecycle covering Floor/Wall mounting, duplicate prevention, and attachment-first Pickaxe reclaim. Server startup and `/health` also pass as build 6-11-406.
+
+## v6-11-405 — Visual & Basic Combat Refinement
+
+- House interior darkness now appears only while the local player is inside/revealing the completed house; the darkness mask extends one tile farther north and south without widening.
+- Held weapons/arms now clip against the exact wall/closed-door boundary plane rather than the thicker collision rectangle; separately drawn bowstrings/nock use the same wall clipping.
+- Interior torch light can illuminate the visible inside face of completed-house boundary walls while the boundary still blocks light from leaking outdoors.
+- Standard slime hopping uses a deterministic per-enemy presentation phase derived locally from enemy identity, removing synchronized group bouncing with zero added network traffic.
+- Basic melee weapon/tool attacks and bow melee now damage at most one enemy per swing; Wand Mastery keeps its deliberate multi-target behavior.
+- v404 first-snapshot fake slime death fix is retained unchanged.
+
+## v6-11-404 — Interior Darkness & Precise Weapon Occlusion
+
+- Completed enclosed player-built houses now retain a local ambient interior shadow even during daytime. Night darkness stacks with that room shadow, so an unlit house becomes substantially darker after sunset and near midnight.
+- Existing held and placed Torch lighting carves through the interior-darkness layer using the same v402 wall/closed-door occlusion polygons, so interior torches illuminate rooms naturally and exterior light can still spill through an open doorway without any new network traffic.
+- Replaced the v397 proximity-only held-equipment clipping rule with actual segment-vs-structure intersection tests. A nearby wall no longer clips a weapon merely because the player is close to it; the current arm/weapon pose must physically cross that specific Wood Wall or closed Wood Door.
+- Held-arm clipping now follows the shoulder-to-hand segment, while weapon/tool/torch clipping follows the hand-to-equipment direction. This fixes false clipping below houses and when attacking away from a nearby upper wall while preserving genuine through-wall occlusion.
+- Fixed a client initialization artifact where an authoritative first enemy snapshot could be interpreted as an alive-to-dead transition. Dormant server-side enemy pools, especially inactive night Slimes, no longer emit a fake Slime death effect when a player first connects/spawns.
+- Preserves v403 night-Slime local roaming/sunrise retreat, v402 organic structure approach AI and wall-occluded lighting, v401 Torch crafting/reclaim, current building dependency rules, and all existing world/combat systems.
+
+## v6-11-403 — Night Slime Roam Behavior
+
+- Night-wave slimes no longer use their map-edge entry point as a combat disengage "home."
+- While night is active, a night slime that temporarily has no valid player target stays in the field and adopts its current position as a local roam anchor instead of marching back to the edge.
+- Relentless nighttime reacquisition remains unchanged: any visible living player on Spawn is reacquired immediately on the normal AI tick.
+- Sunrise retreat is unchanged and remains the only normal behavior that intentionally sends night slimes back to a map edge before despawn.
+- No new network messages, timers, or replication cadence were added. Existing movement replication is reused.
+
+## v6-11-402 — Occluded Lighting & Building AI Refinement
+
+- Torch light is now **wall-occluded** instead of a simple circular darkness cutout. Each client derives a local visibility polygon from nearby Wood Walls and closed Wood Doors, clips the existing soft radial/flicker light to that shape, and lets light naturally spill through open doorways and around wall corners.
+- Placed-torch visibility polygons are cached by structure revision/nearby closed-door state. The held torch is solved locally as the player moves. This adds **no lighting network packets or heartbeat**.
+- Refined Pickaxe floor dependencies: a Wood Floor touching a wall/door may now be reclaimed when that boundary is still supported by another adjacent Wood Floor. The final floor supporting a boundary remains protected.
+- Removing a Wood Wall that is required to support a connected Wood Door now automatically removes that unsupported door too. Both the mined wall and cascaded door return as ordinary shared ground loot, so building materials are not lost.
+- Aggro enemies no longer all commit indefinitely to the identical doorway route when a player is behind a structure. When direct line-of-effect is blocked, enemies make a **low-frequency server-side approach decision**: some keep pressing the obvious route while others temporarily choose side/rear flank points and route around closed doors before reassessing.
+- Organic approach choices persist for roughly 1–6 seconds and reuse the existing cached structure navigation and normal enemy movement replication. No new enemy-AI message type, timer packet, or network heartbeat was added.
+- Preserves v401 Green Jelly Cube/Torch crafting, dark midnight lighting, held/placed torch behavior, v400 door-state synchronization, Spawn-only night pressure, runtime enemy generation, and existing combat/world systems.
+- Regression: **30 syntax targets + 82 retained checks/smokes** pass, including a new WebSocket building-dependency smoke covering shared-wall floor reclaim, last-support protection, and automatic door removal/drop after a supporting wall is mined.
+
+## v6-11-401 — Green Jelly Cube & Torch Lighting
+
+- Moved the shared world clock from top-center to a compact chip directly beneath the upper-right minimap.
+- Added the user-authored **Green Jelly Cube** resource sprite. Green Slimes now have a **30%** server-authoritative chance to drop one on death, including Spawn's nighttime green Slimes; non-green Slime variants do not use this drop rule.
+- Added the repeatable crafting recipe **1 Wood + 1 Green Jelly Cube → 1 Torch** in the Building crafting category.
+- Torch is a normal 1–9 assignable build item. Selecting it holds the torch in the player's hand and emits portable light while keeping the existing placement cursor available.
+- Torches can be placed on the 16px build grid within the normal 96px build range. Placed torches are cosmetic/non-colliding shared structures and emit a softly flickering pool of light without any idle network heartbeat.
+- Pickaxe reclaim works like the existing building system: mining a placed Torch removes the structure, drops a Torch as shared ground loot, and picking it up restores it to inventory.
+- Night lighting is substantially darker: dusk deepens after 18:00, full night is dark at 20:00, darkness peaks around midnight, then gradually eases toward the existing 05:00 dawn. Carried and placed torches locally cut soft light holes through that darkness layer.
+- Torch behavior is visual utility only in this build: no fuel consumption, fire spread, burn damage, enemy fear, or combat effects.
+- Preserved v400 synchronized door visuals/collision, Spawn-only night pressure, runtime enemy generation, building rules, and all existing combat/world behavior. World definitions are unchanged apart from the build marker.
+- Regression: **30 syntax targets + 80 retained checks/smokes** pass, including a WebSocket Torch lifecycle smoke covering craft → place → Pickaxe reclaim → ground loot → pickup.
+
+## v6-11-400 — Door Visual State Sync
+
+- Fixed the remaining v399 door-state mismatch: when player proximity opens a doorway authoritatively for enemies, the local client now draws that same door open immediately.
+- Preserves the existing passage/occupancy hold-open behavior, closed-door blocking, and the rule that enemies cannot open doors themselves.
+- No world-generation, enemy-generation, combat, building-placement, or map-definition changes beyond the world build marker.
+
+## v6-11-399 — Shared Door Approach State
+
+- Fixed a client/server door-state timing mismatch: when a player approaches a Wood Door closely enough for the client to present it as open, the server now mirrors that near-door state immediately instead of waiting for the player centre to enter/cross the doorway collider.
+- Enemies waiting on the opposite side of an opened doorway can therefore begin entering as soon as the player opens the door from inside/outside.
+- Enemies still cannot open closed doors themselves; the shared passage exists only because a living player is near/opening that specific door.
+- Existing v398 occupancy safety remains intact, so the door continues to stay open while a player or living enemy is physically in the doorway and closes only after the doorway clears.
+- Preserves Spawn-only progressive night Slimes, runtime enemy generation, building controls, closed-door combat blocking, and all v398 gameplay behavior.
+
+## v6-11-398 — Runtime Enemy Generation & Spawn-Night Pressure
+
+- Coordinate-world enemies no longer use fixed mob coordinates in `WORLD_CONTENT`. Each map now exposes only population rules (`enemyGeneration`); the server chooses concrete enemy positions at runtime when the server session starts.
+- The Spawn map keeps its normal daytime enemy population empty. Its special night event begins with two hostile green Slimes, then adds one approximately every 10 seconds up to a cap of eight living night Slimes.
+- Night-event Slimes exist only on the Spawn map, enter from outside a map edge, acquire a player immediately after entering, and remain relentlessly aggressive for the rest of the night. Other maps keep their normal runtime-generated populations and receive no special night wave.
+- At 05:00, surviving night-event Slimes retreat toward the map edge and despawn; not-yet-entered Slimes are removed immediately.
+- Escape no longer cancels an active building item or shows a build-cancel message. Building selection remains active until another assigned hotbar item is selected or the selected build stack is exhausted.
+- Wood Doors now remain physically open while a player or living enemy occupies the doorway, preventing the collider from closing on top of an entity.
+- Preserves v397 corner-door support, closed-door enemy pathing, structure combat blocking, roof/building visuals, mobile building controls, and the current coordinate-world layout.
+- Regression: 30 syntax targets + 76 retained checks/smokes pass, including runtime-generated normal mobs, Spawn-only progressive night waves, immediate night aggression, the eight-Slime cap, Escape/build persistence, and occupancy-safe doors.
+
+## v6-11-397 — Closed Doors & Night Slimes
+
+- Closed Wood Doors now behave as actual structure barriers for monsters, melee, arrows, normal wand projectiles, and Fireball unless a player is actively opening that doorway. Enemy path planning may target the doorway, but physical movement cannot cross while the door is closed.
+- Door placement now accepts perpendicular/rotated Wood Walls as endpoint supports, allowing valid doors directly beside 90-degree building corners while retaining the two-supported-sides requirement.
+- Tightened held-attack occlusion so the attacking hand/arm is clipped with the held weapon when a nearby solid wall or closed door blocks the swing.
+- Foreground/inside-house Wood Doors remain more opaque than surrounding faded walls, making the front doorway easier to locate from inside a completed house.
+- Top-hotbar Wood Floor/Wall/Door icons are rotated to their upright authored orientation without changing the already-correct inventory/menu presentation.
+- Added the first nighttime hostile wave: each occupied coordinate-grid map can activate four runtime-only green Slimes between 20:00 and 05:00. They enter from just outside a map edge, use the normal slime combat model with default aggression, and add no map-editor-authored spawn records.
+- At 05:00 sunrise, established night Slimes disengage and retreat toward a reachable map edge before despawning. A slime still entering from outside at the exact dawn boundary is cleaned up immediately, and a retreat trapped by a player-closed door has an 8-second cleanup failsafe rather than phasing through the structure.
+- Night-spawn lifecycle uses existing enemy snapshots/movement replication; there is no new idle clock heartbeat or dedicated night-spawn network loop. Empty maps do not run visible night waves.
+- Preserved v396 roof treatment, structure-aware routing, Rain Cloud wall exception, building/mobile controls, and all coordinate-world/map-editor content. Coordinate-world content changes only by the 396 → 397 version marker.
+- Regression: 30 syntax targets + 74 retained checks/smokes pass, including a WebSocket corner-door placement smoke and runtime night-entry/sunrise-retreat verification.
+
+## v6-11-396 — Structure Combat & Navigation
+
+- Polished authored player-built structures without changing placement geometry: stronger continuous wall/door perimeter contrast, refreshed authored Wood Floor/Wall/Door menu/hotbar icons, and a roof-specific silhouette pass.
+- Roof interiors remain deliberately uniform. Only the outer perimeter receives dedicated top/side edges, corner coverage, the existing 3px overhang, and a stronger south eave/shadow so roofs read as one object rather than a tiled rectangle.
+- Solid Wood Walls now block melee, arrows, normal wand projectiles, and Fireball line-of-effect on both client presentation and server-authoritative damage validation. Wood Doors remain intentional openings. Rain Cloud remains intentionally exempt because it summons weather at a location rather than firing a projectile through the wall.
+- Basic projectiles and Fireballs stop visually at player-built Wood Walls; held weapon art is clipped to the player side of nearby walls instead of drawing through them.
+- Living shared enemies now use cached 16px structure-aware A* routing when a direct chase line is blocked by player-built walls, allowing them to seek door/opening routes instead of repeatedly walking into the wall. Routes replan on target-cell/build-layout changes or a short cache timeout and add no new network messages.
+- Goblin lunges require a clear wall line-of-effect. Ghost behavior is intentionally unchanged: Ghosts continue phasing through terrain.
+- v395 building placement rules, roof enclosure rules, mobile build cursor controls, and map-editor-authored coordinate data are preserved. Coordinate-world content changes only by the 395 → 396 version marker.
+
+## v6-11-395 — Authored Wood Structure Sprites
+
+- Finished the interrupted wood-art handoff from v394 by wiring the supplied in-world building sprites into the actual structure renderer.
+- Wood Floors now use the supplied 16×16 authored floor tile instead of procedural rectangles.
+- Horizontal Wood Walls and closed Wood Doors now use the supplied 16×32 authored sprites at the existing projected wall height and exact placement boundary.
+- Side-facing Wall/Door projections reuse the same authored sprite in a narrow perspective face, preserving the existing thin edge collider, depth sorting, corner extension, and door passage behavior.
+- Automatic roofs now use the supplied 16×16 authored roof tile. Existing 3px outer overhang is preserved by extending only the source edge pixels so the tile itself remains crisp and unscaled.
+- Open-door presentation still folds the authored door sprite against/along the jamb; no door networking or collision rules changed.
+- v394 mobile build cursor, arrow nudge pad, 96px placement range, perimeter-wall/flanked-door/roof-lock rules, desktop controls, and coordinate-world data are preserved.
+- Added a focused v395 sprite-wiring regression check; full retained regression suite still runs through `npm run check`.
+- Coordinate-world layout/content is unchanged apart from the 394 → 395 version marker.
+
 ## v6-11-394 — Mobile Build Cursor Mode
 
 - Replaced v393's character-driven mobile build aiming with an independent world-space build cursor.

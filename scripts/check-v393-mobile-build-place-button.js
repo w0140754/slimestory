@@ -13,22 +13,23 @@ const input = read("public", "client-input.js");
 const game = read("public", "game.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.394");
-assert(server.includes('const BUILD_VERSION = "6-11-394";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
-assert(html.includes('/client-input.js?v=394') && html.includes('/game.js?v=394'));
+assert.strictEqual(pkg.version, "0.6.11.406");
+assert(server.includes('const BUILD_VERSION = "6-11-406";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
+assert(html.includes('/client-input.js?v=406') && html.includes('/game.js?v=406'));
 
 assert(input.includes("function updateMobilePrimaryActionButton()"), "contextual mobile primary button updater missing");
 assert(input.includes('button.textContent = buildMode ? "PLACE" : "ATK";'), "mobile build mode must relabel ATK to PLACE");
 assert(input.includes('button.setAttribute("aria-label", buildMode ? "Place building piece" : "Attack")'), "mobile action aria label must follow build mode");
 assert(input.includes("if (mobileBuildModeActive()) {"), "mobile attack pointerdown must intercept build mode");
-assert(input.includes("tryPlaceSelectedBuildPieceAtWorld(cursor.x, cursor.y);"), "PLACE must confirm the canonical selected build target");
+assert(input.includes('if (cursor && typeof tryPlaceSelectedBuildPieceAtWorld === "function") {') && input.includes("tryPlaceSelectedBuildPieceAtWorld(cursor.x, cursor.y);"), "PLACE must reuse canonical world-space build placement function");
+assert(input.includes("const cursor = mobileBuildCursorWorldPoint();"), "PLACE must confirm the stored world-space build cursor");
 
-const buildBranch = input.indexOf("if (mobileBuildModeActive()) {", input.indexOf('attack.addEventListener("pointerdown"'));
+const buildBranch = input.indexOf('if (mobileBuildModeActive()) {', input.indexOf('attack.addEventListener("pointerdown"'));
 const combatAssist = input.indexOf("applyMobileCombatAssistAim()", buildBranch);
 assert(buildBranch >= 0 && combatAssist > buildBranch, "build PLACE branch must run before mobile combat assist can retarget the pointer");
 
 assert(game.includes('if (typeof updateMobilePrimaryActionButton === "function") updateMobilePrimaryActionButton();'), "build begin/cancel must refresh the mobile button label");
 assert(html.includes("#mobileAttackButton.build-place-mode"), "PLACE mode visual state missing");
 
-console.log("v393 mobile build PLACE button regression retained OK");
+console.log("v396 mobile build PLACE button regression OK");

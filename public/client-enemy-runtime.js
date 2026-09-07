@@ -421,7 +421,12 @@ function installClientEnemyRuntime(OnlineClientClass) {
         enemy.spawnAnimTime = ENEMY_SPAWN_ANIM_DURATION;
       }
 
-      if (!syncingMapEntry && wasAlive && !nextAlive) {
+      if (!syncingMapEntry && !firstSnapshot && wasAlive && !nextAlive) {
+        // v404: the first authoritative snapshot is initialization, not a kill.
+        // Dormant server-only pools (notably night slimes) may be constructed
+        // client-side as alive placeholders just before their first snapshot.
+        // Suppress that synthetic alive -> dead transition so connecting at
+        // Spawn cannot show a fake slime death effect on/near the player.
         spawnEnemyDeathEffect(enemy, enemyType, state.mapId);
       }
 
@@ -722,7 +727,8 @@ function installClientEnemyRuntime(OnlineClientClass) {
       );
 
     if (enemy) {
-      if (enemy.alive) {
+      const sunriseDespawn = Boolean(message.despawn);
+      if (enemy.alive && !sunriseDespawn) {
         spawnEnemyDeathEffect(enemy, message.enemyType, message.mapId);
       }
 
@@ -732,10 +738,10 @@ function installClientEnemyRuntime(OnlineClientClass) {
       setReplicatedEnemyCountdown(
         enemy,
         "respawnTime",
-        profile?.respawnSeconds ?? 30
+        sunriseDespawn ? 0 : (profile?.respawnSeconds ?? 30)
       );
 
-      if (profile?.onKilledLocal) {
+      if (!sunriseDespawn && profile?.onKilledLocal) {
         profile.onKilledLocal(enemy);
       }
     }

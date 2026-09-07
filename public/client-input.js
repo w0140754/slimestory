@@ -163,7 +163,7 @@ function beginMobileBuildCursorForSelectedPiece() {
   clearMobilePointTargetMode();
   if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
 
-  const leadDistance = selectedBuildPiece === "woodFloor" ? 24 : 18;
+  const leadDistance = (selectedBuildPiece === "woodFloor" || selectedBuildPiece === "torch") ? 24 : 18;
   const aimLength = Math.hypot(mobileAimDx, mobileAimDy) || 1;
   setMobileBuildCursorWorldPoint(
     player.x + (mobileAimDx / aimLength) * leadDistance,
@@ -181,7 +181,7 @@ function nudgeMobileBuildCursor(dx, dy) {
 
   // Floor cells live on the 16px build grid. Wall/Door targeting needs the
   // half-cell step so one tap can move from a floor centre to a specific edge.
-  const step = selectedBuildPiece === "woodFloor" ? 16 : 8;
+  const step = (selectedBuildPiece === "woodFloor" || selectedBuildPiece === "torch") ? 16 : 8;
   return setMobileBuildCursorWorldPoint(
     cursor.x + Number(dx) * step,
     cursor.y + Number(dy) * step
@@ -1060,11 +1060,6 @@ function handleMenuKeyDown(key) {
 
   if (key !== "escape") {
     return false;
-  }
-
-  if (typeof selectedBuildPiece !== "undefined" && selectedBuildPiece) {
-    cancelBuildPlacement(false);
-    return true;
   }
 
   // Rain Cloud is a committed summon. Do not allow the inventory/menu to open

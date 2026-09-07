@@ -18,7 +18,7 @@ const checks = [
   [/@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?#inventoryOverlay\s*\{[\s\S]*?1120px/.test(html), "desktop Escape workspace enlarged"],
   [/\.item-detail-tooltip\s*\{[\s\S]*?width:\s*440px;/.test(html), "item hover card enlarged"],
   [/\.skill-detail-tooltip\s*\{[\s\S]*?width:\s*460px;/.test(html), "legacy skill detail style remains layout-safe while skill UI is retired"],
-  [html.includes('/client-input.js?v=394') && html.includes('/game.js?v=394'), "v377 client cache keys"],
+  [html.includes('/client-input.js?v=406') && html.includes('/game.js?v=406'), "v377 client cache keys"],
 ];
 
 for (const [ok, label] of checks) {

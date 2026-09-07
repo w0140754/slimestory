@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-394";
+const BUILD_VERSION = "6-11-406";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -17,16 +17,30 @@ const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 const WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE = 500;
 const WORLD_CLOCK_START_GAME_MINUTES = 8 * 60;
 const WORLD_CLOCK_SERVER_STARTED_AT = Date.now();
+const WORLD_CLOCK_MINUTES_PER_DAY = 24 * 60;
+const WORLD_CLOCK_NIGHT_START_MINUTE = 20 * 60;
+const WORLD_CLOCK_SUNRISE_MINUTE = 5 * 60;
+
+function serverWorldClockAbsoluteGameMinutes(now = Date.now()) {
+  const elapsedRealMs = Math.max(0, now - WORLD_CLOCK_SERVER_STARTED_AT);
+  return WORLD_CLOCK_START_GAME_MINUTES +
+    elapsedRealMs / WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE;
+}
+
+function normalizedServerWorldClockMinutes(now = Date.now()) {
+  const absoluteMinutes = serverWorldClockAbsoluteGameMinutes(now);
+  return ((absoluteMinutes % WORLD_CLOCK_MINUTES_PER_DAY) + WORLD_CLOCK_MINUTES_PER_DAY) % WORLD_CLOCK_MINUTES_PER_DAY;
+}
+
+function serverWorldIsNight(now = Date.now()) {
+  const gameMinutes = normalizedServerWorldClockMinutes(now);
+  return gameMinutes >= WORLD_CLOCK_NIGHT_START_MINUTE || gameMinutes < WORLD_CLOCK_SUNRISE_MINUTE;
+}
 
 function serverWorldClockSnapshot(now = Date.now()) {
-  const elapsedRealMs = Math.max(0, now - WORLD_CLOCK_SERVER_STARTED_AT);
-  const gameMinutes = (
-    WORLD_CLOCK_START_GAME_MINUTES +
-    elapsedRealMs / WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE
-  ) % (24 * 60);
   return {
     serverNowMs: now,
-    gameMinutes,
+    gameMinutes: normalizedServerWorldClockMinutes(now),
     realMsPerGameMinute: WORLD_CLOCK_REAL_MS_PER_GAME_MINUTE
   };
 }
@@ -638,8 +652,8 @@ function playerMapTransitionAllowed(previousMapId, requestedMapId) {
   const requestedGrid = worldGridMetaForMap(requestedMapId);
 
   // The new coordinate world never accepts arbitrary client teleports. Grid
-  // transitions must move exactly one cardinal cell. Legacy-to-legacy travel
-  // remains compatible for the preserved rollback/editor maps.
+  // transitions must move exactly one cardinal cell. Historical non-grid compatibility
+  // remains isolated from the active coordinate-world path.
   if (previousGrid || requestedGrid) {
     return Boolean(
       previousGrid &&
@@ -1220,20 +1234,84 @@ function serverEnemyBodyPoint(enemy) {
   };
 }
 
-function allEnemySpawnDefinitions() {
+function runtimeEnemySpawnPoint(mapId) {
+  const definition = WORLD_CONTENT.maps?.[mapId] || {};
+  const dimensions = mapWorldDimensions(mapId);
+  const minEdge = 42;
+  const protectedPoints = [
+    ...(definition.playerSpawns || []).map(spawn => ({
+      x: Number(spawn.x) || 0,
+      y: Number(spawn.y) || 0,
+      radius: 54
+    })),
+    ...(definition.npcs || []).map(npc => ({
+      x: Number(npc.x) || 0,
+      y: Number(npc.y) || 0,
+      radius: 34
+    }))
+  ];
+  const environment = definition.environment || {};
+  const blockers = [
+    ...(environment.trees || []).map(entity => ({ x: entity.x, y: entity.y, radius: 20 })),
+    ...(environment.rocks || []).map(entity => ({ x: entity.x, y: entity.y, radius: 17 })),
+    ...(environment.sceneryRocks || []).map(entity => ({ x: entity.x, y: entity.y, radius: 17 })),
+    ...(environment.houses || []).map(entity => ({ x: entity.x, y: entity.y, radius: 34 }))
+  ];
+
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const x = minEdge + Math.random() * Math.max(1, dimensions.width - minEdge * 2);
+    const y = minEdge + Math.random() * Math.max(1, dimensions.height - minEdge * 2);
+    if (protectedPoints.some(point => Math.hypot(x - point.x, y - point.y) < point.radius)) continue;
+    if (blockers.some(point => Math.hypot(x - Number(point.x || 0), y - Number(point.y || 0)) < point.radius)) continue;
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+
+  return {
+    x: Math.max(minEdge, Math.min(dimensions.width - minEdge, dimensions.width * 0.25)),
+    y: Math.max(minEdge, Math.min(dimensions.height - minEdge, dimensions.height * 0.25))
+  };
+}
+
+function generateRuntimeEnemyDefinitions() {
   const definitions = [];
 
-  for (
-    const [mapId, mapDefinition]
-    of Object.entries(WORLD_CONTENT.maps)
-  ) {
-    for (
-      const spawn
-      of mapDefinition.enemySpawns || []
-    ) {
+  for (const [mapId, mapDefinition] of Object.entries(WORLD_CONTENT.maps || {})) {
+    const generation = mapDefinition?.enemyGeneration;
+    if (!generation || !mapDefinition?.grid) continue;
+
+    const level = Math.max(1, Math.floor(Number(generation.level) || 1));
+    const slimeCount = Math.max(0, Math.floor(Number(generation.slimeCount) || 0));
+    const mushroomCount = Math.max(0, Math.floor(Number(generation.mushroomCount) || 0));
+    const purpleChance = Math.max(0, Math.min(1, Number(generation.purpleSlimeChance) || 0));
+
+    for (let index = 0; index < slimeCount; index += 1) {
+      const point = runtimeEnemySpawnPoint(mapId);
       definitions.push({
-        ...spawn,
-        mapId
+        id: `runtime:${mapId}:slime:${index + 1}`,
+        type: "slime",
+        mapId,
+        level,
+        x: point.x,
+        y: point.y,
+        phase: Math.random() * Math.PI * 2,
+        wanderRadiusX: 18 + Math.floor(Math.random() * 14),
+        wanderRadiusY: 12 + Math.floor(Math.random() * 10),
+        ...(Math.random() < purpleChance ? { variant: "purple" } : {}),
+        runtimeGenerated: true
+      });
+    }
+
+    for (let index = 0; index < mushroomCount; index += 1) {
+      const point = runtimeEnemySpawnPoint(mapId);
+      definitions.push({
+        id: `runtime:${mapId}:mushroom:${index + 1}`,
+        type: "mushroom",
+        mapId,
+        level,
+        x: point.x,
+        y: point.y,
+        phase: Math.random() * Math.PI * 2,
+        runtimeGenerated: true
       });
     }
   }
@@ -1241,9 +1319,49 @@ function allEnemySpawnDefinitions() {
   return definitions;
 }
 
+const GENERATED_NORMAL_ENEMY_SPAWNS = generateRuntimeEnemyDefinitions();
+
+function allEnemySpawnDefinitions() {
+  return GENERATED_NORMAL_ENEMY_SPAWNS;
+}
+
+const NIGHT_SLIME_MAP_ID =
+  WORLD_CONTENT.worldGrid?.startMapId ||
+  WORLD_CONTENT.defaultPlayerLoad?.mapId ||
+  "world_p0_p0";
+const NIGHT_SLIME_CAP = 8;
+const NIGHT_SLIME_INITIAL_COUNT = 2;
+const NIGHT_SLIME_SPAWN_INTERVAL_SECONDS = 10;
+
+function nightSlimeSpawnDefinitions() {
+  const spawns = [];
+  const dimensions = mapWorldDimensions(NIGHT_SLIME_MAP_ID);
+  for (let index = 0; index < NIGHT_SLIME_CAP; index += 1) {
+    spawns.push({
+      id: `night_slime_${NIGHT_SLIME_MAP_ID}_${index + 1}`,
+      type: "slime",
+      mapId: NIGHT_SLIME_MAP_ID,
+      x: dimensions.width / 2,
+      y: dimensions.height / 2,
+      phase: index * 0.7,
+      level: 1,
+      variant: "green",
+      aggressiveOnSight: true,
+      nightOnly: true,
+      nightPoolIndex: index
+    });
+  }
+  return spawns;
+}
+
+const GENERATED_NIGHT_SLIME_SPAWNS = nightSlimeSpawnDefinitions();
+
 function enemySpawnsOfType(type) {
-  return allEnemySpawnDefinitions()
+  const generated = allEnemySpawnDefinitions()
     .filter(spawn => spawn.type === type);
+  return type === "slime"
+    ? generated.concat(GENERATED_NIGHT_SLIME_SPAWNS)
+    : generated;
 }
 
 function validateWorldContent() {
@@ -1827,12 +1945,66 @@ function playerOwnedEffectMayAffectTarget(sourcePlayerId, target) {
 const sharedStructures = new Map();
 const sharedStructuresByMap = new Map();
 let nextSharedStructureId = 1;
+let structureNavRevision = 0;
 const MAX_STRUCTURES_PER_MAP = 96;
 const BUILD_GRID_SIZE = 16;
 const BUILD_PLACE_RANGE = 96;
 const DOOR_ADJACENT_DISTANCE = 10;
+const DOOR_SERVER_OPEN_DISTANCE = 14;
+const DOOR_SERVER_OPEN_TANGENTIAL_DISTANCE = 12;
 const DOOR_PASSAGE_MS = 500;
 const playerDoorPassages = new Map();
+
+function serverRefreshDoorPassageFromNearbyPlayer(structure, now = Date.now()) {
+  if (structure?.kind !== "woodDoor" || !structure?.id) return false;
+
+  for (const [playerId, playerState] of players.entries()) {
+    if (
+      playerState?.mapId !== structure.mapId ||
+      playerState.hp <= 0 ||
+      serverDoorPerpendicularDistance(structure, playerState.x, playerState.y) > DOOR_SERVER_OPEN_DISTANCE ||
+      serverDoorTangentialDistance(structure, playerState.x, playerState.y) > DOOR_SERVER_OPEN_TANGENTIAL_DISTANCE
+    ) continue;
+
+    // v399: the client already shows the door open as the player reaches the
+    // doorway. Mirror that approach state authoritatively so enemies waiting
+    // on the opposite side can use the opening immediately, without waiting
+    // for the player's centre point to enter/cross the door collider.
+    playerDoorPassages.set(playerId, { doorId: structure.id, expiresAt: now + DOOR_PASSAGE_MS });
+    return true;
+  }
+
+  return false;
+}
+
+function serverDoorCurrentlyOpen(structure, now = Date.now()) {
+  if (structure?.kind !== "woodDoor" || !structure?.id) return false;
+  if (serverRefreshDoorPassageFromNearbyPlayer(structure, now)) return true;
+  for (const [playerId, passage] of playerDoorPassages.entries()) {
+    if (!passage) {
+      playerDoorPassages.delete(playerId);
+      continue;
+    }
+
+    if (passage.doorId !== structure.id) {
+      if (passage.expiresAt < now) playerDoorPassages.delete(playerId);
+      continue;
+    }
+
+    if (passage.expiresAt >= now) return true;
+
+    // v398: once a player has opened a door, do not let its short passage
+    // timer close the collider on top of a player or mob that is still in the
+    // doorway. Hold it open until the doorway is physically clear.
+    if (serverDoorOccupied(structure)) {
+      passage.expiresAt = now + DOOR_PASSAGE_MS;
+      return true;
+    }
+
+    playerDoorPassages.delete(playerId);
+  }
+  return false;
+}
 
 function structuresOnMap(mapId) {
   return Array.from(sharedStructuresByMap.get(mapId)?.values() || []);
@@ -1845,7 +2017,13 @@ function structureSnapshot(mapId) {
     kind: structure.kind,
     x: structure.x,
     y: structure.y,
-    ...(["woodWall", "woodDoor"].includes(structure.kind) ? { axis: structure.axis } : {})
+    ...(["woodWall", "woodDoor"].includes(structure.kind) ? { axis: structure.axis } : {}),
+    ...(structure.kind === "torch" && structure.supportId ? {
+      supportId: structure.supportId,
+      mountType: structure.mountType,
+      ...(structure.mountAxis ? { mountAxis: structure.mountAxis } : {}),
+      ...(structure.mountSide ? { mountSide: structure.mountSide } : {})
+    } : {})
   }));
 }
 
@@ -1867,12 +2045,122 @@ function circleRectHit(x, y, radius, rect) {
   return dx * dx + dy * dy <= radius * radius;
 }
 
-function serverPointHitsStructureWall(mapId, x, y, radius = 4) {
+function serverDoorOccupied(structure) {
+  if (structure?.kind !== "woodDoor") return false;
+  const rect = structureRect(structure);
+
+  for (const playerState of players.values()) {
+    if (
+      playerState?.mapId === structure.mapId &&
+      playerState.hp > 0 &&
+      circleRectHit(playerState.x, playerState.y, 4.5, rect)
+    ) {
+      return true;
+    }
+  }
+
+  for (const enemy of allSharedEnemies()) {
+    if (
+      enemy?.mapId === structure.mapId &&
+      enemy.alive &&
+      circleRectHit(enemy.x, enemy.y, 5, rect)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function serverPointHitsStructureWall(
+  mapId,
+  x,
+  y,
+  radius = 4,
+  { includeDoors = true } = {}
+) {
   for (const structure of structuresOnMap(mapId)) {
-    if (!["woodWall", "woodDoor"].includes(structure.kind)) continue;
+    if (structure.kind !== "woodWall" && !(includeDoors && structure.kind === "woodDoor")) continue;
+    if (structure.kind === "woodDoor" && serverDoorCurrentlyOpen(structure)) continue;
     if (circleRectHit(x, y, radius, structureRect(structure))) return true;
   }
   return false;
+}
+
+function serverSegmentRectIntersectionT(x1, y1, x2, y2, rect, padding = 0) {
+  const minX = Number(rect.x) - padding;
+  const maxX = Number(rect.x) + Number(rect.width) + padding;
+  const minY = Number(rect.y) - padding;
+  const maxY = Number(rect.y) + Number(rect.height) + padding;
+  const dx = Number(x2) - Number(x1);
+  const dy = Number(y2) - Number(y1);
+  let tMin = 0;
+  let tMax = 1;
+
+  for (const [start, delta, low, high] of [
+    [Number(x1), dx, minX, maxX],
+    [Number(y1), dy, minY, maxY]
+  ]) {
+    if (Math.abs(delta) < 0.000001) {
+      if (start < low || start > high) return null;
+      continue;
+    }
+    let a = (low - start) / delta;
+    let b = (high - start) / delta;
+    if (a > b) [a, b] = [b, a];
+    tMin = Math.max(tMin, a);
+    tMax = Math.min(tMax, b);
+    if (tMin > tMax) return null;
+  }
+
+  return tMin >= 0 && tMin <= 1 ? tMin : null;
+}
+
+function serverWoodWallImpact(
+  mapId,
+  fromX,
+  fromY,
+  toX,
+  toY,
+  padding = 0,
+  { allowEndpoint = false, ignoreStructureId = null, ignoreDoors = false } = {}
+) {
+  let best = null;
+  for (const structure of structuresOnMap(mapId)) {
+    const blocks = structure?.kind === "woodWall" ||
+      (structure?.kind === "woodDoor" && !ignoreDoors && !serverDoorCurrentlyOpen(structure));
+    if (!blocks) continue;
+    if (ignoreStructureId && structure.id === ignoreStructureId) continue;
+    const t = serverSegmentRectIntersectionT(
+      fromX,
+      fromY,
+      toX,
+      toY,
+      structureRect(structure),
+      padding
+    );
+    if (t === null || t <= 0.001 || (!allowEndpoint && t >= 0.999)) continue;
+    if (!best || t < best.t) best = { t, structure };
+  }
+  if (!best) return null;
+  return {
+    t: best.t,
+    x: Number(fromX) + (Number(toX) - Number(fromX)) * Math.max(0, best.t - 0.01),
+    y: Number(fromY) + (Number(toY) - Number(fromY)) * Math.max(0, best.t - 0.01),
+    structure: best.structure
+  };
+}
+
+function serverLineOfEffectClear(
+  mapId,
+  fromX,
+  fromY,
+  toX,
+  toY,
+  padding = 0,
+  options = {}
+) {
+  return !serverWoodWallImpact(mapId, fromX, fromY, toX, toY, padding, options);
 }
 
 function serverDoorPerpendicularDistance(structure, x, y) {
@@ -1931,6 +2219,20 @@ function floorStructureAt(mapId, x, y) {
   ) || null;
 }
 
+function torchSupportById(mapId, supportId) {
+  if (typeof supportId !== "string" || !supportId) return null;
+  const support = sharedStructures.get(supportId);
+  if (!support || support.mapId !== mapId) return null;
+  return ["woodFloor", "woodWall"].includes(support.kind) ? support : null;
+}
+
+function attachedTorchForSupport(mapId, supportId) {
+  if (typeof supportId !== "string" || !supportId) return null;
+  return structuresOnMap(mapId).find(structure =>
+    structure?.kind === "torch" && structure?.supportId === supportId
+  ) || null;
+}
+
 function normalizedWallFromFloorEdge(floorX, floorY, edge) {
   if (edge === "north") return { x: floorX, y: floorY - 8, axis: "horizontal" };
   if (edge === "south") return { x: floorX, y: floorY + 8, axis: "horizontal" };
@@ -1957,6 +2259,26 @@ function wallTouchesFloor(structure, floorX, floorY) {
   return candidates.some(wall => wallMatchesBoundary(structure, wall));
 }
 
+function floorsSupportingBoundary(mapId, structure) {
+  if (!["woodWall", "woodDoor"].includes(structure?.kind)) return [];
+  const x = Number(structure.x);
+  const y = Number(structure.y);
+  const candidates = structure.axis === "vertical"
+    ? [[x - 8, y], [x + 8, y]]
+    : [[x, y - 8], [x, y + 8]];
+  return candidates
+    .map(([floorX, floorY]) => floorStructureAt(mapId, floorX, floorY))
+    .filter(Boolean);
+}
+
+function floorRemovalWouldOrphanBoundary(mapId, floor) {
+  if (floor?.kind !== "woodFloor") return false;
+  return structuresOnMap(mapId).some(structure => {
+    if (!wallTouchesFloor(structure, floor.x, floor.y)) return false;
+    return !floorsSupportingBoundary(mapId, structure).some(otherFloor => otherFloor.id !== floor.id);
+  });
+}
+
 function floorAcrossBuildEdge(mapId, floorX, floorY, edge) {
   if (edge === "north") return floorStructureAt(mapId, floorX, floorY - BUILD_GRID_SIZE);
   if (edge === "south") return floorStructureAt(mapId, floorX, floorY + BUILD_GRID_SIZE);
@@ -1967,19 +2289,79 @@ function floorAcrossBuildEdge(mapId, floorX, floorY, edge) {
 
 function doorHasFlankingWalls(mapId, wall) {
   if (!wall) return false;
-  const offsetA = wall.axis === "horizontal"
-    ? { x: wall.x - BUILD_GRID_SIZE, y: wall.y }
-    : { x: wall.x, y: wall.y - BUILD_GRID_SIZE };
-  const offsetB = wall.axis === "horizontal"
-    ? { x: wall.x + BUILD_GRID_SIZE, y: wall.y }
-    : { x: wall.x, y: wall.y + BUILD_GRID_SIZE };
-  const hasWallAt = point => structuresOnMap(mapId).some(structure =>
-    structure?.kind === "woodWall" &&
-    structure.axis === wall.axis &&
-    Math.abs(Number(structure.x) - point.x) < 1 &&
-    Math.abs(Number(structure.y) - point.y) < 1
-  );
-  return hasWallAt(offsetA) && hasWallAt(offsetB);
+  const structures = structuresOnMap(mapId);
+  const endpoints = wall.axis === "horizontal"
+    ? [
+        { x: wall.x - 8, y: wall.y, side: -1 },
+        { x: wall.x + 8, y: wall.y, side: 1 }
+      ]
+    : [
+        { x: wall.x, y: wall.y - 8, side: -1 },
+        { x: wall.x, y: wall.y + 8, side: 1 }
+      ];
+
+  const endpointHasWallSupport = endpoint => structures.some(structure => {
+    if (structure?.kind !== "woodWall") return false;
+    const axis = structure.axis === "vertical" ? "vertical" : "horizontal";
+
+    // Straight wall continuation beside the door.
+    if (axis === wall.axis) {
+      const expectedX = wall.axis === "horizontal"
+        ? wall.x + endpoint.side * BUILD_GRID_SIZE
+        : wall.x;
+      const expectedY = wall.axis === "vertical"
+        ? wall.y + endpoint.side * BUILD_GRID_SIZE
+        : wall.y;
+      return Math.abs(Number(structure.x) - expectedX) < 1 &&
+        Math.abs(Number(structure.y) - expectedY) < 1;
+    }
+
+    // v397: a perpendicular wall meeting the same endpoint is also valid.
+    // This lets a door sit directly beside a 90-degree exterior corner.
+    if (wall.axis === "horizontal") {
+      return Math.abs(Number(structure.x) - endpoint.x) < 1 &&
+        Math.abs(Math.abs(Number(structure.y) - endpoint.y) - 8) < 1;
+    }
+    return Math.abs(Number(structure.y) - endpoint.y) < 1 &&
+      Math.abs(Math.abs(Number(structure.x) - endpoint.x) - 8) < 1;
+  });
+
+  return endpoints.every(endpointHasWallSupport);
+}
+
+function wallSupportsDoor(door, wall) {
+  if (door?.kind !== "woodDoor" || wall?.kind !== "woodWall") return false;
+  const doorAxis = door.axis === "vertical" ? "vertical" : "horizontal";
+  const wallAxis = wall.axis === "vertical" ? "vertical" : "horizontal";
+  const endpoints = doorAxis === "horizontal"
+    ? [
+        { x: Number(door.x) - 8, y: Number(door.y), side: -1 },
+        { x: Number(door.x) + 8, y: Number(door.y), side: 1 }
+      ]
+    : [
+        { x: Number(door.x), y: Number(door.y) - 8, side: -1 },
+        { x: Number(door.x), y: Number(door.y) + 8, side: 1 }
+      ];
+
+  return endpoints.some(endpoint => {
+    if (wallAxis === doorAxis) {
+      const expectedX = doorAxis === "horizontal"
+        ? Number(door.x) + endpoint.side * BUILD_GRID_SIZE
+        : Number(door.x);
+      const expectedY = doorAxis === "vertical"
+        ? Number(door.y) + endpoint.side * BUILD_GRID_SIZE
+        : Number(door.y);
+      return Math.abs(Number(wall.x) - expectedX) < 1 &&
+        Math.abs(Number(wall.y) - expectedY) < 1;
+    }
+
+    if (doorAxis === "horizontal") {
+      return Math.abs(Number(wall.x) - endpoint.x) < 1 &&
+        Math.abs(Math.abs(Number(wall.y) - endpoint.y) - 8) < 1;
+    }
+    return Math.abs(Number(wall.y) - endpoint.y) < 1 &&
+      Math.abs(Math.abs(Number(wall.x) - endpoint.x) - 8) < 1;
+  });
 }
 
 function buildFloorKey(x, y) {
@@ -2058,12 +2440,16 @@ function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
   const testY = edgeKind && wall ? wall.y : y;
   if (kind === "woodFloor") {
     if (x < 32 || y < 32 || x > dimensions.width - 32 || y > dimensions.height - 32) return true;
+  } else if (kind === "torch") {
+    if (x < 16 || y < 16 || x > dimensions.width - 16 || y > dimensions.height - 16) return true;
   } else if (testX < 24 || testY < 24 || testX > dimensions.width - 24 || testY > dimensions.height - 24) {
     return true;
   }
 
   if (kind === "woodFloor") {
     if (floorStructureAt(mapId, x, y)) return true;
+  } else if (kind === "torch") {
+    if (structuresOnMap(mapId).some(structure => Math.hypot(Number(structure.x) - x, Number(structure.y) - y) < 10)) return true;
   } else if (edgeKind) {
     if (!wall || structuresOnMap(mapId).some(structure => wallMatchesBoundary(structure, wall))) return true;
   }
@@ -2087,29 +2473,40 @@ function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
 
 function handleStructurePlaceRequest(playerId, socket, message) {
   const playerState = players.get(playerId);
-  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : null;
+  const kind = message?.kind === "woodFloor" ? "woodFloor" : message?.kind === "woodWall" ? "woodWall" : message?.kind === "woodDoor" ? "woodDoor" : message?.kind === "torch" ? "torch" : null;
   if (!playerState || playerState.hp <= 0 || !kind || !worldGridMetaForMap(playerState.mapId)) return;
 
-  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "woodWall" ? "woodWalls" : "woodDoors";
+  const resourceKey = kind === "woodFloor" ? "woodFloors" : kind === "woodWall" ? "woodWalls" : kind === "woodDoor" ? "woodDoors" : "torches";
   const dimensions = mapWorldDimensions(playerState.mapId);
   const floorX = Math.round(clampNumber(message.x, 0, dimensions.width, playerState.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const floorY = Math.round(clampNumber(message.y, 0, dimensions.height, playerState.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const edge = typeof message?.edge === "string" ? message.edge : null;
   const wall = (kind === "woodWall" || kind === "woodDoor") ? normalizedWallFromFloorEdge(floorX, floorY, edge) : null;
-  const placementX = wall?.x ?? floorX;
-  const placementY = wall?.y ?? floorY;
+  const requestedSupportId = kind === "torch" && typeof message?.supportId === "string" ? message.supportId : null;
+  const torchSupport = kind === "torch" && requestedSupportId
+    ? torchSupportById(playerState.mapId, requestedSupportId)
+    : null;
+  const placementX = torchSupport ? Number(torchSupport.x) : (wall?.x ?? floorX);
+  const placementY = torchSupport ? Number(torchSupport.y) : (wall?.y ?? floorY);
   let reason = null;
+
   if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
   else if ((kind === "woodWall" || kind === "woodDoor") && (!wall || !floorStructureAt(playerState.mapId, floorX, floorY))) reason = "needsFloor";
   else if ((kind === "woodWall" || kind === "woodDoor") && roofedFloorKeysOnMap(playerState.mapId).has(buildFloorKey(floorX, floorY))) reason = "roofed";
   else if ((kind === "woodWall" || kind === "woodDoor") && floorAcrossBuildEdge(playerState.mapId, floorX, floorY, edge)) reason = "interiorEdge";
   else if (kind === "woodDoor" && !doorHasFlankingWalls(playerState.mapId, wall)) reason = "doorNeedsWalls";
+  else if (kind === "torch" && requestedSupportId && !torchSupport) reason = "invalidSupport";
+  else if (kind === "torch" && torchSupport && attachedTorchForSupport(playerState.mapId, torchSupport.id)) reason = "supportOccupied";
   else if (Math.hypot(placementX - playerState.x, placementY - playerState.y) > BUILD_PLACE_RANGE) reason = "tooFar";
   else if (structuresOnMap(playerState.mapId).length >= MAX_STRUCTURES_PER_MAP) reason = "mapLimit";
-  else if (structurePlacementBlocked(playerState.mapId, kind, floorX, floorY, wall)) reason = "blocked";
+  else if (kind === "torch" && torchSupport) {
+    // v406: a torch mounted to a valid player-built support is allowed to share
+    // that support's space. The support already passed world/NPC placement
+    // rules when it was built, so only attachment occupancy matters here.
+  } else if (structurePlacementBlocked(playerState.mapId, kind, floorX, floorY, wall)) reason = "blocked";
 
   if (reason) {
-    sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors });
+    sendJson(socket, { type: "structurePlaceResult", success: false, reason, kind, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches });
     return;
   }
 
@@ -2121,14 +2518,29 @@ function handleStructurePlaceRequest(playerId, socket, message) {
     x: placementX,
     y: placementY,
     ...((kind === "woodWall" || kind === "woodDoor") ? { axis: wall.axis } : {}),
+    ...(kind === "torch" ? (
+      torchSupport
+        ? {
+            supportId: torchSupport.id,
+            mountType: torchSupport.kind === "woodWall" ? "wall" : "floor",
+            ...(torchSupport.kind === "woodWall" ? {
+              mountAxis: torchSupport.axis === "vertical" ? "vertical" : "horizontal",
+              mountSide: torchSupport.axis === "vertical"
+                ? (playerState.x < Number(torchSupport.x) ? "west" : "east")
+                : (playerState.y < Number(torchSupport.y) ? "north" : "south")
+            } : {})
+          }
+        : { mountType: "ground" }
+    ) : {}),
     ownerId: playerId
   };
   sharedStructures.set(structure.id, structure);
   if (!sharedStructuresByMap.has(structure.mapId)) sharedStructuresByMap.set(structure.mapId, new Map());
   sharedStructuresByMap.get(structure.mapId).set(structure.id, structure);
+  structureNavRevision += 1;
 
   broadcastToMap(structure.mapId, { type: "structurePlaced", structure });
-  sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors });
+  sendJson(socket, { type: "structurePlaceResult", success: true, kind, structureId: structure.id, totalWoodFloors: playerState.woodFloors, totalWoodWalls: playerState.woodWalls, totalWoodDoors: playerState.woodDoors, totalTorches: playerState.torches });
 }
 
 function removeSharedStructure(structureId) {
@@ -2138,10 +2550,48 @@ function removeSharedStructure(structureId) {
   const bucket = sharedStructuresByMap.get(structure.mapId);
   bucket?.delete(structureId);
   if (bucket && bucket.size === 0) sharedStructuresByMap.delete(structure.mapId);
+  structureNavRevision += 1;
   for (const [playerId, passage] of playerDoorPassages.entries()) {
     if (passage?.doorId === structureId) playerDoorPassages.delete(playerId);
   }
   return structure;
+}
+
+function broadcastRemovedStructureAsLoot(removed, reason = "mined") {
+  if (!removed) return;
+  broadcastToMap(removed.mapId, {
+    type: "structureRemoved",
+    structureId: removed.id,
+    mapId: removed.mapId,
+    reason
+  });
+
+  // Return the exact placed piece as ordinary shared loot. This remains
+  // change-only state: there are no structure timers or idle-map heartbeats.
+  spawnSharedResource(
+    removed.mapId,
+    removed.kind,
+    removed.x,
+    removed.y,
+    { life: 30.0 }
+  );
+}
+
+function removeDoorsOrphanedByWall(removedWall) {
+  if (removedWall?.kind !== "woodWall") return [];
+  const candidates = structuresOnMap(removedWall.mapId).filter(structure =>
+    structure?.kind === "woodDoor" && wallSupportsDoor(structure, removedWall)
+  );
+  const removedDoors = [];
+  for (const door of candidates) {
+    // If another valid wall still supports the same endpoint, the door remains.
+    if (doorHasFlankingWalls(removedWall.mapId, door)) continue;
+    const removedDoor = removeSharedStructure(door.id);
+    if (!removedDoor) continue;
+    removedDoors.push(removedDoor);
+    broadcastRemovedStructureAsLoot(removedDoor, "supportRemoved");
+  }
+  return removedDoors;
 }
 
 function handleStructureDestroyRequest(playerId, socket, message) {
@@ -2153,9 +2603,40 @@ function handleStructureDestroyRequest(playerId, socket, message) {
   let reason = null;
   if (playerState.mapId !== structure.mapId) reason = "wrongMap";
   else if (playerState.weaponIndex !== 11) reason = "needPickaxe";
-  else if (structure.kind === "woodFloor" && structuresOnMap(structure.mapId).some(other => wallTouchesFloor(other, structure.x, structure.y))) reason = "wallAttached";
-  else if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) reason = "tooFar";
 
+  if (reason) {
+    sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
+    return;
+  }
+
+  // v406: mounted torches are a protective attachment layer. Pickaxing the
+  // supporting wall/floor removes and drops the torch first; the support is
+  // left untouched for a later swing. This also prevents support-deletion
+  // cascades from silently eating a torch item.
+  if (["woodFloor", "woodWall"].includes(structure.kind)) {
+    const attachedTorch = attachedTorchForSupport(structure.mapId, structure.id);
+    if (attachedTorch) {
+      if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) {
+        sendJson(socket, { type: "structureDestroyResult", success: false, reason: "tooFar", structureId });
+        return;
+      }
+      const removedTorch = removeSharedStructure(attachedTorch.id);
+      if (!removedTorch) return;
+      broadcastRemovedStructureAsLoot(removedTorch, "supportPickaxeFirst");
+      sendJson(socket, {
+        type: "structureDestroyResult",
+        success: true,
+        structureId: removedTorch.id,
+        kind: removedTorch.kind,
+        supportId: structure.id,
+        attachmentRemoved: true
+      });
+      return;
+    }
+  }
+
+  if (structure.kind === "woodFloor" && floorRemovalWouldOrphanBoundary(structure.mapId, structure)) reason = "wallAttached";
+  else if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) reason = "tooFar";
   if (reason) {
     sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
     return;
@@ -2164,22 +2645,8 @@ function handleStructureDestroyRequest(playerId, socket, message) {
   const removed = removeSharedStructure(structureId);
   if (!removed) return;
 
-  broadcastToMap(removed.mapId, {
-    type: "structureRemoved",
-    structureId: removed.id,
-    mapId: removed.mapId,
-    reason: "mined"
-  });
-
-  // Return the exact placed piece as ordinary shared loot. This is still
-  // change-only state: there are no structure timers or idle-map heartbeats.
-  spawnSharedResource(
-    removed.mapId,
-    removed.kind,
-    removed.x,
-    removed.y,
-    { life: 30.0 }
-  );
+  broadcastRemovedStructureAsLoot(removed, "mined");
+  if (removed.kind === "woodWall") removeDoorsOrphanedByWall(removed);
 
   sendJson(socket, {
     type: "structureDestroyResult",
@@ -2846,7 +3313,7 @@ function spawnSharedResource(
   y,
   options = {}
 ) {
-  if (!["wood", "stone", "flower", "goldSlimeBubble", "icedCoffee", "woodFloor", "woodWall", "woodDoor"].includes(kind)) {
+  if (!["wood", "stone", "flower", "goldSlimeBubble", "greenJellyCube", "icedCoffee", "woodFloor", "woodWall", "woodDoor", "torch"].includes(kind)) {
     return null;
   }
 
@@ -2963,6 +3430,8 @@ function handleResourcePickup(
     else playerState.whiteFlowers += 1;
   } else if (resource.kind === "goldSlimeBubble") {
     playerState.goldSlimeBubbles += 1;
+  } else if (resource.kind === "greenJellyCube") {
+    playerState.greenJellyCubes += 1;
   } else if (resource.kind === "icedCoffee") {
     playerState.beachQuestIcedCoffee = 1;
   } else if (resource.kind === "woodFloor") {
@@ -2971,6 +3440,8 @@ function handleResourcePickup(
     playerState.woodWalls += 1;
   } else if (resource.kind === "woodDoor") {
     playerState.woodDoors += 1;
+  } else if (resource.kind === "torch") {
+    playerState.torches += 1;
   }
 
   broadcastToMap(resource.mapId, {
@@ -2985,9 +3456,11 @@ function handleResourcePickup(
     totalWhiteFlowers: playerState.whiteFlowers,
     totalBlueFlowers: playerState.blueFlowers,
     totalGoldSlimeBubbles: playerState.goldSlimeBubbles,
+    totalGreenJellyCubes: playerState.greenJellyCubes,
     totalWoodFloors: playerState.woodFloors,
     totalWoodWalls: playerState.woodWalls,
     totalWoodDoors: playerState.woodDoors,
+    totalTorches: playerState.torches,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee
   });
 }
@@ -3006,6 +3479,7 @@ const CRAFT_RECIPES = Object.freeze({
   woodFloor: Object.freeze({ repeatable: true, resourceKey: "woodFloors", outputCount: 4, ingredients: Object.freeze({ wood: 2 }) }),
   woodWall: Object.freeze({ repeatable: true, resourceKey: "woodWalls", outputCount: 2, ingredients: Object.freeze({ wood: 3 }) }),
   woodDoor: Object.freeze({ repeatable: true, resourceKey: "woodDoors", outputCount: 1, ingredients: Object.freeze({ wood: 4 }) }),
+  torch: Object.freeze({ repeatable: true, resourceKey: "torches", outputCount: 1, ingredients: Object.freeze({ wood: 1, greenJellyCubes: 1 }) }),
   testWoodSupply: Object.freeze({ repeatable: true, resourceKey: "wood", outputCount: 100, ingredients: Object.freeze({}) }),
   arrows: Object.freeze({ repeatable: true, resourceKey: "arrows", outputCount: 50, ingredients: Object.freeze({ wood: 5, stone: 1 }) }),
   healingPotion: Object.freeze({ repeatable: true, resourceKey: "healingPotions", outputCount: 1, ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }) }),
@@ -3271,7 +3745,7 @@ function playerNearAuthorizedCraftingTable(playerState) {
     return true;
   }
 
-  // Editor-authored crafting tables are authorized from their actual saved position.
+  // Generated/shared crafting tables are authorized from their actual world position.
   return playerNearPlacedInteraction(playerState, "craftingTable", 40, 12);
 }
 
@@ -3311,7 +3785,9 @@ function handleCraftRequest(
       totalArrows: playerState.arrows,
       totalWoodFloors: playerState.woodFloors,
       totalWoodWalls: playerState.woodWalls,
-      totalWoodDoors: playerState.woodDoors
+      totalWoodDoors: playerState.woodDoors,
+      totalGreenJellyCubes: playerState.greenJellyCubes,
+      totalTorches: playerState.torches
     });
     return;
   }
@@ -3330,7 +3806,9 @@ function handleCraftRequest(
       totalArrows: playerState.arrows,
       totalWoodFloors: playerState.woodFloors,
       totalWoodWalls: playerState.woodWalls,
-      totalWoodDoors: playerState.woodDoors
+      totalWoodDoors: playerState.woodDoors,
+      totalGreenJellyCubes: playerState.greenJellyCubes,
+      totalTorches: playerState.torches
     });
     return;
   }
@@ -3352,7 +3830,9 @@ function handleCraftRequest(
       totalArrows: playerState.arrows,
       totalWoodFloors: playerState.woodFloors,
       totalWoodWalls: playerState.woodWalls,
-      totalWoodDoors: playerState.woodDoors
+      totalWoodDoors: playerState.woodDoors,
+      totalGreenJellyCubes: playerState.greenJellyCubes,
+      totalTorches: playerState.torches
     });
     return;
   }
@@ -3382,7 +3862,9 @@ function handleCraftRequest(
     totalMagicPotions: playerState.magicPotions,
     totalWoodFloors: playerState.woodFloors,
     totalWoodWalls: playerState.woodWalls,
-    totalWoodDoors: playerState.woodDoors
+    totalWoodDoors: playerState.woodDoors,
+    totalGreenJellyCubes: playerState.greenJellyCubes,
+    totalTorches: playerState.torches
   });
 }
 
@@ -3637,7 +4119,21 @@ function environmentMeleeValid(
         targetAngle,
         playerState.attackAimAngle
       )
-    ) <= halfArc
+    ) <= halfArc &&
+    serverLineOfEffectClear(
+      playerState.mapId,
+      playerState.x,
+      playerState.y - 8,
+      entity.x,
+      entity.y - targetOffsetY,
+      1,
+      {
+        ignoreStructureId:
+          ["woodWall", "woodDoor"].includes(entity?.kind)
+            ? entity.id
+            : null
+      }
+    )
   );
 }
 
@@ -5597,8 +6093,8 @@ function refreshGridEnemyMapLifecycle() {
 }
 
 function enemyMapSimulationActive(mapId) {
-  // Preserve legacy-map behavior for rollback/editor smoke tests. The new
-  // coordinate world only simulates enemies on maps that actually have a player.
+  // Historical non-grid compatibility stays isolated here. The active coordinate
+  // world only simulates enemies on maps that actually have a player.
   return !worldGridMetaForMap(mapId) || mapHasNetworkRecipients(mapId);
 }
 
@@ -5825,6 +6321,8 @@ function enemyPreciseMotionReasons(enemy) {
   // surfaced in the local diagnostics so we can see why passive networking is
   // (or is not) engaging on a real map instead of guessing from packet totals.
   if (enemy.type === "bigGoldSlime") reasons.push("boss");
+  if (enemy.nightEntering) reasons.push("nightEntering");
+  if (enemy.nightFleeing) reasons.push("nightFleeing");
   if (enemy.returningHome) reasons.push("returningHome");
   if (!enemy.returningHome && enemyHasNearbyPlayer(enemy)) reasons.push("nearby");
   if (enemy.aggroTargetId) reasons.push("aggroTarget");
@@ -6533,6 +7031,13 @@ function resolveEnemyAggroTarget(
 ) {
   if (!enemy?.alive || enemy.returningHome) return null;
 
+  const relentlessNightAggro = Boolean(
+    enemy.nightOnly &&
+    serverWorldIsNight() &&
+    !enemy.nightEntering &&
+    !enemy.nightFleeing
+  );
+
   let target = visibleAggroPlayerById(
     enemy.aggroTargetId,
     enemy.mapId,
@@ -6552,7 +7057,7 @@ function resolveEnemyAggroTarget(
       target.y - enemy.y
     );
 
-    if (targetDistance <= ENEMY_ENGAGEMENT_RADIUS) {
+    if (relentlessNightAggro || targetDistance <= ENEMY_ENGAGEMENT_RADIUS) {
       refreshEnemyEngagement(enemy, target.id);
     } else {
       enemy.aggroEngagementTime = Math.max(
@@ -6567,12 +7072,18 @@ function resolveEnemyAggroTarget(
     }
   }
 
-  if (!target && allowAcquire && enemyUsesProximityAggro(enemy)) {
+  if (
+    !target &&
+    allowAcquire &&
+    (enemyUsesProximityAggro(enemy) || relentlessNightAggro)
+  ) {
     const nearby = nearestVisiblePlayer(
       enemy.mapId,
       enemy.x,
       enemy.y,
-      Math.max(0, Number(enemy.detectionRadius) || 0)
+      relentlessNightAggro
+        ? Infinity
+        : Math.max(0, Number(enemy.detectionRadius) || 0)
     );
 
     if (nearby) {
@@ -8058,16 +8569,50 @@ function handlePvpAttack(
       return;
     }
 
+    const targetDistanceFromImpact = Math.hypot(
+      target.x - impactX,
+      (target.y - 8) - impactY
+    );
+    const splashStartX = impactX + (target.x - impactX) * 0.12;
+    const splashStartY = impactY + ((target.y - 8) - impactY) * 0.12;
     valid =
-      Math.hypot(
-        target.x - impactX,
-        (target.y - 8) - impactY
-      ) <= PVP_FIREBALL_LANDING_RADIUS + 6;
+      targetDistanceFromImpact <= PVP_FIREBALL_LANDING_RADIUS + 6 &&
+      serverLineOfEffectClear(
+        attacker.mapId,
+        attacker.x,
+        attacker.y - 8,
+        impactX,
+        impactY,
+        1
+      ) &&
+      serverLineOfEffectClear(
+        attacker.mapId,
+        splashStartX,
+        splashStartY,
+        target.x,
+        target.y - 8,
+        0.5
+      );
 
     minimumMs = 3000;
     knockback = 18;
   } else {
     return;
+  }
+
+  if (
+    valid &&
+    source !== "fireball" &&
+    !serverLineOfEffectClear(
+      attacker.mapId,
+      attacker.x,
+      attacker.y - 8,
+      target.x,
+      target.y - 8,
+      source === "arrow" ? 0.4 : 1
+    )
+  ) {
+    valid = false;
   }
 
   if (!valid) return;
@@ -8546,6 +9091,19 @@ function killSharedEnemy(
 
   const pendingDrops = [];
 
+  // v401: ordinary green Slimes (including the Spawn night wave) have a 30%
+  // chance to drop the craft material used for portable/placeable torches.
+  if (
+    enemy.type === "slime" &&
+    (enemy.variant || "green") === "green" &&
+    Math.random() < 0.30
+  ) {
+    pendingDrops.push({
+      kind: "resource",
+      resourceKind: "greenJellyCube"
+    });
+  }
+
   for (const drop of profile?.resourceDrops || []) {
     if (
       drop?.kind &&
@@ -8978,7 +9536,15 @@ function tickSharedGoblins(dt) {
         pursuing &&
         targetPlayer &&
         targetDistance <= 20 &&
-        goblin.attackCooldown <= 0
+        goblin.attackCooldown <= 0 &&
+        serverLineOfEffectClear(
+          goblin.mapId,
+          goblin.x,
+          goblin.y - 5,
+          targetPlayer.x,
+          targetPlayer.y - 3,
+          2
+        )
       ) {
         const length = targetDistance || 1;
 
@@ -8999,16 +9565,12 @@ function tickSharedGoblins(dt) {
 
         goblin.attackHit = false;
       } else if (pursuing) {
-        const moveX =
-          targetDx / targetDistance;
-
-        const moveY =
-          targetDy / targetDistance;
+        const move = enemyStructureChaseVector(goblin, targetX, targetY);
 
         moveServerGoblin(
           goblin,
-          moveX,
-          moveY,
+          move.x,
+          move.y,
           goblin.chaseSpeed,
           dt
         );
@@ -9016,9 +9578,9 @@ function tickSharedGoblins(dt) {
         goblin.moving = true;
         goblin.walkTime += dt;
 
-        if (Math.abs(moveX) > 0.05) {
+        if (Math.abs(move.x) > 0.05) {
           goblin.dir =
-            moveX >= 0 ? 1 : -1;
+            move.x >= 0 ? 1 : -1;
         }
       } else {
         // Once an engaged goblin loses its target, do not drop directly into
@@ -9207,7 +9769,15 @@ function validateSharedEnemyMeleeHit(
         targetAngle,
         aimAngle
       )
-    ) <= 0.90
+    ) <= 0.90 &&
+    serverLineOfEffectClear(
+      playerState.mapId,
+      playerState.x,
+      playerState.y - 8,
+      enemy.x,
+      enemy.y + targetOffsetY,
+      1
+    )
   );
 }
 
@@ -9247,7 +9817,15 @@ function validateSharedEnemyWandMasteryHit(
   const reconciliationAngleGrace = 0.08;
   return (
     Math.abs(angleDifference(targetAngle, aimAngle)) <=
-    0.56 + reconciliationAngleGrace
+    0.56 + reconciliationAngleGrace &&
+    serverLineOfEffectClear(
+      playerState.mapId,
+      playerState.x,
+      playerState.y - 8,
+      enemy.x,
+      enemy.y + targetOffsetY,
+      1
+    )
   );
 }
 
@@ -9288,7 +9866,15 @@ function validateSharedEnemyBowMeleeHit(
         targetAngle,
         aimAngle
       )
-    ) <= 1.05
+    ) <= 1.05 &&
+    serverLineOfEffectClear(
+      playerState.mapId,
+      playerState.x,
+      playerState.y - 8,
+      enemy.x,
+      enemy.y + targetOffsetY,
+      1
+    )
   );
 }
 
@@ -9357,6 +9943,14 @@ function applyServerFireballSplashBurn(playerId, mapId, payload) {
   // can keep moving while the projectile is airborne. This is validation grace,
   // not the blast radius.
   if (Math.hypot(impactX - playerState.x, impactY - playerState.y) > 220) return 0;
+  if (!serverLineOfEffectClear(
+    mapId,
+    playerState.x,
+    playerState.y - 8,
+    impactX,
+    impactY,
+    1
+  )) return 0;
 
   if (sharedEnemyActionRateLimited(playerId, "fireballSplash", "impact", 3000)) {
     return 0;
@@ -9379,6 +9973,9 @@ function applyServerFireballSplashBurn(playerId, mapId, payload) {
     const bodyY = enemy.y + (profile?.bodyOffsetY ?? -11);
     const distance = Math.hypot(bodyX - impactX, bodyY - impactY);
     if (distance > FIREBALL_SPLASH_BURN_RADIUS) continue;
+    const splashStartX = impactX + (bodyX - impactX) * 0.12;
+    const splashStartY = impactY + (bodyY - impactY) * 0.12;
+    if (!serverLineOfEffectClear(mapId, splashStartX, splashStartY, bodyX, bodyY, 0.5)) continue;
     candidates.push({ enemy, distance });
   }
 
@@ -9630,7 +10227,15 @@ function handleSharedEnemyDamageAction(
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
-      ) > 190
+      ) > 190 ||
+      !serverLineOfEffectClear(
+        playerState.mapId,
+        playerState.x,
+        playerState.y - 8,
+        enemy.x,
+        enemy.y + (serverEnemyProfile(enemy)?.bodyOffsetY ?? -11),
+        1
+      )
     ) {
       return;
     }
@@ -9658,7 +10263,15 @@ function handleSharedEnemyDamageAction(
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
-      ) > arrowCharge.maxDistance + 12
+      ) > arrowCharge.maxDistance + 12 ||
+      !serverLineOfEffectClear(
+        playerState.mapId,
+        playerState.x,
+        playerState.y - 8,
+        enemy.x,
+        enemy.y + (serverEnemyProfile(enemy)?.bodyOffsetY ?? -11),
+        0.4
+      )
     ) {
       return;
     }
@@ -9701,7 +10314,15 @@ function handleSharedEnemyDamageAction(
       Math.hypot(
         enemy.x - playerState.x,
         enemy.y - playerState.y
-      ) > 260
+      ) > 260 ||
+      !serverLineOfEffectClear(
+        playerState.mapId,
+        playerState.x,
+        playerState.y - 8,
+        enemy.x,
+        enemy.y + (serverEnemyProfile(enemy)?.bodyOffsetY ?? -11),
+        1
+      )
     ) {
       return;
     }
@@ -10213,11 +10834,9 @@ function tickSharedBigGoldSlimes(dt) {
       targetX !== null &&
       targetY !== null
     ) {
-      const dx = targetX - slime.x;
-      const dy = targetY - slime.y;
-      const length = Math.hypot(dx, dy) || 1;
-      moveX = dx / length;
-      moveY = dy / length;
+      const move = enemyStructureChaseVector(slime, targetX, targetY);
+      moveX = move.x;
+      moveY = move.y;
       const enraged =
         slime.hp <= slime.maxHp * 0.5;
 
@@ -10313,17 +10932,20 @@ function makeServerSlime(spawn) {
     level = 1,
     variant = "green",
     aggressiveOnSight = false,
-    spawnOnlyWhileBigGoldDead = false
+    spawnOnlyWhileBigGoldDead = false,
+    nightOnly = false,
+    nightPoolIndex = 0
   } = spawn;
 
-  // Conditional respawning should not suppress the initial map population.
-  // Baby gold slimes begin alive; only later respawns pause while the boss is alive.
-  const startsDormant = false;
+  // Runtime-generated night slimes are registered up front so clients can learn
+  // their compact network ids, but they remain dormant until NIGHT begins.
+  const startsDormant = Boolean(nightOnly);
 
   // Gold babies are den predators: unlike ordinary slimes they acquire nearby
   // living players without waiting to be struck first.
   const aggressiveByDefault =
     Boolean(aggressiveOnSight) ||
+    Boolean(nightOnly) ||
     variant === "goldBaby";
 
   const maxHp =
@@ -10343,6 +10965,14 @@ function makeServerSlime(spawn) {
     variant,
     aggressiveOnSight: aggressiveByDefault,
     spawnOnlyWhileBigGoldDead: Boolean(spawnOnlyWhileBigGoldDead),
+    nightOnly: Boolean(nightOnly),
+    nightPoolIndex: Math.max(0, Math.floor(Number(nightPoolIndex) || 0)),
+    nightEntering: false,
+    nightFleeing: false,
+    nightEntryTargetX: x,
+    nightEntryTargetY: y,
+    nightExitTargetX: x,
+    nightExitTargetY: y,
 
     x,
     y,
@@ -10623,7 +11253,8 @@ function tickSharedCrabs(dt) {
       const dy = crab.tauntY - crab.y;
       const distance = Math.hypot(dx, dy);
       if (distance > 1) {
-        const move = crabMovementVector(dx, dy);
+        const nav = enemyStructureChaseVector(crab, crab.tauntX, crab.tauntY);
+        const move = crabMovementVector(nav.x, nav.y);
         moveServerSlime(crab, move.x, move.y, crab.chaseSpeed, dt);
         if (Math.abs(move.x) > 0.05) crab.dir = move.x >= 0 ? 1 : -1;
       }
@@ -10635,7 +11266,8 @@ function tickSharedCrabs(dt) {
       const dx = targetPlayer.x - crab.x;
       const dy = targetPlayer.y - crab.y;
       if (Math.hypot(dx, dy) > 1) {
-        const move = crabMovementVector(dx, dy);
+        const nav = enemyStructureChaseVector(crab, targetPlayer.x, targetPlayer.y);
+        const move = crabMovementVector(nav.x, nav.y);
         moveServerSlime(crab, move.x, move.y, crab.chaseSpeed, dt);
         if (Math.abs(move.x) > 0.05) crab.dir = move.x >= 0 ? 1 : -1;
       }
@@ -10961,20 +11593,19 @@ function tickSharedMushrooms(dt) {
         Math.hypot(dx, dy);
 
       if (distance > 1) {
-        const moveX = dx / distance;
-        const moveY = dy / distance;
+        const move = enemyStructureChaseVector(mushroom, mushroom.tauntX, mushroom.tauntY);
 
         moveServerSlime(
           mushroom,
-          moveX,
-          moveY,
+          move.x,
+          move.y,
           mushroom.chaseSpeed,
           dt
         );
 
-        if (Math.abs(moveX) > 0.05) {
+        if (Math.abs(move.x) > 0.05) {
           mushroom.dir =
-            moveX >= 0 ? 1 : -1;
+            move.x >= 0 ? 1 : -1;
         }
       }
 
@@ -11000,20 +11631,23 @@ function tickSharedMushrooms(dt) {
         Math.hypot(dx, dy);
 
       if (distance > 1) {
-        const moveX = dx / distance;
-        const moveY = dy / distance;
+        const move = enemyStructureChaseVector(
+          mushroom,
+          targetPlayer.x,
+          targetPlayer.y
+        );
 
         moveServerSlime(
           mushroom,
-          moveX,
-          moveY,
+          move.x,
+          move.y,
           mushroom.chaseSpeed,
           dt
         );
 
-        if (Math.abs(moveX) > 0.05) {
+        if (Math.abs(move.x) > 0.05) {
           mushroom.dir =
-            moveX >= 0 ? 1 : -1;
+            move.x >= 0 ? 1 : -1;
         }
       }
 
@@ -11083,7 +11717,7 @@ function mapPointAllowed(
   x,
   y,
   padding = 0,
-  { allowWater = false } = {}
+  { allowWater = false, ignoreStructureDoors = false } = {}
 ) {
   const dimensions =
     mapWorldDimensions(mapId);
@@ -11144,19 +11778,340 @@ function mapPointAllowed(
     }
   }
 
-  if (serverPointHitsStructureWall(mapId, x, y, Math.max(4, padding))) return false;
+  if (serverPointHitsStructureWall(
+    mapId,
+    x,
+    y,
+    Math.max(4, padding),
+    { includeDoors: !ignoreStructureDoors }
+  )) return false;
 
   return true;
 }
 
-function enemyMapPointAllowed(enemy, x, y, padding = 0) {
+function enemyMapPointAllowed(enemy, x, y, padding = 0, { navigationPlanning = false } = {}) {
   return mapPointAllowed(
     enemy.mapId,
     x,
     y,
     padding,
-    { allowWater: serverEnemyCanEnterWater(enemy) }
+    {
+      allowWater: serverEnemyCanEnterWater(enemy),
+      // v397: AI may PLAN through a doorway so it walks to the opening, but
+      // actual movement still treats a closed door as solid. A player opening
+      // the door grants the brief shared passage window and the enemy can enter.
+      ignoreStructureDoors: Boolean(navigationPlanning)
+    }
   );
+}
+
+function enemyStructureNavigationPadding(enemy) {
+  if (enemy?.type === "bigGoldSlime") return 10;
+  if (enemy?.type === "goblin") return 4;
+  return 6;
+}
+
+function enemyStructurePath(
+  enemy,
+  targetX,
+  targetY,
+  padding = enemyStructureNavigationPadding(enemy),
+  { ignoreDoors = true } = {}
+) {
+  if (!enemy || !Number.isFinite(targetX) || !Number.isFinite(targetY)) return null;
+  const mapId = enemy.mapId;
+  if (!structuresOnMap(mapId).some(structure => structure?.kind === "woodWall")) return null;
+
+  const grid = BUILD_GRID_SIZE;
+  const snap = value => Math.round(Number(value) / grid) * grid;
+  const start = { x: snap(enemy.x), y: snap(enemy.y) };
+  const goal = { x: snap(targetX), y: snap(targetY) };
+  const goalKey = `${goal.x},${goal.y}`;
+  const cacheKey = `${goalKey}:${structureNavRevision}:${padding}:${ignoreDoors ? "door-plan" : "solid-door"}`;
+  const now = Date.now();
+  const cached = enemy._structureNav;
+
+  if (
+    cached?.key === cacheKey &&
+    cached.expiresAt > now &&
+    Array.isArray(cached.path)
+  ) {
+    return cached.path.length > 0 ? cached.path : null;
+  }
+
+  const minX = Math.min(start.x, goal.x) - 160;
+  const maxX = Math.max(start.x, goal.x) + 160;
+  const minY = Math.min(start.y, goal.y) - 160;
+  const maxY = Math.max(start.y, goal.y) + 160;
+  const keyFor = (x, y) => `${x},${y}`;
+  const heuristic = (x, y) => Math.abs(goal.x - x) + Math.abs(goal.y - y);
+  const open = [{ x: start.x, y: start.y, g: 0, f: heuristic(start.x, start.y) }];
+  const bestG = new Map([[keyFor(start.x, start.y), 0]]);
+  const parent = new Map();
+  const nodes = new Map([[keyFor(start.x, start.y), start]]);
+  let foundKey = null;
+  let visited = 0;
+
+  while (open.length > 0 && visited < 420) {
+    open.sort((a, b) => a.f - b.f || a.g - b.g);
+    const current = open.shift();
+    const currentKey = keyFor(current.x, current.y);
+    if (current.g !== bestG.get(currentKey)) continue;
+    visited += 1;
+
+    if (currentKey === goalKey) {
+      foundKey = currentKey;
+      break;
+    }
+
+    for (const [dx, dy] of [[grid, 0], [-grid, 0], [0, grid], [0, -grid]]) {
+      const nx = current.x + dx;
+      const ny = current.y + dy;
+      if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+      if (!enemyMapPointAllowed(enemy, nx, ny, padding, { navigationPlanning: ignoreDoors })) continue;
+      if (!serverLineOfEffectClear(
+        mapId,
+        current.x,
+        current.y,
+        nx,
+        ny,
+        Math.max(1, padding - 2),
+        { ignoreDoors }
+      )) continue;
+
+      const nextKey = keyFor(nx, ny);
+      const nextG = current.g + grid;
+      if (nextG >= (bestG.get(nextKey) ?? Infinity)) continue;
+      bestG.set(nextKey, nextG);
+      parent.set(nextKey, currentKey);
+      nodes.set(nextKey, { x: nx, y: ny });
+      open.push({ x: nx, y: ny, g: nextG, f: nextG + heuristic(nx, ny) });
+    }
+  }
+
+  if (!foundKey) {
+    enemy._structureNav = { key: cacheKey, expiresAt: now + 350, path: [] };
+    return null;
+  }
+
+  const path = [];
+  let cursor = foundKey;
+  while (cursor && cursor !== keyFor(start.x, start.y)) {
+    const node = nodes.get(cursor);
+    if (!node) break;
+    path.push(node);
+    cursor = parent.get(cursor);
+  }
+  path.reverse();
+
+  enemy._structureNav = {
+    key: cacheKey,
+    expiresAt: now + 750,
+    path
+  };
+  return path;
+}
+
+function enemyStructureApproachSeed(enemy) {
+  const text = String(enemy?.id || enemy?.type || "enemy");
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function enemyOrganicStructureApproachTarget(enemy, targetX, targetY, padding) {
+  if (!enemy || !Number.isFinite(targetX) || !Number.isFinite(targetY)) return null;
+  const now = Date.now();
+  const snapSize = BUILD_GRID_SIZE * 2;
+  const targetKey = `${enemy.mapId}:${Math.round(targetX / snapSize)},${Math.round(targetY / snapSize)}:${structureNavRevision}`;
+  const cached = enemy._structureApproach;
+
+  if (cached?.key === targetKey && cached.expiresAt > now) {
+    if (cached.mode !== "flank") return null;
+    if (Math.hypot(Number(cached.x) - enemy.x, Number(cached.y) - enemy.y) <= 10) {
+      enemy._structureApproach = {
+        key: targetKey,
+        mode: "direct",
+        expiresAt: now + 900 + Math.random() * 700
+      };
+      return null;
+    }
+    return { x: cached.x, y: cached.y };
+  }
+
+  const nearbyStructure = structuresOnMap(enemy.mapId).some(structure =>
+    ["woodWall", "woodDoor"].includes(structure?.kind) &&
+    Math.hypot(Number(structure.x) - targetX, Number(structure.y) - targetY) <= 112
+  );
+  if (!nearbyStructure) {
+    enemy._structureApproach = { key: targetKey, mode: "direct", expiresAt: now + 1800 };
+    return null;
+  }
+
+  // Roughly one third of enemies keep pressing the obvious route while the
+  // others periodically investigate a side/rear approach. The decision lives
+  // only on the authoritative server and changes every few seconds, so this
+  // produces organic movement without any extra network message type or tick.
+  if (Math.random() < 0.34) {
+    enemy._structureApproach = {
+      key: targetKey,
+      mode: "direct",
+      expiresAt: now + 1400 + Math.random() * 1800
+    };
+    return null;
+  }
+
+  const seed = enemyStructureApproachSeed(enemy);
+  const radii = [48, 64, 80];
+  const directions = [
+    [1, 0], [-1, 0], [0, 1], [0, -1],
+    [1, 1], [1, -1], [-1, 1], [-1, -1]
+  ];
+  const candidates = [];
+  for (const radius of radii) {
+    for (let index = 0; index < directions.length; index += 1) {
+      const direction = directions[(index + seed) % directions.length];
+      const scale = direction[0] !== 0 && direction[1] !== 0 ? 0.72 : 1;
+      const x = targetX + direction[0] * radius * scale;
+      const y = targetY + direction[1] * radius * scale;
+      if (!enemyMapPointAllowed(enemy, x, y, padding, { navigationPlanning: false })) continue;
+
+      // A flank point should actually be on the far side of some structure
+      // from the player. Otherwise it is just a noisy offset inside the room.
+      if (serverLineOfEffectClear(
+        enemy.mapId,
+        targetX,
+        targetY,
+        x,
+        y,
+        Math.max(1, padding - 2)
+      )) continue;
+
+      candidates.push({ x, y });
+    }
+  }
+
+  if (!candidates.length) {
+    enemy._structureApproach = {
+      key: targetKey,
+      mode: "direct",
+      expiresAt: now + 1200 + Math.random() * 1200
+    };
+    return null;
+  }
+
+  const choice = candidates[(seed + Math.floor(Math.random() * candidates.length)) % candidates.length];
+  enemy._structureApproach = {
+    key: targetKey,
+    mode: "flank",
+    x: choice.x,
+    y: choice.y,
+    expiresAt: now + 2600 + Math.random() * 3000
+  };
+  return choice;
+}
+
+function enemyStructureChaseVector(enemy, targetX, targetY) {
+  const dx = Number(targetX) - Number(enemy.x);
+  const dy = Number(targetY) - Number(enemy.y);
+  const directDistance = Math.hypot(dx, dy);
+  if (directDistance <= 0.001) return { x: 0, y: 0, waypointX: targetX, waypointY: targetY };
+
+  const padding = enemyStructureNavigationPadding(enemy);
+  if (serverLineOfEffectClear(
+    enemy.mapId,
+    enemy.x,
+    enemy.y,
+    targetX,
+    targetY,
+    Math.max(1, padding - 2)
+  )) {
+    enemy._structureNav = null;
+    return { x: dx / directDistance, y: dy / directDistance, waypointX: targetX, waypointY: targetY };
+  }
+
+  const organicTarget = enemyOrganicStructureApproachTarget(enemy, targetX, targetY, padding);
+  const navTargetX = organicTarget?.x ?? targetX;
+  const navTargetY = organicTarget?.y ?? targetY;
+  const ignoreDoorsForPlan = !organicTarget;
+
+  const navDx = navTargetX - enemy.x;
+  const navDy = navTargetY - enemy.y;
+  const navDistance = Math.hypot(navDx, navDy);
+  if (
+    organicTarget &&
+    navDistance > 0.001 &&
+    serverLineOfEffectClear(
+      enemy.mapId,
+      enemy.x,
+      enemy.y,
+      navTargetX,
+      navTargetY,
+      Math.max(1, padding - 2)
+    )
+  ) {
+    return {
+      x: navDx / navDistance,
+      y: navDy / navDistance,
+      waypointX: navTargetX,
+      waypointY: navTargetY
+    };
+  }
+
+  let path = enemyStructurePath(
+    enemy,
+    navTargetX,
+    navTargetY,
+    padding,
+    { ignoreDoors: ignoreDoorsForPlan }
+  );
+  if (!path?.length) {
+    // A speculative flank that cannot be reached immediately falls back to the
+    // normal doorway-aware chase rather than freezing the enemy in place.
+    if (organicTarget) {
+      enemy._structureApproach = {
+        key: enemy._structureApproach?.key,
+        mode: "direct",
+        expiresAt: Date.now() + 900
+      };
+      const fallback = enemyStructurePath(enemy, targetX, targetY, padding, { ignoreDoors: true });
+      if (!fallback?.length) return { x: 0, y: 0, waypointX: enemy.x, waypointY: enemy.y };
+      path = fallback;
+    } else {
+      return { x: 0, y: 0, waypointX: enemy.x, waypointY: enemy.y };
+    }
+  }
+
+  // Smooth the grid path by using the farthest cached waypoint still visible.
+  // Flanking paths keep closed doors solid so a side-route actually goes
+  // around the house instead of silently converging on the front door again.
+  let waypoint = path[0];
+  for (let i = 1; i < path.length; i++) {
+    const candidate = path[i];
+    if (!serverLineOfEffectClear(
+      enemy.mapId,
+      enemy.x,
+      enemy.y,
+      candidate.x,
+      candidate.y,
+      Math.max(1, padding - 2),
+      { ignoreDoors: ignoreDoorsForPlan }
+    )) break;
+    waypoint = candidate;
+  }
+
+  const waypointDx = waypoint.x - enemy.x;
+  const waypointDy = waypoint.y - enemy.y;
+  const waypointDistance = Math.hypot(waypointDx, waypointDy) || 1;
+  return {
+    x: waypointDx / waypointDistance,
+    y: waypointDy / waypointDistance,
+    waypointX: waypoint.x,
+    waypointY: waypoint.y
+  };
 }
 
 function slimePositionAllowed(
@@ -11260,9 +12215,12 @@ function resetServerSlime(slime) {
   slime.tauntY = slime.homeY;
   slime.tauntOwnerId = null;
 
-  slime.hp = slime.maxHp;
-  slime.alive = true;
+  slime.hp = slime.nightOnly ? 0 : slime.maxHp;
+  slime.alive = !slime.nightOnly;
   slime.respawnTime = 0;
+  slime.nightEntering = false;
+  slime.nightFleeing = false;
+  slime.nightFleeTime = 0;
 
   slime.burnTime = 0;
   slime.burnTickTimer = 0;
@@ -11272,10 +12230,334 @@ function resetServerSlime(slime) {
   clearEnemyAggroTarget(slime);
 
   clearServerEnemyHurlState(slime);
+  clearServerEnemySnareState(slime);
 
   slime.lastDamagePlayerId = null;
 }
 
+function chooseNightSlimeEdgeEntry(slime) {
+  const dimensions = mapWorldDimensions(slime.mapId);
+  const index = Math.max(0, Math.floor(Number(slime.nightPoolIndex) || 0));
+  const baseSide = index % 4;
+
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const side = (baseSide + attempt + Math.floor(Math.random() * 4)) % 4;
+    const horizontal = side === 0 || side === 2;
+    const along = horizontal
+      ? 26 + Math.random() * Math.max(1, dimensions.height - 52)
+      : 26 + Math.random() * Math.max(1, dimensions.width - 52);
+    let insideX;
+    let insideY;
+    let outsideX;
+    let outsideY;
+
+    if (side === 0) { // west
+      insideX = 12; insideY = along; outsideX = -10; outsideY = along;
+    } else if (side === 1) { // north
+      insideX = along; insideY = 20; outsideX = along; outsideY = -10;
+    } else if (side === 2) { // east
+      insideX = dimensions.width - 12; insideY = along; outsideX = dimensions.width + 10; outsideY = along;
+    } else { // south
+      insideX = along; insideY = dimensions.height - 10; outsideX = along; outsideY = dimensions.height + 10;
+    }
+
+    if (enemyMapPointAllowed(slime, insideX, insideY, 6, { navigationPlanning: true })) {
+      return { insideX, insideY, outsideX, outsideY, side };
+    }
+  }
+
+  return {
+    insideX: 12,
+    insideY: Math.max(26, Math.min(dimensions.height - 26, dimensions.height / 2)),
+    outsideX: -10,
+    outsideY: Math.max(26, Math.min(dimensions.height - 26, dimensions.height / 2)),
+    side: 0
+  };
+}
+
+function activateNightSlime(slime) {
+  const entry = chooseNightSlimeEdgeEntry(slime);
+  slime.homeX = entry.insideX;
+  slime.homeY = entry.insideY;
+  slime.x = entry.outsideX;
+  slime.y = entry.outsideY;
+  slime.dir = entry.insideX >= entry.outsideX ? 1 : -1;
+  slime.wanderTargetX = entry.insideX;
+  slime.wanderTargetY = entry.insideY;
+  slime.pauseTime = 0;
+  slime.wanderStuckTime = 0;
+  slime.hp = slime.maxHp;
+  slime.alive = true;
+  slime.respawnTime = 0;
+  slime.nightEntering = true;
+  slime.nightFleeing = false;
+  slime.nightFleeTime = 0;
+  slime.nightEntryTargetX = entry.insideX;
+  slime.nightEntryTargetY = entry.insideY;
+  slime.aggroTargetId = null;
+  slime.aggroEngagementTime = 0;
+  slime.wasEngaged = false;
+  slime.returningHome = false;
+  slime.confusionTime = 0;
+  slime.confusionTargetId = null;
+  slime.tauntTime = 0;
+  slime.tauntOwnerId = null;
+  slime.burnTime = 0;
+  slime.burnTickTimer = 0;
+  slime.knockbackX = 0;
+  slime.knockbackY = 0;
+  clearEnemyAggroTarget(slime);
+  clearServerEnemyHurlState(slime);
+  clearServerEnemySnareState(slime);
+}
+
+function chooseNightSlimeExit(slime) {
+  const dimensions = mapWorldDimensions(slime.mapId);
+  const candidates = [
+    { insideX: 12, insideY: Math.max(20, Math.min(dimensions.height - 10, slime.y)), outsideX: -12, outsideY: Math.max(20, Math.min(dimensions.height - 10, slime.y)) },
+    { insideX: dimensions.width - 12, insideY: Math.max(20, Math.min(dimensions.height - 10, slime.y)), outsideX: dimensions.width + 12, outsideY: Math.max(20, Math.min(dimensions.height - 10, slime.y)) },
+    { insideX: Math.max(12, Math.min(dimensions.width - 12, slime.x)), insideY: 20, outsideX: Math.max(12, Math.min(dimensions.width - 12, slime.x)), outsideY: -12 },
+    { insideX: Math.max(12, Math.min(dimensions.width - 12, slime.x)), insideY: dimensions.height - 10, outsideX: Math.max(12, Math.min(dimensions.width - 12, slime.x)), outsideY: dimensions.height + 12 }
+  ].filter(candidate => enemyMapPointAllowed(
+    slime,
+    candidate.insideX,
+    candidate.insideY,
+    6,
+    { navigationPlanning: true }
+  ));
+
+  const pool = candidates.length ? candidates : [{
+    insideX: 12, insideY: Math.max(20, Math.min(dimensions.height - 10, slime.y)),
+    outsideX: -12, outsideY: Math.max(20, Math.min(dimensions.height - 10, slime.y))
+  }];
+  pool.sort((a, b) =>
+    Math.hypot(a.insideX - slime.x, a.insideY - slime.y) -
+    Math.hypot(b.insideX - slime.x, b.insideY - slime.y)
+  );
+  return pool[0];
+}
+
+function beginNightSlimeFlee(slime) {
+  const exit = chooseNightSlimeExit(slime);
+  slime.nightEntering = false;
+  slime.nightFleeing = true;
+  slime.nightFleeTime = 0;
+  slime.nightExitInsideX = exit.insideX;
+  slime.nightExitInsideY = exit.insideY;
+  slime.nightExitTargetX = exit.outsideX;
+  slime.nightExitTargetY = exit.outsideY;
+  slime.tauntTime = 0;
+  slime.tauntOwnerId = null;
+  slime.confusionTime = 0;
+  slime.confusionTargetId = null;
+  slime.returningHome = false;
+  slime.wasEngaged = false;
+  clearEnemyAggroTarget(slime);
+  clearServerEnemyHurlState(slime);
+  clearServerEnemySnareState(slime);
+}
+
+function despawnNightSlime(slime) {
+  if (!slime?.nightOnly || !slime.alive) return;
+  slime.hp = 0;
+  slime.alive = false;
+  slime.respawnTime = 0;
+  slime.nightEntering = false;
+  slime.nightFleeing = false;
+  slime.nightFleeTime = 0;
+  clearEnemyAggroTarget(slime);
+  clearServerEnemyStatuses(slime);
+  clearServerEnemyHurlState(slime);
+  clearServerEnemySnareState(slime);
+  broadcastToMap(slime.mapId, {
+    type: "enemyKilled",
+    enemyType: slime.type,
+    enemyId: slime.id,
+    mapId: slime.mapId,
+    killerId: null,
+    x: slime.x,
+    y: slime.y,
+    despawn: true
+  });
+}
+
+let nightSlimeWaveNightActive = false;
+let nightSlimeWaveSpawnTimer = 0;
+let nightSlimeWaveHadOccupants = false;
+
+function nightSlimePool() {
+  return sharedSlimes.filter(slime =>
+    slime?.nightOnly &&
+    slime.mapId === NIGHT_SLIME_MAP_ID
+  );
+}
+
+function activeNightSlimeCount() {
+  return nightSlimePool().filter(slime => slime.alive).length;
+}
+
+function activateNextNightSlime() {
+  if (activeNightSlimeCount() >= NIGHT_SLIME_CAP) return false;
+  const candidate = nightSlimePool().find(slime =>
+    !slime.alive &&
+    (Number(slime.respawnTime) || 0) <= 0
+  );
+  if (!candidate) return false;
+  activateNightSlime(candidate);
+  return true;
+}
+
+function forceNightSlimeAggro(slime) {
+  if (!slime?.alive || slime.nightEntering || slime.nightFleeing) return false;
+  const nearest = nearestVisiblePlayer(
+    slime.mapId,
+    slime.x,
+    slime.y,
+    Infinity
+  );
+  if (!nearest) {
+    clearEnemyAggroTarget(slime);
+    return false;
+  }
+  setEnemyAggroTarget(slime, nearest.player.id);
+  return true;
+}
+
+function tickNightSlimeLifecycle(dt) {
+  const night = serverWorldIsNight();
+  const spawnMapOccupied = mapHasNetworkRecipients(NIGHT_SLIME_MAP_ID);
+  const pool = nightSlimePool();
+
+  if (night) {
+    if (!nightSlimeWaveNightActive) {
+      nightSlimeWaveNightActive = true;
+      nightSlimeWaveSpawnTimer = 0;
+      nightSlimeWaveHadOccupants = false;
+    }
+
+    for (const slime of pool) {
+      if (!slime.alive && (Number(slime.respawnTime) || 0) > 0) {
+        slime.respawnTime = Math.max(0, slime.respawnTime - dt);
+      }
+    }
+
+    if (spawnMapOccupied) {
+      if (!nightSlimeWaveHadOccupants) {
+        nightSlimeWaveHadOccupants = true;
+        const needed = Math.max(
+          0,
+          NIGHT_SLIME_INITIAL_COUNT - activeNightSlimeCount()
+        );
+        for (let index = 0; index < needed; index += 1) {
+          if (!activateNextNightSlime()) break;
+        }
+        nightSlimeWaveSpawnTimer = 0;
+      } else {
+        nightSlimeWaveSpawnTimer += dt;
+        while (nightSlimeWaveSpawnTimer >= NIGHT_SLIME_SPAWN_INTERVAL_SECONDS) {
+          nightSlimeWaveSpawnTimer -= NIGHT_SLIME_SPAWN_INTERVAL_SECONDS;
+          if (!activateNextNightSlime()) {
+            nightSlimeWaveSpawnTimer = Math.min(
+              nightSlimeWaveSpawnTimer,
+              NIGHT_SLIME_SPAWN_INTERVAL_SECONDS
+            );
+            break;
+          }
+        }
+      }
+    } else {
+      // Do not simulate or create a hidden wave on an empty spawn map. Keep at
+      // most one interval banked so a player arriving mid-night sees activity
+      // promptly without a burst of many deferred spawns.
+      nightSlimeWaveHadOccupants = false;
+      nightSlimeWaveSpawnTimer = Math.min(
+        NIGHT_SLIME_SPAWN_INTERVAL_SECONDS,
+        nightSlimeWaveSpawnTimer + dt
+      );
+    }
+
+    for (const slime of pool) {
+      if (!slime.alive || !slime.nightEntering) continue;
+
+      const dx = slime.nightEntryTargetX - slime.x;
+      const dy = slime.nightEntryTargetY - slime.y;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance <= 0.5) {
+        slime.x = slime.nightEntryTargetX;
+        slime.y = slime.nightEntryTargetY;
+        slime.nightEntering = false;
+        forceNightSlimeAggro(slime);
+        continue;
+      }
+
+      const step = Math.min(distance, slime.chaseSpeed * 1.15 * dt);
+      slime.x += dx / distance * step;
+      slime.y += dy / distance * step;
+      if (Math.abs(dx) > 0.05) slime.dir = dx >= 0 ? 1 : -1;
+    }
+
+    return;
+  }
+
+  nightSlimeWaveNightActive = false;
+  nightSlimeWaveSpawnTimer = 0;
+  nightSlimeWaveHadOccupants = false;
+
+  // Sunrise starts at 05:00, exactly when the client lighting enters DAWN.
+  for (const slime of pool) {
+    slime.respawnTime = 0;
+    if (!slime.alive) continue;
+
+    // Empty spawn maps can clean up immediately; occupied spawn maps get the
+    // visible retreat behavior.
+    if (!spawnMapOccupied) {
+      despawnNightSlime(slime);
+      continue;
+    }
+
+    // A slime that has not crossed onto the map yet simply disappears at dawn.
+    if (slime.nightEntering) {
+      despawnNightSlime(slime);
+      continue;
+    }
+
+    if (!slime.nightFleeing) beginNightSlimeFlee(slime);
+    slime.nightFleeTime = (Number(slime.nightFleeTime) || 0) + dt;
+
+    const insideDx = slime.nightExitInsideX - slime.x;
+    const insideDy = slime.nightExitInsideY - slime.y;
+    const insideDistance = Math.hypot(insideDx, insideDy);
+
+    if (insideDistance > 5) {
+      const move = enemyStructureChaseVector(
+        slime,
+        slime.nightExitInsideX,
+        slime.nightExitInsideY
+      );
+      moveServerSlime(slime, move.x, move.y, slime.chaseSpeed * 1.25, dt);
+      if (Math.abs(move.x) > 0.05) slime.dir = move.x >= 0 ? 1 : -1;
+    } else {
+      const dx = slime.nightExitTargetX - slime.x;
+      const dy = slime.nightExitTargetY - slime.y;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance <= 0.5) {
+        despawnNightSlime(slime);
+        continue;
+      }
+
+      const step = Math.min(distance, slime.chaseSpeed * 1.35 * dt);
+      slime.x += dx / distance * step;
+      slime.y += dy / distance * step;
+      if (Math.abs(dx) > 0.05) slime.dir = dx >= 0 ? 1 : -1;
+    }
+
+    // If a closed structure makes the dawn route impossible, clean up after a
+    // generous visible retreat window rather than leaving a stranded night mob.
+    if (slime.nightFleeTime >= 8) despawnNightSlime(slime);
+  }
+}
 
 
 function broadcastHurlEnemyDamage(
@@ -11660,6 +12942,15 @@ function bigGoldSlimeAliveOnMap(mapId) {
 function tickSharedSlimes(dt) {
   for (const slime of sharedSlimes) {
     if (!enemyMapSimulationActive(slime.mapId)) continue;
+    if (
+      slime.nightOnly &&
+      (
+        !serverWorldIsNight() ||
+        slime.nightEntering ||
+        slime.nightFleeing ||
+        !slime.alive
+      )
+    ) continue;
     if (!slime.alive) {
       // Baby gold slimes only enter/re-enter the den during the long window
       // where the Big Gold Slime is dead. Their timer freezes while the elite
@@ -11681,8 +12972,17 @@ function tickSharedSlimes(dt) {
     }
 
     if (slime.returningHome) {
-      tickEnemyReturningHome(slime, dt);
-      continue;
+      if (slime.nightOnly && serverWorldIsNight()) {
+        slime.returningHome = false;
+        slime.returnStuckTime = 0;
+        slime.wasEngaged = false;
+        slime.homeX = slime.x;
+        slime.homeY = slime.y;
+        chooseServerSlimeWanderTarget(slime);
+      } else {
+        tickEnemyReturningHome(slime, dt);
+        continue;
+      }
     }
 
     tickEnemyStatuses(slime, dt);
@@ -11769,20 +13069,19 @@ function tickSharedSlimes(dt) {
         Math.hypot(dx, dy);
 
       if (distance > 1) {
-        const moveX = dx / distance;
-        const moveY = dy / distance;
+        const move = enemyStructureChaseVector(slime, slime.tauntX, slime.tauntY);
 
         moveServerSlime(
           slime,
-          moveX,
-          moveY,
+          move.x,
+          move.y,
           slime.chaseSpeed,
           dt
         );
 
-        if (Math.abs(moveX) > 0.05) {
+        if (Math.abs(move.x) > 0.05) {
           slime.dir =
-            moveX >= 0 ? 1 : -1;
+            move.x >= 0 ? 1 : -1;
         }
       }
 
@@ -11802,29 +13101,23 @@ function tickSharedSlimes(dt) {
       targetPlayer &&
       targetDistance > 1
     ) {
-      const dx =
-        targetPlayer.x - slime.x;
-
-      const dy =
-        targetPlayer.y - slime.y;
-
-      const length =
-        Math.hypot(dx, dy) || 1;
-
-      const moveX = dx / length;
-      const moveY = dy / length;
+      const move = enemyStructureChaseVector(
+        slime,
+        targetPlayer.x,
+        targetPlayer.y
+      );
 
       moveServerSlime(
         slime,
-        moveX,
-        moveY,
+        move.x,
+        move.y,
         slime.chaseSpeed,
         dt
       );
 
-      if (Math.abs(moveX) > 0.05) {
+      if (Math.abs(move.x) > 0.05) {
         slime.dir =
-          moveX >= 0 ? 1 : -1;
+          move.x >= 0 ? 1 : -1;
       }
 
       continue;
@@ -11836,9 +13129,24 @@ function tickSharedSlimes(dt) {
       !targetPlayer &&
       !slime.aggroTargetId
     ) {
-      beginEnemyReturningHome(slime);
-      tickEnemyReturningHome(slime, dt);
-      continue;
+      // Night-wave slimes enter from the map edge, so their spawn/home point
+      // is not a meaningful territory anchor. If no valid player is currently
+      // targetable (disconnect, death, hide, etc.), keep them roaming from
+      // their present position instead of visibly marching back to the edge.
+      // They will reacquire any visible player on the next AI tick, and dawn
+      // still uses the dedicated edge-retreat lifecycle above.
+      if (slime.nightOnly && serverWorldIsNight()) {
+        slime.wasEngaged = false;
+        slime.returningHome = false;
+        slime.returnStuckTime = 0;
+        slime.homeX = slime.x;
+        slime.homeY = slime.y;
+        chooseServerSlimeWanderTarget(slime);
+      } else {
+        beginEnemyReturningHome(slime);
+        tickEnemyReturningHome(slime, dt);
+        continue;
+      }
     }
 
     if (slime.pauseTime > 0) {
@@ -11979,6 +13287,7 @@ setInterval(() => {
   previousSlimeTick = now;
 
   refreshGridEnemyMapLifecycle();
+  tickNightSlimeLifecycle(dt);
   tickSharedEnemySnareStatuses(dt);
   tickServerPlayerBurns(dt);
   refreshServerWaterWetness();
@@ -13072,6 +14381,11 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? previous.goldSlimeBubbles
         : 0,
 
+    greenJellyCubes:
+      previous && Number.isFinite(previous.greenJellyCubes)
+        ? previous.greenJellyCubes
+        : 0,
+
     arrows: previous && Number.isFinite(previous.arrows)
       ? previous.arrows
       : 0,
@@ -13086,6 +14400,10 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     woodDoors: previous && Number.isFinite(previous.woodDoors)
       ? previous.woodDoors
+      : 0,
+
+    torches: previous && Number.isFinite(previous.torches)
+      ? previous.torches
       : 0,
 
     beachQuestStage: previous
@@ -14136,10 +15454,12 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.attackPotionCooldownUntil = now + Math.min(BUFF_POTION_COOLDOWN_MS, clampInteger(buffs.attackPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   playerState.magicPotionCooldownUntil = now + Math.min(BUFF_POTION_COOLDOWN_MS, clampInteger(buffs.magicPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   playerState.goldSlimeBubbles = clampInteger(resources.goldSlimeBubbles, 0, 999999, 0);
+  playerState.greenJellyCubes = clampInteger(resources.greenJellyCubes, 0, 999999, 0);
   playerState.arrows = clampInteger(resources.arrows, 0, 999999, 0);
   playerState.woodFloors = clampInteger(resources.woodFloors, 0, 999999, 0);
   playerState.woodWalls = clampInteger(resources.woodWalls, 0, 999999, 0);
   playerState.woodDoors = clampInteger(resources.woodDoors, 0, 999999, 0);
+  playerState.torches = clampInteger(resources.torches, 0, 999999, 0);
 
   const story = state.story && typeof state.story === "object"
     ? state.story
@@ -14195,10 +15515,12 @@ function handlePersistentStateRestore(playerId, socket, message) {
     attackPotionUntil: playerState.attackPotionUntil,
     magicPotionUntil: playerState.magicPotionUntil,
     goldSlimeBubbles: playerState.goldSlimeBubbles,
+    greenJellyCubes: playerState.greenJellyCubes,
     arrows: playerState.arrows,
     woodFloors: playerState.woodFloors,
     woodWalls: playerState.woodWalls,
     woodDoors: playerState.woodDoors,
+    torches: playerState.torches,
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
     beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,

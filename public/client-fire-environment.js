@@ -721,9 +721,23 @@ function updateFire(dt) {
       );
 
       const duration = Math.max(0.001, Number(fireball.duration) || 0.4);
-      const progress = Math.max(0, Math.min(1, fireball.elapsed / duration));
+      let progress = Math.max(0, Math.min(1, fireball.elapsed / duration));
+      const previousX = fireball.x;
+      const previousY = fireball.y;
       fireball.x = fireball.startX + (fireball.targetX - fireball.startX) * progress;
       fireball.y = fireball.startY + (fireball.targetY - fireball.startY) * progress;
+
+      const wallImpact = typeof structureWallImpactPoint === "function"
+        ? structureWallImpactPoint(previousX, previousY, fireball.x, fireball.y, 1)
+        : null;
+      if (wallImpact) {
+        fireball.x = wallImpact.x;
+        fireball.y = wallImpact.y;
+        fireball.targetX = wallImpact.x;
+        fireball.targetY = wallImpact.y;
+        fireball.elapsed = duration;
+        progress = 1;
+      }
 
       if (fireball.trailTimer <= 0) {
         fireball.trailTimer = 0.035;
@@ -748,8 +762,8 @@ function updateFire(dt) {
         continue;
       }
 
-      // The aimed Fireball ignores anything it visually passes over and only
-      // resolves when it reaches its chosen landing point.
+      // v396: aimed Fireballs still resolve at a landing point, but a solid
+      // player-built wall can shorten that flight and become the landing point.
       igniteVegetationNear(fireball.targetX, fireball.targetY, 12);
 
       let nearestEnemy = null;
@@ -769,7 +783,15 @@ function updateFire(dt) {
 
         if (
           distanceSq <= hitRadius * hitRadius &&
-          distanceSq < nearestDistanceSq
+          distanceSq < nearestDistanceSq &&
+          (typeof structureLineOfEffectClear !== "function" ||
+            structureLineOfEffectClear(
+              fireball.targetX + (body.x - fireball.targetX) * 0.08,
+              fireball.targetY + (body.y - fireball.targetY) * 0.08,
+              body.x,
+              body.y,
+              0.5
+            ))
         ) {
           nearestEnemy = enemy;
           nearestPvpPlayer = null;
@@ -791,7 +813,15 @@ function updateFire(dt) {
 
           if (
             distanceSq <= hitRadius * hitRadius &&
-            distanceSq < nearestDistanceSq
+            distanceSq < nearestDistanceSq &&
+            (typeof structureLineOfEffectClear !== "function" ||
+              structureLineOfEffectClear(
+                fireball.targetX + (remote.x - fireball.targetX) * 0.08,
+                fireball.targetY + ((remote.y - 8) - fireball.targetY) * 0.08,
+                remote.x,
+                remote.y - 8,
+                0.5
+              ))
           ) {
             nearestEnemy = null;
             nearestPvpPlayer = remote;
@@ -836,8 +866,17 @@ function updateFire(dt) {
     }
 
     // Legacy/non-aimed fallback projectiles remain supported for safety.
+    const previousX = fireball.x;
+    const previousY = fireball.y;
     fireball.x += fireball.vx * dt;
     fireball.y += fireball.vy * dt;
+    const wallImpact = typeof structureWallImpactPoint === "function"
+      ? structureWallImpactPoint(previousX, previousY, fireball.x, fireball.y, 1)
+      : null;
+    if (wallImpact) {
+      fireball.x = wallImpact.x;
+      fireball.y = wallImpact.y;
+    }
 
     if (fireball.trailTimer <= 0) {
       fireball.trailTimer = 0.035;
@@ -851,6 +890,10 @@ function updateFire(dt) {
     }
 
     if (fireball.visualOnly) {
+      if (wallImpact) {
+        fireballs.splice(i, 1);
+        continue;
+      }
       const outOfWorld =
         fireball.x < 0 ||
         fireball.y < 0 ||
@@ -863,9 +906,9 @@ function updateFire(dt) {
       continue;
     }
 
-    let impact = false;
+    let impact = Boolean(wallImpact);
 
-    for (
+    if (!impact) for (
       const { enemy, profile }
       of activeEnemyRecords({ aliveOnly: true })
     ) {

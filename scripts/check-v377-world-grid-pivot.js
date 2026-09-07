@@ -15,9 +15,9 @@ const abilities = read("public", "client-abilities.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.394", "package version must be v377");
-assert(server.includes('const BUILD_VERSION = "6-11-394";'), "server build marker must be v377");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-394";'), "client build marker must be v377");
+assert.strictEqual(pkg.version, "0.6.11.406", "package version must be v377");
+assert(server.includes('const BUILD_VERSION = "6-11-406";'), "server build marker must be v377");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-406";'), "client build marker must be v377");
 
 assert(world.worldGrid, "coordinate world metadata missing");
 assert.strictEqual(world.worldGrid.radius, 1, "foundation world radius must be 1");
@@ -34,16 +34,18 @@ for (const [mapId, map] of gridEntries) {
   assert.deepStrictEqual((map.playerSpawns || []).map(spawn => spawn.id), ["center", "west", "east", "north", "south"], `${mapId} must expose cardinal entry spawns`);
   assert.strictEqual((map.portals || []).length, 0, `${mapId} must use edge traversal instead of authored portals`);
   if (distance > 0) {
-    assert((map.enemySpawns || []).length > 0, `${mapId} outer-ring map should be populated`);
-    assert((map.enemySpawns || []).every(spawn => Number(spawn.level) >= 2), `${mapId} outer-ring enemies should scale above spawn`);
+    assert(map.enemyGeneration, `${mapId} outer-ring map should expose runtime enemy generation rules`);
+    assert(Number(map.enemyGeneration.slimeCount || 0) + Number(map.enemyGeneration.mushroomCount || 0) > 0, `${mapId} outer-ring map should request a runtime mob population`);
+    assert(Number(map.enemyGeneration.level) >= 2, `${mapId} runtime enemy level should scale above spawn`);
   }
+  assert(!Object.prototype.hasOwnProperty.call(map, "enemySpawns"), `${mapId} must not store fixed enemy spawn coordinates`);
 }
 assert.strictEqual(coords.size, 9, "coordinate world must have nine unique cells");
 
 const center = world.maps.world_p0_p0;
 assert(center.npcs.some(npc => npc.type === "shopkeeper"), "coordinate spawn must retain Marnie tutorial access");
 assert(center.npcs.some(npc => npc.type === "craftingTable"), "coordinate spawn must retain crafting access");
-assert((center.enemySpawns || []).length === 0, "coordinate spawn should be enemy-free");
+assert(Number(center.enemyGeneration?.slimeCount || 0) === 0 && Number(center.enemyGeneration?.mushroomCount || 0) === 0, "coordinate spawn should be free of normal runtime mobs");
 
 assert(game.includes("const HOTBAR_SLOT_COUNT = 9;"), "weapon/tool belt must have 9 slots");
 for (let key = 1; key <= 9; key += 1) {

@@ -1432,17 +1432,11 @@ class GameApp {
 }
 
 console.log(
-  "WORLD_CONTENT client registry:",
+  "WORLD_CONTENT coordinate registry:",
   {
     version: WORLD_CONTENT?.version,
-    meadowGhosts:
-      (WORLD_CONTENT?.maps?.meadow?.enemySpawns || [])
-        .filter(spawn => spawn.type === "ghost")
-        .map(spawn => spawn.id),
-    ghostGroveGhosts:
-      (WORLD_CONTENT?.maps?.ghostGrove?.enemySpawns || [])
-        .filter(spawn => spawn.type === "ghost")
-        .map(spawn => spawn.id)
+    startMapId: WORLD_CONTENT?.worldGrid?.startMapId || null,
+    mapCount: Object.keys(WORLD_CONTENT?.maps || {}).length
   }
 );
 
@@ -1451,8 +1445,8 @@ assignPersistentEntityIds();
 loadLocalCharacterState();
 
 // Character progression/loadout persists, but map position intentionally does
-// not. The map editor owns one global loading target; when none has been
-// authored yet, preserve the historical Spawn Clearing center fallback.
+// not. The coordinate world owns the canonical loading target and defaults to
+// the safe center cell.
 const initialPlayerLoadTarget = sharedDefaultPlayerLoadTarget();
 activateMap(initialPlayerLoadTarget.mapId, initialPlayerLoadTarget.spawnId);
 updateHotbar();

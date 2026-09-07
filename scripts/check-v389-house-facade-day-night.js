@@ -13,10 +13,10 @@ const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.394");
-assert(server.includes('const BUILD_VERSION = "6-11-394";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
-assert.strictEqual(world.version, 394);
+assert.strictEqual(pkg.version, "0.6.11.406");
+assert(server.includes('const BUILD_VERSION = "6-11-406";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
+assert.strictEqual(world.version, 406);
 assert.strictEqual(Object.keys(world.maps).length, 9, "current build must preserve the active 3x3 coordinate world");
 
 // v389 foundations retained after the v390 interior-visibility refinement.
@@ -25,8 +25,8 @@ assert(game.includes("activeInteriorRoofRegion()"), "interior roof detection mis
 assert(game.includes("function roofRegionVisuallyCoversLocalPlayer("), "completed roof must still fade when it visually covers a player outside/behind it");
 assert(game.includes("ROOF_PLAYER_COVER_ALPHA"), "roof canopy-style player cover alpha missing");
 assert(game.includes("const ROOF_OVERHANG = 3;"), "roof overhang missing");
-assert(game.includes("16 + leftOverhang + rightOverhang"), "roof must extend over exposed side-wall art");
-assert(game.includes("16 + topOverhang + bottomOverhang"), "roof must extend over exposed north/south wall seams");
+assert(game.includes("x - ROOF_OVERHANG") && game.includes("x + 16"), "roof must extend authored edge pixels over exposed side-wall art");
+assert(game.includes("y - ROOF_OVERHANG") && game.includes("y + 16"), "roof must extend authored edge pixels over exposed north/south wall seams");
 
 assert(!network.includes('message.reason === "needsFloor" ? "PLACE ON FLOOR"'), "failed placement text should remain retired");
 assert(!network.includes('message.reason === "blocked" ? "BLOCKED"'), "failed placement BLOCKED note should remain retired");

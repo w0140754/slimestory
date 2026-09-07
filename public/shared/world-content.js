@@ -126,35 +126,15 @@
       });
     }
 
-    const enemySpawns = [];
-    if (distance > 0) {
-      const slimeCount = biome === "forest" ? 3 : 4;
-      for (let index = 0; index < slimeCount; index += 1) {
-        const [px, py] = randomWorldPoint(50);
-        enemySpawns.push({
-          id: `${mapId}:slime:${index + 1}`,
-          type: "slime",
-          level: 1 + distance,
-          x: px, y: py,
-          phase: Number((random() * 6.28).toFixed(2)),
-          wanderRadiusX: 18 + Math.floor(random() * 14),
-          wanderRadiusY: 12 + Math.floor(random() * 10),
-          ...(random() < 0.16 ? { variant: "purple" } : {})
-        });
-      }
-      if (biome === "forest") {
-        for (let index = 0; index < 2; index += 1) {
-          const [px, py] = randomWorldPoint(50);
-          enemySpawns.push({
-            id: `${mapId}:mushroom:${index + 1}`,
-            type: "mushroom",
-            level: 1 + distance,
-            x: px, y: py,
-            phase: Number((random() * 6.28).toFixed(2))
-          });
-        }
-      }
-    }
+    // v398: coordinate-world enemy positions are not part of WORLD_CONTENT.
+    // This object only describes the per-map population rules. The server
+    // chooses concrete enemy positions at runtime for each server session.
+    const enemyGeneration = {
+      level: 1 + distance,
+      slimeCount: distance > 0 ? (biome === "forest" ? 3 : 4) : 0,
+      mushroomCount: distance > 0 && biome === "forest" ? 2 : 0,
+      purpleSlimeChance: distance > 0 ? 0.16 : 0
+    };
 
     const terrainRegions = [];
     if (biome === "rocky-plains") {
@@ -191,7 +171,7 @@
       ],
       portals: [],
       environment,
-      enemySpawns,
+      enemyGeneration,
       npcs,
       terrain: { cellSize: 8, defaultType: "grass", regions: terrainRegions },
       collision: { waterRects: [] }
@@ -215,7 +195,7 @@
   });
 
   return Object.freeze({
-    version: 394,
+    version: 406,
     schemaVersion: 1,
     worldGrid,
     defaultPlayerLoad: Object.freeze({ mapId: worldGrid.startMapId, spawnId: "center" }),

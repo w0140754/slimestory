@@ -21,6 +21,8 @@ function buildClientEnemyFoundation() {
   arrowResourceImage.src = "./assets/arrow_resource.png";
 
   const goldSlimeBubbleLootImage = loadImage("assets/big_gold_slime_bubble_loot_v1.png");
+  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=406");
+  const torchLootImage = loadImage("assets/torch_v1.png?v=406");
 
   const woodImage = new Image();
   woodImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAe0lEQVQ4T2NkoBAwwllkgkFmgJI4y3+42/CAey//wF0OZ4A0ZwZqMZy99pRBSpQHJowVbDjyFG4ImIBpfv76I4OkKD+cxgVA8jBD4AYE2EgzPHv9BWw7SDMvDxdMPQb4/OUbw/T111ANoMgFIEBRGMAARbFALhg1gIEBAEAwSRFp34JXAAAAEGRlQkc1OERFQTUyNzFDOURCMUM4CKL2nwAAAABJRU5ErkJgggAA";
@@ -79,6 +81,10 @@ function buildClientEnemyFoundation() {
   if (stoneInventoryImage) stoneInventoryImage.src = rockLootableImage.src;
   document.getElementById("inventoryArrowImg").src = arrowResourceImage.src;
   document.getElementById("inventoryGoldSlimeBubbleImg").src = goldSlimeBubbleLootImage.src;
+  const inventoryGreenJellyCubeImg = document.getElementById("inventoryGreenJellyCubeImg");
+  if (inventoryGreenJellyCubeImg) inventoryGreenJellyCubeImg.src = greenJellyCubeLootImage.src;
+  const inventoryTorchImg = document.getElementById("inventoryTorchImg");
+  if (inventoryTorchImg) inventoryTorchImg.src = torchLootImage.src;
   document.getElementById("arrowHudImg").src = arrowResourceImage.src;
   document.getElementById("inventoryWhiteFlowerImg").src = flowerLootImage("white").src;
   document.getElementById("inventoryBlueFlowerImg").src = flowerLootImage("blue").src;
@@ -109,6 +115,12 @@ function buildClientEnemyFoundation() {
   if (craftWoodRingImg) craftWoodRingImg.src = woodRingImage.src;
   const craftRingWoodIcon = document.getElementById("craftRingWoodIcon");
   if (craftRingWoodIcon) craftRingWoodIcon.src = woodImage.src;
+  const craftTorchImg = document.getElementById("craftTorchImg");
+  if (craftTorchImg) craftTorchImg.src = torchLootImage.src;
+  const craftTorchWoodIcon = document.getElementById("craftTorchWoodIcon");
+  if (craftTorchWoodIcon) craftTorchWoodIcon.src = woodImage.src;
+  const craftTorchJellyIcon = document.getElementById("craftTorchJellyIcon");
+  if (craftTorchJellyIcon) craftTorchJellyIcon.src = greenJellyCubeLootImage.src;
 
   document.getElementById("inventorySwordImg").src = swordImage.src;
   document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
@@ -386,9 +398,9 @@ function buildClientEnemyFoundation() {
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
   const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=372");
-  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=394");
-  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=394");
-  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=394");
+  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=406");
+  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=406");
+  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=406");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated
@@ -403,6 +415,10 @@ function buildClientEnemyFoundation() {
     goldSlimeBubble: Object.freeze({
       image: goldSlimeBubbleLootImage,
       shadowWidth: 7
+    }),
+    greenJellyCube: Object.freeze({
+      image: greenJellyCubeLootImage,
+      shadowWidth: 6
     }),
     icedCoffee: Object.freeze({
       image: icedCoffeeLootImage,
@@ -421,6 +437,10 @@ function buildClientEnemyFoundation() {
     woodDoor: Object.freeze({
       image: woodDoorLootImage,
       shadowWidth: 8
+    }),
+    torch: Object.freeze({
+      image: torchLootImage,
+      shadowWidth: 7
     })
   });
 

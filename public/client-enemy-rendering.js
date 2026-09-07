@@ -110,6 +110,26 @@ function drawEnemyDeathEffect(effect, camX, camY) {
   ctx.restore();
 }
 
+function slimePresentationHopPhase(slime) {
+  const key = String(
+    slime?.entityId ??
+    slime?.id ??
+    slime?.networkId ??
+    ""
+  );
+  if (!key) return Number(slime?.phase) || 0;
+
+  // v405: derive a stable visual-only phase from the existing enemy identity.
+  // Nothing is replicated: every client deterministically gets the same
+  // stagger, while groups stop bouncing in lockstep.
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) / 4294967296) * Math.PI * 2;
+}
+
 function drawSlime(slime, camX, camY) {
   if (!slime.alive) return;
 
@@ -164,7 +184,7 @@ function drawSlime(slime, camX, camY) {
   const bounceBase = carried
     ? 0
     : Math.sin(
-        worldTime * 6.2 + slime.phase
+        worldTime * 6.2 + slimePresentationHopPhase(slime)
       ) * 0.5 + 0.5;
 
   const hopWave = carried

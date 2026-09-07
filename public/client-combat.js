@@ -247,8 +247,43 @@ function updateBasicProjectiles(dt) {
     const projectile = basicProjectiles[i];
 
     projectile.life -= dt;
+    const previousX = projectile.x;
+    const previousY = projectile.y;
     projectile.x += projectile.vx * dt;
     projectile.y += projectile.vy * dt;
+
+    const wallImpact =
+      typeof structureWallImpactPoint === "function"
+        ? structureWallImpactPoint(
+            previousX,
+            previousY,
+            projectile.x,
+            projectile.y,
+            projectile.type === "arrow" ? 0.4 : 1
+          )
+        : null;
+
+    if (wallImpact) {
+      projectile.x = wallImpact.x;
+      projectile.y = wallImpact.y;
+
+      if (
+        !projectile.visualOnly &&
+        typeof onlineClient !== "undefined"
+      ) {
+        onlineClient.sendVisualEffect(
+          "basicProjectileImpact",
+          {
+            projectileType: projectile.type,
+            x: projectile.x,
+            y: projectile.y
+          }
+        );
+      }
+
+      basicProjectiles.splice(i, 1);
+      continue;
+    }
 
     if (projectile.visualOnly) {
       const outOfWorld =
@@ -283,6 +318,21 @@ function updateBasicProjectiles(dt) {
         dx * dx + dy * dy <=
         hitRadius * hitRadius
       ) {
+        // Server repeats this check authoritatively; doing it here prevents
+        // false local impact feedback against a target visible through a wall.
+        if (
+          typeof structureLineOfEffectClear === "function" &&
+          !structureLineOfEffectClear(
+            player.x,
+            player.y - 8,
+            body.x,
+            body.y,
+            projectile.type === "arrow" ? 0.4 : 1
+          )
+        ) {
+          continue;
+        }
+
         damageEnemyWithProjectile(
           enemy,
           projectile,
@@ -309,6 +359,19 @@ function updateBasicProjectiles(dt) {
         const dy = projectile.y - (remote.y - 8);
 
         if (dx * dx + dy * dy <= 8 * 8) {
+          if (
+            typeof structureLineOfEffectClear === "function" &&
+            !structureLineOfEffectClear(
+              player.x,
+              player.y - 8,
+              remote.x,
+              remote.y - 8,
+              0.4
+            )
+          ) {
+            continue;
+          }
+
           onlineClient.sendPvpAttack(
             remote.id,
             "arrow",
@@ -703,8 +766,11 @@ function tryHitPvpPlayers(source = "melee", maxTargets = Infinity) {
     const insideAngle =
       Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= hitHalfArc;
     const insideRange = distance <= reach + 8;
+    const clearLine =
+      typeof structureLineOfEffectClear !== "function" ||
+      structureLineOfEffectClear(originX, originY, remote.x, remote.y - 8, 0.5);
 
-    if (insideAngle && insideRange) {
+    if (insideAngle && insideRange && clearLine) {
       const relativeAngle = angleDifference(targetAngle, player.attackAimAngle);
       const sweepProgress = Math.max(
         0,
@@ -809,8 +875,11 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
       : profile.meleeBodyRadius ?? 5;
 
     const insideRange = distance <= reach + bodyRadius;
+    const clearLine =
+      typeof structureLineOfEffectClear !== "function" ||
+      structureLineOfEffectClear(originX, originY, target.x, target.y, 0.5);
 
-    if (insideAngle && insideRange) {
+    if (insideAngle && insideRange && clearLine) {
       const relativeAngle = angleDifference(targetAngle, player.attackAimAngle);
       const sweepProgress = Math.max(
         0,
@@ -975,7 +1044,7 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
     weapon === "oldSword" ||
     weapon === "katana"
   ) {
-    tryHitEnemies();
+    tryHitEnemies("melee", 1);
     tryHitPvpPlayers();
     tryCutHarvestFlowers();
     tryCutGrass();
@@ -983,14 +1052,14 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
   }
 
   if (weapon === "axe") {
-    tryHitEnemies();
+    tryHitEnemies("melee", 1);
     tryHitPvpPlayers();
     tryHitTree();
     return;
   }
 
   if (weapon === "pickaxe") {
-    tryHitEnemies();
+    tryHitEnemies("melee", 1);
     tryHitPvpPlayers();
     if (!tryHitPlayerStructure(lockedStructureId)) {
       tryHitRock();
@@ -1011,7 +1080,7 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
       );
 
     } else {
-      tryHitEnemies("melee");
+      tryHitEnemies("melee", 1);
       tryHitPvpPlayers("melee");
     }
     return;
@@ -1184,6 +1253,13 @@ function bowHasCloseMonsterInAim() {
       return false;
     }
 
+    if (
+      typeof structureLineOfEffectClear === "function" &&
+      !structureLineOfEffectClear(originX, originY, target.x, target.y, 0.5)
+    ) {
+      return false;
+    }
+
     const targetAngle = Math.atan2(dy, dx);
 
     return (
@@ -1219,7 +1295,7 @@ function executeBowMeleeAttack() {
   player.slashTime =
     player.slashDuration;
 
-  tryHitEnemies("bowMelee");
+  tryHitEnemies("bowMelee", 1);
   tryHitPvpPlayers("bowMelee");
 
   player.shadowCritAttack = false;

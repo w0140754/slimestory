@@ -61,7 +61,6 @@ for (const [mapId, map] of Object.entries(WORLD_CONTENT.maps || {})) {
   const idGroups = [
     ["playerSpawns", map.playerSpawns],
     ["portals", map.portals],
-    ["enemySpawns", map.enemySpawns],
     ["trees", environment.trees],
     ["tallGrass", environment.tallGrass],
     ["rocks", environment.rocks],
@@ -70,6 +69,21 @@ for (const [mapId, map] of Object.entries(WORLD_CONTENT.maps || {})) {
     ["houses", environment.houses]
   ];
   validateUniqueIds(mapId, idGroups);
+
+  if (Object.prototype.hasOwnProperty.call(map, "enemySpawns")) {
+    fail(`${mapId} must not store fixed enemySpawns in the coordinate world`);
+  }
+
+  const generation = map.enemyGeneration || {};
+  for (const field of ["level", "slimeCount", "mushroomCount", "purpleSlimeChance"]) {
+    if (!finite(generation[field])) fail(`${mapId}.enemyGeneration.${field} must be finite`);
+  }
+  if (Number(generation.level) < 1 || Number(generation.slimeCount) < 0 || Number(generation.mushroomCount) < 0) {
+    fail(`${mapId}.enemyGeneration contains invalid population values`);
+  }
+  if (Number(generation.purpleSlimeChance) < 0 || Number(generation.purpleSlimeChance) > 1) {
+    fail(`${mapId}.enemyGeneration.purpleSlimeChance must be between 0 and 1`);
+  }
 
   for (const [groupName, items] of idGroups) {
     for (const item of items || []) {

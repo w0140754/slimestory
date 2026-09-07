@@ -199,6 +199,15 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=406");
+const torchImage = loadImage("assets/torch_v1.png?v=406");
+
+// v395: user-supplied in-world building art. These are separate from the
+// compact inventory/crafting icons under assets/ui/.
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=406");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=406");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=406");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=406");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -1710,20 +1719,21 @@ function applySharedWorldContentToClientMaps() {
   }
 
   for (
-    const [mapId, definition]
+    const [mapId]
     of Object.entries(WORLD_CONTENT.maps)
   ) {
     const state = mapStates[mapId];
 
     if (!state) {
-      // The terrain/portal definition for a brand-new map is still client
-      // content. Once it exists, enemy networking needs no map-specific code.
       console.warn(
         `WORLD_CONTENT map "${mapId}" has no client mapState yet`
       );
       continue;
     }
 
+    // v398: coordinate-world mobs are server-generated at runtime. The client
+    // starts each collection empty and authoritative enemySnapshot packets
+    // construct the actual entities for the current server session.
     for (
       const [, collectionName]
       of Object.entries(
@@ -1732,115 +1742,28 @@ function applySharedWorldContentToClientMaps() {
     ) {
       state[collectionName] = [];
     }
-
-    for (
-      const spawn
-      of definition.enemySpawns || []
-    ) {
-      const collectionName =
-        CLIENT_ENEMY_COLLECTIONS[spawn.type];
-
-      if (!collectionName) continue;
-
-      if (!Array.isArray(state[collectionName])) {
-        state[collectionName] = [];
-      }
-
-      const entity =
-        createClientEnemyFromWorldSpawn(
-          mapId,
-          spawn
-        );
-
-      if (entity) {
-        state[collectionName].push(entity);
-      }
-    }
   }
 }
 
 function reconcileSharedEnemiesForMap(mapId) {
-  const state =
-    mapStates[mapId];
+  const state = mapStates[mapId];
 
-  const definition =
-    typeof WORLD_CONTENT !== "undefined"
-      ? WORLD_CONTENT.maps?.[mapId]
-      : null;
-
-  if (!state || !definition) {
+  if (!state) {
     return;
   }
 
+  // Runtime-generated coordinate-world enemies must survive map activation.
+  // They are created/reconciled by authoritative server snapshots instead of
+  // being rebuilt from fixed WORLD_CONTENT spawn coordinates.
   for (
-    const [enemyType, collectionName]
+    const [, collectionName]
     of Object.entries(
       CLIENT_ENEMY_COLLECTIONS
     )
   ) {
-    const currentCollection =
-      state[collectionName] || [];
-
-    const existingById =
-      new Map(
-        currentCollection
-          .filter(enemy => enemy.entityId)
-          .map(enemy => [
-            enemy.entityId,
-            enemy
-          ])
-      );
-
-    const rebuilt = [];
-
-    for (
-      const spawn
-      of definition.enemySpawns || []
-    ) {
-      if (spawn.type !== enemyType) {
-        continue;
-      }
-
-      let entity =
-        existingById.get(spawn.id);
-
-      if (!entity) {
-        entity =
-          createClientEnemyFromWorldSpawn(
-            mapId,
-            spawn
-          );
-      }
-
-      if (!entity) continue;
-
-      // Reassert identity every activation. This prevents stale objects from
-      // an old map from being rendered through the active-array view.
-      entity.entityId = spawn.id;
-      if (typeof spawn.hurlable === "boolean") {
-        entity.hurlable = spawn.hurlable;
-      }
-      const runtimeProfile =
-        enemyProfileForType(enemyType);
-
-      if (
-        runtimeProfile?.applySpawnData
-      ) {
-        runtimeProfile.applySpawnData(
-          entity,
-          spawn
-        );
-      }
-
-      entity.networkType = enemyType;
-      entity.networkMapId = mapId;
-      entity.serverControlled = true;
-
-      rebuilt.push(entity);
+    if (!Array.isArray(state[collectionName])) {
+      state[collectionName] = [];
     }
-
-    state[collectionName] =
-      rebuilt;
   }
 }
 
@@ -2891,8 +2814,8 @@ function activateMap(mapId, entrySide, transitionContext = null) {
       player.y = dy > 0 ? 16 : world.height - 2;
     }
   } else {
-    // Editor-authored maps name their entry points explicitly. Legacy maps
-    // retain their historical side-based entry rules.
+    // Historical non-grid maps can name entry points explicitly; otherwise they
+    // retain their older side-based entry rules.
     const sharedSpawn = sharedPlayerSpawnPoint(mapId, entrySide);
 
     if (sharedSpawn) {
@@ -4195,10 +4118,12 @@ const player = {
   attackPotionUntil: 0,
   magicPotionUntil: 0,
   goldSlimeBubbles: 0,
+  greenJellyCubes: 0,
   arrows: 0,
   woodFloors: 0,
   woodWalls: 0,
   woodDoors: 0,
+  torches: 0,
 
   // Count-based item ownership. Missing/zero means not owned.
   // New players intentionally start with no gear or weapons.
@@ -4307,7 +4232,7 @@ const player = {
 const HOTBAR_SLOT_COUNT = 9;
 const UTILITY_HOTBAR_SLOT_COUNT = 3;
 const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
-const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall", "woodDoor"]);
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "woodWall", "woodDoor", "torch"]);
 const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -4472,6 +4397,14 @@ const CRAFT_RECIPES = Object.freeze({
     ingredients: Object.freeze({ wood: 4 }),
     repeatable: true
   }),
+  torch: Object.freeze({
+    name: "Torch",
+    resourceKey: "torches",
+    outputCount: 1,
+    category: "building",
+    ingredients: Object.freeze({ wood: 1, greenJellyCubes: 1 }),
+    repeatable: true
+  }),
   testWoodSupply: Object.freeze({
     name: "Test Wood +100",
     resourceKey: "wood",
@@ -4596,6 +4529,7 @@ function shopImageForItemId(itemId) {
   if (itemId === "woodFloor") return document.getElementById("inventoryWoodFloorImg");
   if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
   if (itemId === "woodDoor") return document.getElementById("inventoryWoodDoorImg");
+  if (itemId === "torch") return torchImage;
   if (itemId === "arrows") return arrowResourceImage;
 
   const weaponIndex =
@@ -4805,6 +4739,7 @@ function hotbarItemInventoryCount(itemId) {
   if (itemId === "woodFloor") return Math.max(0, Math.floor(Number(player.woodFloors) || 0));
   if (itemId === "woodWall") return Math.max(0, Math.floor(Number(player.woodWalls) || 0));
   if (itemId === "woodDoor") return Math.max(0, Math.floor(Number(player.woodDoors) || 0));
+  if (itemId === "torch") return Math.max(0, Math.floor(Number(player.torches) || 0));
   return 0;
 }
 
@@ -4812,6 +4747,7 @@ function hotbarItemDisplayName(itemId) {
   if (itemId === "woodFloor") return "Wood Floor";
   if (itemId === "woodWall") return "Wood Wall";
   if (itemId === "woodDoor") return "Wood Door";
+  if (itemId === "torch") return "Torch";
   const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
   if (weaponIndex >= 0) return weaponDisplayName(weaponIndex);
   return itemId || "Item";
@@ -5438,9 +5374,11 @@ function updateCraftingUi() {
       ? arrowResourceImage
       : recipe.resourceKey === "wood"
         ? woodImage
-        : recipe.resourceKey
-          ? potionImageForItem(recipeId)
-          : shopImageForItemId(recipe.itemId);
+        : recipe.resourceKey === "torches"
+          ? torchImage
+          : recipe.resourceKey
+            ? potionImageForItem(recipeId)
+            : shopImageForItemId(recipe.itemId);
 
     if (image && itemImage) {
       image.src = itemImage.src;
@@ -7867,6 +7805,10 @@ function updateHotbar() {
     slot.classList.remove("cooling-down", "buff-active");
 
     if (image) {
+      image.classList.toggle(
+        "build-hotbar-upright",
+        assigned && BUILD_HOTBAR_ITEMS.includes(itemId)
+      );
       if (assigned) {
         const itemImage = hotkeyImageForItemId(itemId);
         if (itemImage) image.src = itemImage.src;
@@ -8333,10 +8275,12 @@ function updateInventoryUi() {
   const attackPotionCount = document.getElementById("inventoryAttackPotionCount");
   const magicPotionCount = document.getElementById("inventoryMagicPotionCount");
   const goldSlimeBubbleCount = document.getElementById("inventoryGoldSlimeBubbleCount");
+  const greenJellyCubeCount = document.getElementById("inventoryGreenJellyCubeCount");
   const arrowCount = document.getElementById("inventoryArrowCount");
   const woodFloorCount = document.getElementById("inventoryWoodFloorCount");
   const woodWallCount = document.getElementById("inventoryWoodWallCount");
   const woodDoorCount = document.getElementById("inventoryWoodDoorCount");
+  const torchCount = document.getElementById("inventoryTorchCount");
   const arrowHud = document.getElementById("arrowHud");
   const arrowHudCount = document.getElementById("arrowHudCount");
 
@@ -8349,10 +8293,12 @@ function updateInventoryUi() {
   if (attackPotionCount) attackPotionCount.textContent = `${player.attackPotions}`;
   if (magicPotionCount) magicPotionCount.textContent = `${player.magicPotions}`;
   if (goldSlimeBubbleCount) goldSlimeBubbleCount.textContent = `${player.goldSlimeBubbles}`;
+  if (greenJellyCubeCount) greenJellyCubeCount.textContent = `${player.greenJellyCubes}`;
   if (arrowCount) arrowCount.textContent = `${player.arrows}`;
   if (woodFloorCount) woodFloorCount.textContent = `${player.woodFloors}`;
   if (woodWallCount) woodWallCount.textContent = `${player.woodWalls}`;
   if (woodDoorCount) woodDoorCount.textContent = `${player.woodDoors}`;
+  if (torchCount) torchCount.textContent = `${player.torches}`;
   if (arrowHudCount) arrowHudCount.textContent = `${Math.max(0, Math.floor(Number(player.arrows) || 0))}`;
   if (arrowHud) {
     arrowHud.style.display = equippedWeapon() === "bow" ? "flex" : "none";
@@ -8832,10 +8778,12 @@ function buildLocalCharacterSave() {
       attackPotions: Math.max(0, Math.floor(Number(player.attackPotions) || 0)),
       magicPotions: Math.max(0, Math.floor(Number(player.magicPotions) || 0)),
       goldSlimeBubbles: Math.max(0, Math.floor(Number(player.goldSlimeBubbles) || 0)),
+      greenJellyCubes: Math.max(0, Math.floor(Number(player.greenJellyCubes) || 0)),
       arrows: Math.max(0, Math.floor(Number(player.arrows) || 0)),
       woodFloors: Math.max(0, Math.floor(Number(player.woodFloors) || 0)),
       woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0)),
-      woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0))
+      woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0)),
+      torches: Math.max(0, Math.floor(Number(player.torches) || 0))
     },
 
     items: validSavedItemIds(player.items),
@@ -8971,10 +8919,12 @@ function applyLocalCharacterSave(save) {
   player.attackPotionCooldownUntil = saveNow + Math.min(BUFF_POTION_COOLDOWN_MS, clampLocalSaveInteger(save.buffs?.attackPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   player.magicPotionCooldownUntil = saveNow + Math.min(BUFF_POTION_COOLDOWN_MS, clampLocalSaveInteger(save.buffs?.magicPotionCooldownRemainingMs, 0, BUFF_POTION_COOLDOWN_MS, 0));
   player.goldSlimeBubbles = clampLocalSaveInteger(save.resources?.goldSlimeBubbles, 0, 999999, 0);
+  player.greenJellyCubes = clampLocalSaveInteger(save.resources?.greenJellyCubes, 0, 999999, 0);
   player.arrows = clampLocalSaveInteger(save.resources?.arrows, 0, 999999, 0);
   player.woodFloors = clampLocalSaveInteger(save.resources?.woodFloors, 0, 999999, 0);
   player.woodWalls = clampLocalSaveInteger(save.resources?.woodWalls, 0, 999999, 0);
   player.woodDoors = clampLocalSaveInteger(save.resources?.woodDoors, 0, 999999, 0);
+  player.torches = clampLocalSaveInteger(save.resources?.torches, 0, 999999, 0);
 
   player.items = validSavedItemIds(save.items);
   player.shopPurchases = Array.from(new Set(
@@ -9129,10 +9079,12 @@ function persistentServerBootstrapPayload() {
       attackPotions: player.attackPotions,
       magicPotions: player.magicPotions,
       goldSlimeBubbles: player.goldSlimeBubbles,
+      greenJellyCubes: player.greenJellyCubes,
       arrows: player.arrows,
       woodFloors: player.woodFloors,
       woodWalls: player.woodWalls,
-      woodDoors: player.woodDoors
+      woodDoors: player.woodDoors,
+      torches: player.torches
     },
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
@@ -10067,8 +10019,14 @@ const DOOR_ADJACENT_DISTANCE = 10;
 const DOOR_PASSAGE_DISTANCE = 14;
 const DOOR_PASSAGE_MS = 420;
 const HOUSE_FOREGROUND_ALPHA = 0.34;
+const HOUSE_FOREGROUND_DOOR_ALPHA = 0.52;
+const STRUCTURE_COVER_DOOR_ALPHA = 0.72;
 const ROOF_PLAYER_COVER_ALPHA = 0.58;
 const ROOF_OVERHANG = 3;
+const STRUCTURE_EDGE_DARK = "#6b3b22";
+const STRUCTURE_EDGE_LIGHT = "#d59a6b";
+const ROOF_EDGE_DARK = "#4d1f00";
+const ROOF_EAVE_LIGHT = "#a65012";
 let localDoorPassageId = null;
 let localDoorPassageUntil = 0;
 let roofRegionCache = { mapId: null, revision: -1, regions: [] };
@@ -10110,10 +10068,64 @@ function applyStructureRemoved(mapId, structureId) {
 function drawWoodFloor(structure, camX, camY, alpha = 1) {
   const x = Math.round(structure.x - camX - 8);
   const y = Math.round(structure.y - camY - 8);
-  ctx.save(); ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#8f6338"; ctx.fillRect(x, y, 16, 16);
-  ctx.fillStyle = "#b27b45"; ctx.fillRect(x + 1, y + 1, 14, 3); ctx.fillRect(x + 1, y + 9, 14, 2);
-  ctx.fillStyle = "#5e4127"; ctx.fillRect(x, y + 7, 16, 1); ctx.fillRect(x + 5, y, 1, 7); ctx.fillRect(x + 11, y + 8, 1, 8);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(woodFloorStructureImage, x, y, 16, 16);
+  ctx.restore();
+}
+
+function torchDisplayWorldPosition(structure) {
+  const x = Number(structure?.x);
+  const y = Number(structure?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { x: 0, y: 0 };
+
+  if (structure?.mountType === "wall") {
+    // Wall structures store their collision-boundary center. Raise the visible
+    // torch onto the painted wall face while keeping its support relationship
+    // exact and deterministic on every client.
+    return { x, y: y - 8 };
+  }
+  return { x, y };
+}
+
+function torchLightWorldPosition(structure) {
+  const display = torchDisplayWorldPosition(structure);
+  return { x: display.x, y: display.y - 9 };
+}
+
+function torchVisibilityWorldPosition(structure) {
+  const light = torchLightWorldPosition(structure);
+  if (structure?.mountType !== "wall") return light;
+
+  const x = Number(structure.x);
+  const y = Number(structure.y);
+  if (structure.mountAxis === "vertical") {
+    return {
+      x: x + (structure.mountSide === "west" ? -1.5 : 1.5),
+      y: light.y
+    };
+  }
+  return {
+    x: light.x,
+    y: y + (structure.mountSide === "north" ? -1.5 : 1.5)
+  };
+}
+
+function drawPlacedTorch(structure, camX, camY, alpha = 1) {
+  const display = torchDisplayWorldPosition(structure);
+  const x = Math.round(display.x - camX - 8);
+  const y = Math.round(display.y - camY - 15);
+  const flicker = Math.sin(worldTime * 13.7 + Number(structure.x) * 0.031 + Number(structure.y) * 0.017);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(torchImage, x, y, 16, 16);
+  if (alpha > 0.5 && flicker > 0.35) {
+    ctx.globalAlpha = alpha * 0.72;
+    ctx.fillStyle = "#d9ff9e";
+    ctx.fillRect(x + (flicker > 0.75 ? 10 : 5), y + 2, 1, 1);
+  }
   ctx.restore();
 }
 
@@ -10122,6 +10134,102 @@ function wallCollisionRect(structure) {
     return { x: Number(structure.x) - 1, y: Number(structure.y) - 8, width: 2, height: 16 };
   }
   return { x: Number(structure.x) - 8, y: Number(structure.y) - 1, width: 16, height: 2 };
+}
+
+function structureEdgeNeighbor(structure, direction) {
+  if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure?.kind)) return false;
+  const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
+  const offsetX = axis === "horizontal" ? direction * BUILD_GRID_SIZE : 0;
+  const offsetY = axis === "vertical" ? direction * BUILD_GRID_SIZE : 0;
+  return currentMapStructures().some(other =>
+    other !== structure &&
+    BUILD_EDGE_STRUCTURE_KINDS.includes(other?.kind) &&
+    (other?.axis === "vertical" ? "vertical" : "horizontal") === axis &&
+    Math.abs(Number(other.x) - (Number(structure.x) + offsetX)) < 1 &&
+    Math.abs(Number(other.y) - (Number(structure.y) + offsetY)) < 1
+  );
+}
+
+function segmentRectIntersectionT(x1, y1, x2, y2, rect, padding = 0) {
+  const minX = Number(rect.x) - padding;
+  const maxX = Number(rect.x) + Number(rect.width) + padding;
+  const minY = Number(rect.y) - padding;
+  const maxY = Number(rect.y) + Number(rect.height) + padding;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  let tMin = 0;
+  let tMax = 1;
+
+  for (const [start, delta, low, high] of [
+    [x1, dx, minX, maxX],
+    [y1, dy, minY, maxY]
+  ]) {
+    if (Math.abs(delta) < 0.000001) {
+      if (start < low || start > high) return null;
+      continue;
+    }
+    let a = (low - start) / delta;
+    let b = (high - start) / delta;
+    if (a > b) [a, b] = [b, a];
+    tMin = Math.max(tMin, a);
+    tMax = Math.min(tMax, b);
+    if (tMin > tMax) return null;
+  }
+
+  return tMin >= 0 && tMin <= 1 ? tMin : null;
+}
+
+function structureWallImpactPoint(fromX, fromY, toX, toY, padding = 0) {
+  let best = null;
+  for (const structure of currentMapStructures()) {
+    const blocks = structure?.kind === "woodWall" ||
+      (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure));
+    if (!blocks) continue;
+    const t = segmentRectIntersectionT(
+      Number(fromX),
+      Number(fromY),
+      Number(toX),
+      Number(toY),
+      wallCollisionRect(structure),
+      padding
+    );
+    if (t === null || t <= 0.001 || t >= 0.999) continue;
+    if (!best || t < best.t) best = { t, structure };
+  }
+
+  if (!best) return null;
+  const safeT = Math.max(0, best.t - 0.01);
+  return {
+    x: Number(fromX) + (Number(toX) - Number(fromX)) * safeT,
+    y: Number(fromY) + (Number(toY) - Number(fromY)) * safeT,
+    structure: best.structure
+  };
+}
+
+function structureLineOfEffectClear(fromX, fromY, toX, toY, padding = 0) {
+  return !structureWallImpactPoint(fromX, fromY, toX, toY, padding);
+}
+
+function applyHeldItemStructureVisibilityClip(camX, camY) {
+  // v406: every local held-item layer (arm, weapon, bow, string, torch) now
+  // uses one visibility mask derived from the player's authoritative collision
+  // position. This avoids pose-specific probes that could put the clipping
+  // origin on the wrong side of a wall while still clipping any pixels that
+  // genuinely extend across a closed wall/door boundary.
+  const sourceX = Number(player?.x);
+  const sourceY = Number(player?.y);
+  if (![sourceX, sourceY].every(Number.isFinite)) return;
+
+  const polygon = torchLightVisibilityPolygon(sourceX, sourceY, 42, "held-item-local");
+  if (!polygon?.length) return;
+
+  ctx.beginPath();
+  ctx.moveTo(polygon[0].x - camX, polygon[0].y - camY);
+  for (let index = 1; index < polygon.length; index += 1) {
+    ctx.lineTo(polygon[index].x - camX, polygon[index].y - camY);
+  }
+  ctx.closePath();
+  ctx.clip();
 }
 
 function verticalWallHasUpperHorizontalJoin(structure) {
@@ -10176,10 +10284,11 @@ function structureFadeAlpha(structure, alpha = 1) {
     // south/foreground wall is softened. Back and side walls stay fully solid
     // so the interior keeps a stable room-like silhouette.
     return structureIsForegroundRoofBoundary(structure, interiorRegion)
-      ? alpha * HOUSE_FOREGROUND_ALPHA
+      ? alpha * (structure?.kind === "woodDoor" ? HOUSE_FOREGROUND_DOOR_ALPHA : HOUSE_FOREGROUND_ALPHA)
       : alpha;
   }
-  return structureVisuallyCoversLocalPlayer(structure) ? alpha * 0.58 : alpha;
+  if (!structureVisuallyCoversLocalPlayer(structure)) return alpha;
+  return alpha * (structure?.kind === "woodDoor" ? STRUCTURE_COVER_DOOR_ALPHA : 0.58);
 }
 
 function doorPerpendicularDistance(structure, x, y) {
@@ -10196,7 +10305,18 @@ function doorTangentialDistance(structure, x, y) {
 
 function localDoorPassageActive(structure) {
   if (!structure?.id || localDoorPassageId !== structure.id) return false;
-  if (performance.now() > localDoorPassageUntil) return false;
+  const now = performance.now();
+  const insideDoorway =
+    doorPerpendicularDistance(structure, player.x, player.y) <= 5.5 &&
+    doorTangentialDistance(structure, player.x, player.y) <= 12;
+
+  if (now > localDoorPassageUntil) {
+    // v398: keep a door visually/collision-open while the local player is
+    // physically occupying the doorway so it cannot close onto the player.
+    if (!insideDoorway) return false;
+    localDoorPassageUntil = now + DOOR_PASSAGE_MS;
+  }
+
   return doorPerpendicularDistance(structure, player.x, player.y) <= DOOR_PASSAGE_DISTANCE;
 }
 
@@ -10224,7 +10344,20 @@ function doorAllowsLocalPlayerStep(structure, fromX, fromY, toX, toY, playerRadi
   return true;
 }
 
+function localPlayerApproachOpensDoor(structure) {
+  if (player?.hp <= 0) return false;
+  return (
+    doorPerpendicularDistance(structure, player.x, player.y) <= DOOR_PASSAGE_DISTANCE &&
+    doorTangentialDistance(structure, player.x, player.y) <= 12
+  );
+}
+
 function doorVisuallyOpen(structure) {
+  // v400: mirror the server's v399 shared approach-open rule exactly enough
+  // that a doorway never becomes passable to enemies while still drawn shut
+  // on the approaching player's client. The older passage state remains as
+  // the hold-open mechanism while the player is actually traversing it.
+  if (localPlayerApproachOpensDoor(structure)) return true;
   if (localDoorPassageActive(structure)) return true;
 
   // Remote door state is not networked. A tiny near-plane heuristic keeps the
@@ -10244,51 +10377,48 @@ function doorVisuallyOpen(structure) {
 }
 
 function drawWoodWall(structure, camX, camY, alpha = 1) {
-  // v385: walls remain thin floor-edge colliders; corner projection is visual only.
-  // Horizontal walls rise 32px above their edge. A vertical wall that meets a
-  // horizontal wall at its upper endpoint gains one extra 16px visual extension
-  // so the side wall reaches the back wall's top without adding another collider.
   const sx = Math.round(Number(structure.x) - camX);
   const sy = Math.round(Number(structure.y) - camY);
   const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
 
   ctx.save();
   ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+  ctx.imageSmoothingEnabled = false;
 
   if (axis === "horizontal") {
     const left = sx - 8;
     const top = sy - 31;
-    ctx.fillStyle = "#4f321d";
-    ctx.fillRect(left, top, 16, 32);
-    ctx.fillStyle = "#8d5b32";
-    ctx.fillRect(left + 1, top + 1, 14, 30);
-    ctx.fillStyle = "#b67a45";
-    ctx.fillRect(left + 2, top + 2, 12, 5);
-    ctx.fillRect(left + 2, top + 10, 12, 5);
-    ctx.fillRect(left + 2, top + 18, 12, 5);
-    ctx.fillRect(left + 2, top + 26, 12, 4);
-    ctx.fillStyle = "#654023";
-    ctx.fillRect(left + 4, top + 1, 1, 30);
-    ctx.fillRect(left + 11, top + 1, 1, 30);
-    // Strong one-pixel base line communicates the exact collision boundary.
-    ctx.fillStyle = "#3e2818";
+    ctx.drawImage(woodWallStructureImage, left, top, 16, 32);
+
+    // One continuous silhouette line across connected wall runs. End caps are
+    // only drawn at the true ends so adjacent 16px pieces do not look boxed-in.
+    ctx.fillStyle = STRUCTURE_EDGE_DARK;
+    ctx.fillRect(left, top, 16, 1);
     ctx.fillRect(left, sy, 16, 1);
+    if (!structureEdgeNeighbor(structure, -1)) ctx.fillRect(left, top, 1, 32);
+    if (!structureEdgeNeighbor(structure, 1)) ctx.fillRect(left + 15, top, 1, 32);
+
+    ctx.fillStyle = STRUCTURE_EDGE_LIGHT;
+    ctx.globalAlpha *= 0.42;
+    ctx.fillRect(left + 1, top + 1, 14, 1);
   } else {
-    // Side walls normally span their 16px edge plus the projected 16px wall rise.
-    // At an upper/back corner, the extra 16px closes the projection gap shown in
-    // the v385 corner diagram while leaving collision and placement unchanged.
     const cornerExtension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
     const height = 32 + cornerExtension;
     const left = sx - 2;
     const top = sy + 9 - height;
-    ctx.fillStyle = "#4f321d";
-    ctx.fillRect(left, top, 4, height);
-    ctx.fillStyle = "#956039";
-    ctx.fillRect(left + 1, top + 1, 2, height - 2);
-    ctx.fillStyle = "#bd8150";
-    for (let y = top + 3; y < top + height - 2; y += 7) ctx.fillRect(left + 1, y, 2, 1);
-    ctx.fillStyle = "#3e2818";
-    ctx.fillRect(sx, sy - 8, 1, 16);
+    if (cornerExtension) {
+      ctx.drawImage(woodWallStructureImage, 0, 0, 16, 16, left, top, 4, 16);
+      ctx.drawImage(woodWallStructureImage, 0, 0, 16, 32, left, top + 16, 4, 32);
+    } else {
+      ctx.drawImage(woodWallStructureImage, left, top, 4, 32);
+    }
+
+    ctx.fillStyle = STRUCTURE_EDGE_DARK;
+    ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+    ctx.fillRect(left, top, 1, height);
+    ctx.fillRect(left + 3, top, 1, height);
+    if (!structureEdgeNeighbor(structure, -1)) ctx.fillRect(left, top, 4, 1);
+    if (!structureEdgeNeighbor(structure, 1)) ctx.fillRect(left, top + height - 1, 4, 1);
   }
 
   ctx.restore();
@@ -10299,54 +10429,49 @@ function drawWoodDoor(structure, camX, camY, alpha = 1) {
   const sy = Math.round(Number(structure.y) - camY);
   const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
   const open = doorVisuallyOpen(structure);
+
   ctx.save();
   ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+  ctx.imageSmoothingEnabled = false;
 
   if (axis === "horizontal") {
+    const left = sx - 8;
     const top = sy - 31;
     if (open) {
-      // Open leaf tucks against the left jamb, leaving the 16px passage clear.
-      ctx.fillStyle = "#4f321d";
-      ctx.fillRect(sx - 8, top, 4, 32);
-      ctx.fillStyle = "#9f6638";
-      ctx.fillRect(sx - 7, top + 1, 2, 30);
-      ctx.fillStyle = "#d29a59";
-      ctx.fillRect(sx - 7, top + 16, 1, 1);
+      ctx.drawImage(woodDoorStructureImage, left, top, 4, 32);
+      ctx.fillStyle = STRUCTURE_EDGE_DARK;
+      ctx.fillRect(left, top, 1, 32);
+      ctx.fillRect(left + 3, top, 1, 32);
     } else {
-      ctx.fillStyle = "#4f321d";
-      ctx.fillRect(sx - 8, top, 16, 32);
-      ctx.fillStyle = "#9f6638";
-      ctx.fillRect(sx - 7, top + 1, 14, 30);
-      ctx.fillStyle = "#654023";
-      ctx.fillRect(sx - 1, top + 1, 1, 30);
-      ctx.fillRect(sx - 7, top + 10, 14, 1);
-      ctx.fillRect(sx - 7, top + 21, 14, 1);
-      ctx.fillStyle = "#d29a59";
-      ctx.fillRect(sx + 4, sy - 15, 1, 1);
+      ctx.drawImage(woodDoorStructureImage, left, top, 16, 32);
+      ctx.fillStyle = STRUCTURE_EDGE_DARK;
+      ctx.fillRect(left, top, 16, 1);
+      ctx.fillRect(left, sy, 16, 1);
+      ctx.fillRect(left, top, 1, 32);
+      ctx.fillRect(left + 15, top, 1, 32);
     }
-    ctx.fillStyle = "#3e2818";
-    if (!open) ctx.fillRect(sx - 8, sy, 16, 1);
   } else {
     const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
     const height = 32 + extension;
     const top = sy + 9 - height;
     if (open) {
-      // Open side-facing leaf folds northward from the upper jamb.
-      ctx.fillStyle = "#4f321d";
-      ctx.fillRect(sx - 8, sy - 8, 8, 3);
-      ctx.fillStyle = "#9f6638";
-      ctx.fillRect(sx - 7, sy - 7, 6, 1);
+      ctx.drawImage(woodDoorStructureImage, 0, 0, 16, 32, sx - 8, sy - 8, 8, 3);
+      ctx.fillStyle = STRUCTURE_EDGE_DARK;
+      ctx.fillRect(sx - 8, sy - 8, 8, 1);
+    } else if (extension) {
+      ctx.drawImage(woodDoorStructureImage, 0, 0, 16, 16, sx - 2, top, 4, 16);
+      ctx.drawImage(woodDoorStructureImage, 0, 0, 16, 32, sx - 2, top + 16, 4, 32);
+      ctx.fillStyle = STRUCTURE_EDGE_DARK;
+      ctx.fillRect(sx - 2, top, 1, height);
+      ctx.fillRect(sx + 1, top, 1, height);
     } else {
-      ctx.fillStyle = "#4f321d";
-      ctx.fillRect(sx - 2, top, 4, height);
-      ctx.fillStyle = "#9f6638";
-      ctx.fillRect(sx - 1, top + 1, 2, height - 2);
-      ctx.fillStyle = "#d29a59";
-      ctx.fillRect(sx, sy - 1, 1, 1);
-      ctx.fillStyle = "#3e2818";
-      ctx.fillRect(sx, sy - 8, 1, 16);
+      ctx.drawImage(woodDoorStructureImage, sx - 2, top, 4, 32);
+      ctx.fillStyle = STRUCTURE_EDGE_DARK;
+      ctx.fillRect(sx - 2, top, 1, 32);
+      ctx.fillRect(sx + 1, top, 1, 32);
     }
   }
+
   ctx.restore();
 }
 
@@ -10444,11 +10569,15 @@ function automaticRoofRegions() {
   return regions;
 }
 
+function pointInsideRoofRegion(region, worldX, worldY) {
+  return Boolean(region?.floors?.some(floor =>
+    Math.abs(Number(worldX) - Number(floor.x)) <= 8 &&
+    Math.abs(Number(worldY) - Number(floor.y)) <= 8
+  ));
+}
+
 function playerInsideRoofRegion(region) {
-  return region.floors.some(floor =>
-    Math.abs(Number(player.x) - Number(floor.x)) <= 8 &&
-    Math.abs(Number(player.y) - Number(floor.y)) <= 8
-  );
+  return pointInsideRoofRegion(region, player.x, player.y);
 }
 
 function roofRegionVisuallyCoversLocalPlayer(region) {
@@ -10476,55 +10605,76 @@ function roofRegionVisuallyCoversLocalPlayer(region) {
 function drawAutomaticStructureRoofs(camX, camY) {
   for (const region of automaticRoofRegions()) {
     const inside = playerInsideRoofRegion(region);
-    // Once the local player is inside a completed house, remove the roof
-    // entirely. The foreground wall still gives the room a readable facade.
     if (inside) continue;
     const alpha = roofRegionVisuallyCoversLocalPlayer(region)
       ? ROOF_PLAYER_COVER_ALPHA
       : 0.96;
     const floorKeys = region.floorKeys || new Set(region.floors.map(floor => structureCellKey(floor.x, floor.y)));
+
     ctx.save();
     ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = false;
 
     for (const floor of region.floors) {
       const fx = Number(floor.x);
       const fy = Number(floor.y);
       const x = Math.round(fx - camX - 8);
-      // The roof is projected upward over the wall rise. Exposed sides gain a
-      // small overhang so the thin wall-edge art cannot poke through around a
-      // completed house's roof perimeter.
       const y = Math.round(fy - camY - 40);
       const north = !floorKeys.has(structureCellKey(fx, fy - BUILD_GRID_SIZE));
       const south = !floorKeys.has(structureCellKey(fx, fy + BUILD_GRID_SIZE));
       const west = !floorKeys.has(structureCellKey(fx - BUILD_GRID_SIZE, fy));
       const east = !floorKeys.has(structureCellKey(fx + BUILD_GRID_SIZE, fy));
-      const leftOverhang = west ? ROOF_OVERHANG : 0;
-      const rightOverhang = east ? ROOF_OVERHANG : 0;
-      const topOverhang = north ? ROOF_OVERHANG : 0;
-      const bottomOverhang = south ? ROOF_OVERHANG : 0;
 
-      ctx.fillStyle = "#6a3f23";
-      ctx.fillRect(
-        x - leftOverhang,
-        y - topOverhang,
-        16 + leftOverhang + rightOverhang,
-        16 + topOverhang + bottomOverhang
-      );
-      ctx.fillStyle = "#a66a38";
-      ctx.fillRect(x + 1, y + 1, 14, 4);
-      ctx.fillRect(x + 1, y + 9, 14, 3);
-      ctx.fillStyle = "#4c2e1b";
-      ctx.fillRect(x, y + 7, 16, 1);
-      ctx.fillRect(x + 5, y, 1, 7);
-      ctx.fillRect(x + 11, y + 8, 1, 8);
+      // Keep the authored roof tile completely uniform. v396 only gives the
+      // *outer roof silhouette* dedicated edge/corner treatment.
+      if (north) {
+        ctx.drawImage(woodRoofStructureImage, 0, 0, 16, 1, x, y - ROOF_OVERHANG, 16, ROOF_OVERHANG);
+      }
+      if (south) {
+        ctx.drawImage(woodRoofStructureImage, 0, 15, 16, 1, x, y + 16, 16, ROOF_OVERHANG);
+      }
+      if (west) {
+        ctx.drawImage(woodRoofStructureImage, 0, 0, 1, 16, x - ROOF_OVERHANG, y, ROOF_OVERHANG, 16);
+      }
+      if (east) {
+        ctx.drawImage(woodRoofStructureImage, 15, 0, 1, 16, x + 16, y, ROOF_OVERHANG, 16);
+      }
+      if (north && west) {
+        ctx.drawImage(woodRoofStructureImage, 0, 0, 1, 1, x - ROOF_OVERHANG, y - ROOF_OVERHANG, ROOF_OVERHANG, ROOF_OVERHANG);
+      }
+      if (north && east) {
+        ctx.drawImage(woodRoofStructureImage, 15, 0, 1, 1, x + 16, y - ROOF_OVERHANG, ROOF_OVERHANG, ROOF_OVERHANG);
+      }
+      if (south && west) {
+        ctx.drawImage(woodRoofStructureImage, 0, 15, 1, 1, x - ROOF_OVERHANG, y + 16, ROOF_OVERHANG, ROOF_OVERHANG);
+      }
+      if (south && east) {
+        ctx.drawImage(woodRoofStructureImage, 15, 15, 1, 1, x + 16, y + 16, ROOF_OVERHANG, ROOF_OVERHANG);
+      }
 
-      // Outline the roof itself at the outside of the overhang, rather than
-      // exposing the underlying wall boundary line.
-      ctx.fillStyle = "#3c2517";
-      if (north) ctx.fillRect(x - leftOverhang, y - topOverhang, 16 + leftOverhang + rightOverhang, 1);
-      if (south) ctx.fillRect(x - leftOverhang, y + 15 + bottomOverhang, 16 + leftOverhang + rightOverhang, 1);
-      if (west) ctx.fillRect(x - leftOverhang, y - topOverhang, 1, 16 + topOverhang + bottomOverhang);
-      if (east) ctx.fillRect(x + 15 + rightOverhang, y - topOverhang, 1, 16 + topOverhang + bottomOverhang);
+      ctx.drawImage(woodRoofStructureImage, x, y, 16, 16);
+
+      const edgeLeft = x - (west ? ROOF_OVERHANG : 0);
+      const edgeRight = x + 16 + (east ? ROOF_OVERHANG : 0);
+      const edgeTop = y - (north ? ROOF_OVERHANG : 0);
+      const edgeBottom = y + 16 + (south ? ROOF_OVERHANG : 0);
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = ROOF_EDGE_DARK;
+      if (north) ctx.fillRect(edgeLeft, edgeTop, edgeRight - edgeLeft, 1);
+      if (west) ctx.fillRect(edgeLeft, edgeTop, 1, edgeBottom - edgeTop);
+      if (east) ctx.fillRect(edgeRight - 1, edgeTop, 1, edgeBottom - edgeTop);
+
+      if (south) {
+        // A stronger eave is the main depth cue: a thin warm lip followed by
+        // the dark lower edge keeps the roof distinct from the wall below.
+        ctx.fillStyle = ROOF_EAVE_LIGHT;
+        ctx.globalAlpha = alpha * 0.72;
+        ctx.fillRect(edgeLeft + 1, edgeBottom - 3, Math.max(1, edgeRight - edgeLeft - 2), 1);
+        ctx.fillStyle = ROOF_EDGE_DARK;
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(edgeLeft, edgeBottom - 2, edgeRight - edgeLeft, 2);
+      }
     }
 
     ctx.restore();
@@ -10537,6 +10687,13 @@ function wallDrawSortY(structure) {
 
 function addPlayerStructureDrawables(drawables, camX, camY) {
   for (const structure of currentMapStructures()) {
+    if (structure.kind === "torch") {
+      const sortY = structure.mountType === "wall"
+        ? Number(structure.y) + (structure.mountAxis === "vertical" ? 8.25 : 0.25)
+        : Number(structure.y);
+      addDrawable(drawables, sortY, () => drawPlacedTorch(structure, camX, camY));
+      continue;
+    }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
     addDrawable(drawables, wallDrawSortY(structure), () => {
       if (structure.kind === "woodDoor") drawWoodDoor(structure, camX, camY);
@@ -10562,6 +10719,16 @@ function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
 }
 
 function pickaxeStructurePointerBounds(structure) {
+  if (structure?.kind === "torch") {
+    const display = torchDisplayWorldPosition(structure);
+    return {
+      left: display.x - 8,
+      top: display.y - 16,
+      right: display.x + 8,
+      bottom: display.y + 2
+    };
+  }
+
   if (structure?.kind === "woodFloor") {
     return {
       left: Number(structure.x) - 8,
@@ -10612,7 +10779,7 @@ function playerStructurePickaxeTarget() {
   let bestPriority = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || !["woodFloor", "woodWall", "woodDoor"].includes(structure.kind)) continue;
+    if (!structure?.id || !["woodFloor", "woodWall", "woodDoor", "torch"].includes(structure.kind)) continue;
 
     // Player position is only a reach gate. It must never decide which placed
     // piece wins when several structures are in range; the cursor does that.
@@ -10629,7 +10796,11 @@ function playerStructurePickaxeTarget() {
     // If the pointer overlaps a wall/door facade and the floor behind it,
     // prefer the visible edge structure. Otherwise choose whichever structure
     // is geometrically closest to the cursor, independent of player distance.
-    const priority = BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind) ? 0 : 1;
+    const priority = structure.kind === "torch"
+      ? 0
+      : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)
+        ? 1
+        : 2;
     if (
       pointerDistance < bestPointerDistance - 0.001 ||
       (
@@ -10662,6 +10833,14 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
     ctx.fillRect(left, top + 15, 16, 1);
     ctx.fillRect(left, top, 1, 16);
     ctx.fillRect(left + 15, top, 1, 16);
+  } else if (structure.kind === "torch") {
+    const display = torchDisplayWorldPosition(structure);
+    const left = Math.round(display.x - camX - 8);
+    const top = Math.round(display.y - camY - 16);
+    ctx.fillRect(left, top, 16, 1);
+    ctx.fillRect(left, top + 17, 16, 1);
+    ctx.fillRect(left, top, 1, 18);
+    ctx.fillRect(left + 15, top, 1, 18);
   } else if (structure.axis === "vertical") {
     const sx = Math.round(Number(structure.x) - camX);
     const sy = Math.round(Number(structure.y) - camY);
@@ -10703,11 +10882,12 @@ function buildPieceCount(kind) {
   if (kind === "woodFloor") return Math.max(0, Number(player.woodFloors) || 0);
   if (kind === "woodWall") return Math.max(0, Number(player.woodWalls) || 0);
   if (kind === "woodDoor") return Math.max(0, Number(player.woodDoors) || 0);
+  if (kind === "torch") return Math.max(0, Number(player.torches) || 0);
   return 0;
 }
 
 function beginBuildPlacement(kind) {
-  if (!["woodFloor", "woodWall", "woodDoor"].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  if (!["woodFloor", "woodWall", "woodDoor", "torch"].includes(kind) || buildPieceCount(kind) <= 0) return false;
   selectedBuildPiece = kind;
   // Selecting a build piece from the hotbar/mouse wheel must not clear held
   // movement input. Only close the inventory when it is actually open.
@@ -10775,21 +10955,43 @@ function floorExistsAcrossBuildEdge(floorX, floorY, edge) {
 
 function doorCandidateHasFlankingWalls(candidate) {
   if (!candidate) return false;
-  const points = candidate.axis === "horizontal"
+  const structures = currentMapStructures();
+  const endpoints = candidate.axis === "horizontal"
     ? [
-        { x: candidate.x - BUILD_GRID_SIZE, y: candidate.y },
-        { x: candidate.x + BUILD_GRID_SIZE, y: candidate.y }
+        { x: candidate.x - 8, y: candidate.y, side: -1 },
+        { x: candidate.x + 8, y: candidate.y, side: 1 }
       ]
     : [
-        { x: candidate.x, y: candidate.y - BUILD_GRID_SIZE },
-        { x: candidate.x, y: candidate.y + BUILD_GRID_SIZE }
+        { x: candidate.x, y: candidate.y - 8, side: -1 },
+        { x: candidate.x, y: candidate.y + 8, side: 1 }
       ];
-  return points.every(point => currentMapStructures().some(structure =>
-    structure?.kind === "woodWall" &&
-    structure.axis === candidate.axis &&
-    Math.abs(Number(structure.x) - Number(point.x)) < 1 &&
-    Math.abs(Number(structure.y) - Number(point.y)) < 1
-  ));
+
+  const endpointHasWallSupport = endpoint => structures.some(structure => {
+    if (structure?.kind !== "woodWall") return false;
+    const axis = structure.axis === "vertical" ? "vertical" : "horizontal";
+
+    if (axis === candidate.axis) {
+      const expectedX = candidate.axis === "horizontal"
+        ? candidate.x + endpoint.side * BUILD_GRID_SIZE
+        : candidate.x;
+      const expectedY = candidate.axis === "vertical"
+        ? candidate.y + endpoint.side * BUILD_GRID_SIZE
+        : candidate.y;
+      return Math.abs(Number(structure.x) - expectedX) < 1 &&
+        Math.abs(Number(structure.y) - expectedY) < 1;
+    }
+
+    // A rotated wall that terminates at the door endpoint counts as the
+    // required flank, allowing doors immediately beside exterior corners.
+    if (candidate.axis === "horizontal") {
+      return Math.abs(Number(structure.x) - endpoint.x) < 1 &&
+        Math.abs(Math.abs(Number(structure.y) - endpoint.y) - 8) < 1;
+    }
+    return Math.abs(Number(structure.y) - endpoint.y) < 1 &&
+      Math.abs(Math.abs(Number(structure.x) - endpoint.x) - 8) < 1;
+  });
+
+  return endpoints.every(endpointHasWallSupport);
 }
 
 function rawWallPlacementCandidate(worldX, worldY) {
@@ -10864,6 +11066,61 @@ function buildPlacementWithinRange(x, y) {
   return Math.hypot(Number(x) - Number(player.x), Number(y) - Number(player.y)) <= BUILD_PLACE_RANGE;
 }
 
+function torchAttachedToSupport(supportId) {
+  return Boolean(supportId) && currentMapStructures().some(structure =>
+    structure?.kind === "torch" && structure?.supportId === supportId
+  );
+}
+
+function torchWallSupportAtWorldPoint(worldX, worldY) {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "woodWall") continue;
+    const distance = pointDistanceToRect(worldX, worldY, pickaxeStructurePointerBounds(structure));
+    if (distance > 2.5 || distance >= bestDistance) continue;
+    best = structure;
+    bestDistance = distance;
+  }
+  return best;
+}
+
+function torchPlacementCandidate(worldX, worldY) {
+  const wall = torchWallSupportAtWorldPoint(worldX, worldY);
+  if (wall) {
+    return {
+      x: Number(wall.x),
+      y: Number(wall.y),
+      supportId: wall.id,
+      mountType: "wall",
+      mountAxis: wall.axis === "vertical" ? "vertical" : "horizontal",
+      mountSide: wall.axis === "vertical"
+        ? (Number(player.x) < Number(wall.x) ? "west" : "east")
+        : (Number(player.y) < Number(wall.y) ? "north" : "south"),
+      valid: !torchAttachedToSupport(wall.id)
+    };
+  }
+
+  const floor = floorAtWorldPoint(worldX, worldY);
+  if (floor) {
+    return {
+      x: Number(floor.x),
+      y: Number(floor.y),
+      supportId: floor.id,
+      mountType: "floor",
+      valid: !torchAttachedToSupport(floor.id)
+    };
+  }
+
+  return {
+    x: Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE,
+    y: Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE,
+    supportId: null,
+    mountType: "ground",
+    valid: true
+  };
+}
+
 function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
   if (!selectedBuildPiece) return false;
   if (buildPieceCount(selectedBuildPiece) <= 0) {
@@ -10876,6 +11133,15 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
     if (!candidate || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
     if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
       onlineClient.requestStructurePlacement(selectedBuildPiece, candidate.floorX, candidate.floorY, candidate.edge);
+    }
+    return true;
+  }
+
+  if (selectedBuildPiece === "torch") {
+    const candidate = torchPlacementCandidate(worldX, worldY);
+    if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement("torch", candidate.x, candidate.y, null, candidate.supportId);
     }
     return true;
   }
@@ -10919,6 +11185,27 @@ function drawBuildPlacementPreview(camX, camY) {
     const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };
     if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, inRange ? 0.42 : 0.18);
     else drawWoodWall(preview, camX, camY, inRange ? 0.42 : 0.18);
+    return;
+  }
+
+  if (selectedBuildPiece === "torch") {
+    const candidate = torchPlacementCandidate(worldX, worldY);
+    const inRange = buildPlacementWithinRange(candidate.x, candidate.y);
+    const valid = candidate.valid && inRange;
+    drawPlacedTorch(
+      {
+        kind: "torch",
+        x: candidate.x,
+        y: candidate.y,
+        mountType: candidate.mountType,
+        mountAxis: candidate.mountAxis,
+        mountSide: candidate.mountSide
+      },
+      camX,
+      camY,
+      valid ? 0.72 : 0.24
+    );
+    if (!valid) drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, false);
     return;
   }
 
@@ -11003,10 +11290,28 @@ function worldClockPhase(minutes = currentWorldClockMinutes()) {
 
 function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
   const hour = minutes / 60;
-  const maxNightAlpha = 0.42;
-  if (hour >= 20 || hour < 5) return maxNightAlpha;
-  if (hour >= 5 && hour < 7) return maxNightAlpha * (1 - (hour - 5) / 2);
-  if (hour >= 18 && hour < 20) return maxNightAlpha * ((hour - 18) / 2);
+
+  // v401: nights are intentionally dark enough that portable/placeable light
+  // matters. Darkness ramps up through the evening, peaks around midnight,
+  // then slowly eases before the existing 05:00 dawn.
+  const duskNightAlpha = 0.54;
+  const midnightAlpha = 0.82;
+  const preDawnAlpha = 0.56;
+
+  if (hour >= 20) {
+    const t = Math.max(0, Math.min(1, (hour - 20) / 4));
+    return duskNightAlpha + (midnightAlpha - duskNightAlpha) * t;
+  }
+  if (hour < 5) {
+    const t = Math.max(0, Math.min(1, hour / 5));
+    return midnightAlpha + (preDawnAlpha - midnightAlpha) * t;
+  }
+  if (hour < 7) {
+    return preDawnAlpha * (1 - (hour - 5) / 2);
+  }
+  if (hour >= 18 && hour < 20) {
+    return duskNightAlpha * ((hour - 18) / 2);
+  }
   return 0;
 }
 
@@ -11030,13 +11335,242 @@ function updateWorldClockHud() {
   hud.setAttribute("aria-label", `World time ${formatWorldClock(minutes)}, ${phase.toLowerCase()}`);
 }
 
+let worldLightingCanvas = null;
+let worldLightingContext = null;
+
+function ensureWorldLightingBuffer() {
+  if (!worldLightingCanvas) {
+    worldLightingCanvas = document.createElement("canvas");
+    worldLightingContext = worldLightingCanvas.getContext("2d");
+  }
+  if (worldLightingCanvas.width !== VIEW_W || worldLightingCanvas.height !== VIEW_H) {
+    worldLightingCanvas.width = VIEW_W;
+    worldLightingCanvas.height = VIEW_H;
+  }
+  return worldLightingContext;
+}
+
+const TORCH_LIGHT_RAY_COUNT = 64;
+const TORCH_LIGHT_RAY_EPSILON = 0.0008;
+const torchLightVisibilityCache = new Map();
+
+function torchLightBlockingSegments(sourceX, sourceY, radius) {
+  const segments = [];
+  const maxDistance = radius + 18;
+  for (const structure of currentMapStructures()) {
+    const blocks = structure?.kind === "woodWall" ||
+      (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure));
+    if (!blocks) continue;
+
+    const x = Number(structure.x);
+    const y = Number(structure.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (Math.hypot(x - sourceX, y - sourceY) > maxDistance) continue;
+
+    if (structure.axis === "vertical") {
+      segments.push({
+        id: structure.id,
+        x1: x,
+        y1: y - 8,
+        x2: x,
+        y2: y + 8
+      });
+    } else {
+      segments.push({
+        id: structure.id,
+        x1: x - 8,
+        y1: y,
+        x2: x + 8,
+        y2: y
+      });
+    }
+  }
+  return segments;
+}
+
+function raySegmentIntersectionDistance(originX, originY, rayX, rayY, segment) {
+  const segX = segment.x2 - segment.x1;
+  const segY = segment.y2 - segment.y1;
+  const cross = rayX * segY - rayY * segX;
+  if (Math.abs(cross) < 0.000001) return null;
+
+  const qx = segment.x1 - originX;
+  const qy = segment.y1 - originY;
+  const t = (qx * segY - qy * segX) / cross;
+  const u = (qx * rayY - qy * rayX) / cross;
+  if (t < 0.08 || u < -0.0001 || u > 1.0001) return null;
+  return t;
+}
+
+function torchLightVisibilityPolygon(sourceX, sourceY, radius, cacheKey = null) {
+  const blockers = torchLightBlockingSegments(sourceX, sourceY, radius);
+  const signature = `${currentMapId}:${placedStructureRevision}:${blockers.map(segment => segment.id).sort().join(",")}`;
+
+  if (cacheKey) {
+    const cached = torchLightVisibilityCache.get(cacheKey);
+    if (
+      cached?.signature === signature &&
+      Math.abs(cached.sourceX - sourceX) < 0.01 &&
+      Math.abs(cached.sourceY - sourceY) < 0.01 &&
+      Math.abs(cached.radius - radius) < 0.01
+    ) return cached.points;
+  }
+
+  const angles = [];
+  for (let index = 0; index < TORCH_LIGHT_RAY_COUNT; index += 1) {
+    angles.push(index / TORCH_LIGHT_RAY_COUNT * Math.PI * 2 - Math.PI);
+  }
+  for (const segment of blockers) {
+    for (const [x, y] of [[segment.x1, segment.y1], [segment.x2, segment.y2]]) {
+      const angle = Math.atan2(y - sourceY, x - sourceX);
+      angles.push(angle - TORCH_LIGHT_RAY_EPSILON, angle, angle + TORCH_LIGHT_RAY_EPSILON);
+    }
+  }
+  angles.sort((a, b) => a - b);
+
+  const points = angles.map(angle => {
+    const rayX = Math.cos(angle);
+    const rayY = Math.sin(angle);
+    let distance = radius;
+    for (const blocker of blockers) {
+      const hit = raySegmentIntersectionDistance(sourceX, sourceY, rayX, rayY, blocker);
+      if (hit !== null && hit < distance) distance = hit;
+    }
+    return {
+      x: sourceX + rayX * distance,
+      y: sourceY + rayY * distance
+    };
+  });
+
+  if (cacheKey) {
+    if (torchLightVisibilityCache.size > 192) torchLightVisibilityCache.clear();
+    torchLightVisibilityCache.set(cacheKey, {
+      signature,
+      sourceX,
+      sourceY,
+      radius,
+      points
+    });
+  }
+  return points;
+}
+
+function carveTorchLight(
+  bufferCtx,
+  worldX,
+  worldY,
+  radius,
+  seed = 0,
+  cacheKey = null,
+  visibilityOriginX = worldX,
+  visibilityOriginY = worldY
+) {
+  if (!bufferCtx || !Number.isFinite(worldX) || !Number.isFinite(worldY)) return;
+  if (!Number.isFinite(visibilityOriginX) || !Number.isFinite(visibilityOriginY)) return;
+  const flicker =
+    Math.sin(worldTime * 12.7 + seed) * 2.2 +
+    Math.sin(worldTime * 19.3 + seed * 0.37) * 1.2;
+  const lightRadius = Math.max(34, radius + flicker);
+  const visibilityRadius = radius + 6;
+  const polygon = torchLightVisibilityPolygon(
+    visibilityOriginX,
+    visibilityOriginY,
+    visibilityRadius,
+    cacheKey
+  );
+  if (!polygon.length) return;
+
+  const screenX = worldX - currentCamX;
+  const screenY = worldY - currentCamY;
+  const gradient = bufferCtx.createRadialGradient(
+    screenX,
+    screenY,
+    0,
+    screenX,
+    screenY,
+    lightRadius
+  );
+  gradient.addColorStop(0, "rgba(0,0,0,0.98)");
+  gradient.addColorStop(0.24, "rgba(0,0,0,0.94)");
+  gradient.addColorStop(0.62, "rgba(0,0,0,0.58)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  bufferCtx.moveTo(polygon[0].x - currentCamX, polygon[0].y - currentCamY);
+  for (let index = 1; index < polygon.length; index += 1) {
+    bufferCtx.lineTo(polygon[index].x - currentCamX, polygon[index].y - currentCamY);
+  }
+  bufferCtx.closePath();
+  bufferCtx.clip();
+  bufferCtx.globalCompositeOperation = "destination-out";
+  bufferCtx.fillStyle = gradient;
+  bufferCtx.fillRect(
+    screenX - lightRadius,
+    screenY - lightRadius,
+    lightRadius * 2,
+    lightRadius * 2
+  );
+  bufferCtx.restore();
+
+}
+
 function drawWorldLightingOverlay() {
-  const alpha = worldClockLightingAlpha();
+  const minutes = currentWorldClockMinutes();
+  const alpha = worldClockLightingAlpha(minutes);
+  // v406: remove the experimental house-only darkness layer. The world clock
+  // owns ambient darkness again, while real light sources provide contrast.
   if (alpha <= 0.001) return;
+
+  const bufferCtx = ensureWorldLightingBuffer();
+  bufferCtx.clearRect(0, 0, VIEW_W, VIEW_H);
+  bufferCtx.globalCompositeOperation = "source-over";
+  bufferCtx.globalAlpha = alpha;
+  bufferCtx.fillStyle = "#101827";
+  bufferCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+  bufferCtx.globalAlpha = 1;
+
+  // Placed torches are ordinary change-only structures, so lighting adds no
+  // network heartbeat. Each client derives the soft light locally from the
+  // structure snapshot it already has.
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "torch") continue;
+    const light = torchLightWorldPosition(structure);
+    const visibilityOrigin = torchVisibilityWorldPosition(structure);
+    carveTorchLight(
+      bufferCtx,
+      light.x,
+      light.y,
+      82,
+      Number(structure.x) * 0.021 + Number(structure.y) * 0.013,
+      `placed:${structure.id}`,
+      visibilityOrigin.x,
+      visibilityOrigin.y
+    );
+  }
+
+  // Selecting a torch keeps it in hand while the same build cursor remains
+  // available for placement. Keep the logical light source on the player's
+  // side of a nearby house boundary even when the visible flame sprite reaches
+  // across that boundary.
+  if (selectedBuildPiece === "torch" && buildPieceCount("torch") > 0) {
+    const lightX = Number(player.x);
+    const lightY = Number(player.y) - 10;
+    let visibilityX = lightX;
+    let visibilityY = lightY;
+    const insideRegion = automaticRoofRegions().find(region =>
+      pointInsideRoofRegion(region, Number(player.x), Number(player.y))
+    );
+    if (insideRegion && !pointInsideRoofRegion(insideRegion, visibilityX, visibilityY)) {
+      visibilityX = Number(player.x);
+      visibilityY = Number(player.y);
+    }
+    carveTorchLight(bufferCtx, lightX, lightY, 74, 9.7, null, visibilityX, visibilityY);
+  }
+
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#14203a";
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.globalAlpha = 1;
+  ctx.drawImage(worldLightingCanvas, 0, 0);
   ctx.restore();
 }
 
@@ -12056,6 +12590,8 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     }
   }
 
+  // v406: held equipment clipping uses one player-centered visibility mask.
+
   // ---------------------------------------------------------
   // ASSEMBLE CHARACTER
   // ---------------------------------------------------------
@@ -12082,6 +12618,15 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   }
 
   ctx.drawImage(appearance.torso, baseX, baseY);
+
+  const drawHeldArmWithStructureClip = (drawArm) => {
+    ctx.save();
+    if (!reflectionMode && remotePlayerDrawDepth === 0) {
+      applyHeldItemStructureVisibilityClip(camX, camY);
+    }
+    drawArm();
+    ctx.restore();
+  };
 
   if (!carryingEnemy) {
     if (snareSetupActive) {
@@ -12255,18 +12800,18 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
       );
 
       // Right arm becomes the weapon arm.
-      ctx.drawImage(
+      drawHeldArmWithStructureClip(() => ctx.drawImage(
         appearance.rightArm,
         baseX + weaponArmX,
         baseY + weaponArmY
-      );
+      ));
     } else {
       // Left arm is the weapon arm.
-      ctx.drawImage(
+      drawHeldArmWithStructureClip(() => ctx.drawImage(
         appearance.leftArm,
         baseX + weaponArmX,
         baseY + weaponArmY
-      );
+      ));
 
       // Right arm stays in its normal walking pose.
       ctx.drawImage(
@@ -12610,24 +13155,32 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
         grabEase
     };
 
-    drawPixelLine(
-      tipA.x,
-      tipA.y,
-      nock.x,
-      nock.y,
-      "#d8d0ae"
-    );
+    const drawClippedBowStringSegment = (from, to) => {
+      ctx.save();
+      if (!reflectionMode && remotePlayerDrawDepth === 0) {
+        applyHeldItemStructureVisibilityClip(camX, camY);
+      }
+      drawPixelLine(
+        from.x,
+        from.y,
+        to.x,
+        to.y,
+        "#d8d0ae"
+      );
+      ctx.restore();
+    };
 
-    drawPixelLine(
-      nock.x,
-      nock.y,
-      tipB.x,
-      tipB.y,
-      "#d8d0ae"
-    );
+    drawClippedBowStringSegment(tipA, nock);
+    drawClippedBowStringSegment(nock, tipB);
 
-    // Tiny nock pixel makes the pull point easier to read at 320x180.
+    // Tiny nock pixel makes the pull point easier to read at 320x180. The
+    // nock is separately drawn, so give it the same wall clipping as the
+    // string rather than letting it float through a blocked wall.
     if (stringGrab > 0.45) {
+      ctx.save();
+      if (!reflectionMode && remotePlayerDrawDepth === 0) {
+        applyHeldItemStructureVisibilityClip(camX, camY);
+      }
       ctx.fillStyle = "#eee5c5";
       ctx.fillRect(
         Math.round(nock.x),
@@ -12635,9 +13188,13 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
         1,
         1
       );
+      ctx.restore();
     }
 
     ctx.save();
+    if (!reflectionMode && remotePlayerDrawDepth === 0) {
+      applyHeldItemStructureVisibilityClip(camX, camY);
+    }
 
     ctx.translate(
       Math.round(
@@ -12666,17 +13223,17 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     // as gripping the handle instead of the bow sitting entirely over the hand.
     if (!bowAimingActive) {
       if (useRightHand) {
-        ctx.drawImage(
+        drawHeldArmWithStructureClip(() => ctx.drawImage(
           appearance.rightArm,
           baseX + weaponArmX,
           baseY + rightArmOffsetY + weaponArmY
-        );
+        ), true, weaponArmX, rightArmOffsetY + weaponArmY);
       } else {
-        ctx.drawImage(
+        drawHeldArmWithStructureClip(() => ctx.drawImage(
           appearance.leftArm,
           baseX + weaponArmX,
           baseY + leftArmOffsetY + weaponArmY
-        );
+        ), false, weaponArmX, leftArmOffsetY + weaponArmY);
       }
     }
 
@@ -12778,6 +13335,9 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
           : 0;
 
     ctx.save();
+    if (!reflectionMode && remotePlayerDrawDepth === 0) {
+      applyHeldItemStructureVisibilityClip(camX, camY);
+    }
     ctx.translate(
       Math.round(handX),
       Math.round(handY + weaponHoldOffsetY)
@@ -12790,6 +13350,31 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
       -weaponPivotY
     );
 
+    ctx.restore();
+  }
+
+  // v401: a selected Torch is both a placeable build piece and a carried light.
+  // Build selection intentionally suppresses normal weapons, so drawing it here
+  // gives the player a simple "hold or place" interaction without another mode.
+  if (
+    remotePlayerDrawDepth === 0 &&
+    selectedBuildPiece === "torch" &&
+    buildPieceCount("torch") > 0 &&
+    !carryingEnemy &&
+    !snareSetupActive
+  ) {
+    const torchX = Math.round(handX - 8);
+    const torchY = Math.round(handY - 14);
+    ctx.save();
+    if (!reflectionMode) {
+      applyHeldItemStructureVisibilityClip(camX, camY);
+    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(torchImage, torchX, torchY, 16, 16);
+    if (!reflectionMode && Math.sin(worldTime * 15.2) > 0.45) {
+      ctx.fillStyle = "#e5ffad";
+      ctx.fillRect(torchX + 10, torchY + 2, 1, 1);
+    }
     ctx.restore();
   }
 

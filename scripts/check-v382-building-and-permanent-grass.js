@@ -13,14 +13,14 @@ const network = read("public", "client-network.js");
 const world = read("public", "client-world.js");
 const fire = read("public", "client-fire-environment.js");
 
-assert.strictEqual(pkg.version, "0.6.11.394");
-assert(server.includes('const BUILD_VERSION = "6-11-394";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-394";'));
+assert.strictEqual(pkg.version, "0.6.11.406");
+assert(server.includes('const BUILD_VERSION = "6-11-406";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-406";'));
 
 assert(!game.includes("selectedBuildOrientation"));
 assert(!game.includes("rotateSelectedBuildPiece"));
 assert(!input.includes("rotateSelectedBuildPiece"));
-assert(network.includes("requestStructurePlacement(kind, x, y, edge = null)"));
+assert(network.includes("requestStructurePlacement(kind, x, y, edge = null, supportId = null)"));
 assert(!network.includes("orientation = null"));
 assert(!server.includes("structure.orientation"));
 assert(!server.includes("message?.orientation"));

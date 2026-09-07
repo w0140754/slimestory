@@ -32,7 +32,7 @@ assert(rules.circleCanOccupy(testMap, 40, 40, 2, { allowWater: true }) === false
 
 assert(server.includes('wetSpeedMultiplier: 1.25'), "Crab server Wet speed bonus missing");
 assert(server.includes('profile?.canEnterWater !== false'), "enemy water traversal must default open with explicit opt-out");
-assert(server.includes('{ allowWater: serverEnemyCanEnterWater(enemy) }'), "enemy movement must use water capability");
+assert(server.includes('allowWater: serverEnemyCanEnterWater(enemy)') && server.includes('ignoreStructureDoors: Boolean(navigationPlanning)'), "enemy movement must use water capability while door passability remains navigation-specific");
 assert(server.includes('function refreshServerWaterWetness()'), "server water Wet refresh missing");
 assert(server.includes('refreshServerWaterWetness();'), "water Wet refresh not wired into authoritative tick");
 assert(server.includes('serverPointTouchesWater(target.mapId, target.x, target.y, 4)'), "player water Wet sampling missing");
@@ -44,9 +44,9 @@ assert(app.includes('terrainEntityTouchesWater(player.x, player.y, currentMapId,
 assert(app.includes('drawTerrainWadingOverlay('), "wading overlays not wired into sorted entity rendering");
 assert(terrainClient.includes('function drawTerrainWadingOverlay('), "wading renderer helper missing");
 assert(terrainClient.includes('function terrainEntityTouchesWater('), "water contact helper missing");
-assert(server.includes('const BUILD_VERSION = "6-11-394";'), "server build must be v347");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-394";'), "client build must be v347");
-assert(index.includes('/client-terrain.js?v=394') && index.includes('/client-app.js?v=394') && index.includes('/game.js?v=394'), "v347 client cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-406";'), "server build must be v347");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-406";'), "client build must be v347");
+assert(index.includes('/client-terrain.js?v=406') && index.includes('/client-app.js?v=406') && index.includes('/game.js?v=406'), "v347 client cache keys missing");
 assert(readme.includes('## v6-11-347 — Water traversal + Crab Wet affinity'), "README v347 changelog missing");
 
 console.log("Water traversal + Crab Wet affinity regression checks passed.");

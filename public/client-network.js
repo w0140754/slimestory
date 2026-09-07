@@ -415,6 +415,8 @@ class OnlineClient {
       if (Number.isFinite(message.woodFloors)) player.woodFloors = Math.max(0, Math.floor(message.woodFloors));
       if (Number.isFinite(message.woodWalls)) player.woodWalls = Math.max(0, Math.floor(message.woodWalls));
       if (Number.isFinite(message.woodDoors)) player.woodDoors = Math.max(0, Math.floor(message.woodDoors));
+      if (Number.isFinite(message.greenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.greenJellyCubes));
+      if (Number.isFinite(message.torches)) player.torches = Math.max(0, Math.floor(message.torches));
       if (typeof message.beachQuestStage === "string") player.beachQuest.stage = message.beachQuestStage;
       if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
@@ -883,6 +885,7 @@ class OnlineClient {
       if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
       if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
       if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
+      if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
       // v389: invalid building placement is intentionally quiet. The placement
       // preview already communicates where a piece can go; failed clicks should
       // not spam floating BLOCKED / PLACE ON FLOOR / TOO FAR notes.
@@ -2000,10 +2003,11 @@ class OnlineClient {
     return true;
   }
 
-  requestStructurePlacement(kind, x, y, edge = null) {
+  requestStructurePlacement(kind, x, y, edge = null, supportId = null) {
     if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
     const payload = { type: "structurePlace", kind, x, y };
     if (["woodWall", "woodDoor"].includes(kind) && ["north", "east", "south", "west"].includes(edge)) payload.edge = edge;
+    if (kind === "torch" && typeof supportId === "string" && supportId) payload.supportId = supportId;
     this.socket.send(JSON.stringify(payload));
     return true;
   }
@@ -2102,7 +2106,9 @@ class OnlineClient {
     if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
-      if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
+    if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
+    if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
+    if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
 
     if (Number.isFinite(message.totalArrows)) {
       player.arrows = Math.max(0, Math.floor(message.totalArrows));
@@ -2118,7 +2124,9 @@ class OnlineClient {
           magicPotions: "totalMagicPotions",
           woodFloors: "totalWoodFloors",
           woodWalls: "totalWoodWalls",
-          woodDoors: "totalWoodDoors"
+          woodDoors: "totalWoodDoors",
+          greenJellyCubes: "totalGreenJellyCubes",
+          torches: "totalTorches"
         }[recipe.resourceKey];
         if (!totalField || !Number.isFinite(message[totalField])) {
           player[recipe.resourceKey] =
@@ -2258,7 +2266,9 @@ class OnlineClient {
     }
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
-      if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
+    if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
+    if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
+    if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
 
     if (message.resourceKind === "icedCoffee" && Number.isFinite(message.beachQuestIcedCoffee)) {
       player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
