@@ -1,3 +1,14 @@
+## v6-11-430 — Mobile Placeable Targeting & Night-Light Polish
+
+- Starts from the user-tested **v6-11-429 Mobile HUD Tap-Target Polish** build.
+- On mobile, selecting/holding a placeable (Floor, Wall, Door, Torch, Chest, or Crafting Table) no longer creates an automatic placement cursor in front of the player.
+- The translucent placement ghost and **↑ ↓ ← →** precision nudge pad now stay hidden until the player deliberately taps a world position.
+- After the first world tap, the existing preview → nudge → **PLACE** flow is unchanged. After a successful placement, the cursor/nudge pad stays active so repeated placement remains fast.
+- This specifically lets a Torch be held for night visibility without a distracting ghost Torch bouncing around the world or persistent placement arrows.
+- Reduced Torch light radii slightly: placed Torches **82 → 74**, held Torches (local and remote) **74 → 68**.
+- Reduced the local player's natural night-sight radius **28 → 18**, leaving essentially a small self-reveal rather than a broad free visibility bubble.
+- World content remains **414** and combat balance remains **30**.
+
 ## v6-11-429 — Mobile HUD Tap-Target Polish
 
 - Starts from the user-tested **v6-11-428 Mobile Inventory Layout Rebuild** with no gameplay changes.

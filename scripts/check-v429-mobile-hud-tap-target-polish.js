@@ -9,10 +9,10 @@ const config = fs.readFileSync(path.join(root, "public", "client-config.js"), "u
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
-assert.strictEqual(pkg.version, "0.6.11.429");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
-assert(server.includes('const BUILD_VERSION = "6-11-429";'));
-assert(html.includes('?v=429'), "client cache markers must advance to v429");
+assert.strictEqual(pkg.version, "0.6.11.430");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert(server.includes('const BUILD_VERSION = "6-11-430";'));
+assert(html.includes('?v=430'), "client cache markers must advance to v429");
 assert(html.includes('/* v429 — mobile HUD tap-target polish.'), "v429 mobile HUD override missing");
 assert(html.includes('#craftHudButton {\n      left: 2px !important;\n      top: 44px !important;'), "mobile Craft button must align under Menu");
 assert(html.includes('transform: translateX(-50%) scale(.72) !important;'), "mobile hotbar scale must be slightly larger");

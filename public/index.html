@@ -4639,7 +4639,7 @@
     #mobileBuildNudgeRight { grid-column: 3; grid-row: 2; }
     #mobileBuildNudgeDown { grid-column: 2; grid-row: 3; }
 
-    body.mobile-build-cursor-mode #mobileAutoAttackButton {
+    body.mobile-build-selected-mode #mobileAutoAttackButton {
       display: none;
     }
 
@@ -6286,6 +6286,9 @@
   }
 
 
+  /* v430 — mobile placeable targeting polish.
+     Holding a placeable keeps the normal mobile HUD clean; the precision nudge
+     pad appears only after the first intentional world tap creates a preview. */
   /* v429 — mobile HUD tap-target polish.
      Keep the v428 layout, but align the left Craft lane with the dedicated
      mobile Menu button and give the live 1–0 hotbar a little more breathing
@@ -6593,7 +6596,7 @@
           <span class="resource-menu-count" id="inventoryGoldSlimeBubbleCount">0</span>
         </div>
         <div class="menu-item resource-menu-item" data-resource-key="greenJellyCubes" title="Green Jelly Cube">
-          <img id="inventoryGreenJellyCubeImg" src="assets/green_jelly_cube.png?v=429" alt="Green Jelly Cube" />
+          <img id="inventoryGreenJellyCubeImg" src="assets/green_jelly_cube.png?v=430" alt="Green Jelly Cube" />
           <span class="resource-menu-count" id="inventoryGreenJellyCubeCount">0</span>
         </div>
       </div>
@@ -6622,12 +6625,12 @@
 
       <div class="menu-section-title">Building</div>
       <div id="inventoryBuildingGrid" class="inventory-grid">
-        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–0 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=429" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–0 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=429" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–0 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=429" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–0 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=429" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=429" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–0 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=429" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–0 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=430" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–0 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=430" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–0 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=430" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–0 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=430" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=430" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–0 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=430" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="craftingTables" data-build-item="craftingTable" data-hotbar-assignable="true" data-owned-item="craftingTable" title="Crafting Table · place it to unlock advanced recipes nearby"><img id="inventoryCraftingTableImg" src="assets/wood_bench_v2.png" alt="Crafting Table" /><span class="resource-menu-count" id="inventoryCraftingTableCount">0</span></div>
       </div>
       <div id="inventoryBuildingEmpty" class="inventory-empty">No building pieces</div>
@@ -6886,7 +6889,7 @@
 <div class="skill-node">
             <div class="skill-node-top">
               <div class="skill-node-title">
-                <img class="skill-node-icon" src="assets/tiger_paw_v1.png?v=429" alt="Tiger Paw" />
+                <img class="skill-node-icon" src="assets/tiger_paw_v1.png?v=430" alt="Tiger Paw" />
                 <span class="skill-node-name">Hurl moved to Tiger Paw</span>
               </div>
             </div>
@@ -7315,11 +7318,11 @@
     </div>
     <div id="craftGrid" role="list" aria-label="Available crafting recipes">
       <button class="craft-recipe" type="button" data-craft-recipe="craftingTable"><img src="assets/wood_bench_v2.png" alt="Wood Crafting Table" /><span class="craft-recipe-name">Wood Crafting Table</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=429" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=429" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=429" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=429" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=429" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=429" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=430" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=430" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=430" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=430" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=430" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=430" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="testWoodSupply"><img alt="Wood" /><span class="craft-recipe-name">Test Wood +100</span><span class="craft-recipe-cost">FREE · TEST SUPPLY</span><span class="craft-recipe-status">TAKE</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -7327,11 +7330,11 @@
       <button class="craft-recipe" type="button" data-craft-recipe="attackPotion"><img id="craftAttackPotionImg" alt="Attack Potion" /><span class="craft-recipe-name">Attack Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftAttackWhiteIcon" alt="White Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="magicPotion"><img id="craftMagicPotionImg" alt="Magic Potion" /><span class="craft-recipe-name">Magic Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftMagicBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
 
-      <button class="craft-recipe" type="button" data-craft-recipe="recoveryPickaxe"><img id="craftRecoveryPickaxeImg" src="assets/pickaxe_v6.png?v=429" alt="Recovery Pickaxe" /><span class="craft-recipe-name">Recovery Pickaxe</span><span class="craft-recipe-cost">FREE · ONLY IF MISSING</span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="recoveryPickaxe"><img id="craftRecoveryPickaxeImg" src="assets/pickaxe_v6.png?v=430" alt="Recovery Pickaxe" /><span class="craft-recipe-name">Recovery Pickaxe</span><span class="craft-recipe-cost">FREE · ONLY IF MISSING</span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodSword"><img id="craftWoodSwordImg" alt="Wood Sword" /><span class="craft-recipe-name">Wood Sword</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftSwordWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodBow"><img id="craftWoodBowImg" alt="Wood Bow" /><span class="craft-recipe-name">Wood Bow</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="shepherdStaff"><img id="craftShepherdStaffImg" alt="Shepherd Staff" /><span class="craft-recipe-name">Shepherd Staff</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftStaffWoodIcon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="tigerPaw"><img id="craftTigerPawImg" src="assets/tiger_paw_v1.png?v=429" alt="Tiger Paw" /><span class="craft-recipe-name">Tiger Paw</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTigerPawWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftTigerPawStoneIcon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="tigerPaw"><img id="craftTigerPawImg" src="assets/tiger_paw_v1.png?v=430" alt="Tiger Paw" /><span class="craft-recipe-name">Tiger Paw</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTigerPawWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftTigerPawStoneIcon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="woodHelm"><img id="craftWoodHelmImg" alt="Wood Helm" /><span class="craft-recipe-name">Wood Helm</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftHelmWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodChest"><img id="craftWoodChestImg" alt="Wood Chest" /><span class="craft-recipe-name">Wood Chest</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftChestWoodIcon" alt="Wood" /><span class="craft-cost-value">12</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -7369,7 +7372,7 @@
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=429" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=430" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -7391,36 +7394,36 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=429"></script>
-<script src="/shared/terrain-rules.js?v=429"></script>
-<script src="/shared/terrain-presentation.js?v=429"></script>
-<script src="/shared/combat-balance.js?v=429"></script>
-<script src="/shared/ability-scaling.js?v=429"></script>
-<script src="/shared/rain-field.js?v=429"></script>
-<script src="/shared/weather-rules.js?v=429"></script>
-<script src="/shared/camouflage-rules.js?v=429"></script>
-<script src="/shared/enemy-net-protocol.js?v=429"></script>
-<script src="/shared/structure-geometry.js?v=429"></script>
-<script src="/shared/structure-topology.js?v=429"></script>
-<script src="/shared/player-net-protocol.js?v=429"></script>
-<script src="/client-config.js?v=429"></script>
-<script src="/client-utils.js?v=429"></script>
-<script src="/client-world.js?v=429"></script>
-<script src="/client-maps.js?v=429"></script>
-<script src="/client-enemies.js?v=429"></script>
-<script src="/client-enemy-runtime.js?v=429"></script>
-<script src="/client-enemy-rendering.js?v=429"></script>
-<script src="/client-combat.js?v=429"></script>
-<script src="/client-abilities.js?v=429"></script>
-<script src="/client-magus-abilities.js?v=429"></script>
-<script src="/client-class-abilities.js?v=429"></script>
-<script src="/client-status.js?v=429"></script>
-<script src="/client-fire-environment.js?v=429"></script>
-<script src="/client-network.js?v=429"></script>
-<script src="/client-simulation-foundation.js?v=429"></script>
-<script src="/game.js?v=429"></script>
-<script src="/client-terrain.js?v=429"></script>
-<script src="/client-input.js?v=429"></script>
-<script src="/client-app.js?v=429"></script>
+<script src="/shared/world-content-runtime.js?v=430"></script>
+<script src="/shared/terrain-rules.js?v=430"></script>
+<script src="/shared/terrain-presentation.js?v=430"></script>
+<script src="/shared/combat-balance.js?v=430"></script>
+<script src="/shared/ability-scaling.js?v=430"></script>
+<script src="/shared/rain-field.js?v=430"></script>
+<script src="/shared/weather-rules.js?v=430"></script>
+<script src="/shared/camouflage-rules.js?v=430"></script>
+<script src="/shared/enemy-net-protocol.js?v=430"></script>
+<script src="/shared/structure-geometry.js?v=430"></script>
+<script src="/shared/structure-topology.js?v=430"></script>
+<script src="/shared/player-net-protocol.js?v=430"></script>
+<script src="/client-config.js?v=430"></script>
+<script src="/client-utils.js?v=430"></script>
+<script src="/client-world.js?v=430"></script>
+<script src="/client-maps.js?v=430"></script>
+<script src="/client-enemies.js?v=430"></script>
+<script src="/client-enemy-runtime.js?v=430"></script>
+<script src="/client-enemy-rendering.js?v=430"></script>
+<script src="/client-combat.js?v=430"></script>
+<script src="/client-abilities.js?v=430"></script>
+<script src="/client-magus-abilities.js?v=430"></script>
+<script src="/client-class-abilities.js?v=430"></script>
+<script src="/client-status.js?v=430"></script>
+<script src="/client-fire-environment.js?v=430"></script>
+<script src="/client-network.js?v=430"></script>
+<script src="/client-simulation-foundation.js?v=430"></script>
+<script src="/game.js?v=430"></script>
+<script src="/client-terrain.js?v=430"></script>
+<script src="/client-input.js?v=430"></script>
+<script src="/client-app.js?v=430"></script>
 </body>
 </html>

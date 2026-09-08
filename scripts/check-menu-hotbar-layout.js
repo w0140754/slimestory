@@ -15,7 +15,7 @@ const checks = [
   [game.includes('topHotbar?.addEventListener("drop"'), "real top hotbar is the assignment drop target"],
   [html.includes('data-equipment-slot="head"') && html.includes('data-equipment-slot="shirt"') && html.includes('data-equipment-slot="pants"') && html.includes('data-equipment-slot="charm"'), "right equipment dock exposes armor destinations"],
   [/#statsPage,[\s\S]*?#pvpPage,[\s\S]*?display:\s*none !important;/.test(html), "Stats and PvP pages are removed from the presented menu"],
-  [html.includes('/client-input.js?v=429') && html.includes('/game.js?v=429'), "v422 client cache keys"],
+  [html.includes('/client-input.js?v=430') && html.includes('/game.js?v=430'), "v422 client cache keys"],
 ];
 
 for (const [ok, label] of checks) {

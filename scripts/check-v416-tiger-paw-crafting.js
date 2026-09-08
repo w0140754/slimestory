@@ -11,10 +11,10 @@ const config = read("public/client-config.js");
 const html = read("public/index.html");
 const pkg = require(path.join(root, "package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.429");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
-assert(server.includes('const BUILD_VERSION = "6-11-429";'));
-assert(html.includes('/game.js?v=429'));
+assert.strictEqual(pkg.version, "0.6.11.430");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert(server.includes('const BUILD_VERSION = "6-11-430";'));
+assert(html.includes('/game.js?v=430'));
 assert(server.includes('tigerPaw: Object.freeze({ ingredients: Object.freeze({ wood: 8, stone: 2 }), repeatable: true })'));
 assert(server.includes('reason: "invalidRecipe"'));
 assert(server.includes('type: "craftResult"'));

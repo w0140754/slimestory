@@ -14,9 +14,9 @@ const html = read("public", "index.html");
 const server = read("server.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.429");
-assert(server.includes('const BUILD_VERSION = "6-11-429";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
+assert.strictEqual(pkg.version, "0.6.11.430");
+assert(server.includes('const BUILD_VERSION = "6-11-430";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");

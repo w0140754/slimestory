@@ -11,10 +11,10 @@ const network = read("public", "client-network.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.429");
-assert(server.includes('const BUILD_VERSION = "6-11-429";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
-assert(html.includes('?v=429'));
+assert.strictEqual(pkg.version, "0.6.11.430");
+assert(server.includes('const BUILD_VERSION = "6-11-430";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert(html.includes('?v=430'));
 
 // Chest interaction polish: explicit Loot All, double-click take, mobile tap take.
 assert(html.includes('id="chestLootAll"'));

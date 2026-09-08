@@ -71,7 +71,7 @@ async function moveAndGetSlimes(socket, mapId, x, y) {
     await delay(500);
     const hunter = await connectAtSpawn();
     sockets.push(hunter.socket);
-    if (hunter.welcome.buildVersion !== "6-11-429") throw new Error(`unexpected build ${hunter.welcome.buildVersion}`);
+    if (hunter.welcome.buildVersion !== "6-11-430") throw new Error(`unexpected build ${hunter.welcome.buildVersion}`);
 
     const outerMap = "world_p1_p0";
     const initial = await moveAndGetSlimes(hunter.socket, outerMap, 16, 200);

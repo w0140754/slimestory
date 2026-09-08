@@ -18,10 +18,10 @@ function readPngSize(buffer) {
 
 const pkg = JSON.parse(readText('package.json'));
 const world = readText('public', 'client-world.js');
-assert.strictEqual(pkg.version, '0.6.11.429', 'package version must be 0.6.11.429');
-assert(world.includes('fire_immune_tree_trunk_v1.png?v=429'), 'decorative tree trunk cache key missing');
-assert(world.includes('fire_immune_tree_canopy_v1.png?v=429'), 'decorative tree canopy cache key missing');
-assert(world.includes('fire_immune_tree_canopy_v1_flip.png?v=429'), 'decorative tree flipped canopy cache key missing');
+assert.strictEqual(pkg.version, '0.6.11.430', 'package version must be 0.6.11.430');
+assert(world.includes('fire_immune_tree_trunk_v1.png?v=430'), 'decorative tree trunk cache key missing');
+assert(world.includes('fire_immune_tree_canopy_v1.png?v=430'), 'decorative tree canopy cache key missing');
+assert(world.includes('fire_immune_tree_canopy_v1_flip.png?v=430'), 'decorative tree flipped canopy cache key missing');
 
 for (const file of [
   'fire_immune_tree_trunk_v1.png',

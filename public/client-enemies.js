@@ -21,8 +21,8 @@ function buildClientEnemyFoundation() {
   arrowResourceImage.src = "./assets/arrow_resource.png";
 
   const goldSlimeBubbleLootImage = loadImage("assets/big_gold_slime_bubble_loot_v1.png");
-  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=429");
-  const torchLootImage = loadImage("assets/torch_v1.png?v=429");
+  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=430");
+  const torchLootImage = loadImage("assets/torch_v1.png?v=430");
 
   const woodImage = new Image();
   woodImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAe0lEQVQ4T2NkoBAwwllkgkFmgJI4y3+42/CAey//wF0OZ4A0ZwZqMZy99pRBSpQHJowVbDjyFG4ImIBpfv76I4OkKD+cxgVA8jBD4AYE2EgzPHv9BWw7SDMvDxdMPQb4/OUbw/T111ANoMgFIEBRGMAARbFALhg1gIEBAEAwSRFp34JXAAAAEGRlQkc1OERFQTUyNzFDOURCMUM4CKL2nwAAAABJRU5ErkJgggAA";
@@ -404,12 +404,12 @@ function buildClientEnemyFoundation() {
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
   const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=372");
-  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=429");
-  const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=429");
-  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=429");
-  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=429");
-  const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=429");
-  const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=429");
+  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=430");
+  const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=430");
+  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=430");
+  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=430");
+  const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=430");
+  const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=430");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated

@@ -11,9 +11,9 @@ const enemies = read("public", "client-enemies.js");
 const renderer = read("public", "client-enemy-rendering.js");
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-429";'), 'server build must be 6-11-406');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'), 'client build must be 6-11-406');
-assert(html.includes('/client-enemies.js?v=429') && html.includes('/client-enemy-rendering.js?v=429') && html.includes('/game.js?v=429'), 'current Crab cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-430";'), 'server build must be 6-11-406');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'), 'client build must be 6-11-406');
+assert(html.includes('/client-enemies.js?v=430') && html.includes('/client-enemy-rendering.js?v=430') && html.includes('/game.js?v=430'), 'current Crab cache keys missing');
 assert(readme.includes('## v6-11-341 — Crab two-piece animation'), 'historical README v341 changelog missing');
 assert(enemies.includes('assets/crab_v2.png?v=347'), 'combined Crab asset not wired');
 assert(enemies.includes('assets/crab_back_v1.png?v=347'), 'Crab back asset not wired');

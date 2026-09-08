@@ -9,10 +9,10 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.429");
-assert(server.includes('const BUILD_VERSION = "6-11-429";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
-assert(html.includes('?v=429'));
+assert.strictEqual(pkg.version, "0.6.11.430");
+assert(server.includes('const BUILD_VERSION = "6-11-430";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert(html.includes('?v=430'));
 
 const start = html.indexOf('/* v428 — mobile inventory layout rebuild.');
 assert(start >= 0, "v428 mobile layout block missing");

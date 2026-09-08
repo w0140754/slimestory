@@ -12,11 +12,11 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const world = require("../public/shared/world-content.js");
 
-assert.strictEqual(pkg.version, "0.6.11.429");
+assert.strictEqual(pkg.version, "0.6.11.430");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-429";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
-assert(html.includes('/game.js?v=429'));
+assert(server.includes('const BUILD_VERSION = "6-11-430";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert(html.includes('/game.js?v=430'));
 
 assert(server.includes("if (slime.nightOnly && serverWorldIsNight())"));
 assert(server.includes("slime.homeX = slime.x;"));
