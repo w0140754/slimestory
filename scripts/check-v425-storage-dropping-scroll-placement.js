@@ -2,7 +2,7 @@
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const root=path.join(__dirname,".."); const read=(...p)=>fs.readFileSync(path.join(root,...p),"utf8");
 const pkg=require(path.join(root,"package.json")),server=read("server.js"),game=read("public","game.js"),network=read("public","client-network.js"),enemies=read("public","client-enemies.js"),html=read("public","index.html"),config=read("public","client-config.js");
-assert.strictEqual(pkg.version,"0.6.11.430"); assert(server.includes('const BUILD_VERSION = "6-11-430";')); assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert.strictEqual(pkg.version,"0.6.11.428"); assert(server.includes('const BUILD_VERSION = "6-11-428";')); assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
 assert(server.includes("const CHEST_SLOT_LIMIT = 5;")); assert(server.includes("function handleChestStoreItem(playerId, socket, message)")); assert(server.includes("if (!existing && inventory.length >= CHEST_SLOT_LIMIT)")); assert(server.includes("if (existing) existing.count += amount;"));
 assert(network.includes("requestChestStoreItem(chestId, token, count)")); assert(game.includes('chestPanelElement?.addEventListener("drop"')); assert(html.includes("0 / 5 slots · Drag stacks both ways.")); assert(html.includes("chest-empty-slot"));
 const tokenFn=game.slice(game.indexOf("function inventoryOverlayCellToken"),game.indexOf("function inventoryOverlayCellForToken")); assert(tokenFn.indexOf("element.dataset.resourceKey")<tokenFn.indexOf("element.dataset.ownedItem")); assert(game.includes("function applyInventoryTransferDelta(token, delta"));

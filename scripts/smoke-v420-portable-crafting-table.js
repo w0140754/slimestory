@@ -47,7 +47,7 @@ async function sendAndWait(socket, payload, type, predicate) {
       socket.once("error", reject);
     });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-430") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-428") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const supply = await sendAndWait(
       socket,

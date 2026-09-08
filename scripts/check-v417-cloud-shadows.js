@@ -12,8 +12,8 @@ function assert(ok, message) {
   if (!ok) throw new Error(`v417/v418 regression: ${message}`);
 }
 
-assert(clientConfig.includes('CLIENT_BUILD_VERSION = "6-11-430"'), "client build version not bumped");
-assert(server.includes('BUILD_VERSION = "6-11-430"'), "server build version not bumped");
+assert(clientConfig.includes('CLIENT_BUILD_VERSION = "6-11-428"'), "client build version not bumped");
+assert(server.includes('BUILD_VERSION = "6-11-428"'), "server build version not bumped");
 assert(game.includes("function worldClockSunShadowFactor"), "day/night sunlight shadow factor missing");
 assert(game.includes("function drawCloudShadows"), "cloud-shadow renderer missing");
 assert(game.includes("function traceIrregularCloudBank"), "irregular cloud-bank renderer missing");

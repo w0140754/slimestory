@@ -15,10 +15,10 @@ const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.430");
-assert(server.includes('const BUILD_VERSION = "6-11-430";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
-assert(html.includes('/game.js?v=430'));
+assert.strictEqual(pkg.version, "0.6.11.428");
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(html.includes('/game.js?v=428'));
 
 // Unified assignment belt is now the complete number row 1-0.
 assert(game.includes("const HOTBAR_SLOT_COUNT = 10;"));

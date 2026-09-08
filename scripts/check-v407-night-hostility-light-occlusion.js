@@ -13,11 +13,11 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const game = read("public", "game.js");
 
-assert.strictEqual(pkg.version, "0.6.11.430");
+assert.strictEqual(pkg.version, "0.6.11.428");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-430";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
-assert(html.includes('/game.js?v=430'));
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(html.includes('/game.js?v=428'));
 
 // Gameplay wall collision remains unchanged, while held-item visual occlusion
 // now follows the same Y-sort that decides whether the wall is actually in

@@ -13,9 +13,9 @@ const input = read("public", "client-input.js");
 const game = read("public", "game.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.430");
-assert(server.includes('const BUILD_VERSION = "6-11-430";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
+assert.strictEqual(pkg.version, "0.6.11.428");
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
 assert.strictEqual(world.version, 414);
 
 assert(html.includes('id="mobileBuildNudgePad"'));
@@ -28,6 +28,6 @@ assert(input.includes("function mobileBuildCursorWorldPoint()"));
 assert(input.includes("mobileBuildCursorSuppressMouseUntil"));
 assert(input.includes('button.textContent = buildMode ? "PLACE" : "ATK";'));
 assert(game.includes('typeof mobileBuildCursorWorldPoint === "function"'));
-assert(html.includes('/client-input.js?v=430') && html.includes('/game.js?v=430'));
+assert(html.includes('/client-input.js?v=428') && html.includes('/game.js?v=428'));
 
 console.log("v394 mobile build cursor mode retained on v396");

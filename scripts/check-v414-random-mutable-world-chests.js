@@ -15,12 +15,12 @@ const input = read("public", "client-input.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.430");
+assert.strictEqual(pkg.version, "0.6.11.428");
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.schemaVersion, 2);
-assert(server.includes('const BUILD_VERSION = "6-11-430";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-430";'));
-assert(html.includes('/game.js?v=430'));
+assert(server.includes('const BUILD_VERSION = "6-11-428";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(html.includes('/game.js?v=428'));
 
 function dims(file) {
   const b = fs.readFileSync(file);
@@ -28,8 +28,8 @@ function dims(file) {
 }
 assert.deepStrictEqual(dims(path.join(root, "public/assets/building/chest_closed_v414.png")), [16, 16]);
 assert.deepStrictEqual(dims(path.join(root, "public/assets/building/chest_open_v414.png")), [16, 16]);
-assert(game.includes('chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=430")'));
-assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=430")'));
+assert(game.includes('chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=428")'));
+assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=428")'));
 assert(game.includes("function drawChestStructure("));
 assert(html.includes('data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true"'));
 assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'));

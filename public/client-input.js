@@ -116,18 +116,12 @@ function mobileBuildModeActive() {
 
 function mobileBuildCursorWorldPoint() {
   if (!mobileBuildModeActive()) return null;
-
-  // v430: selecting a placeable only puts it in the player's hand. Mobile
-  // placement does not invent a target/ghost until the player deliberately
-  // taps the world. A map transition also clears any stale target rather than
-  // silently creating a new one in front of the player.
-  if (mobileBuildCursorMapId !== null && mobileBuildCursorMapId !== currentMapId) {
-    mobileBuildCursorWorldX = null;
-    mobileBuildCursorWorldY = null;
-    mobileBuildCursorMapId = null;
-    document.body.classList.remove("mobile-build-cursor-mode");
-    updateMobilePrimaryActionButton();
-    return null;
+  if (
+    mobileBuildCursorWorldX === null ||
+    mobileBuildCursorWorldY === null ||
+    mobileBuildCursorMapId !== currentMapId
+  ) {
+    beginMobileBuildCursorForSelectedPiece();
   }
   if (mobileBuildCursorWorldX === null || mobileBuildCursorWorldY === null) return null;
   return {
@@ -169,13 +163,13 @@ function beginMobileBuildCursorForSelectedPiece() {
   clearMobilePointTargetMode();
   if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
 
-  // v430: holding a Floor/Wall/Door/Torch/Chest/Table is now a clean "held"
-  // state. The placement cursor, ghost preview and nudge arrows remain dormant
-  // until the first world tap establishes an intentional target.
-  mobileBuildCursorWorldX = null;
-  mobileBuildCursorWorldY = null;
-  mobileBuildCursorMapId = null;
-  document.body.classList.remove("mobile-build-cursor-mode");
+  const leadDistance = (["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 24 : 18;
+  const aimLength = Math.hypot(mobileAimDx, mobileAimDy) || 1;
+  setMobileBuildCursorWorldPoint(
+    player.x + (mobileAimDx / aimLength) * leadDistance,
+    player.y + (mobileAimDy / aimLength) * leadDistance
+  );
+  document.body.classList.add("mobile-build-cursor-mode");
   updateMobilePrimaryActionButton();
   return true;
 }
@@ -210,8 +204,6 @@ function handleMobileBuildCursorPointerDown(event) {
   // character/camera cannot drag the preview around.
   mouseCanvasX = point.x;
   mouseCanvasY = point.y;
-  document.body.classList.add("mobile-build-cursor-mode");
-  updateMobilePrimaryActionButton();
   updateCanvasCursor();
 }
 
@@ -565,20 +557,12 @@ function updateMobilePrimaryActionButton() {
   const button = document.getElementById("mobileAttackButton");
   if (!button) return;
   const buildMode = typeof selectedBuildPiece !== "undefined" && Boolean(selectedBuildPiece);
-  const cursorActive = Boolean(
-    buildMode &&
-    mobileControlsEnabled &&
-    mobileBuildCursorWorldX !== null &&
-    mobileBuildCursorWorldY !== null &&
-    mobileBuildCursorMapId === currentMapId
-  );
   button.classList.toggle("build-place-mode", buildMode);
   button.textContent = buildMode ? "PLACE" : "ATK";
   button.setAttribute("aria-label", buildMode ? "Place building piece" : "Attack");
-  document.body.classList.toggle("mobile-build-selected-mode", Boolean(buildMode && mobileControlsEnabled));
-  document.body.classList.toggle("mobile-build-cursor-mode", cursorActive);
+  document.body.classList.toggle("mobile-build-cursor-mode", Boolean(buildMode && mobileControlsEnabled));
   const nudgePad = document.getElementById("mobileBuildNudgePad");
-  if (nudgePad) nudgePad.setAttribute("aria-hidden", cursorActive ? "false" : "true");
+  if (nudgePad) nudgePad.setAttribute("aria-hidden", buildMode ? "false" : "true");
   if (buildMode) button.classList.remove("point-target-armed");
 }
 

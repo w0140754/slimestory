@@ -199,18 +199,18 @@ const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
 const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=430");
-const torchImage = loadImage("assets/torch_v1.png?v=430");
+const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=428");
+const torchImage = loadImage("assets/torch_v1.png?v=428");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=430");
-const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=430");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=430");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=430");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=430");
-const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=430");
-const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=430");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=428");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=428");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=428");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=428");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=428");
+const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=428");
+const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=428");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -228,7 +228,7 @@ const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
 // v415: Tiger Paw inherits the retired Hurl art as a compact inventory/hotbar
 // icon. It is treated like a hand weapon, so no separate held sprite is drawn.
-const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=430");
+const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=428");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -5506,9 +5506,8 @@ function syncCraftPanelToViewport() {
   const viewport = document.getElementById("gameViewport");
   if (!viewport) return;
   const rect = viewport.getBoundingClientRect();
-  const mobileLandscape = window.matchMedia("(hover: none) and (pointer: coarse) and (orientation: landscape)").matches;
   const top = Math.round(rect.top + 86);
-  const left = Math.round(rect.left + (mobileLandscape ? 2 : 8));
+  const left = Math.round(rect.left + 8);
   const maxHeight = `${Math.max(96, Math.round(rect.bottom - top - 8))}px`;
 
   for (const panel of [craftPanel, chestPanel]) {
@@ -12135,15 +12134,6 @@ function tryPlaceSelectedBuildPiece(event) {
 
 function drawBuildPlacementPreview(camX, camY) {
   if (!selectedBuildPiece) return;
-  // v430: on touch devices, simply holding a placeable is not the same as
-  // choosing a placement target. Suppress the ghost entirely until the player
-  // has tapped the world and established the mobile build cursor.
-  if (
-    typeof mobileControlsEnabled !== "undefined" &&
-    mobileControlsEnabled &&
-    typeof mobileBuildCursorWorldPoint === "function" &&
-    !mobileBuildCursorWorldPoint()
-  ) return;
   const point = selectedBuildPlacementWorldPoint(camX, camY);
   const worldX = point.x;
   const worldY = point.y;
@@ -12316,7 +12306,7 @@ function worldClockPhase(minutes = currentWorldClockMinutes()) {
 
 const WORLD_DARKNESS_COLOR = "#020307";
 const INTERIOR_DAY_AMBIENT_ALPHA = 0.54;
-const LOCAL_NIGHT_SIGHT_RADIUS = 18;
+const LOCAL_NIGHT_SIGHT_RADIUS = 28;
 
 function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
   const hour = minutes / 60;
@@ -12826,7 +12816,7 @@ function collectTorchLightSources() {
       y: light.y,
       visibilityX: visibility.x,
       visibilityY: visibility.y,
-      radius: 74,
+      radius: 82,
       seed: Number(structure.x) * 0.021 + Number(structure.y) * 0.013,
       structure
     });
@@ -12839,7 +12829,7 @@ function collectTorchLightSources() {
       y: Number(player.y) - 10,
       visibilityX: Number(player.x),
       visibilityY: Number(player.y),
-      radius: 68,
+      radius: 74,
       seed: 9.7,
       ownerId: (typeof onlineClient !== "undefined" ? onlineClient?.localPlayerId : null) || "local"
     });
@@ -12863,7 +12853,7 @@ function collectTorchLightSources() {
         y: ry - 10,
         visibilityX: rx,
         visibilityY: ry,
-        radius: 68,
+        radius: 74,
         seed: stableTorchLightSeed(remote.id),
         ownerId: remote.id
       });
