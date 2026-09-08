@@ -14,11 +14,11 @@ const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/shared/weather-rules.js?v=428'));
-assert(html.includes('/client-app.js?v=428'));
+assert.strictEqual(pkg.version, "0.6.11.429");
+assert(server.includes('const BUILD_VERSION = "6-11-429";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
+assert(html.includes('/shared/weather-rules.js?v=429'));
+assert(html.includes('/client-app.js?v=429'));
 
 // Map weather remains deterministic and server/client-shared rather than
 // becoming a replicated heartbeat.

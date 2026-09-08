@@ -12,9 +12,9 @@ const game = read("public", "game.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428", "package version must be v378");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build marker must be v378");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build marker must be v378");
+assert.strictEqual(pkg.version, "0.6.11.429", "package version must be v378");
+assert(server.includes('const BUILD_VERSION = "6-11-429";'), "server build marker must be v378");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-429";'), "client build marker must be v378");
 
 assert(html.includes('id="worldMiniMap"'), "fixed local minimap DOM is missing");
 assert(html.includes("--mini-cell: 26px"), "desktop minimap must use enlarged cells");

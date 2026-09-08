@@ -13,9 +13,9 @@ const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert.strictEqual(pkg.version, "0.6.11.429");
+assert(server.includes('const BUILD_VERSION = "6-11-429";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
 assert.strictEqual(world.version, 414);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v390 must preserve the active coordinate world");
 

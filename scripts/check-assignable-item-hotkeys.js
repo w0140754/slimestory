@@ -12,7 +12,7 @@ const checks = [
   [game.includes('topHotbar?.addEventListener("drop"') && game.includes('assignItemToHotbar(itemId, slotNumber - 1);'), "inventory items drag onto the actual HUD hotbar"],
   [game.includes('if (!hotbarItemCanBeAssigned(itemId)) return;'), "actual hotbar rejects non-assignable inventory items such as armor"],
   [html.includes('id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"') && html.includes('id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"'), "old utility/skill rails remain compatibility-only"],
-  [html.includes('/client-input.js?v=428') && html.includes('/game.js?v=428'), "v422 cache keys"],
+  [html.includes('/client-input.js?v=429') && html.includes('/game.js?v=429'), "v422 cache keys"],
 ];
 
 for (const [ok, label] of checks) {

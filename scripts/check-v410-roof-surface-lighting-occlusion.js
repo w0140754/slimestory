@@ -13,11 +13,11 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const game = read("public", "game.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.429");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/game.js?v=428'));
+assert(server.includes('const BUILD_VERSION = "6-11-429";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-429";'));
+assert(html.includes('/game.js?v=429'));
 
 // Roof pixels are now treated as a projected receiver surface rather than
 // inheriting the ground/wall lighting underneath them.

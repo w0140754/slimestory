@@ -1,3 +1,11 @@
+## v6-11-429 — Mobile HUD Tap-Target Polish
+
+- Starts from the user-tested **v6-11-428 Mobile Inventory Layout Rebuild** with no gameplay changes.
+- Aligns the mobile **CRAFT** button directly under the dedicated **MENU** button instead of leaving it horizontally indented.
+- Aligns the open Craft/Chest context panel with that same left-side mobile lane while preserving the existing desktop inset.
+- Makes the live mobile **1–0 hotbar** slightly larger and increases the spacing between slots to reduce accidental taps without changing assignments or hotbar behavior.
+- World content remains **414** and combat balance remains **30**.
+
 ## v6-11-428 — Mobile Inventory Layout Rebuild
 
 - Starts from the completed **v6-11-427 Chest & Mobile Interaction Polish** build. Desktop Inventory/Equipment/Craft/Chest presentation and all gameplay systems are preserved unchanged.
