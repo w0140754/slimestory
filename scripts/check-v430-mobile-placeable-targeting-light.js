@@ -10,9 +10,9 @@ const config = fs.readFileSync(path.join(root, "public", "client-config.js"), "u
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
 assert(html.includes('?v=431'), "client cache markers must advance to v430");
 assert(input.includes('mobileBuildCursorWorldX = null;\n  mobileBuildCursorWorldY = null;\n  mobileBuildCursorMapId = null;\n  document.body.classList.remove("mobile-build-cursor-mode");\n  updateMobilePrimaryActionButton();'), "selecting a placeable must not auto-seed a cursor");
 assert(!input.includes('const leadDistance = (["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece)'), "legacy automatic lead cursor must be gone");

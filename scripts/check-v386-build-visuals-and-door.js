@@ -12,9 +12,9 @@ const network = read("public", "client-network.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 
 assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'), "Wood Door must join the unified build hotbar list");
 assert(game.includes("if (heldBuildPieceForCurrentDraw()) return null;"), "build selection must render local and replicated remote build holders empty-handed");

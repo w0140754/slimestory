@@ -13,9 +13,9 @@ const network = read("public", "client-network.js");
 const server = read("server.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 assert(html.includes('?v=431'), "client cache markers must advance to v421");
 
 // Crafting is now a first-class HUD action rather than an inventory submenu.

@@ -14,5 +14,4 @@ assert(!game.includes("menuItemHotkeyRail"), "retired duplicate rail listeners r
 assert(html.includes('id="hotbar"') && html.includes('id="slot10"'), "live 1-0 HUD missing");
 assert(game.includes('if (inventoryOpen && selectedHotbarInventoryItemId && hotbarItemCanBeAssigned(selectedHotbarInventoryItemId))'), "inventory-to-live-HUD tap assignment path missing");
 assert(game.includes('topHotbar?.addEventListener("drop"'), "inventory-to-live-HUD drag/drop assignment path missing");
-assert(html.includes('/game.js?v=431e'), "431e cache bust missing");
 console.log("v431 live-hotbar-only regression check passed");

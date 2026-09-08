@@ -14,9 +14,9 @@ const combat = read("public", "client-combat.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 
 assert(world.worldGrid, "coordinate world metadata missing");
 assert.strictEqual(world.worldGrid.radius, 1);

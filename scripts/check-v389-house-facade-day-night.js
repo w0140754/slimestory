@@ -13,9 +13,9 @@ const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 assert.strictEqual(world.version, 414);
 assert.strictEqual(Object.keys(world.maps).length, 9, "current build must preserve the active 3x3 coordinate world");
 

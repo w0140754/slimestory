@@ -34,7 +34,7 @@ async function moveToMap(socket, mapId, x, y) {
     const welcomePending = waitForMessage(socket, "welcome");
     await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-431" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
+    if (welcome.buildVersion !== "6-11-432" || welcome.worldContentVersion !== 414) throw new Error("unexpected v414 server/world marker");
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({ type: "persistentStateRestore", state: { resources: { stone: 10, woodWalls: 1, craftingTables: 1 } } }));

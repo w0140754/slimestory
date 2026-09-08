@@ -1,3 +1,17 @@
+# v6-11-432 — Retired Assignment-Rail CSS Purge
+
+Continues the v431 legacy-systems cleanup from confirmed-working Checkpoint 2E without changing gameplay.
+
+- Removed all remaining CSS for the deleted inventory-side Weapons & Tools / assignment rail, including old desktop sizing, responsive layouts, mobile placement overrides, slot/key styling, and the final mobile hide rule.
+- Kept the live **1–0 HUD hotbar** as the only assignment surface. Inventory click-to-assign and drag-to-live-hotbar behavior are unchanged.
+- Cleaned the v428 mobile-layout comment so it no longer documents a UI element that no longer exists.
+- Advanced package/client/server build version to **6-11-432 / 0.6.11.432** and runtime cache token to **?v=431e-432**.
+- Added a regression guard preventing any retired assignment-rail DOM/runtime/CSS selectors from returning.
+
+World content, enemy spawning/generation, combat, crafting, inventory behavior, mobile controls, networking cadence, and authored/runtime world definitions are unchanged.
+
+---
+
 # v6-11-431 Checkpoint 2E — Retired Weapons & Tools Rail Removal
 
 The old inventory-side **Weapons & Tools** assignment rail has been removed. The live 1–0 HUD at the top of the game is now the single assignment surface on both desktop and mobile. Inventory items can still be selected and assigned by clicking a live hotbar slot, or dragged directly onto the live hotbar while Inventory is open.

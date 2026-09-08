@@ -13,8 +13,8 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build must be 6-11-431");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build must be 6-11-431");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'), "server build must be 6-11-431");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'), "client build must be 6-11-431");
 assert(html.includes('/client-combat.js?v=431') && html.includes('/game.js?v=431'), "client cache keys must be v431");
 
 assert(game.includes('let pendingBasicAttack = null;'), "generic pending basic attack state missing");

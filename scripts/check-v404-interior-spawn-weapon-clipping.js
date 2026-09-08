@@ -13,8 +13,8 @@ const runtime = read("public", "client-enemy-runtime.js");
 const html = read("public", "index.html");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 assert.strictEqual(world.version, 414);
 assert(html.includes('/game.js?v=431'));
 assert(html.includes('/client-enemy-runtime.js?v=431'));

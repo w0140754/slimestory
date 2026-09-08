@@ -12,9 +12,9 @@ const input = read("public", "client-input.js");
 const config = read("public", "client-config.js");
 const geometry = require(path.join(root, "public", "shared", "structure-geometry.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 
 // Build hotbar persistence.
 assert(game.includes('return itemId && hotbarAssignmentCanPersist(itemId)'), "saved hotbar restore must accept persistent build items");

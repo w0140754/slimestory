@@ -13,9 +13,9 @@ const input = read("public", "client-input.js");
 const game = read("public", "game.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.431");
-assert(server.includes('const BUILD_VERSION = "6-11-431";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert.strictEqual(pkg.version, "0.6.11.432");
+assert(server.includes('const BUILD_VERSION = "6-11-432";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
 assert(html.includes('/client-input.js?v=431') && html.includes('/game.js?v=431'));
 
 assert(input.includes("function updateMobilePrimaryActionButton()"), "contextual mobile primary button updater missing");

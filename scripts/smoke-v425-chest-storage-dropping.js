@@ -75,7 +75,7 @@ async function take(socket, chestId, token) {
   try {
     await delay(450);
     const client = await connect();
-    if (client.welcome.buildVersion !== "6-11-431") {
+    if (client.welcome.buildVersion !== "6-11-432") {
       throw new Error(`unexpected welcome build ${client.welcome.buildVersion}`);
     }
 
