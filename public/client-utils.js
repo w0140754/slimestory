@@ -22,32 +22,3 @@ function circleRectCollision(cx, cy, radius, rx, ry, rw, rh) {
   return dx * dx + dy * dy < radius * radius;
 }
 
-function pointInRect(x, y, rect) {
-  return (
-    x >= rect.x &&
-    x <= rect.x + rect.width &&
-    y >= rect.y &&
-    y <= rect.y + rect.height
-  );
-}
-
-function subtractInterval(baseInterval, cutInterval) {
-  const [start, end] = baseInterval;
-  const [cutStart, cutEnd] = cutInterval;
-
-  if (cutEnd <= start || cutStart >= end) {
-    return [baseInterval];
-  }
-
-  const pieces = [];
-
-  if (cutStart > start) {
-    pieces.push([start, Math.min(cutStart, end)]);
-  }
-
-  if (cutEnd < end) {
-    pieces.push([Math.max(cutEnd, start), end]);
-  }
-
-  return pieces.filter(([a, b]) => b - a > 0.5);
-}

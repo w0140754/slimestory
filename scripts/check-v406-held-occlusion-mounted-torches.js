@@ -16,11 +16,11 @@ const network = read("public", "client-network.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.431");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/game.js?v=428'));
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('/game.js?v=431'));
 
 // The experimental house-only darkness and v405 wall-face carve are gone.
 assert(!game.includes("function enclosedInteriorDarknessAlpha("));
@@ -64,6 +64,6 @@ assert(game.includes("function torchVisibilityWorldPosition(structure)"));
 // v405 successes stay retained.
 assert(enemyRendering.includes("function slimePresentationHopPhase(slime)"));
 assert(combat.includes('tryHitEnemies("melee", 1);'));
-assert(combat.includes('tryHitEnemies("bowMelee", 1);'));
+assert(!combat.includes("executeBowMeleeAttack"));
 
 console.log("v406 static check passed: house-darkness rollback, unified held-item wall occlusion, safe held-light visibility, mounted torches, and attachment-first reclaim are wired.");

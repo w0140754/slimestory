@@ -9,11 +9,6 @@ function currentTerrainDefinition(mapId = currentMapId) {
   return TERRAIN_RULES.terrainDefinition(definition) ? definition : null;
 }
 
-function terrainTypeAtWorld(x, y, mapId = currentMapId) {
-  const definition = currentTerrainDefinition(mapId);
-  return definition ? TERRAIN_RULES.terrainTypeAt(definition, x, y) : null;
-}
-
 function terrainAllowsMagicGrass(x, y, mapId = currentMapId) {
   const definition = currentTerrainDefinition(mapId);
   if (!definition) return true;
@@ -390,37 +385,21 @@ function terrainEntityTouchesWater(
   radius = 3
 ) {
   const definition = currentTerrainDefinition(mapId);
-  if (definition) {
-    return TERRAIN_RULES.circleTouchesType(
-      definition,
-      worldX,
-      worldY,
-      Math.max(0, Number(radius) || 0),
-      "water"
-    );
-  }
-
-  // Legacy maps currently expose one pond/water collision helper. Keep the
-  // same result for local/remote entities without changing legacy map data.
-  if (
-    mapId === currentMapId &&
-    typeof hitsWater === "function"
-  ) {
-    return hitsWater(worldX, worldY);
-  }
-
-  return false;
+  if (!definition) return false;
+  return TERRAIN_RULES.circleTouchesType(
+    definition,
+    worldX,
+    worldY,
+    Math.max(0, Number(radius) || 0),
+    "water"
+  );
 }
 
 function terrainPointIsWater(worldX, worldY, mapId = currentMapId) {
   const definition = currentTerrainDefinition(mapId);
-  if (definition) {
-    return TERRAIN_RULES.terrainTypeAt(definition, worldX, worldY) === "water";
-  }
   return Boolean(
-    mapId === currentMapId &&
-    typeof hitsWater === "function" &&
-    hitsWater(worldX, worldY)
+    definition &&
+    TERRAIN_RULES.terrainTypeAt(definition, worldX, worldY) === "water"
   );
 }
 

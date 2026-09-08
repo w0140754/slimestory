@@ -15,11 +15,11 @@ const game = read("public", "game.js");
 const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/shared/weather-rules.js?v=428'));
-assert(html.indexOf('/shared/weather-rules.js?v=428') < html.indexOf('/game.js?v=428'));
+assert.strictEqual(pkg.version, "0.6.11.431");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('/shared/weather-rules.js?v=431'));
+assert(html.indexOf('/shared/weather-rules.js?v=431') < html.indexOf('/game.js?v=431'));
 
 // No arbitrary build-count ceiling: placement is still range/resource/collision
 // validated, but long-lived player settlements are not stopped at 96 pieces.
@@ -44,14 +44,15 @@ assert(game.includes("function doorAllowsLocalPlayerStep("));
 assert(game.includes("tangential > 8 + playerRadius + 2"));
 assert(game.includes("localDoorPassageUntil = performance.now() + DOOR_PASSAGE_MS;"));
 
-// Procedural feature IDs are validated by exact seeded-world identity instead
-// of the old kind-prefix assumption, so meadow flowers/grass, ring trees and
-// stone-feature rocks can join the authoritative mutable environment registry.
-assert(server.includes("function canonicalEnvironmentDefinition(mapId, kind, entityId)"));
-assert(server.includes('? "harvestFlowers"'));
-assert(server.includes('? "tallGrass"'));
-assert(server.includes('? "rocks"'));
-assert(server.includes("if (!canonical) return null;"));
+// Procedural feature IDs come straight from the shared seeded WORLD_CONTENT.
+// The server now initializes the authoritative mutable environment itself,
+// so clients no longer upload a duplicate catalog during connection.
+assert(server.includes("function serverEnvironmentEntityFromDefinition("));
+assert(server.includes("function initializeSharedEnvironmentFromWorldContent()"));
+assert(server.includes("for (const definition of environment.harvestFlowers || [])"));
+assert(server.includes("for (const definition of environment.tallGrass || [])"));
+assert(server.includes("for (const definition of environment.rocks || [])"));
+assert(!server.includes('case "environmentCatalog"'));
 const generatedKinds = Object.values(world.maps).flatMap(map => [
   ...(map.environment?.harvestFlowers || []),
   ...(map.environment?.tallGrass || []),
@@ -66,7 +67,7 @@ assert(generatedKinds.some(id => id.includes(":stone-patch:rock:")), "seed fixtu
 // not a shared torch source, so other players do not glow on this client.
 assert(game.includes('const WORLD_DARKNESS_COLOR = "#020307";'));
 assert(game.includes("const midnightAlpha = 0.992;"));
-assert(game.includes("const LOCAL_NIGHT_SIGHT_RADIUS = 28;"));
+assert(game.includes("const LOCAL_NIGHT_SIGHT_RADIUS = 18;"));
 assert(game.includes("function carveLocalPlayerNightSight("));
 assert(game.includes("carveLocalPlayerNightSight(bufferCtx, nightAlpha);"));
 const sightStart = game.indexOf("function carveLocalPlayerNightSight(");

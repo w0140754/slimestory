@@ -80,12 +80,6 @@ function castBasicProjectile(type, angle, options = {}) {
         1,
         Number(options.rangeMultiplier) || 1
       )
-    ),
-    camouflageOpening: Boolean(options.camouflageOpening),
-    focusFire: Boolean(options.focusFire),
-    focusFireShotSequence: Math.max(
-      0,
-      Math.floor(Number(options.focusFireShotSequence) || 0)
     )
   };
 
@@ -188,19 +182,6 @@ function fireBowArrow(drawAmount, angle, options = {}) {
     return false;
   }
 
-  // A real arrow release reveals the hunter even if the shot later misses.
-  // The projectile itself remembers whether it was the prepared ambush shot.
-  const camouflageOpening =
-    consumeCamouflageOpening();
-
-  const attackingFromShadowHide =
-    player.shadowHidden;
-
-  breakShadowHide();
-
-  player.shadowCritAttack =
-    attackingFromShadowHide;
-
   castBasicProjectile(
     "arrow",
     angle,
@@ -210,20 +191,13 @@ function fireBowArrow(drawAmount, angle, options = {}) {
       life: shot.projectileLife,
       drawAmount: shot.chargedAmount,
       damageMultiplier: shot.damageMultiplier,
-      rangeMultiplier: shot.rangeMultiplier,
-      camouflageOpening,
-      focusFire: Boolean(options.focusFire),
-      focusFireShotSequence: Math.max(
-        0,
-        Math.floor(Number(options.focusFireShotSequence) || 0)
-      )
+      rangeMultiplier: shot.rangeMultiplier
     }
   );
 
   player.attackTime = 0.08;
   player.attackCooldown = 0.42;
   player.slashTime = 0;
-  player.shadowCritAttack = false;
 
   return true;
 }
@@ -346,60 +320,6 @@ function updateBasicProjectiles(dt) {
       }
     }
 
-    if (
-      !impact &&
-      projectile.type === "arrow" &&
-      player.pvpEnabled &&
-      typeof onlineClient !== "undefined"
-    ) {
-      for (const remote of onlineClient.playersOnCurrentMap()) {
-        if (!canAttackRemotePlayerWithPvp(remote)) continue;
-
-        const dx = projectile.x - remote.x;
-        const dy = projectile.y - (remote.y - 8);
-
-        if (dx * dx + dy * dy <= 8 * 8) {
-          if (
-            typeof structureLineOfEffectClear === "function" &&
-            !structureLineOfEffectClear(
-              player.x,
-              player.y - 8,
-              remote.x,
-              remote.y - 8,
-              0.4
-            )
-          ) {
-            continue;
-          }
-
-          onlineClient.sendPvpAttack(
-            remote.id,
-            "arrow",
-            {
-              critical: Boolean(projectile.critical),
-              aimAngle: Math.atan2(
-                projectile.vy,
-                projectile.vx
-              ),
-              drawAmount: projectile.drawAmount,
-              damageMultiplier: projectile.damageMultiplier,
-              rangeMultiplier: projectile.rangeMultiplier,
-              projectileX: projectile.x,
-              projectileY: projectile.y,
-              camouflageOpening: Boolean(projectile.camouflageOpening),
-              focusFire: Boolean(projectile.focusFire),
-              focusFireShotSequence: Math.max(
-                0,
-                Math.floor(Number(projectile.focusFireShotSequence) || 0)
-              )
-            }
-          );
-
-          impact = true;
-          break;
-        }
-      }
-    }
 
     const outOfWorld =
       projectile.x < 0 ||
@@ -485,157 +405,7 @@ function drawBasicProjectile(projectile, camX, camY) {
   }
 }
 
-function spawnWandMasteryHitParticles(x, y, angle, startDelay = 0, reverseTravel = false) {
-  // Three parallel rake marks that follow the wand's sweep path. They are
-  // revealed progressively so the slash feels drawn across the enemy.
-  const sweepAngle = angle + Math.PI / 2 - 0.12;
-  const normalX = -Math.sin(sweepAngle);
-  const normalY = Math.cos(sweepAngle);
-
-  const clawColors = ["#ffffff", "#ffffff", "#ffffff"];
-
-  for (let claw = -1; claw <= 1; claw++) {
-    const offset = claw * 2.35;
-    const markAngle = sweepAngle + claw * 0.05;
-    const dirX = Math.cos(markAngle);
-    const dirY = Math.sin(markAngle);
-    const life = 0.31;
-    const colorIndex = claw + 1;
-
-    // Keep the existing three-rake shape and timing, but let the sweep travel
-    // farther across the target: it begins clearly before contact and finishes
-    // just beyond the old endpoint. The center shift preserves that asymmetric
-    // lead/trail extension for both normal and reversed claw travel.
-    const slashStartExtension = 8;
-    const slashEndExtension = 2;
-    const slashLength = 10 + slashStartExtension + slashEndExtension;
-    const slashCenterShift =
-      (reverseTravel ? -1 : 1) *
-      (slashEndExtension - slashStartExtension) / 2;
-
-    wandSweepParticles.push({
-      x: x + normalX * offset + dirX * slashCenterShift,
-      y: y + normalY * offset + dirY * slashCenterShift,
-      vx: dirX * 1.1 + normalX * claw * 0.18,
-      vy: dirY * 1.1 + normalY * claw * 0.18,
-      life,
-      maxLife: life,
-      delay: Math.max(0, Number(startDelay) || 0),
-      color: clawColors[colorIndex],
-      kind: "hit",
-      rotation: markAngle,
-      slashLength,
-      slashWidth: 1.15,
-      slashCurve: 1.2,
-      reverseTravel: Boolean(reverseTravel)
-    });
-  }
-}
-
-function updateWandSweepParticles(dt) {
-  for (let i = wandSweepParticles.length - 1; i >= 0; i--) {
-    const particle = wandSweepParticles[i];
-
-    if ((Number(particle.delay) || 0) > 0) {
-      particle.delay = Math.max(0, particle.delay - dt);
-      continue;
-    }
-
-    particle.life -= dt;
-    particle.x += particle.vx * dt;
-    particle.y += particle.vy * dt;
-    particle.vx *= 0.94;
-    particle.vy *= 0.94;
-
-    if (particle.life <= 0) {
-      wandSweepParticles.splice(i, 1);
-    }
-  }
-}
-
-function drawWandSweepParticles(camX, camY) {
-  for (const particle of wandSweepParticles) {
-    if ((Number(particle.delay) || 0) > 0) continue;
-
-    const alpha = Math.max(0, Math.min(1, particle.life / particle.maxLife));
-    const x = Math.round(particle.x - camX);
-    const y = Math.round(particle.y - camY);
-
-    ctx.save();
-    ctx.globalAlpha = alpha * (particle.kind === "hit" ? 0.72 : 0.90);
-    ctx.fillStyle = particle.color;
-
-    if (particle.kind === "glitter") {
-      // Alternate between a single bright pixel and a tiny four-point sparkle.
-      const sparkle = Math.sin(worldTime * 28 + (particle.twinkle || 0)) > -0.15;
-      ctx.fillRect(x, y, 1, 1);
-
-      if (sparkle && alpha > 0.38) {
-        ctx.fillRect(x - 1, y, 1, 1);
-        ctx.fillRect(x + 1, y, 1, 1);
-        ctx.fillRect(x, y - 1, 1, 1);
-        ctx.fillRect(x, y + 1, 1, 1);
-      }
-    } else {
-      // Let the rake travel across the target: it draws on from one end, and
-      // once long enough the opposite end starts disappearing.
-      const rotation = Number(particle.rotation) || 0;
-      const length = Math.max(4, Number(particle.slashLength) || 8);
-      const width = Math.max(1, Number(particle.slashWidth) || 1.5);
-      const curve = Number(particle.slashCurve) || 0;
-      const age = 1 - alpha;
-      const headProgress = Math.max(0, Math.min(1, age * 2.2));
-      const tailProgress = Math.max(0, Math.min(1, (headProgress - 0.42) / 0.58));
-      const steps = Math.max(8, Math.round(length * 1.8));
-      const startStep = Math.min(steps - 1, Math.floor((steps - 1) * tailProgress));
-      const endStep = Math.max(startStep, Math.ceil((steps - 1) * headProgress));
-      const cosR = Math.cos(rotation);
-      const sinR = Math.sin(rotation);
-      const halfWidth = Math.max(0, Math.round((width - 1) / 2));
-
-      for (let i = startStep; i <= endStep; i++) {
-        const tRaw = i / (steps - 1);
-        const t = particle.reverseTravel ? 1 - tRaw : tRaw;
-        const localX = -length / 2 + t * length;
-        const arch = (1 - Math.pow((t - 0.5) / 0.5, 2));
-        const localY = -curve * arch;
-        const worldX = x + localX * cosR - localY * sinR;
-        const worldY = y + localX * sinR + localY * cosR;
-        const px = Math.round(worldX);
-        const py = Math.round(worldY);
-
-        for (let w = -halfWidth; w <= halfWidth; w++) {
-          ctx.fillRect(px, py + w, 1, 1);
-        }
-
-        if (i === endStep && headProgress < 1) {
-          const tipX = Math.round(worldX + cosR);
-          const tipY = Math.round(worldY + sinR);
-          ctx.fillRect(tipX, tipY, 1, 1);
-        }
-      }
-    }
-
-    ctx.restore();
-  }
-}
-
-function wandMasteryMaxTargets(level = abilityLevel("wandMastery")) {
-  const cleanLevel = Math.max(1, Math.floor(Number(level) || 1));
-  if (cleanLevel >= 20) return 3;
-  if (cleanLevel >= 10) return 2;
-  return 1;
-}
-
-function wandMasteryMeleeActive() {
-  return Boolean(
-    isWandTypeWeapon(equippedWeapon()) &&
-    isAbilityUnlocked("wandMastery")
-  );
-}
-
 function currentMeleeReach() {
-  if (wandMasteryMeleeActive()) return WAND_MASTERY_REACH;
   return equippedWeapon() === "katana" ? 31 : SWORD_REACH;
 }
 
@@ -665,15 +435,6 @@ function damageEnemyWithProjectile(
       projectile.damageMultiplier;
     payload.rangeMultiplier =
       projectile.rangeMultiplier;
-    payload.camouflageOpening =
-      Boolean(
-        projectile.camouflageOpening
-      );
-    payload.focusFire = Boolean(projectile.focusFire);
-    payload.focusFireShotSequence = Math.max(
-      0,
-      Math.floor(Number(projectile.focusFireShotSequence) || 0)
-    );
   }
 
   sendEnemyAction(
@@ -698,139 +459,9 @@ function damageEnemyWithMelee(
     "damage",
     {
       source,
-      critical:
-        player.shadowCritAttack,
-      aimAngle:
-        player.attackAimAngle,
-      impactDelayMs:
-        Math.max(0, Math.round(Number(options.impactDelayMs) || 0)),
-      targetCount:
-        Math.max(1, Math.round(Number(options.targetCount) || 1))
+      aimAngle: player.attackAimAngle
     }
   );
-}
-
-function canAttackRemotePlayerWithPvp(remote) {
-  return Boolean(
-    remote &&
-    player.pvpEnabled &&
-    remote.pvpEnabled &&
-    remote.mapId === currentMapId &&
-    (Number(remote.hp) || 0) > 0 &&
-    !remote.shadowHidden
-  );
-}
-
-function tryHitPvpPlayers(source = "melee", maxTargets = Infinity) {
-  if (
-    typeof onlineClient === "undefined" ||
-    !onlineClient?.connected ||
-    !player.pvpEnabled
-  ) {
-    return;
-  }
-
-  const originX = player.x;
-  const originY = player.y - 8;
-
-  const horizontalSwing =
-    player.attackDirection === "left" ||
-    player.attackDirection === "right";
-
-  const hitHalfArc =
-    source === "bowMelee"
-      ? BOW_MELEE_HALF_ARC
-      : source === "wandMasteryMelee"
-        ? WAND_MASTERY_HALF_ARC
-        : horizontalSwing
-          ? 0.88
-          : 0.74;
-
-  const reach =
-    source === "bowMelee"
-      ? BOW_MELEE_TRIGGER_RANGE
-      : source === "wandMasteryMelee"
-        ? WAND_MASTERY_REACH
-        : currentMeleeReach();
-
-  const candidates = [];
-
-  for (const remote of onlineClient.playersOnCurrentMap()) {
-    if (!canAttackRemotePlayerWithPvp(remote)) continue;
-
-    const dx = remote.x - originX;
-    const dy = (remote.y - 8) - originY;
-    const distance = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
-
-    const insideAngle =
-      Math.abs(angleDifference(targetAngle, player.attackAimAngle)) <= hitHalfArc;
-    const insideRange = distance <= reach + 8;
-    const clearLine =
-      typeof structureLineOfEffectClear !== "function" ||
-      structureLineOfEffectClear(originX, originY, remote.x, remote.y - 8, 0.5);
-
-    if (insideAngle && insideRange && clearLine) {
-      const relativeAngle = angleDifference(targetAngle, player.attackAimAngle);
-      const sweepProgress = Math.max(
-        0,
-        Math.min(1, (relativeAngle + hitHalfArc) / (hitHalfArc * 2))
-      );
-      candidates.push({ remote, distance, sweepProgress });
-    }
-  }
-
-  candidates.sort((a, b) => a.distance - b.distance);
-
-  const selectedTargets =
-    candidates.slice(0, Math.max(0, maxTargets));
-  const wandMasteryTargetCount =
-    source === "wandMasteryMelee"
-      ? selectedTargets.length
-      : 1;
-
-  for (const { remote, sweepProgress } of selectedTargets) {
-    const hitDelay =
-      source === "wandMasteryMelee"
-        ? Math.max(
-            0,
-            Math.min(player.slashDuration * 0.92, sweepProgress * player.slashDuration * 0.92)
-          )
-        : 0;
-
-    onlineClient.sendPvpAttack(
-      remote.id,
-      source,
-      {
-        critical: player.shadowCritAttack,
-        aimAngle: player.attackAimAngle,
-        impactDelayMs: Math.round(hitDelay * 1000),
-        targetCount: wandMasteryTargetCount
-      }
-    );
-
-    if (source === "wandMasteryMelee") {
-      const hitX = Number(remote.x) || 0;
-      const hitY = (Number(remote.y) || 0) - 8;
-      spawnWandMasteryHitParticles(
-        hitX,
-        hitY,
-        player.attackAimAngle,
-        hitDelay,
-        player.attackDirection === "left"
-      );
-      onlineClient.sendVisualEffect(
-        "wandMasteryHit",
-        {
-          x: hitX,
-          y: hitY,
-          angle: player.attackAimAngle,
-          delay: hitDelay,
-          reverseTravel: player.attackDirection === "left"
-        }
-      );
-    }
-  }
 }
 
 function tryHitEnemies(source = "melee", maxTargets = Infinity) {
@@ -841,19 +472,9 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
     player.attackDirection === "left" ||
     player.attackDirection === "right";
 
-  const hitHalfArc =
-    source === "bowMelee"
-      ? BOW_MELEE_HALF_ARC
-      : source === "wandMasteryMelee"
-        ? WAND_MASTERY_HALF_ARC
-        : horizontalSwing
-          ? 0.80
-          : SWORD_HALF_ARC;
+  const hitHalfArc = horizontalSwing ? 0.80 : SWORD_HALF_ARC;
 
-  const reach =
-    source === "wandMasteryMelee"
-      ? WAND_MASTERY_REACH
-      : currentMeleeReach();
+  const reach = currentMeleeReach();
 
   const candidates = [];
 
@@ -891,55 +512,17 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
 
   candidates.sort((a, b) => a.distance - b.distance);
 
-  const selectedTargets =
-    candidates.slice(0, Math.max(0, maxTargets));
-  const wandMasteryTargetCount =
-    source === "wandMasteryMelee"
-      ? selectedTargets.length
-      : 1;
-
-  for (const { enemy, sweepProgress } of selectedTargets) {
-    if (source === "wandMasteryMelee") {
-      const target = enemyBodyPoint(enemy);
-      const hitDelay = Math.max(
-        0,
-        Math.min(player.slashDuration * 0.92, sweepProgress * player.slashDuration * 0.92)
-      );
-
-      damageEnemyWithMelee(
-        enemy,
-        source,
-        {
-          impactDelayMs: hitDelay * 1000,
-          targetCount: wandMasteryTargetCount
-        }
-      );
-
-      // The claw mark is spawned from the authoritative enemyDamage response.
-      // Do not predict it here: passive enemy interpolation can differ by a few
-      // pixels from the server and previously produced visual "hits" with no
-      // registered damage.
-    } else {
-      damageEnemyWithMelee(enemy, source);
-    }
+  const selectedTargets = candidates.slice(0, Math.max(0, maxTargets));
+  for (const { enemy } of selectedTargets) {
+    damageEnemyWithMelee(enemy, source);
   }
 }
 
-function attackCooldownForWeapon(weapon) {
+function attackCooldownForWeapon(_weapon) {
   // Bows never reach the universal primary-attack path; their charge/release
-  // cadence remains independent. Every other equipped weapon/tool now reads
-  // the shared Slow / Normal / Quick tier from combat-balance.
-  if (typeof COMBAT_BALANCE?.weaponAttackCooldown === "function") {
-    return COMBAT_BALANCE.weaponAttackCooldown(player.weaponIndex);
-  }
-
-  // Compatibility fallback if an older cached combat-balance file is present.
-  if (isWandTypeWeapon(weapon)) {
-    return typeof COMBAT_BALANCE?.wandAttackCooldown === "function"
-      ? COMBAT_BALANCE.wandAttackCooldown(player.weaponIndex)
-      : WAND_BASIC_ATTACK_FALLBACK_COOLDOWN;
-  }
-  return player.attackCooldownDuration;
+  // cadence remains independent. Every other equipped weapon/tool uses the
+  // shared Slow / Normal / Quick tier.
+  return COMBAT_BALANCE.weaponAttackCooldown(player.weaponIndex);
 }
 
 function attackDurationForWeapon(weapon) {
@@ -963,12 +546,11 @@ function attackImpactDelayForWeapon(weapon) {
   );
 }
 
-function queueBasicAttackImpact(weapon, shadowCritAttack) {
+function queueBasicAttackImpact(weapon) {
   pendingBasicAttack = {
     weapon,
     mapId: currentMapId,
     time: attackImpactDelayForWeapon(weapon),
-    shadowCritAttack: Boolean(shadowCritAttack),
     // Lock the cursor-selected structure at mouse/touch-down so the delayed
     // Pickaxe impact cannot switch targets if the pointer moves during swing.
     structureTargetId: weapon === "pickaxe"
@@ -998,9 +580,6 @@ function updatePendingBasicAttack(dt) {
     return;
   }
 
-  player.shadowCritAttack =
-    pending.shadowCritAttack;
-
   // The slash/claw sweep begins on the active visual frame, not on mouse-down.
   player.slashTime =
     player.slashDuration;
@@ -1010,7 +589,6 @@ function updatePendingBasicAttack(dt) {
     pending.structureTargetId
   );
 
-  player.shadowCritAttack = false;
 }
 
 function updateAttackAimFromPointer(pointerX, pointerY) {
@@ -1045,7 +623,6 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
     weapon === "katana"
   ) {
     tryHitEnemies("melee", 1);
-    tryHitPvpPlayers();
     tryCutHarvestFlowers();
     tryCutGrass();
     return;
@@ -1053,14 +630,12 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
 
   if (weapon === "axe") {
     tryHitEnemies("melee", 1);
-    tryHitPvpPlayers();
     tryHitTree();
     return;
   }
 
   if (weapon === "pickaxe") {
     tryHitEnemies("melee", 1);
-    tryHitPvpPlayers();
     if (!tryHitPlayerStructure(lockedStructureId)) {
       tryHitRock();
     }
@@ -1068,30 +643,12 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
   }
 
   if (isWandTypeWeapon(weapon)) {
-    if (isAbilityUnlocked("wandMastery")) {
-      const masteryTargets = wandMasteryMaxTargets();
-      tryHitEnemies(
-        "wandMasteryMelee",
-        masteryTargets
-      );
-      tryHitPvpPlayers(
-        "wandMasteryMelee",
-        masteryTargets
-      );
-
-    } else {
-      tryHitEnemies("melee", 1);
-      tryHitPvpPlayers("melee");
-    }
+    tryHitEnemies("melee", 1);
     return;
   }
 }
 
 function executePrimaryAttackCommand(payload) {
-  if (player.hunterSnareSetting) {
-    cancelHunterSnarePlacement(true);
-  }
-
   // Bow input normally has its own press/hold/release path. A carried Hurl
   // slime is the exception: primary click must be allowed through so the
   // throw takes priority regardless of which weapon is equipped.
@@ -1101,14 +658,6 @@ function executePrimaryAttackCommand(payload) {
   ) {
     return;
   }
-
-  const attackingFromShadowHide =
-    player.shadowHidden;
-
-  breakShadowHide();
-
-  player.shadowCritAttack =
-    attackingFromShadowHide;
 
   // Hurl occupies both hands. A primary click becomes the throw.
   if (getLocalCarriedHurlObject()) {
@@ -1127,34 +676,30 @@ function executePrimaryAttackCommand(payload) {
       player.slashTime = 0;
     }
 
-    player.shadowCritAttack = false;
-    return;
+      return;
   }
 
   if (player.attackCooldown > 0) {
-    player.shadowCritAttack = false;
-    return;
+      return;
   }
 
   const currentWeapon = equippedWeapon();
 
   if (!currentWeapon) {
-    player.shadowCritAttack = false;
-    return;
+      return;
   }
 
-  // v377 item-driven actions: active abilities belong to the equipped item
-  // rather than a class/skill binding. Fire Wand uses Fireball as its primary
-  // press/aim/release action; Rain Wand begins the existing Rain Cloud cast.
+  // Item-driven actions belong directly to the equipped item. Fire Wand uses
+  // Fireball as its primary press/aim/release action; Rain Wand begins the
+  // Rain Cloud cast.
   if (currentWeapon === "wand") {
     const target = {
       x: currentCamX + Number(payload.pointerX || 0),
       y: currentCamY + Number(payload.pointerY || 0)
     };
     updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
-    beginFireballAim(null, target);
-    player.shadowCritAttack = false;
-    return;
+    beginFireballAim(target);
+      return;
   }
 
   if (currentWeapon === "rainWand") {
@@ -1164,8 +709,7 @@ function executePrimaryAttackCommand(payload) {
     };
     updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
     beginRainCloudCast(target);
-    player.shadowCritAttack = false;
-    return;
+      return;
   }
 
   if (currentWeapon === "tigerPaw") {
@@ -1174,13 +718,8 @@ function executePrimaryAttackCommand(payload) {
     player.attackTime = 0.12;
     player.attackCooldown = 0.25;
     player.slashTime = 0;
-    player.shadowCritAttack = false;
-    return;
+      return;
   }
-
-  // A committed primary attack breaks Camouflage immediately even on a whiff.
-  // The authoritative server grants the short ambush token on this transition.
-  consumeCamouflageOpening();
 
   updateAttackAimFromPointer(
     payload.pointerX,
@@ -1209,176 +748,38 @@ function executePrimaryAttackCommand(payload) {
   player.basicAttackMovementLockTime = 0;
 
   player.slashTime = 0;
-  queueBasicAttackImpact(
-    currentWeapon,
-    player.shadowCritAttack
-  );
+  queueBasicAttackImpact(currentWeapon);
 
-  player.shadowCritAttack = false;
-}
-
-function bowHasCloseMonsterInAim() {
-  const originX = player.x;
-  const originY = player.y - 8;
-  const aim = Number(player.attackAimAngle) || 0;
-
-  const candidates = [];
-
-  for (
-    const { enemy, profile }
-    of activeEnemyRecords({ aliveOnly: true })
-  ) {
-    if (
-      profile.canFocusFire &&
-      !profile.canFocusFire(enemy)
-    ) {
-      continue;
-    }
-
-    candidates.push(
-      enemyBodyPoint(enemy)
-    );
-  }
-
-  if (
-    player.pvpEnabled &&
-    typeof onlineClient !== "undefined"
-  ) {
-    for (const remote of onlineClient.playersOnCurrentMap()) {
-      if (!canAttackRemotePlayerWithPvp(remote)) continue;
-
-      candidates.push({
-        x: remote.x,
-        y: remote.y - 8
-      });
-    }
-  }
-
-  return candidates.some(target => {
-    const dx = target.x - originX;
-    const dy = target.y - originY;
-    const distance = Math.hypot(dx, dy);
-
-    if (distance > BOW_MELEE_TRIGGER_RANGE) {
-      return false;
-    }
-
-    if (
-      typeof structureLineOfEffectClear === "function" &&
-      !structureLineOfEffectClear(originX, originY, target.x, target.y, 0.5)
-    ) {
-      return false;
-    }
-
-    const targetAngle = Math.atan2(dy, dx);
-
-    return (
-      Math.abs(
-        angleDifference(
-          targetAngle,
-          aim
-        )
-      ) <= BOW_MELEE_HALF_ARC
-    );
-  });
-}
-
-function executeBowMeleeAttack() {
-  const attackingFromShadowHide =
-    player.shadowHidden;
-
-  consumeCamouflageOpening();
-  breakShadowHide();
-
-  player.shadowCritAttack =
-    attackingFromShadowHide;
-
-  player.bowDrawing = false;
-  player.bowDrawAmount = 0;
-  player.bowReleaseTime = 0;
-
-  player.attackDuration =
-    attackDurationForWeapon("bow");
-  player.attackTime =
-    player.attackDuration;
-  player.attackCooldown = 0.46;
-  player.slashTime =
-    player.slashDuration;
-
-  tryHitEnemies("bowMelee", 1);
-  tryHitPvpPlayers("bowMelee");
-
-  player.shadowCritAttack = false;
-
-  if (
-    typeof onlineClient !== "undefined"
-  ) {
-    onlineClient.sendLocalState(true);
-  }
 }
 
 function handlePrimaryAttack(event) {
   if (typeof tryPlaceSelectedBuildPiece === "function" && tryPlaceSelectedBuildPiece(event)) return;
   if (player.isDead) return;
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen || event.button !== 0) return;
-  if (player.rainCloudCasting) return;
-
-  if (player.hunterSnareSetting) {
-    cancelHunterSnarePlacement(true);
-  }
-  if (focusFireIsCasting() || fireballIsAiming()) return;
+  if (shopOpen || beachQuestOpen || event.button !== 0) return;
+  if (player.rainCloudCasting || fireballIsAiming()) return;
 
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
   mouseCanvasY = pointer.y;
   updateCanvasCursor();
 
-  if (
-    equippedWeapon() === "bow" &&
-    !getLocalCarriedHurlObject()
-  ) {
-    if (player.attackCooldown > 0) {
-      return;
-    }
+  if (equippedWeapon() === "bow" && !getLocalCarriedHurlObject()) {
+    if (player.attackCooldown > 0) return;
 
-    updateAttackAimFromPointer(
-      pointer.x,
-      pointer.y
-    );
-
-    if (bowHasCloseMonsterInAim()) {
-      executeBowMeleeAttack();
-      return;
-    }
-
+    updateAttackAimFromPointer(pointer.x, pointer.y);
     if ((Number(player.arrows) || 0) <= 0) {
-      spawnFloatingText(
-        player.x,
-        player.y - 27,
-        "NO ARROWS",
-        "#ffe38b",
-        0.72
-      );
+      spawnFloatingText(player.x, player.y - 27, "NO ARROWS", "#ffe38b", 0.72);
       return;
     }
 
-    // Every click starts a fresh one-second draw. Do not inherit residual
-    // bowDrawAmount from the previous release animation.
     player.bowDrawAmount = 0;
     player.bowDrawing = true;
     player.bowReleaseTime = 0;
-
-    if (
-      typeof onlineClient !== "undefined"
-    ) {
-      onlineClient.sendLocalState(true);
-    }
-
+    if (typeof onlineClient !== "undefined") onlineClient.sendLocalState(true);
     return;
   }
 
   primaryAttackHeld = !getLocalCarriedHurlObject();
-
   inputController.queueCommand("primaryAttack", {
     pointerX: pointer.x,
     pointerY: pointer.y
@@ -1388,8 +789,8 @@ function handlePrimaryAttack(event) {
 function repeatHeldPrimaryAttackIfReady() {
   if (!primaryAttackHeld) return;
   if (player.isDead || player.hp <= 0) return;
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
-  if (player.rainCloudCasting || focusFireIsCasting() || fireballIsAiming()) return;
+  if (shopOpen || beachQuestOpen) return;
+  if (player.rainCloudCasting || fireballIsAiming()) return;
   if (player.attackCooldown > 0) return;
 
   const weapon = equippedWeapon();

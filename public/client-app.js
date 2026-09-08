@@ -11,7 +11,6 @@ function updateHudUi() {
     const interactionAvailable = Boolean(
       !player.isDead &&
       !shopOpen &&
-      !classResetConfirmOpen &&
       !beachQuestOpen &&
       nearbySpawnInteraction()
     );
@@ -124,132 +123,16 @@ function updateEnvironmentRegrowthEffects(
   updateGrowthParticles(dt);
 }
 
-function updateRockPresentation(dt) {
-  const nowMs = performance.now();
-
-  for (const rock of rocks) {
-    if (rock.depleted) continue;
-
-    rock.pickupTime = Math.max(
-      0,
-      (Number(rock.pickupTime) || 0) - dt
-    );
-
-    if (rock.carriedBy) {
-      rock.visualRotation = 0;
-      continue;
-    }
-
-    const wasHurling = (Number(rock.hurlTime) || 0) > 0;
-    const wasRolling = (Number(rock.rollTime) || 0) > 0;
-
-    rock.hurlTime = Math.max(
-      0,
-      (Number(rock.hurlTime) || 0) - dt
-    );
-    rock.rollTime = Math.max(
-      0,
-      (Number(rock.rollTime) || 0) - dt
-    );
-
-    if (!Number.isFinite(Number(rock.renderX))) rock.renderX = rock.x;
-    if (!Number.isFinite(Number(rock.renderY))) rock.renderY = rock.y;
-
-    const snapshotAge = Math.max(
-      0,
-      Math.min(
-        0.16,
-        (nowMs - (Number(rock.serverSnapshotAtMs) || nowMs)) / 1000
-      )
-    );
-
-    let velocityX = 0;
-    let velocityY = 0;
-    let spinSpeed = 0;
-
-    if (wasHurling) {
-      velocityX = Number(rock.hurlVelocityX) || 0;
-      velocityY = Number(rock.hurlVelocityY) || 0;
-      spinSpeed = 10.8;
-    } else if (wasRolling) {
-      const rollDuration = Math.max(0.01, Number(rock.rollDuration) || 0.24);
-      const fraction = Math.max(0, Math.min(1, (Number(rock.rollTime) || 0) / rollDuration));
-      velocityX = (Number(rock.rollVelocityX) || 0) * fraction;
-      velocityY = (Number(rock.rollVelocityY) || 0) * fraction;
-      spinSpeed = 6.2 * fraction;
-    }
-
-    if (wasHurling || wasRolling) {
-      // Predict continuously at render rate, then make only a gentle correction
-      // toward an extrapolated authoritative snapshot. This keeps the server in
-      // charge without visually following its 10 Hz stepping.
-      rock.renderX += velocityX * dt;
-      rock.renderY += velocityY * dt;
-
-      const targetX = Number(rock.serverTargetX);
-      const targetY = Number(rock.serverTargetY);
-
-      if (Number.isFinite(targetX) && Number.isFinite(targetY)) {
-        const predictedTargetX = targetX + velocityX * snapshotAge;
-        const predictedTargetY = targetY + velocityY * snapshotAge;
-        const correctionBlend = 1 - Math.exp(-9 * dt);
-        rock.renderX += (predictedTargetX - rock.renderX) * correctionBlend;
-        rock.renderY += (predictedTargetY - rock.renderY) * correctionBlend;
-      }
-
-      // Keep one cosmetic spin direction for the whole throw + landing roll.
-      // This prevents a server phase transition from visually reversing the
-      // rock even though its physical trajectory remains continuous.
-      const directionSign = Number(rock.visualSpinDirection) < 0 ? -1 : 1;
-      rock.visualRotation += spinSpeed * directionSign * dt;
-      return;
-    }
-
-    // Once motion ends, smoothly settle onto the exact authoritative landing
-    // point. Preserve the angle where the physical roll stopped; forcing the
-    // sprite back upright created a conspicuous post-landing reverse spin.
-    const settleBlend = 1 - Math.exp(-24 * dt);
-    const targetX = Number(rock.serverTargetX);
-    const targetY = Number(rock.serverTargetY);
-
-    if (Number.isFinite(targetX)) {
-      rock.renderX += (targetX - rock.renderX) * settleBlend;
-      if (Math.abs(targetX - rock.renderX) < 0.03) rock.renderX = targetX;
-    }
-
-    if (Number.isFinite(targetY)) {
-      rock.renderY += (targetY - rock.renderY) * settleBlend;
-      if (Math.abs(targetY - rock.renderY) < 0.03) rock.renderY = targetY;
-    }
-
-    // Normalize by whole turns only. This keeps the exact same visible pose
-    // while preventing the accumulated angle from growing forever.
-    const rotation = Number(rock.visualRotation) || 0;
-    if (Math.abs(rotation) > Math.PI * 2) {
-      rock.visualRotation = Math.atan2(
-        Math.sin(rotation),
-        Math.cos(rotation)
-      );
-    }
-  }
-}
-
 function updateTransientSystems(dt) {
   updateEnemyPresentationEffects(dt);
-  updateRockPresentation(dt);
   updateDamageNumbers(dt);
   updateFloatingTexts(dt);
   updatePotionUseEffects(dt);
-  updateJesterConfetti(dt);
   updateLevelUpParticles(dt);
-  updateWandSweepParticles(dt);
-  updateJesterAfterimages(dt);
-  updateShadowSmoke(dt);
   updateCoins(dt);
   updateWoodDrops(dt);
   updateFlowerDrops(dt);
   updateLootPickupAnimations(dt);
-  updateFocusFire(dt);
   updateFireballAim(dt);
   updateRainCloudCast(dt);
   updateBasicProjectiles(dt);
@@ -316,7 +199,6 @@ function updatePlayerStatusAndTimers(dt) {
   updateBowVisualState(dt);
   updatePendingBasicAttack(dt);
 
-  tickTimer(player, "shadowHideRevealTime", dt);
   tickTimer(player, "contactCooldown", dt);
   tickTimer(player, "wetTime", dt);
 
@@ -351,24 +233,23 @@ function updatePlayerStatusAndTimers(dt) {
     player.attackDuration = DEFAULT_BASIC_ATTACK_DURATION;
   }
 
-  if (player.skillCooldowns) {
-    for (const skillId of Object.keys(player.skillCooldowns)) {
-      const endAtMs = Number(player.skillCooldownEndTimes?.[skillId]) || 0;
+  if (player.actionCooldowns) {
+    for (const actionId of Object.keys(player.actionCooldowns)) {
+      const endAtMs = Number(player.actionCooldownEndTimes?.[actionId]) || 0;
       if (endAtMs > 0) {
-        player.skillCooldowns[skillId] = Math.max(
+        player.actionCooldowns[actionId] = Math.max(
           0,
           (endAtMs - Date.now()) / 1000
         );
       } else {
-        player.skillCooldowns[skillId] = Math.max(
+        player.actionCooldowns[actionId] = Math.max(
           0,
-          (Number(player.skillCooldowns[skillId]) || 0) - dt
+          (Number(player.actionCooldowns[actionId]) || 0) - dt
         );
       }
     }
   }
 
-  updateJesterRuntime(dt);
   updatePlayerBurnStatus(dt);
 }
 
@@ -396,33 +277,12 @@ function readMovementInput() {
 }
 
 function bowStrafeMovementMultiplier() {
-  const bowMovementRestricted =
-    player.bowDrawing ||
-    focusFireIsCasting();
-
-  if (!bowMovementRestricted) return 1;
-
-  // Strafe's enhancement is toggled directly inside the Ranger skill card and
-  // defaults ON when learned. Focus Fire intentionally uses the same movement
-  // rule for targeting and barrage.
-  if (!hasEnhancement("strafe_enh_1")) return 0;
-
-  const level = Math.max(0, Math.min(5, abilityLevel("strafe")));
-  if (level <= 0) return 0;
-
-  // LV1-LV5: 30%, 35%, 40%, 45%, 50%.
-  return 0.25 + level * 0.05;
+  // Drawing a bow uses the base rooted
+  // behavior. Ordinary movement is unaffected.
+  return player.bowDrawing ? 0 : 1;
 }
 
 function updatePlayerMovement(dt) {
-  player.pvpSnareRootTime = Math.max(
-    0,
-    (Number(player.pvpSnareRootTime) || 0) - dt
-  );
-  player.pvpSnareSlowTime = Math.max(
-    0,
-    (Number(player.pvpSnareSlowTime) || 0) - dt
-  );
 
   if (player.isDead) {
     player.walkTime = 0;
@@ -432,17 +292,10 @@ function updatePlayerMovement(dt) {
     return;
   }
 
-  updateHunterSnarePlacement(dt);
-
   const movement = readMovementInput();
   const strafeMultiplier = bowStrafeMovementMultiplier();
-  const pvpSnareRooted =
-    (Number(player.pvpSnareRootTime) || 0) > 0;
-
   const canActuallyMove =
     !player.rainCloudCasting &&
-    !player.hunterSnareSetting &&
-    !pvpSnareRooted &&
     movement.moving &&
     strafeMultiplier > 0;
 
@@ -457,22 +310,10 @@ function updatePlayerMovement(dt) {
     const wetMovementMultiplier =
       playerIsWet() ? GAME_CONFIG.player.wetSpeedMultiplier : 1;
 
-    const pvpSnareMovementMultiplier =
-      (Number(player.pvpSnareSlowTime) || 0) > 0
-        ? Math.max(
-            0.1,
-            Math.min(
-              1,
-              Number(player.pvpSnareSlowMultiplier) || 0.45
-            )
-          )
-        : 1;
-
     const moveSpeed =
       player.speed *
       strafeMultiplier *
-      wetMovementMultiplier *
-      pvpSnareMovementMultiplier;
+      wetMovementMultiplier;
 
     const nextX = player.x + movement.dx * moveSpeed * dt;
     const nextY = player.y + movement.dy * moveSpeed * dt;
@@ -489,7 +330,6 @@ function updatePlayerMovement(dt) {
   player.y = clampToWorld(player.y, 15, world.height - 1);
 
   updateMapConnection();
-  updateCamouflageState(dt);
 }
 
 function collectNearbyPickups() {
@@ -558,9 +398,8 @@ function processGameCommand(command) {
   if (player.isDead) return;
 
   if (command.type === "equipWeapon") {
-    // Focus Fire is a committed channel. Hotbar keys and mouse wheel cannot
-    // be used as a free cancel by swapping weapons mid-skill.
-    if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return;
+    // Wand actions are committed while aiming/casting.
+    if (fireballIsAiming() || player.rainCloudCasting) return;
 
     const slotIndex =
       Number(command.payload.index);
@@ -571,16 +410,6 @@ function processGameCommand(command) {
       selectHotbarSlot(slotIndex);
     }
 
-    return;
-  }
-
-  if (command.type === "useActiveSkill") {
-    triggerActiveSkillForKey(command.payload.key);
-    return;
-  }
-
-  if (command.type === "releaseFocusFire") {
-    releaseFocusFireCharge();
     return;
   }
 
@@ -629,7 +458,7 @@ class GameSimulation {
       return;
     }
 
-    const modalInputBlocked = shopOpen || classResetConfirmOpen || beachQuestOpen;
+    const modalInputBlocked = shopOpen || beachQuestOpen;
 
     worldTime += dt;
     this.state.advanceTick();
@@ -670,266 +499,48 @@ function getCameraPosition() {
   };
 }
 
-const PROTOTYPE_ISLAND_MAP_ID = "prototypeIsland";
-const PROTOTYPE_ISLAND_WEST_MAP_ID = "prototypeIslandWest";
-const PROTOTYPE_ISLAND_FACE_DEPTH = 10;
+const TERRAIN_FACE_DEPTH = 10;
 
-function isPrototypeIslandMap(mapId = currentMapId) {
-  return (
-    mapId === PROTOTYPE_ISLAND_MAP_ID ||
-    mapId === PROTOTYPE_ISLAND_WEST_MAP_ID
-  );
-}
-
-function isAuthoredTerrainMap(mapId = currentMapId) {
-  const definition =
-    typeof WORLD_CONTENT !== "undefined"
-      ? WORLD_CONTENT?.maps?.[mapId]
-      : null;
-
-  return Boolean(
-    definition &&
-    typeof TERRAIN_RULES !== "undefined" &&
-    TERRAIN_RULES.terrainDefinition(definition)
-  );
-}
-
-function getPrototypeIslandLayout(mapId = currentMapId) {
-  if (!isPrototypeIslandMap(mapId)) return null;
-
-  const isWestHalf = mapId === PROTOTYPE_ISLAND_WEST_MAP_ID;
-  const main = {
-    x: 200,
-    y: 130,
-    width: isWestHalf ? 600 : 300,
-    height: 300
-  };
-
-  const eastBridge = {
-    x: main.x + main.width,
-    y: 266,
-    width: 78,
-    height: 28
-  };
-
-  const westBridge =
-    mapId === PROTOTYPE_ISLAND_MAP_ID
-      ? {
-          x: 122,
-          y: 266,
-          width: 78,
-          height: 28
-        }
-      : null;
-
-  const walkableRects = [main];
-  if (westBridge) walkableRects.push(westBridge);
-  walkableRects.push(eastBridge);
-
-  return {
-    main,
-    eastBridge,
-    westBridge,
-    walkableRects
-  };
-}
-
-function prototypeIslandWalkableRects(mapId = currentMapId) {
-  const layout = getPrototypeIslandLayout(mapId);
-  if (!layout) return [];
-  return layout.walkableRects || [];
-}
-
-
-function pointInPrototypeIslandWalkableArea(x, y) {
-  const rects = prototypeIslandWalkableRects();
-  if (!rects.length) return true;
-  return rects.some(rect => pointInRect(x, y, rect));
-}
-
-function buildPrototypeIslandTopPath(camX, camY) {
-  const rects = prototypeIslandWalkableRects();
-  if (!rects.length) return null;
-
-  const path = new Path2D();
-  for (const rect of rects) {
-    path.rect(
-      Math.round(rect.x - camX),
-      Math.round(rect.y - camY),
-      Math.round(rect.width),
-      Math.round(rect.height)
-    );
-  }
-  return path;
-}
-
-function drawPrototypeIslandBackdrop() {
+function drawTerrainBackdrop() {
   ctx.fillStyle = "#090b09";
   ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 }
 
-
-function prototypeIslandExposedBottomSegments() {
-  const rects = prototypeIslandWalkableRects();
-  const segments = [];
-
-  for (const rect of rects) {
-    const bottomY = rect.y + rect.height;
-    let intervals = [[rect.x, rect.x + rect.width]];
-
-    for (const other of rects) {
-      if (other === rect) continue;
-
-      const otherTop = other.y;
-      const otherBottom = other.y + other.height;
-
-      // If terrain already occupies space directly below this bottom edge,
-      // that horizontal overlap is not an exposed south-facing face.
-      if (otherTop <= bottomY && otherBottom > bottomY) {
-        const cut = [other.x, other.x + other.width];
-        intervals = intervals.flatMap(interval => subtractInterval(interval, cut));
-      }
-    }
-
-    for (const [x1, x2] of intervals) {
-      segments.push({ x: x1, y: bottomY, width: x2 - x1 });
-    }
-  }
-
-  return segments;
-}
-
-function drawPrototypeIslandEarthFaces(camX, camY) {
-  if (
-    typeof drawTerrainSouthVoidFaces === "function" &&
+function drawTerrainEarthFaces(camX, camY) {
+  if (typeof drawTerrainSouthVoidFaces === "function") {
     drawTerrainSouthVoidFaces(
       currentMapId,
       camX,
       camY,
-      PROTOTYPE_ISLAND_FACE_DEPTH
-    )
-  ) {
-    return;
-  }
-
-  // Legacy fallback retained until every island map is terrain-driven.
-  const segments = prototypeIslandExposedBottomSegments();
-  if (!segments.length) return;
-
-  const depth = PROTOTYPE_ISLAND_FACE_DEPTH;
-
-  ctx.save();
-  ctx.fillStyle = "#8b5a3c";
-
-  for (const segment of segments) {
-    ctx.fillRect(
-      Math.round(segment.x - camX),
-      Math.round(segment.y - camY),
-      Math.round(segment.width),
-      depth
+      TERRAIN_FACE_DEPTH
     );
   }
-
-  ctx.fillStyle = "#5f3925";
-
-  for (const segment of segments) {
-    ctx.fillRect(
-      Math.round(segment.x - camX),
-      Math.round(segment.y - camY + depth),
-      Math.round(segment.width),
-      2
-    );
-  }
-
-  ctx.restore();
 }
 
-function drawPrototypeIslandGroundLayer(camX, camY) {
-  if (
-    typeof drawTerrainMapTop === "function" &&
-    drawTerrainMapTop(currentMapId, camX, camY)
-  ) {
-    if (typeof drawWaterfallGroveLandmark === "function") {
-      drawWaterfallGroveLandmark(currentMapId, camX, camY);
-    }
+function drawTerrainGroundLayer(camX, camY) {
+  if (typeof drawTerrainMapTop !== "function") return;
+  drawTerrainMapTop(currentMapId, camX, camY);
 
-    // Player floors sit on top of the authored/generated terrain surface.
-    // v379 only drew them on the legacy flat-ground path, which made placement
-    // consume inventory without a visible floor on coordinate maps.
-    drawPlayerStructureFloors(camX, camY);
-
-    // Terrain owns the top surface (including dirt/water). Reflections are
-    // layered into authored water before a light surface veil.
-    drawPlayerReflection(camX, camY);
-
-    if (onlineClient) {
-      for (const remotePlayer of onlineClient.playersOnCurrentMap()) {
-        drawRemotePlayerReflection(remotePlayer, camX, camY);
-      }
-    }
-
-    if (typeof drawTerrainWaterSurfaceOverlay === "function") {
-      drawTerrainWaterSurfaceOverlay(currentMapId, camX, camY);
-    }
-
-    if (typeof drawBeachTideOverlay === "function") {
-      drawBeachTideOverlay(currentMapId, camX, camY);
-    }
-
-    for (const cloud of rainClouds) {
-      drawRainCloudGround(cloud, camX, camY);
-    }
-
-    for (const house of houses) {
-      drawHouseGround(house, camX, camY);
-    }
-    return;
+  if (typeof drawWaterfallGroveLandmark === "function") {
+    drawWaterfallGroveLandmark(currentMapId, camX, camY);
   }
 
-  const path = buildPrototypeIslandTopPath(camX, camY);
-  if (!path) {
-    drawGroundLayer(camX, camY);
-    return;
-  }
-
-  ctx.save();
-  ctx.clip(path);
-  drawGroundLayer(camX, camY);
-  ctx.restore();
-}
-
-function drawGroundLayer(camX, camY) {
-  drawGround(camX, camY);
   drawPlayerStructureFloors(camX, camY);
-  drawMapConnection(camX, camY);
-
-  drawWaterBase(
-    camX,
-    camY
-  );
-
-  drawPlayerReflection(
-    camX,
-    camY
-  );
+  drawPlayerReflection(camX, camY);
 
   if (onlineClient) {
-    for (
-      const remotePlayer
-      of onlineClient.playersOnCurrentMap()
-    ) {
-      drawRemotePlayerReflection(
-        remotePlayer,
-        camX,
-        camY
-      );
+    for (const remotePlayer of onlineClient.playersOnCurrentMap()) {
+      drawRemotePlayerReflection(remotePlayer, camX, camY);
     }
   }
 
-  drawWaterSurface(
-    camX,
-    camY
-  );
+  if (typeof drawTerrainWaterSurfaceOverlay === "function") {
+    drawTerrainWaterSurfaceOverlay(currentMapId, camX, camY);
+  }
+
+  if (typeof drawBeachTideOverlay === "function") {
+    drawBeachTideOverlay(currentMapId, camX, camY);
+  }
 
   for (const cloud of rainClouds) {
     drawRainCloudGround(cloud, camX, camY);
@@ -966,82 +577,14 @@ function buildWorldDrawables(camX, camY) {
   }
 
   for (const rock of rocks) {
-    const carrier = rockCarrier(rock);
-    const sortY = carrier
-      ? carrier.y + 0.25
-      : rock.y - 0.15;
-
+    // Loose map rocks are no longer part of the retired carry/hurl system.
+    // Sort them directly from their authored world position.
     addDrawable(
       drawables,
-      sortY,
+      rock.y - 0.15,
       () => drawRock(rock, camX, camY)
     );
   }
-
-  for (const snare of hunterSnareVisuals.values()) {
-    if (snare.mapId !== currentMapId) continue;
-
-    addDrawable(
-      drawables,
-      snare.y - 0.25,
-      () => drawHunterSnare(snare, camX, camY)
-    );
-  }
-
-  if (currentMapId === "spawn") {
-    addDrawable(
-      drawables,
-      tutorialNpc.y,
-      () =>
-        drawTutorialNpc(
-          camX,
-          camY
-        )
-    );
-
-    addDrawable(
-      drawables,
-      woodCraftBench.y,
-      () =>
-        drawWoodCraftBench(
-          camX,
-          camY
-        )
-    );
-
-    addDrawable(
-      drawables,
-      classResetCrystal.y,
-      () =>
-        drawClassResetCrystal(
-          camX,
-          camY
-        )
-    );
-  }
-
-  if (currentMapId === "hunterHollow") {
-    addDrawable(
-      drawables,
-      hunterNpc.y,
-      () =>
-        drawHunterNpc(
-          camX,
-          camY
-        )
-    );
-
-    addDrawable(
-      drawables,
-      jesterNpc.y,
-      () =>
-        drawJesterNpc(
-          camX,
-          camY
-        )
-    );
-  }
-
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     addDrawable(
       drawables,
@@ -1201,31 +744,6 @@ function buildWorldDrawables(camX, camY) {
     );
   }
 
-  const clone = getActiveJesterClone();
-
-  if (clone) {
-    addDrawable(
-      drawables,
-      clone.y,
-      () => drawJesterClone(camX, camY)
-    );
-  }
-
-  for (
-    const remoteClone
-    of remoteJesterClones
-  ) {
-    addDrawable(
-      drawables,
-      remoteClone.y,
-      () => drawJesterCloneEntity(
-        remoteClone,
-        camX,
-        camY
-      )
-    );
-  }
-
   if (onlineClient) {
     for (const remotePlayer of onlineClient.playersOnCurrentMap()) {
       addDrawable(
@@ -1262,7 +780,6 @@ function buildWorldDrawables(camX, camY) {
             { width: 14, depth: 5, phase: 0.4 }
           );
         }
-        drawPvpMarker(player, camX, camY);
       }
     );
   }
@@ -1286,24 +803,12 @@ function drawForegroundLayer(camX, camY) {
     drawWaterfallGroveAtmosphere(currentMapId, camX, camY);
   }
 
-  drawJesterAfterimages(camX, camY);
   drawFireParticles(camX, camY);
-  drawWandSweepParticles(camX, camY);
   drawGrowthParticles(camX, camY);
-  drawShadowSmoke(camX, camY);
-  drawJesterConfetti(camX, camY);
   drawLevelUpParticles(camX, camY);
 
-  for (const opener of focusFireOpeners) {
-    drawFocusFireOpener(opener, camX, camY);
-  }
-
   drawFireballTargeting(camX, camY);
-  drawFocusFireTargeting(camX, camY);
-  drawFocusFireTargetMarker(camX, camY);
-  drawCamouflageIndicator(camX, camY);
   drawRainCloudCastIndicator(camX, camY);
-  drawHunterSnarePlacementIndicator(camX, camY);
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
   drawPotionUseEffects(camX, camY);
@@ -1349,18 +854,8 @@ class GameRenderer {
     currentCamX = camera.x;
     currentCamY = camera.y;
 
-    const usesTerrainBackdrop =
-      isPrototypeIslandMap(currentMapId) ||
-      isAuthoredTerrainMap(currentMapId);
-
-    if (usesTerrainBackdrop) {
-      drawPrototypeIslandBackdrop();
-    } else if (useMobileSubpixelCamera) {
-      // The fractional translation can uncover less than one logical pixel at
-      // a canvas edge. Pre-fill it so no stale-frame seam can appear there.
-      ctx.fillStyle = "#6f9f52";
-      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    }
+    // v431: every active map is a coordinate-world terrain map.
+    drawTerrainBackdrop();
 
     ctx.save();
     ctx.translate(
@@ -1368,20 +863,12 @@ class GameRenderer {
       mobileCameraPresentationOffsetY
     );
 
-    if (usesTerrainBackdrop) {
-      drawPrototypeIslandEarthFaces(renderCamera.x, renderCamera.y);
-      drawPrototypeIslandGroundLayer(renderCamera.x, renderCamera.y);
-      drawSortedWorldLayer(renderCamera.x, renderCamera.y);
-      drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
-      drawCloudShadows(renderCamera.x, renderCamera.y);
-      drawForegroundLayer(renderCamera.x, renderCamera.y);
-    } else {
-      drawGroundLayer(renderCamera.x, renderCamera.y);
-      drawSortedWorldLayer(renderCamera.x, renderCamera.y);
-      drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
-      drawCloudShadows(renderCamera.x, renderCamera.y);
-      drawForegroundLayer(renderCamera.x, renderCamera.y);
-    }
+    drawTerrainEarthFaces(renderCamera.x, renderCamera.y);
+    drawTerrainGroundLayer(renderCamera.x, renderCamera.y);
+    drawSortedWorldLayer(renderCamera.x, renderCamera.y);
+    drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);
+    drawCloudShadows(renderCamera.x, renderCamera.y);
+    drawForegroundLayer(renderCamera.x, renderCamera.y);
 
     ctx.restore();
     mobileCameraPresentationOffsetX = 0;
@@ -1444,10 +931,9 @@ class GameApp {
     }
 
     // Cooldown deadlines are wall-clock based; refresh only the lightweight
-    // hotbar cooldown layer every frame so cast-time cooldowns are visible
-    // immediately and continue counting down without requiring a menu refresh.
-    if (typeof updateAbilityCooldownHud === "function") {
-      updateAbilityCooldownHud();
+    // item-action layer every frame. This never rewrites item image sources.
+    if (typeof updateHotbarActionCooldownHud === "function") {
+      updateHotbarActionCooldownHud();
     }
 
     // v420: recipe availability depends on live proximity to a portable

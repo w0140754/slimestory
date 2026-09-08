@@ -86,7 +86,6 @@ const mobileControlsEnabled = window.matchMedia(
 let mobileAimDx = 1;
 let mobileAimDy = 0;
 let mobilePointTargetMode = null;
-let mobilePointTargetKey = null;
 let mobilePointTargetSuppressMouseUntil = 0;
 let mobileBuildCursorWorldX = null;
 let mobileBuildCursorWorldY = null;
@@ -99,11 +98,6 @@ let mobileAutoAttackBowDrawing = false;
 
 const MOBILE_COMBAT_ASSIST_MELEE_DISTANCE = 62;
 const MOBILE_BOW_VISIBLE_TARGET_DISTANCE = 320;
-const MOBILE_POINT_TARGET_SKILLS = new Set([
-  "fireball",
-  "rainCloud",
-  "focusFire"
-]);
 
 
 function mobileBuildModeActive() {
@@ -116,12 +110,18 @@ function mobileBuildModeActive() {
 
 function mobileBuildCursorWorldPoint() {
   if (!mobileBuildModeActive()) return null;
-  if (
-    mobileBuildCursorWorldX === null ||
-    mobileBuildCursorWorldY === null ||
-    mobileBuildCursorMapId !== currentMapId
-  ) {
-    beginMobileBuildCursorForSelectedPiece();
+
+  // v430: selecting a placeable only puts it in the player's hand. Mobile
+  // placement does not invent a target/ghost until the player deliberately
+  // taps the world. A map transition also clears any stale target rather than
+  // silently creating a new one in front of the player.
+  if (mobileBuildCursorMapId !== null && mobileBuildCursorMapId !== currentMapId) {
+    mobileBuildCursorWorldX = null;
+    mobileBuildCursorWorldY = null;
+    mobileBuildCursorMapId = null;
+    document.body.classList.remove("mobile-build-cursor-mode");
+    updateMobilePrimaryActionButton();
+    return null;
   }
   if (mobileBuildCursorWorldX === null || mobileBuildCursorWorldY === null) return null;
   return {
@@ -163,13 +163,13 @@ function beginMobileBuildCursorForSelectedPiece() {
   clearMobilePointTargetMode();
   if (mobileAutoAttackEnabled) setMobileAutoAttackEnabled(false, { quiet: true });
 
-  const leadDistance = (["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece) || selectedBuildPiece === "torch") ? 24 : 18;
-  const aimLength = Math.hypot(mobileAimDx, mobileAimDy) || 1;
-  setMobileBuildCursorWorldPoint(
-    player.x + (mobileAimDx / aimLength) * leadDistance,
-    player.y + (mobileAimDy / aimLength) * leadDistance
-  );
-  document.body.classList.add("mobile-build-cursor-mode");
+  // v430: holding a Floor/Wall/Door/Torch/Chest/Table is now a clean "held"
+  // state. The placement cursor, ghost preview and nudge arrows remain dormant
+  // until the first world tap establishes an intentional target.
+  mobileBuildCursorWorldX = null;
+  mobileBuildCursorWorldY = null;
+  mobileBuildCursorMapId = null;
+  document.body.classList.remove("mobile-build-cursor-mode");
   updateMobilePrimaryActionButton();
   return true;
 }
@@ -199,69 +199,42 @@ function handleMobileBuildCursorPointerDown(event) {
   clearMobilePointTargetMode();
   mobileBuildCursorSuppressMouseUntil = performance.now() + 550;
 
-  // Keep the legacy pointer coordinates in sync for cursor/UI helpers, while
+  // Keep the shared pointer coordinates in sync for cursor/UI helpers, while
   // the actual build target remains stored in world coordinates so moving the
   // character/camera cannot drag the preview around.
   mouseCanvasX = point.x;
   mouseCanvasY = point.y;
+  document.body.classList.add("mobile-build-cursor-mode");
+  updateMobilePrimaryActionButton();
   updateCanvasCursor();
-}
-
-function mobileAbilitySlotForKey(key) {
-  return document.getElementById(
-    key === "shift" ? "abilitySlotShift" :
-    key === "space" ? "abilitySlotSpace" :
-    key === "e" ? "abilitySlotE" :
-    key === "r" ? "abilitySlotR" : ""
-  );
 }
 
 function clearMobilePointTargetMode() {
   mobilePointTargetMode = null;
-  mobilePointTargetKey = null;
   document.body.classList.remove("mobile-point-targeting");
-
   document.getElementById("mobileAttackButton")
     ?.classList.remove("point-target-armed");
-  for (const slot of document.querySelectorAll(".ability-slot.point-target-armed")) {
-    slot.classList.remove("point-target-armed");
-  }
 
   const hint = document.getElementById("mobileTargetHint");
   if (hint) hint.textContent = "";
 }
 
-function armMobilePointTarget(mode, key = null) {
-  if (!mobileControlsEnabled) return false;
+function armMobilePointTarget(mode) {
+  if (!mobileControlsEnabled || mode !== "bow") return false;
 
-  if (
-    mobilePointTargetMode === mode &&
-    mobilePointTargetKey === key
-  ) {
+  if (mobilePointTargetMode === "bow") {
     clearMobilePointTargetMode();
     return false;
   }
 
   clearMobilePointTargetMode();
-  mobilePointTargetMode = mode;
-  mobilePointTargetKey = key;
+  mobilePointTargetMode = "bow";
   document.body.classList.add("mobile-point-targeting");
 
   const hint = document.getElementById("mobileTargetHint");
-  if (hint) {
-    hint.textContent = mode === "bow"
-      ? "TAP WHERE THE ARROW SHOULD GO"
-      : mode === "focusFire"
-        ? "TAP THE RAPID-FIRE TARGET"
-        : mode === "rainCloud"
-          ? "TAP WHERE THE CLOUD SHOULD FORM"
-          : "TAP WHERE THE FIREBALL SHOULD LAND";
-  }
-
-  const armedControl = mode === "bow"
-    ? document.getElementById("mobileAttackButton")
-    : mobileAbilitySlotForKey(key);
-  armedControl?.classList.add("point-target-armed");
+  if (hint) hint.textContent = "TAP WHERE THE ARROW SHOULD GO";
+  document.getElementById("mobileAttackButton")
+    ?.classList.add("point-target-armed");
   return true;
 }
 
@@ -307,11 +280,9 @@ function updateMobilePointBowShot() {
 
   const automatedDrawBlocked =
     shopOpen ||
-    classResetConfirmOpen ||
     beachQuestOpen ||
     mobilePointTargetMode ||
     player.rainCloudCasting ||
-    focusFireIsCasting() ||
     fireballIsAiming() ||
     getLocalCarriedHurlObject();
 
@@ -347,10 +318,8 @@ function updateMobilePointBowShot() {
 }
 
 function executeMobilePointTargetCommand(payload = {}) {
-  if (!mobileControlsEnabled) return false;
+  if (!mobileControlsEnabled || String(payload.mode || "") !== "bow") return false;
 
-  const mode = String(payload.mode || "");
-  const key = String(payload.key || "");
   const target = {
     x: Math.max(0, Math.min(world.width, Number(payload.targetX) || 0)),
     y: Math.max(0, Math.min(world.height, Number(payload.targetY) || 0))
@@ -363,37 +332,17 @@ function executeMobilePointTargetCommand(payload = {}) {
   mouseCanvasY = point.y;
   updateAttackAimFromPointer(point.x, point.y);
 
-  if (mode === "bow") {
-    if (equippedWeapon() !== "bow" || getLocalCarriedHurlObject()) return true;
-
-    handlePrimaryAttack(mobilePointerEventForCanvas(point));
-    mobileAutoAttackBowDrawing = false;
-    mobileTrackedBowEnemy = null;
-    mobileAutoBowTarget = player.bowDrawing ? target : null;
-    return true;
-  }
-
-  if (
-    !MOBILE_POINT_TARGET_SKILLS.has(mode) ||
-    skillBindings[key] !== mode
-  ) {
-    return false;
-  }
-
-  triggerActiveSkillForKey(key, { pointTarget: target });
-
-  if (mode === "fireball" && player.fireballAiming) {
-    releaseFireballAim(target);
-  } else if (mode === "focusFire" && player.focusFireCharging) {
-    releaseFocusFireCharge(target);
-  }
-
+  if (equippedWeapon() !== "bow" || getLocalCarriedHurlObject()) return true;
+  handlePrimaryAttack(mobilePointerEventForCanvas(point));
+  mobileAutoAttackBowDrawing = false;
+  mobileTrackedBowEnemy = null;
+  mobileAutoBowTarget = player.bowDrawing ? target : null;
   return true;
 }
 
 function handleMobilePointTargetPointerDown(event) {
   if (!mobileControlsEnabled || !mobilePointTargetMode || event.button !== 0) return;
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen) {
+  if (shopOpen || beachQuestOpen) {
     clearMobilePointTargetMode();
     return;
   }
@@ -402,7 +351,6 @@ function handleMobilePointTargetPointerDown(event) {
   const pointer = getCanvasPointerPosition(event);
   const payload = {
     mode: mobilePointTargetMode,
-    key: mobilePointTargetKey,
     targetX: currentCamX + pointer.x,
     targetY: currentCamY + pointer.y
   };
@@ -475,15 +423,7 @@ function mobileResourceTarget() {
 
   if (weapon === "pickaxe" && Array.isArray(rocks)) {
     for (const rock of rocks) {
-      if (
-        !rock ||
-        rock.depleted ||
-        rock.carriedBy ||
-        (Number(rock.hurlTime) || 0) > 0 ||
-        (Number(rock.rollTime) || 0) > 0
-      ) {
-        continue;
-      }
+      if (!rock || rock.depleted) continue;
       const target = { x: rock.x, y: rock.y - 4 };
       const dx = target.x - originX;
       const dy = target.y - originY;
@@ -557,12 +497,20 @@ function updateMobilePrimaryActionButton() {
   const button = document.getElementById("mobileAttackButton");
   if (!button) return;
   const buildMode = typeof selectedBuildPiece !== "undefined" && Boolean(selectedBuildPiece);
+  const cursorActive = Boolean(
+    buildMode &&
+    mobileControlsEnabled &&
+    mobileBuildCursorWorldX !== null &&
+    mobileBuildCursorWorldY !== null &&
+    mobileBuildCursorMapId === currentMapId
+  );
   button.classList.toggle("build-place-mode", buildMode);
   button.textContent = buildMode ? "PLACE" : "ATK";
   button.setAttribute("aria-label", buildMode ? "Place building piece" : "Attack");
-  document.body.classList.toggle("mobile-build-cursor-mode", Boolean(buildMode && mobileControlsEnabled));
+  document.body.classList.toggle("mobile-build-selected-mode", Boolean(buildMode && mobileControlsEnabled));
+  document.body.classList.toggle("mobile-build-cursor-mode", cursorActive);
   const nudgePad = document.getElementById("mobileBuildNudgePad");
-  if (nudgePad) nudgePad.setAttribute("aria-hidden", buildMode ? "false" : "true");
+  if (nudgePad) nudgePad.setAttribute("aria-hidden", cursorActive ? "false" : "true");
   if (buildMode) button.classList.remove("point-target-armed");
 }
 
@@ -601,11 +549,9 @@ function updateMobileAutoAttack() {
   }
   if (
     shopOpen ||
-    classResetConfirmOpen ||
     beachQuestOpen ||
     mobilePointTargetMode ||
     player.rainCloudCasting ||
-    focusFireIsCasting() ||
     fireballIsAiming() ||
     getLocalCarriedHurlObject()
   ) {
@@ -822,7 +768,6 @@ function installMobileControls() {
       equippedWeapon() === "bow" &&
       !getLocalCarriedHurlObject() &&
       !player.rainCloudCasting &&
-      !focusFireIsCasting() &&
       !fireballIsAiming()
     ) {
       if ((Number(player.arrows) || 0) <= 0) {
@@ -913,88 +858,12 @@ function installMobileControls() {
     handleMenuKeyDown("escape");
   });
 
-  const abilityKeys = ["shift", "space", "e", "r"];
-  for (const key of abilityKeys) {
-    const slot = document.getElementById(
-      key === "shift" ? "abilitySlotShift" :
-      key === "space" ? "abilitySlotSpace" :
-      key === "e" ? "abilitySlotE" : "abilitySlotR"
-    );
-    if (!slot) continue;
-    let pointerId = null;
-    slot.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      const skillId = skillBindings[key];
-      if (MOBILE_POINT_TARGET_SKILLS.has(skillId)) {
-        armMobilePointTarget(skillId, key);
-        return;
-      }
-
-      clearMobilePointTargetMode();
-      pointerId = event.pointerId;
-      slot.setPointerCapture(event.pointerId);
-      const point = mobileAimCanvasPoint();
-      mouseCanvasX = point.x;
-      mouseCanvasY = point.y;
-      inputController.queueCommand("useActiveSkill", { key });
-    });
-    slot.addEventListener("pointermove", event => {
-      if (pointerId !== event.pointerId) return;
-      const rect = slot.getBoundingClientRect();
-      const dx = event.clientX - (rect.left + rect.width / 2);
-      const dy = event.clientY - (rect.top + rect.height / 2);
-      const length = Math.hypot(dx, dy);
-      if (length <= 7) return;
-      mobileAimDx = dx / length;
-      mobileAimDy = dy / length;
-      const point = mobileAimCanvasPoint();
-      mouseCanvasX = point.x;
-      mouseCanvasY = point.y;
-      updateAttackAimFromPointer(point.x, point.y);
-    });
-    const releaseSkill = event => {
-      if (pointerId !== event.pointerId) return;
-      pointerId = null;
-      const skillId = skillBindings[key];
-      if (skillId === "focusFire") {
-        inputController.queueCommand("releaseFocusFire", { key });
-      } else if (skillId === "fireball") {
-        inputController.queueCommand("releaseFireball", { key });
-      }
-    };
-    slot.addEventListener("pointerup", releaseSkill);
-    slot.addEventListener("pointercancel", releaseSkill);
-  }
-
   canvas.addEventListener("pointerdown", handleMobilePointTargetPointerDown);
   canvas.addEventListener("pointerdown", handleMobileBuildCursorPointerDown);
 }
 
 installMobileControls();
 updateMobilePrimaryActionButton();
-
-const HUNTER_SNARE_MOVEMENT_KEYS = new Set([
-  "w",
-  "a",
-  "s",
-  "d"
-]);
-
-function noteHunterSnareMovementCommand(key) {
-  if (
-    !player.hunterSnareSetting ||
-    !HUNTER_SNARE_MOVEMENT_KEYS.has(key)
-  ) {
-    return false;
-  }
-
-  // A movement key that was already held before Snare began does not create a
-  // fresh keydown here (repeat events are ignored). Releasing/re-pressing it,
-  // or pressing another movement key, is a new command and cancels setup.
-  cancelHunterSnarePlacement(true);
-  return true;
-}
-
 
 function handleCanvasMouseMove(event) {
   const pointer = getCanvasPointerPosition(event);
@@ -1004,7 +873,7 @@ function handleCanvasMouseMove(event) {
   if (
     !shopOpen &&
     equippedWeapon() === "bow" &&
-    (player.bowDrawing || player.focusFireCharging)
+    player.bowDrawing
   ) {
     updateAttackAimFromPointer(
       pointer.x,
@@ -1033,23 +902,6 @@ const HOTBAR_KEY_TO_INDEX = Object.freeze({
 function handleMenuKeyDown(key) {
   if (beachQuestOpen) {
     if (key === "escape") setBeachQuestOpen(false);
-    return true;
-  }
-
-  // The class-reset crystal uses a focused confirmation prompt. While it is
-  // open, do not let gameplay/menu keys leak through underneath it.
-  if (classResetConfirmOpen) {
-    if (key === "escape" || key === "n") {
-      setClassResetConfirmOpen(false);
-      return true;
-    }
-
-    if (key === "y" || key === "enter") {
-      setClassResetConfirmOpen(false);
-      resetClassAndSkills();
-      return true;
-    }
-
     return true;
   }
 
@@ -1090,7 +942,6 @@ function handleWeaponHotkey(key) {
 
 function handleGameKeyDown(event) {
   const key = event.key.toLowerCase();
-  const activeSkillKey = normalizeActiveSkillKey(event);
 
   if (event.repeat) return;
 
@@ -1102,16 +953,9 @@ function handleGameKeyDown(event) {
 
   if (handleMenuKeyDown(key)) return;
 
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen) {
+  if (shopOpen || beachQuestOpen) {
     inputController.setKey(key, false);
     return;
-  }
-
-  if (
-    HUNTER_SNARE_MOVEMENT_KEYS.has(key) &&
-    !inputController.keys[key]
-  ) {
-    noteHunterSnareMovementCommand(key);
   }
 
   inputController.setKey(key, true);
@@ -1122,12 +966,6 @@ function handleGameKeyDown(event) {
     );
     return;
   }
-
-  if (activeSkillKey === "space") {
-    event.preventDefault();
-  }
-
-  if (handleActiveSkillKeyDown(event, activeSkillKey)) return;
   handleWeaponHotkey(key);
 }
 
@@ -1135,40 +973,7 @@ window.addEventListener("keydown", handleGameKeyDown);
 
 function handleGameKeyUp(event) {
   const key = event.key.toLowerCase();
-  const activeSkillKey = normalizeActiveSkillKey(event);
   inputController.setKey(key, false);
-
-  if (
-    activeSkillKey &&
-    skillBindings[activeSkillKey] === "focusFire"
-  ) {
-    if (activeSkillKey === "space") {
-      event.preventDefault();
-    }
-
-    // Queue the release even if the key was tapped between animation frames.
-    // The command queue preserves keydown -> keyup order, so Focus Fire cannot
-    // become stuck charging from an extremely quick tap.
-    inputController.queueCommand(
-      "releaseFocusFire",
-      { key: activeSkillKey }
-    );
-  }
-
-  if (
-    activeSkillKey &&
-    skillBindings[activeSkillKey] === "fireball"
-  ) {
-    if (activeSkillKey === "space") {
-      event.preventDefault();
-    }
-
-    inputController.queueCommand(
-      "releaseFireball",
-      { key: activeSkillKey }
-    );
-  }
-
 }
 
 window.addEventListener("keyup", handleGameKeyUp);
@@ -1203,7 +1008,6 @@ canvas.addEventListener("mousedown", event => {
 window.addEventListener("mouseup", handleBowVisualMouseUp);
 
 function resetInputAfterFocusLoss() {
-  cancelHunterSnarePlacement(false);
   clearMobilePointTargetMode();
   clearMobileBuildCursor();
   setMobileAutoAttackEnabled(false, { quiet: true });
@@ -1220,10 +1024,6 @@ function resetInputAfterFocusLoss() {
     player.bowDrawing = false;
     player.bowReleaseTime = 0;
     player.bowDrawAmount = 0;
-  }
-
-  if (focusFireIsCasting()) {
-    cancelFocusFire();
   }
 
   if (fireballIsAiming()) {

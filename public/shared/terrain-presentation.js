@@ -12,8 +12,6 @@
   "use strict";
 
   // Presentation only. Terrain gameplay meaning remains in terrain-rules.js.
-  // Both the game renderer and map editor use this exact painter so editor
-  // terrain previews cannot silently drift from the runtime look.
   const PALETTE = Object.freeze({
     grass: Object.freeze({
       base: "#70984d",

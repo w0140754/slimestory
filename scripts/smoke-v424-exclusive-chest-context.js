@@ -55,7 +55,7 @@ async function move(socket, mapId, x, y) {
     await delay(450);
     const a = await connect();
     const b = await connect();
-    if (a.welcome.buildVersion !== "6-11-428" || b.welcome.buildVersion !== "6-11-428") {
+    if (a.welcome.buildVersion !== "6-11-431" || b.welcome.buildVersion !== "6-11-431") {
       throw new Error("unexpected v424 welcome");
     }
 

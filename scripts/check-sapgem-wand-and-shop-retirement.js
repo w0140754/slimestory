@@ -12,14 +12,15 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = require(path.join(root, "package.json"));
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build must be 6-11-406");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build must be 6-11-406");
-assert(pkg.version === "0.6.11.428", "package version must be 0.6.11.428");
-assert(html.includes('/shared/combat-balance.js?v=428') && html.includes('/game.js?v=428'), "v336 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build must be 6-11-431");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build must be 6-11-431");
+assert(pkg.version === "0.6.11.431", "package version must be 0.6.11.431");
+assert(html.includes('/shared/combat-balance.js?v=431') && html.includes('/game.js?v=431'), "v431 cache keys missing");
 assert(fs.existsSync(path.join(root, "public", "assets", "sapgem_wand_v4.png")), "current Sapgem sprite missing");
 assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372")'), "current Sapgem asset is not loaded");
 assert(game.includes('"weapon_sapgemWand"') && game.includes('"sapgemWand"'), "Sapgem weapon id/style missing");
-assert(game.includes('weapon_sapgemWand: "arcana"'), "Sapgem should use Arcana weapon requirement");
+assert(game.includes('weapon_sapgemWand: 10'), "Sapgem should use its level-only equipment requirement");
+assert(!game.includes('weapon_sapgemWand: "arcana"'), "retired Arcana/class equipment requirement must stay removed");
 assert(html.includes('data-owned-item="weapon_sapgemWand"') && enemies.includes('inventorySapgemWandImg'), "Sapgem inventory UI missing");
 assert(game.includes('currentWeapon === "sapgemWand"') && game.includes('? sapgemWandImage'), "Sapgem held sprite render missing");
 
@@ -34,17 +35,19 @@ const sapgem = balance.weaponProfiles.find(x => x.id === "weapon_sapgemWand");
 assert(sapgem.attackSpeed === "normal", "Sapgem attack speed must be Normal");
 assert(balance.weaponAttackSpeedLabel(12) === "Normal", "Sapgem shared attack-speed label must be Normal");
 assert(balance.isWandWeaponIndex(12), "Sapgem index 12 must be treated as a wand");
-assert(balanceText.includes('const VERSION = 30;'), "combat balance version must be 30");
+assert(balanceText.includes('const VERSION = 32;'), "combat balance version must be 32");
 
 const shopBlock = game.match(/const SHOP_ITEMS = \[([\s\S]*?)\n\];/);
 assert(shopBlock, "client SHOP_ITEMS missing");
 assert(!shopBlock[1].includes('weapon_wand') && !shopBlock[1].includes('weapon_rainWand'), "Fire/Rain Wand must be retired from client shop");
 assert(shopBlock[1].includes('weapon_sapgemWand'), "Sapgem must be sold in client shop");
 assert(server.includes('const SHOP_VENDOR_CATALOGS = Object.freeze({'), "server vendor catalogs missing");
-const vendorCatalogBlock = server.match(/const SHOP_VENDOR_CATALOGS = Object\.freeze\(\{([\s\S]*?)\n\}\);\n\nconst SHOP_ITEM_IDS/);
+const vendorCatalogBlock = server.match(/const SHOP_VENDOR_CATALOGS = Object\.freeze\(\{([\s\S]*?)\n\}\);\n\n\/\/ Equipment tokens allowed/);
 assert(vendorCatalogBlock && !vendorCatalogBlock[1].includes('weapon_wand') && !vendorCatalogBlock[1].includes('weapon_rainWand'), "Fire/Rain Wand must be retired from current vendor stock");
 assert(server.includes('weapon_sapgemWand: Object.freeze({ price: 20, level: 10 })'), "Sapgem must be authorized in Myrtle's shop");
-assert(server.includes('SHOP_PURCHASE_HISTORY_ITEM_IDS') && server.includes('"weapon_wand"') && server.includes('"weapon_rainWand"'), "legacy Fire/Rain purchase-history compatibility missing");
+assert(server.includes('const TRANSFERABLE_EQUIPMENT_ITEM_IDS = new Set(['), "transferable equipment token catalog missing");
+assert(server.includes('"weapon_wand"') && server.includes('"weapon_rainWand"'), "existing Fire/Rain Wand inventory tokens must remain transferable even though vendors no longer sell them");
+assert(!server.includes('SHOP_PURCHASE_HISTORY_ITEM_IDS') && !server.includes('shopPurchases'), "retired shop purchase-history state must stay removed");
 assert(server.includes('const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, TIGER_PAW_WEAPON_INDEX, -1);') && server.includes('weaponIndex: sanitizedWeaponIndex'), "server weapon index clamp must include Tiger Paw after Sapgem");
 assert(readme.includes('## v6-11-334 — Sapgem Wand + wand progression cleanup'), "README historical v334 changelog missing");
 console.log("Sapgem wand/shop retirement regression checks passed.");

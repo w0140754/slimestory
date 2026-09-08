@@ -13,9 +13,9 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build must be 6-11-406");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build must be 6-11-406");
-assert(html.includes('/client-combat.js?v=428') && html.includes('/game.js?v=428'), "client cache keys must be v333");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build must be 6-11-431");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build must be 6-11-431");
+assert(html.includes('/client-combat.js?v=431') && html.includes('/game.js?v=431'), "client cache keys must be v431");
 
 assert(game.includes('let pendingBasicAttack = null;'), "generic pending basic attack state missing");
 assert(game.includes('basicAttackMovementLockTime: 0'), "generic basic attack movement lock missing");
@@ -24,16 +24,16 @@ assert(!game.includes('wandMovementLockTime'), "wand-only movement lock state st
 assert(game.includes('const MELEE_BASIC_ATTACK_IMPACT_PHASE = 0.34;'), "non-wand active-frame impact phase missing");
 
 assert(combat.includes('function attackImpactDelayForWeapon(weapon)'), "generic impact timing helper missing");
-assert(combat.includes('function queueBasicAttackImpact(weapon, shadowCritAttack)'), "generic queued impact helper missing");
+assert(combat.includes('function queueBasicAttackImpact(weapon)'), "generic queued impact helper missing");
 assert(combat.includes('function updatePendingBasicAttack(dt)'), "generic pending attack updater missing");
 assert(combat.includes('player.basicAttackMovementLockTime = 0;'), "all non-bow attacks must allow movement through the gesture");
-assert(combat.includes('queueBasicAttackImpact(\n    currentWeapon,'), "primary attacks must queue through generic impact path");
+assert(combat.includes('queueBasicAttackImpact(currentWeapon);'), "primary attacks must queue through generic impact path");
 assert(!combat.includes('if (isWandTypeWeapon(currentWeapon)) {\n    // Plant only voluntary movement'), "old wand-only impact branch still present");
 
 for (const weapon of ['"sword"', '"oldSword"', '"katana"', '"axe"', '"pickaxe"']) {
   assert(combat.includes(weapon), `expected non-bow weapon routing missing: ${weapon}`);
 }
-assert(combat.includes('if (isWandTypeWeapon(weapon))'), "wand/Wand Mastery routing must remain");
+assert(combat.includes('if (isWandTypeWeapon(weapon))'), "wand routing must remain");
 assert(combat.includes('if (\n    equippedWeapon() === "bow"'), "bow must retain separate primary-input path");
 assert(combat.includes('if (!weapon || weapon === "bow" || getLocalCarriedHurlObject()) return;'), "held-repeat must continue excluding bows and Hurl");
 

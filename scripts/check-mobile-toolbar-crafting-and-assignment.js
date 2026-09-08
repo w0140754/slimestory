@@ -11,17 +11,17 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build must be v377");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build must be v377");
-assert.strictEqual(pkg.version, "0.6.11.428", "package version must be v377");
-assert(html.includes('/game.js?v=428') && html.includes('/client-input.js?v=428'), "v377 cache keys missing");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build must be v377");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build must be v377");
+assert.strictEqual(pkg.version, "0.6.11.431", "package version must be v377");
+assert(html.includes('/game.js?v=431e') && html.includes('/client-input.js?v=431e'), "v431e cache keys missing");
 
 assert(html.includes('translateX(-50%) scale(.84)'), "mobile top weapon/tool hotbar was not enlarged");
 assert(html.includes('width: min(188px, 43vw)') && html.includes('#craftGrid {\n      flex: 1 1 auto;'), "compact mobile crafting rail missing");
-assert(html.includes('id="menuItemHotkeyRail"') && html.includes('Weapons &amp; Tools'), "unified weapon/tool assignment rail missing");
-assert(html.includes('data-menu-hotbar-slot="8"'), "ninth weapon/tool assignment slot missing");
-assert(html.includes('id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system"'), "retired consumable hotkey rail must stay hidden");
-assert(/#statsPage,[\s\S]*?#pvpPage,[\s\S]*?#skillsPage,[\s\S]*?#talentsPage,[\s\S]*?display:\s*none !important;/.test(html), "retired stats/pvp/class/talent pages must remain hidden from the rebuilt menu");
+assert(!html.includes('id="menuItemHotkeyRail"') && !html.includes('data-menu-hotbar-slot='), "retired duplicate inventory weapon/tool rail must be removed");
+assert(!html.includes('id="menuUtilityHotkeyRail"') && !html.includes('id="menuSkillHotkeyRail"'), "retired auxiliary hotkey rails must be removed");
+assert(html.includes('id="slot9"') && html.includes('id="slot10"'), "live 1–0 HUD assignment targets missing");
+assert(!html.includes('id="statsPage"') && !html.includes('id="pvpPage"') && !html.includes('id="skillsPage"') && !html.includes('id="talentsPage"'), "retired stats/pvp/class/talent pages must be removed");
 
 assert(game.includes('function assignItemToHotbar(itemId, slotIndex)'), "weapon/tool hotbar assignment function missing");
 assert(game.includes('player.hotbarAssignments[slotIndex] =\n    itemId;'), "weapon/tool assignment mutation missing");

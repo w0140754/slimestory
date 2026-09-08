@@ -1,7 +1,7 @@
 // Slime Story shared fire/environment runtime.
 // Extracted from game.js in v6-11-239 with function bodies preserved verbatim.
 // Classic-script semantics are intentional: these declarations resolve the existing
-// world, combat, status, ability, and networking bindings at invocation time.
+// world, combat, status, action, and networking bindings at invocation time.
 
 function spawnFireParticle(x, y, vx = 0, vy = -8, life = 0.28) {
   fireParticles.push({
@@ -14,7 +14,7 @@ function spawnFireParticle(x, y, vx = 0, vy = -8, life = 0.28) {
   });
 }
 
-function igniteGrass(clump, options = {}) {
+function igniteGrass(clump) {
   if (clump.cut || clump.burnTime > 0) return;
 
   const burnDuration = isTemporaryRainGrass(clump)
@@ -27,13 +27,6 @@ function igniteGrass(clump, options = {}) {
     clump.burnExpiresAtMs = Date.now() + burnDuration * 1000;
   }
 
-  if (
-    isTemporaryRainGrass(clump) &&
-    options.sync !== false &&
-    !(typeof onlineClient !== "undefined" && onlineClient?.connected)
-  ) {
-    syncTemporaryRainGrassState(clump, "burning");
-  }
 }
 
 function igniteHarvestFlower(flower) {
@@ -194,43 +187,6 @@ function igniteLivingNear(x, y, radius = 14) {
   }
 }
 
-function igniteTemporaryRainGrassNear(
-  x,
-  y,
-  radius = 13,
-  options = {}
-) {
-  const ignitionChance = Math.max(
-    0,
-    Math.min(1, Number(options.chance) || 1)
-  );
-  const maxIgnitions = Number.isFinite(options.maxIgnitions)
-    ? Math.max(1, Math.floor(options.maxIgnitions))
-    : Infinity;
-  let ignitions = 0;
-
-  for (const clump of tallGrass) {
-    if (
-      !isTemporaryRainGrass(clump) ||
-      !temporaryRainGrassCellIsAlive(clump) ||
-      clump.burnTime > 0
-    ) {
-      continue;
-    }
-
-    const dx = clump.x - x;
-    const dy = (clump.y - 5) - y;
-
-    if (
-      dx * dx + dy * dy <= radius * radius &&
-      Math.random() <= ignitionChance
-    ) {
-      igniteGrass(clump);
-      ignitions += 1;
-      if (ignitions >= maxIgnitions) break;
-    }
-  }
-}
 
 function isNearBurningTemporaryRainGrass(x, y, radius = 13) {
   for (const clump of tallGrass) {
@@ -251,144 +207,6 @@ function isNearBurningTemporaryRainGrass(x, y, radius = 13) {
   }
 
   return false;
-}
-
-function ignitePlayerFromTemporaryRainGrass(targetId = null) {
-  // Burning magic grass now obeys the same Wet rule as other fire sources.
-  if (!targetId || targetId === onlineClient?.localPlayerId) {
-    // Temporary magic-grass fire may keep animating while disconnected, but
-    // the local player cannot acquire an authoritative Burned status without
-    // a live server connection.
-    if (
-      typeof onlineClient === "undefined" ||
-      !onlineClient?.connected ||
-      player.isDead ||
-      player.hp <= 0 ||
-      player.burnTime > 0
-    ) {
-      return;
-    }
-
-    const ignited = applyLocalBurnStatus(
-      player,
-      player.burnDuration
-    );
-
-    if (!ignited) {
-      return;
-    }
-
-    if (
-      typeof onlineClient !== "undefined" &&
-      onlineClient?.connected
-    ) {
-      onlineClient.requestPlayerIgnite(onlineClient.localPlayerId);
-      onlineClient.sendLocalState(true);
-    }
-
-    return;
-  }
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    onlineClient.requestPlayerIgnite(targetId);
-  }
-}
-
-function spreadOnlineFireToTemporaryRainGrass() {
-  const sources = [];
-
-  // Shared enemies are authoritative on the server, but their burn timers are
-  // mirrored locally. Use those synced timers to ignite client-temporary grass
-  // that the server cannot know exists.
-  for (
-    const { enemy, profile }
-    of activeEnemyRecords({ aliveOnly: true })
-  ) {
-    if ((Number(enemy.burnTime) || 0) <= 0) continue;
-
-    const body = enemyBodyPoint(enemy);
-    sources.push({
-      x: body.x,
-      y: body.y,
-      radius: 13,
-      chance: profile.burnSpreadChance ?? 0.42
-    });
-  }
-
-  if (player.burnTime > 0) {
-    sources.push({
-      x: player.x,
-      y: player.y - 8,
-      radius: 13,
-      chance: 0.42
-    });
-  }
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    for (const remote of onlineClient.playersOnCurrentMap()) {
-      if ((Number(remote.burnTime) || 0) <= 0) continue;
-
-      sources.push({
-        x: remote.x,
-        y: remote.y - 8,
-        radius: 13,
-        chance: 0.42
-      });
-    }
-  }
-
-  // Burning world vegetation is also server-authoritative, but its burn state
-  // is mirrored into these local objects. Let it ignite temporary grass too.
-  // Burning temporary grass is included as a local-only source so the rain
-  // patch can visibly chain through itself in multiplayer.
-  for (const clump of tallGrass) {
-    if (clump.cut || clump.burnTime <= 0) {
-      continue;
-    }
-
-    const magicGrassSource = isTemporaryRainGrass(clump);
-    sources.push({
-      x: clump.x,
-      y: clump.y - 5,
-      radius: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_RADIUS : 17,
-      chance: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE : 0.58,
-      magicGrassSource
-    });
-  }
-
-  for (const flower of harvestFlowers) {
-    if (!flower.cut && flower.burnTime > 0) {
-      sources.push({ x: flower.x, y: flower.y - 8, radius: 16, chance: 0.60 });
-    }
-  }
-
-  for (const tree of trees) {
-    if (tree.canopyBurnTime > 0 && !tree.canopyBurned) {
-      sources.push({ x: tree.x, y: tree.y - 18, radius: 20, chance: 0.48 });
-    }
-  }
-
-  for (const source of sources) {
-    if (Math.random() <= source.chance) {
-      igniteTemporaryRainGrassNear(
-        source.x,
-        source.y,
-        source.radius,
-        source.magicGrassSource
-          ? {
-              chance: TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE,
-              maxIgnitions: TEMP_RAIN_GRASS_CHAIN_MAX_IGNITIONS
-            }
-          : {}
-      );
-    }
-  }
 }
 
 function spreadTemporaryRainGrassFireToLiving() {
@@ -426,43 +244,6 @@ function spreadTemporaryRainGrassFireToLiving() {
     }
   }
 
-  const playerBodyX = player.x;
-  const playerBodyY = player.y - 8;
-
-  if (
-    !player.isDead &&
-    player.hp > 0 &&
-    player.burnTime <= 0 &&
-    isNearBurningTemporaryRainGrass(playerBodyX, playerBodyY, 12)
-  ) {
-    ignitePlayerFromTemporaryRainGrass();
-  }
-
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    for (const remote of onlineClient.playersOnCurrentMap()) {
-      if (
-        !canAttackRemotePlayerWithPvp(remote) ||
-        remote.isDead ||
-        (Number(remote.hp) || 0) <= 0 ||
-        (Number(remote.burnTime) || 0) > 0
-      ) {
-        continue;
-      }
-
-      if (
-        isNearBurningTemporaryRainGrass(
-          Number(remote.x) || 0,
-          (Number(remote.y) || 0) - 8,
-          12
-        )
-      ) {
-        ignitePlayerFromTemporaryRainGrass(remote.id);
-      }
-    }
-  }
 }
 
 function spreadFireFromBurningSources() {
@@ -767,7 +548,6 @@ function updateFire(dt) {
       igniteVegetationNear(fireball.targetX, fireball.targetY, 12);
 
       let nearestEnemy = null;
-      let nearestPvpPlayer = null;
       let nearestDistanceSq = Infinity;
 
       for (
@@ -794,57 +574,16 @@ function updateFire(dt) {
             ))
         ) {
           nearestEnemy = enemy;
-          nearestPvpPlayer = null;
           nearestDistanceSq = distanceSq;
         }
       }
 
-      if (
-        player.pvpEnabled &&
-        typeof onlineClient !== "undefined"
-      ) {
-        for (const remote of onlineClient.playersOnCurrentMap()) {
-          if (!canAttackRemotePlayerWithPvp(remote)) continue;
-
-          const dx = fireball.targetX - remote.x;
-          const dy = fireball.targetY - (remote.y - 8);
-          const hitRadius = FIREBALL_LANDING_RADIUS + 3;
-          const distanceSq = dx * dx + dy * dy;
-
-          if (
-            distanceSq <= hitRadius * hitRadius &&
-            distanceSq < nearestDistanceSq &&
-            (typeof structureLineOfEffectClear !== "function" ||
-              structureLineOfEffectClear(
-                fireball.targetX + (remote.x - fireball.targetX) * 0.08,
-                fireball.targetY + ((remote.y - 8) - fireball.targetY) * 0.08,
-                remote.x,
-                remote.y - 8,
-                0.5
-              ))
-          ) {
-            nearestEnemy = null;
-            nearestPvpPlayer = remote;
-            nearestDistanceSq = distanceSq;
-          }
-        }
-      }
 
       if (nearestEnemy) {
         damageEnemyWithProjectile(
           nearestEnemy,
           fireball,
           "fireball"
-        );
-      } else if (nearestPvpPlayer) {
-        onlineClient.sendPvpAttack(
-          nearestPvpPlayer.id,
-          "fireball",
-          {
-            aimAngle: Number(fireball.angle) || 0,
-            impactX: fireball.targetX,
-            impactY: fireball.targetY
-          }
         );
       }
 
@@ -865,91 +604,6 @@ function updateFire(dt) {
       continue;
     }
 
-    // Legacy/non-aimed fallback projectiles remain supported for safety.
-    const previousX = fireball.x;
-    const previousY = fireball.y;
-    fireball.x += fireball.vx * dt;
-    fireball.y += fireball.vy * dt;
-    const wallImpact = typeof structureWallImpactPoint === "function"
-      ? structureWallImpactPoint(previousX, previousY, fireball.x, fireball.y, 1)
-      : null;
-    if (wallImpact) {
-      fireball.x = wallImpact.x;
-      fireball.y = wallImpact.y;
-    }
-
-    if (fireball.trailTimer <= 0) {
-      fireball.trailTimer = 0.035;
-      spawnFireParticle(
-        fireball.x - fireball.vx * 0.018,
-        fireball.y - fireball.vy * 0.018,
-        -fireball.vx * 0.035 + (Math.random() - 0.5) * 5,
-        -fireball.vy * 0.035 - Math.random() * 4,
-        0.18 + Math.random() * 0.10
-      );
-    }
-
-    if (fireball.visualOnly) {
-      if (wallImpact) {
-        fireballs.splice(i, 1);
-        continue;
-      }
-      const outOfWorld =
-        fireball.x < 0 ||
-        fireball.y < 0 ||
-        fireball.x > world.width ||
-        fireball.y > world.height;
-
-      if (outOfWorld || fireball.life <= 0) {
-        fireballs.splice(i, 1);
-      }
-      continue;
-    }
-
-    let impact = Boolean(wallImpact);
-
-    if (!impact) for (
-      const { enemy, profile }
-      of activeEnemyRecords({ aliveOnly: true })
-    ) {
-      const body = enemyBodyPoint(enemy);
-      const dx = fireball.x - body.x;
-      const dy = fireball.y - body.y;
-      const hitRadius = profile.projectileHitRadius ?? 8;
-
-      if (dx * dx + dy * dy <= hitRadius * hitRadius) {
-        damageEnemyWithProjectile(enemy, fireball, "fireball");
-        impact = true;
-        break;
-      }
-    }
-
-    const outOfWorld =
-      fireball.x < 0 ||
-      fireball.y < 0 ||
-      fireball.x > world.width ||
-      fireball.y > world.height;
-
-    if (impact || outOfWorld || fireball.life <= 0) {
-      for (let p = 0; p < (impact ? 5 : 2); p++) {
-        spawnFireParticle(
-          fireball.x,
-          fireball.y,
-          (Math.random() - 0.5) * 18,
-          (Math.random() - 0.5) * 18,
-          0.18 + Math.random() * 0.16
-        );
-      }
-
-      if (impact && typeof onlineClient !== "undefined") {
-        onlineClient.sendVisualEffect(
-          "fireballImpact",
-          { x: fireball.x, y: fireball.y }
-        );
-      }
-
-      fireballs.splice(i, 1);
-    }
   }
 
   // Tiny trail / ember particles.

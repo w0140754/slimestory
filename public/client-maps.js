@@ -1,6 +1,5 @@
 // Slime Story deterministic client map construction/registration.
-// v383: legacy authored-map construction was retired with the visual editor.
-// Runtime map state is now built only from the active coordinate-grid WORLD_CONTENT.
+// Runtime map state is built only from the active coordinate-grid WORLD_CONTENT.
 
 function buildClientMapRegistry() {
   function makeRuntimeTree(x, y, phase = 0) {
@@ -151,8 +150,7 @@ function buildClientMapRegistry() {
       slimes: [],
       ghosts: [],
       goblins: [],
-      houses: (environment.houses || []).map(runtimeHouseFromSharedDefinition),
-      pond: { x: -1000, y: -1000, width: 1, height: 1 }
+      houses: (environment.houses || []).map(runtimeHouseFromSharedDefinition)
     };
   }
 
@@ -161,28 +159,8 @@ function buildClientMapRegistry() {
     mapStates[mapId] = buildSharedEnvironmentMapState(mapId);
   }
 
-  // Compatibility handles for older rendering/interaction helpers that still
-  // exist outside the retired map system. v420 removes the starter Marnie NPC
-  // and static bench, so all legacy spawn fixtures remain harmlessly off-map.
-  const offMapNpc = () => ({ x: -10000, y: -10000, interactionRadius: 0 });
-
-  const spawnMapX = x => x;
-  const spawnMapY = y => y;
-  const tutorialNpc = offMapNpc();
-  const hunterNpc = offMapNpc();
-  const jesterNpc = offMapNpc();
-  const woodCraftBench = offMapNpc();
-  const classResetCrystal = offMapNpc();
-
   return {
     houseImage,
-    spawnMapX,
-    spawnMapY,
-    tutorialNpc,
-    hunterNpc,
-    jesterNpc,
-    woodCraftBench,
-    classResetCrystal,
     mapStates
   };
 }

@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-428";
+const BUILD_VERSION = "6-11-431";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -74,8 +74,7 @@ const TERRAIN_RULES = require("./public/shared/terrain-rules.js");
 const COMBAT_BALANCE = require("./public/shared/combat-balance.js");
 const RAIN_FIELD = require("./public/shared/rain-field.js");
 const WEATHER_RULES = require("./public/shared/weather-rules.js");
-const ABILITY_SCALING = require("./public/shared/ability-scaling.js");
-const CAMOUFLAGE_RULES = require("./public/shared/camouflage-rules.js");
+const ACTION_BALANCE = require("./public/shared/action-balance.js");
 const ENEMY_NET_PROTOCOL = require("./public/shared/enemy-net-protocol.js");
 const PLAYER_NET_PROTOCOL = require("./public/shared/player-net-protocol.js");
 const STRUCTURE_GEOMETRY = require("./public/shared/structure-geometry.js");
@@ -137,10 +136,7 @@ function makeFireDiagnostics() {
     enemyIgnitions: 0,
     playerIgnitions: 0,
     enemyDamageTicks: 0,
-    playerDamageTicks: 0,
-    legacyPlayerBurnDamageRequests: 0,
-    legacyPlayerIgniteRequests: 0,
-    legacyRainGrassStateReports: 0
+    playerDamageTicks: 0
   };
 }
 
@@ -150,8 +146,7 @@ function makeRainDiagnostics() {
   return {
     fieldsCreated: 0, grassQueries: 0, grassCellChecks: 0, grassEnters: 0, grassExits: 0,
     enemyWetEnters: 0, enemyWetExits: 0, playerWetEnters: 0, playerWetExits: 0,
-    cellIgnitions: 0, cellExtinguishes: 0, fieldDeltaEvents: 0, ghostDamageTicks: 0,
-    legacyMagicGrassSlow: 0, legacyWet: 0, legacyRainDamage: 0
+    cellIgnitions: 0, cellExtinguishes: 0, fieldDeltaEvents: 0, ghostDamageTicks: 0
   };
 }
 let rainDiagnostics = makeRainDiagnostics();
@@ -565,10 +560,7 @@ function reportNetworkDiagnostics() {
     `spread=${fireDiagnostics.spreadPulses} pulses/${fireDiagnostics.spreadSources} sources | ` +
     `ignite env=${fireDiagnostics.environmentIgnitions} grass=${fireDiagnostics.rainGrassIgnitions} ` +
     `mob=${fireDiagnostics.enemyIgnitions} player=${fireDiagnostics.playerIgnitions} | ` +
-    `DoT mob=${fireDiagnostics.enemyDamageTicks} ticks player=${fireDiagnostics.playerDamageTicks} ticks | ` +
-    `legacyIN selfDamage=${fireDiagnostics.legacyPlayerBurnDamageRequests} ` +
-    `playerIgnite=${fireDiagnostics.legacyPlayerIgniteRequests} ` +
-    `rainGrassState=${fireDiagnostics.legacyRainGrassStateReports}`
+    `DoT mob=${fireDiagnostics.enemyDamageTicks} ticks player=${fireDiagnostics.playerDamageTicks} ticks`
   );
 
   console.log(
@@ -577,8 +569,7 @@ function reportNetworkDiagnostics() {
     `grass enter=${rainDiagnostics.grassEnters} exit=${rainDiagnostics.grassExits} | ` +
     `wet mob=${rainDiagnostics.enemyWetEnters}/${rainDiagnostics.enemyWetExits} player=${rainDiagnostics.playerWetEnters}/${rainDiagnostics.playerWetExits} | ` +
     `fieldFire ignite=${rainDiagnostics.cellIgnitions} extinguish=${rainDiagnostics.cellExtinguishes} deltas=${rainDiagnostics.fieldDeltaEvents} | ` +
-    `ghostTicks=${rainDiagnostics.ghostDamageTicks} | ` +
-    `legacyIN magicGrassSlow=${rainDiagnostics.legacyMagicGrassSlow} wet=${rainDiagnostics.legacyWet} rainDamage=${rainDiagnostics.legacyRainDamage}`
+    `ghostTicks=${rainDiagnostics.ghostDamageTicks}`
   );
   fireDiagnostics = makeFireDiagnostics();
   rainDiagnostics = makeRainDiagnostics();
@@ -640,15 +631,12 @@ function defaultPlayerLoadTarget() {
     return { mapId: configured.mapId, spawnId: configured.spawnId };
   }
 
-  // Compatibility with v329's temporary per-map representation.
-  for (const mapId of ALLOWED_MAPS) {
-    const spawnId = typeof WORLD_CONTENT.maps[mapId]?.defaultPlayerSpawnId === "string"
-      ? WORLD_CONTENT.maps[mapId].defaultPlayerSpawnId
-      : "";
-    if (worldContentPlayerSpawn(mapId, spawnId)) return { mapId, spawnId };
+  const mapId = WORLD_CONTENT.worldGrid?.startMapId;
+  if (ALLOWED_MAPS.has(mapId) && worldContentPlayerSpawn(mapId, "center")) {
+    return { mapId, spawnId: "center" };
   }
 
-  return { mapId: "spawn", spawnId: "center" };
+  throw new Error("WORLD_CONTENT has no valid coordinate-world start spawn.");
 }
 
 function defaultPlayerLoadState() {
@@ -676,20 +664,12 @@ function playerMapTransitionAllowed(previousMapId, requestedMapId) {
 
   const previousGrid = worldGridMetaForMap(previousMapId);
   const requestedGrid = worldGridMetaForMap(requestedMapId);
-
-  // The new coordinate world never accepts arbitrary client teleports. Grid
-  // transitions must move exactly one cardinal cell. Historical non-grid compatibility
-  // remains isolated from the active coordinate-world path.
-  if (previousGrid || requestedGrid) {
-    return Boolean(
-      previousGrid &&
-      requestedGrid &&
-      Math.abs(requestedGrid.x - previousGrid.x) +
-        Math.abs(requestedGrid.y - previousGrid.y) === 1
-    );
-  }
-
-  return true;
+  return Boolean(
+    previousGrid &&
+    requestedGrid &&
+    Math.abs(requestedGrid.x - previousGrid.x) +
+      Math.abs(requestedGrid.y - previousGrid.y) === 1
+  );
 }
 
 
@@ -729,11 +709,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 30,
     coinDropChance: 0.45,
     hurlable: true,
-    snareable: true,
     rainEffect: "none",
     damageKnockback: Object.freeze({
       melee: 32,
-      bowMelee: 12,
       basic: 18,
       arrow: 22,
       fireball: 24
@@ -752,11 +730,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 30,
     coinDropChance: 0.45,
     hurlable: true,
-    snareable: true,
     rainEffect: "none",
     damageKnockback: Object.freeze({
       melee: 32,
-      bowMelee: 12,
       basic: 18,
       arrow: 22,
       fireball: 24
@@ -772,11 +748,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 32,
     coinDropChance: 0.45,
     hurlable: true,
-    snareable: true,
     rainEffect: "none",
     damageKnockback: Object.freeze({
       melee: 30,
-      bowMelee: 12,
       basic: 17,
       arrow: 21,
       fireball: 23
@@ -789,11 +763,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 40,
     coinDropChance: 0.50,
     hurlable: true,
-    snareable: true,
     rainEffect: "none",
     damageKnockback: Object.freeze({
       melee: 28,
-      bowMelee: 13,
       basic: 17,
       arrow: 20,
       fireball: 22
@@ -827,11 +799,9 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
     respawnSeconds: 50,
     coinDropChance: 0,
     hurlable: false,
-    snareable: false,
     rainEffect: "damage",
     damageKnockback: Object.freeze({
       melee: 22,
-      bowMelee: 10,
       basic: 14,
       arrow: 16,
       fireball: 18
@@ -850,12 +820,10 @@ const SERVER_ENEMY_RUNTIME_PROFILES = Object.freeze({
       })
     ]),
     hurlable: false,
-    snareable: true,
     rainEffect: "none",
     patrolRadius: 85,
     damageKnockback: Object.freeze({
       melee: 12,
-      bowMelee: 5,
       basic: 8,
       arrow: 9,
       fireball: 10
@@ -887,7 +855,7 @@ function serverEnemyCanEnterWater(enemyOrType) {
 // -----------------------------------------------------------------------------
 // Burn/Wet used to be written directly from several combat/environment paths.
 // Keep the rules here so Fireball, rain, environmental fire, and future status
-// skills all agree on duration, extinguishing, source attribution, and movement.
+// effects all agree on duration, extinguishing, source attribution, and movement.
 const STATUS_RULES = Object.freeze({
   // Mob Burn is a combat DoT. Fireball/spread can choose its own duration later
   // without changing environmental lifetime or player hazard rules.
@@ -1122,78 +1090,19 @@ function clearServerEnemyHurlState(enemy) {
   enemy.hurlThrownBy = null;
 }
 
-function ensureServerEnemySnareState(enemy) {
-  if (!enemy) return enemy;
-
-  enemy.snareRootTime = Math.max(
-    0,
-    Number(enemy.snareRootTime) || 0
-  );
-
-  enemy.snareSlowTime = Math.max(
-    0,
-    Number(enemy.snareSlowTime) || 0
-  );
-
-  enemy.magicGrassFieldActive = Boolean(enemy.magicGrassFieldActive);
-  enemy.magicGrassSlowMultiplier = Math.max(
-    0.1,
-    Math.min(1, Number(enemy.magicGrassSlowMultiplier) || RAIN_FIELD.SPEED_MULTIPLIER)
-  );
-
-  enemy.snareSlowMultiplier = Math.max(
-    0.1,
-    Math.min(
-      1,
-      Number(enemy.snareSlowMultiplier) || 0.45
-    )
-  );
-
-  return enemy;
-}
-
-function clearServerEnemySnareState(enemy) {
-  if (!enemy) return;
-  ensureServerEnemySnareState(enemy);
-  enemy.snareRootTime = 0;
-  enemy.snareSlowTime = 0;
-}
-
-function serverEnemyIsSnareable(enemy) {
-  const profile = serverEnemyProfile(enemy);
-
-  return Boolean(
-    enemy &&
-    enemy.alive &&
-    !enemy.returningHome &&
-    !enemy.carriedBy &&
-    profile &&
-    (
-      typeof enemy.snareable === "boolean"
-        ? enemy.snareable
-        : profile.snareable !== false
-    )
-  );
-}
-
 function serverEnemyMovementMultiplier(enemy) {
-  ensureServerEnemySnareState(enemy);
   ensureServerEnemyStatusState(enemy);
 
-  if (enemy.snareRootTime > 0) return 0;
-
   let multiplier = 1;
-  if (enemy.snareSlowTime > 0) {
-    multiplier = Math.min(multiplier, enemy.snareSlowMultiplier);
-  }
   if (enemy.magicGrassFieldActive) {
-    multiplier = Math.min(multiplier, enemy.magicGrassSlowMultiplier);
+    multiplier = Math.min(
+      multiplier,
+      Math.max(0.1, Math.min(1, Number(enemy.magicGrassSlowMultiplier) || RAIN_FIELD.SPEED_MULTIPLIER))
+    );
   }
   if (enemy.wetTime > 0) {
     const wetMultiplier = Number(serverEnemyProfile(enemy)?.wetSpeedMultiplier);
     if (Number.isFinite(wetMultiplier) && wetMultiplier > 1) {
-      // Crab-style Wet affinity is a bonus layered on top of any existing
-      // snare/grass control, rather than erasing those debuffs.
       multiplier *= wetMultiplier;
     } else {
       multiplier = Math.min(
@@ -1206,34 +1115,6 @@ function serverEnemyMovementMultiplier(enemy) {
   }
 
   return multiplier;
-}
-
-function tickSharedEnemySnareStatuses(dt) {
-  for (const enemy of allSharedEnemies()) {
-    if (!enemyMapSimulationActive(enemy.mapId)) continue;
-    if (!enemy.alive) {
-      clearServerEnemySnareState(enemy);
-      continue;
-    }
-
-    ensureServerEnemySnareState(enemy);
-
-
-    if (enemy.snareRootTime > 0) {
-      enemy.snareRootTime = Math.max(
-        0,
-        enemy.snareRootTime - dt
-      );
-      continue;
-    }
-
-    if (enemy.snareSlowTime > 0) {
-      enemy.snareSlowTime = Math.max(
-        0,
-        enemy.snareSlowTime - dt
-      );
-    }
-  }
 }
 
 function serverEnemyIsHurlable(enemy) {
@@ -1461,520 +1342,12 @@ const persistentStateRestoredPlayers = new Set();
 const socketsByPlayerId = new Map();
 const socketsByMap = new Map();
 
-const HUNTER_SNARE_TRIGGER_RADIUS = 9;
-const HUNTER_SNARE_ROOT_SECONDS = 0.65;
-const HUNTER_SNARE_SLOW_SECONDS = 3.0;
-const HUNTER_SNARE_SLOW_MULTIPLIER = 0.45;
-const HUNTER_SNARE_MAX_ACTIVE = 3;
-const HUNTER_SNARE_MAX_CHARGES = 3;
-const HUNTER_SNARE_CHARGE_SECONDS = 15.0;
-const HUNTER_SNARE_SETUP_SECONDS = 1.25;
-const HUNTER_SNARE_SETUP_MOVE_TOLERANCE = 0.75;
-const hunterSnares = new Map();
-const hunterSnareSetups = new Map();
-let nextHunterSnareId = 1;
-
-function hunterSnaresForOwner(ownerId) {
-  return [...hunterSnares.values()]
-    .filter(snare => snare.ownerId === ownerId)
-    .sort((a, b) => a.createdAt - b.createdAt);
-}
-
-function hunterSnareSnapshot(mapId = null) {
-  return [...hunterSnares.values()]
-    .filter(snare => !mapId || snare.mapId === mapId)
-    .map(snare => ({
-      id: snare.id,
-      ownerId: snare.ownerId,
-      mapId: snare.mapId,
-      x: snare.x,
-      y: snare.y
-    }));
-}
-
-function hunterSnareSetupSnapshot(mapId = null) {
-  const now = Date.now();
-
-  return [...hunterSnareSetups.values()]
-    .filter(setup => !mapId || setup.mapId === mapId)
-    .map(setup => ({
-      ownerId: setup.ownerId,
-      mapId: setup.mapId,
-      x: setup.x,
-      y: setup.y,
-      duration: HUNTER_SNARE_SETUP_SECONDS,
-      elapsed: Math.max(
-        0,
-        Math.min(
-          HUNTER_SNARE_SETUP_SECONDS,
-          (now - setup.startedAt) / 1000
-        )
-      )
-    }));
-}
-
-function removeHunterSnare(snareId, reason = "removed") {
-  const snare = hunterSnares.get(snareId);
-  if (!snare) return null;
-
-  hunterSnares.delete(snareId);
-
-  broadcastToMap(snare.mapId, {
-    type: "hunterSnareRemoved",
-    snareId,
-    ownerId: snare.ownerId,
-    mapId: snare.mapId,
-    reason
-  });
-
-  return snare;
-}
-
-function removeHunterSnaresForOwner(ownerId, mapId = null, reason = "ownerCleanup") {
-  for (const snare of [...hunterSnares.values()]) {
-    if (
-      snare.ownerId !== ownerId ||
-      (mapId && snare.mapId !== mapId)
-    ) {
-      continue;
-    }
-
-    removeHunterSnare(snare.id, reason);
-  }
-}
-
-function broadcastHunterSnareChargeState(playerId) {
-  const playerState = players.get(playerId);
-  if (!playerState) return;
-
-  sendToPlayer(playerId, {
-    type: "hunterSnareChargeState",
-    ownerId: playerId,
-    charges: Math.max(0, Math.floor(playerState.hunterSnareCharges || 0))
-  });
-}
-
-function tickHunterSnareCharges(dt) {
-  for (const [playerId, playerState] of players.entries()) {
-    const charges = Math.max(
-      0,
-      Math.min(
-        HUNTER_SNARE_MAX_CHARGES,
-        Math.floor(Number(playerState.hunterSnareCharges) || 0)
-      )
-    );
-
-    playerState.hunterSnareCharges = charges;
-
-    // A trap sitting in the world still occupies one of the hunter's three
-    // total trap slots. This prevents pre-placing three snares, waiting back
-    // to three charges, and effectively entering combat with six traps.
-    // Once a trap springs (or otherwise leaves the field), that slot becomes
-    // eligible to recharge.
-    const activeTrapCount = hunterSnaresForOwner(playerId).length;
-    const maxBankedCharges = Math.max(
-      0,
-      HUNTER_SNARE_MAX_CHARGES - activeTrapCount
-    );
-
-    if (charges >= maxBankedCharges) {
-      playerState.hunterSnareChargeTime = 0;
-      continue;
-    }
-
-    playerState.hunterSnareChargeTime = Math.max(
-      0,
-      Number(playerState.hunterSnareChargeTime) || 0
-    ) + dt;
-
-    let changed = false;
-    while (
-      playerState.hunterSnareChargeTime >= HUNTER_SNARE_CHARGE_SECONDS &&
-      playerState.hunterSnareCharges < maxBankedCharges
-    ) {
-      playerState.hunterSnareChargeTime -= HUNTER_SNARE_CHARGE_SECONDS;
-      playerState.hunterSnareCharges += 1;
-      changed = true;
-    }
-
-    if (playerState.hunterSnareCharges >= maxBankedCharges) {
-      playerState.hunterSnareChargeTime = 0;
-    }
-
-    if (changed) {
-      broadcastHunterSnareChargeState(playerId);
-    }
-  }
-}
-
-function rejectHunterSnareSetup(
-  playerId,
-  reason,
-  playerState = players.get(playerId)
-) {
-  sendToPlayer(playerId, {
-    type: "hunterSnareSetupRejected",
-    ownerId: playerId,
-    reason,
-    charges: Math.max(
-      0,
-      Math.floor(playerState?.hunterSnareCharges || 0)
-    )
-  });
-}
-
-function cancelHunterSnareSetup(
-  playerId,
-  reason = "cancelled",
-  broadcast = true
-) {
-  const setup = hunterSnareSetups.get(playerId);
-  if (!setup) return null;
-
-  hunterSnareSetups.delete(playerId);
-
-  if (broadcast) {
-    broadcastToMap(setup.mapId, {
-      type: "hunterSnareSetupCancelled",
-      ownerId: playerId,
-      mapId: setup.mapId,
-      reason,
-      duration: HUNTER_SNARE_SETUP_SECONDS
-    });
-  }
-
-  return setup;
-}
-
-function handleHunterSnareBegin(playerId) {
-  const playerState = players.get(playerId);
-  if (!playerState || playerState.hp <= 0) {
-    rejectHunterSnareSetup(playerId, "unavailable", playerState);
-    return;
-  }
-
-  if (hunterSnareSetups.has(playerId)) {
-    rejectHunterSnareSetup(playerId, "alreadySetting", playerState);
-    return;
-  }
-
-  if ((playerState.hunterSnareCharges || 0) <= 0) {
-    rejectHunterSnareSetup(playerId, "noCharges", playerState);
-    return;
-  }
-
-  const now = Date.now();
-  const setup = {
-    ownerId: playerId,
-    mapId: playerState.mapId,
-    x: playerState.x,
-    y: playerState.y,
-    startedAt: now,
-    completesAt: now + HUNTER_SNARE_SETUP_SECONDS * 1000
-  };
-
-  hunterSnareSetups.set(playerId, setup);
-
-  broadcastToMap(setup.mapId, {
-    type: "hunterSnareSetupStarted",
-    ownerId: playerId,
-    mapId: setup.mapId,
-    x: setup.x,
-    y: setup.y,
-    duration: HUNTER_SNARE_SETUP_SECONDS,
-    elapsed: 0
-  });
-}
-
-function handleHunterSnareCancel(playerId) {
-  cancelHunterSnareSetup(
-    playerId,
-    "playerCancelled"
-  );
-}
-
-function finishHunterSnareSetup(playerId) {
-  const setup = hunterSnareSetups.get(playerId);
-  if (!setup) return false;
-
-  const playerState = players.get(playerId);
-
-  if (
-    !playerState ||
-    playerState.hp <= 0 ||
-    playerState.mapId !== setup.mapId
-  ) {
-    cancelHunterSnareSetup(
-      playerId,
-      "ownerUnavailable"
-    );
-    return false;
-  }
-
-  if (
-    Math.hypot(
-      playerState.x - setup.x,
-      playerState.y - setup.y
-    ) > HUNTER_SNARE_SETUP_MOVE_TOLERANCE
-  ) {
-    cancelHunterSnareSetup(
-      playerId,
-      "movement"
-    );
-    return false;
-  }
-
-  if ((playerState.hunterSnareCharges || 0) <= 0) {
-    cancelHunterSnareSetup(
-      playerId,
-      "noCharges"
-    );
-    rejectHunterSnareSetup(
-      playerId,
-      "noCharges",
-      playerState
-    );
-    return false;
-  }
-
-  hunterSnareSetups.delete(playerId);
-
-  playerState.hunterSnareCharges = Math.max(
-    0,
-    Math.floor(playerState.hunterSnareCharges || 0) - 1
-  );
-
-  // A placed trap occupies its charge slot while it remains on the field.
-  // Recharge only becomes possible after a trap leaves the field.
-  if (!Number.isFinite(playerState.hunterSnareChargeTime)) {
-    playerState.hunterSnareChargeTime = 0;
-  }
-
-  broadcastHunterSnareChargeState(playerId);
-
-  const existing = hunterSnaresForOwner(playerId);
-
-  // A hunter may maintain three prepared traps. Setting a fourth retires the
-  // oldest one rather than rejecting a completed setup action.
-  if (existing.length >= HUNTER_SNARE_MAX_ACTIVE) {
-    removeHunterSnare(existing[0].id, "replacedOldest");
-  }
-
-  const snare = {
-    id: `snare:${nextHunterSnareId++}`,
-    ownerId: playerId,
-    mapId: setup.mapId,
-    x: setup.x,
-    y: setup.y,
-    createdAt: Date.now()
-  };
-
-  hunterSnares.set(snare.id, snare);
-
-  broadcastToMap(snare.mapId, {
-    type: "hunterSnarePlaced",
-    ...snare,
-    setupDuration: HUNTER_SNARE_SETUP_SECONDS
-  });
-
-  return true;
-}
-
-function tickHunterSnareSetups() {
-  const now = Date.now();
-
-  for (const [playerId, setup] of hunterSnareSetups.entries()) {
-    const playerState = players.get(playerId);
-
-    if (
-      !playerState ||
-      playerState.hp <= 0 ||
-      playerState.mapId !== setup.mapId
-    ) {
-      cancelHunterSnareSetup(
-        playerId,
-        "ownerUnavailable"
-      );
-      continue;
-    }
-
-    if (
-      Math.hypot(
-        playerState.x - setup.x,
-        playerState.y - setup.y
-      ) > HUNTER_SNARE_SETUP_MOVE_TOLERANCE
-    ) {
-      cancelHunterSnareSetup(
-        playerId,
-        "movement"
-      );
-      continue;
-    }
-
-    if (now >= setup.completesAt) {
-      finishHunterSnareSetup(playerId);
-    }
-  }
-}
-
-function tickHunterSnares() {
-  for (const snare of [...hunterSnares.values()]) {
-    const owner = players.get(snare.ownerId);
-
-    if (
-      !owner ||
-      owner.mapId !== snare.mapId ||
-      owner.hp <= 0
-    ) {
-      removeHunterSnare(
-        snare.id,
-        "ownerUnavailable"
-      );
-      continue;
-    }
-
-    let triggeredEnemy = null;
-    let triggeredPlayer = null;
-    let bestDistance = HUNTER_SNARE_TRIGGER_RADIUS + 0.001;
-
-    for (const enemy of sharedEnemiesOnMap(snare.mapId)) {
-      if (!serverEnemyIsSnareable(enemy)) continue;
-      if (enemy.hurlTime > 0) continue;
-
-      ensureServerEnemySnareState(enemy);
-
-      const distance = Math.hypot(
-        enemy.x - snare.x,
-        enemy.y - snare.y
-      );
-
-      if (distance <= bestDistance) {
-        bestDistance = distance;
-        triggeredEnemy = enemy;
-        triggeredPlayer = null;
-      }
-    }
-
-    // PvP players can spring the same physical trap. Camouflage does not make
-    // the Ranger intangible: stepping onto a snare still catches them, and the
-    // SNARED tell briefly gives away where the hidden player actually is.
-    for (const target of players.values()) {
-      if (
-        target.id === owner.id ||
-        target.mapId !== snare.mapId ||
-        !pvpPlayersCanHarm(owner, target)
-      ) {
-        continue;
-      }
-
-      const distance = Math.hypot(
-        target.x - snare.x,
-        target.y - snare.y
-      );
-
-      if (distance <= bestDistance) {
-        bestDistance = distance;
-        triggeredEnemy = null;
-        triggeredPlayer = target;
-      }
-    }
-
-    if (!triggeredEnemy && !triggeredPlayer) continue;
-
-    const removed = removeHunterSnare(
-      snare.id,
-      "triggered"
-    );
-
-    if (triggeredPlayer) {
-      const now = Date.now();
-      triggeredPlayer.pvpSnareRootUntil = Math.max(
-        Number(triggeredPlayer.pvpSnareRootUntil) || 0,
-        now + HUNTER_SNARE_ROOT_SECONDS * 1000
-      );
-      triggeredPlayer.pvpSnareSlowUntil = Math.max(
-        Number(triggeredPlayer.pvpSnareSlowUntil) || 0,
-        now + HUNTER_SNARE_SLOW_SECONDS * 1000
-      );
-      triggeredPlayer.pvpSnareSlowMultiplier =
-        HUNTER_SNARE_SLOW_MULTIPLIER;
-
-      applyPvpCombatLock(owner, triggeredPlayer);
-
-      broadcastToMap(snare.mapId, {
-        type: "hunterSnareTriggered",
-        snareId: snare.id,
-        ownerId: snare.ownerId,
-        mapId: snare.mapId,
-        x: removed?.x ?? snare.x,
-        y: removed?.y ?? snare.y,
-        targetPlayerId: triggeredPlayer.id,
-        rootSeconds: HUNTER_SNARE_ROOT_SECONDS,
-        slowSeconds: HUNTER_SNARE_SLOW_SECONDS,
-        slowMultiplier: HUNTER_SNARE_SLOW_MULTIPLIER
-      });
-      continue;
-    }
-
-    ensureServerEnemySnareState(triggeredEnemy);
-    triggeredEnemy.snareRootTime =
-      HUNTER_SNARE_ROOT_SECONDS;
-    triggeredEnemy.snareSlowTime =
-      HUNTER_SNARE_SLOW_SECONDS;
-    triggeredEnemy.snareSlowMultiplier =
-      HUNTER_SNARE_SLOW_MULTIPLIER;
-
-    broadcastToMap(snare.mapId, {
-      type: "hunterSnareTriggered",
-      snareId: snare.id,
-      ownerId: snare.ownerId,
-      mapId: snare.mapId,
-      x: removed?.x ?? snare.x,
-      y: removed?.y ?? snare.y,
-      enemyType: triggeredEnemy.type,
-      enemyId: triggeredEnemy.id,
-      rootSeconds: HUNTER_SNARE_ROOT_SECONDS,
-      slowSeconds: HUNTER_SNARE_SLOW_SECONDS,
-      slowMultiplier: HUNTER_SNARE_SLOW_MULTIPLIER
-    });
-  }
-}
-
-// PvP is deliberately opt-in. Both players must have it enabled before the
-// server will accept any player-vs-player attack. Once combat begins, both
-// participants are locked in PvP for a short window so nobody can attack and
-// immediately toggle themselves safe.
-const PVP_DAMAGE_MULTIPLIER = 0.50;
-const PVP_COMBAT_LOCK_MS = 10_000;
-const PVP_PLAYER_BURN_DURATION = 3.0;
-const PVP_FIREBALL_LANDING_RADIUS = 13;
-const PVP_LOCK_REBROADCAST_GRACE_MS = 1_000;
-const pvpAttackRateLimits = new Map();
-
-function pvpPlayersCanHarm(attacker, target) {
-  return Boolean(
-    attacker &&
-    target &&
-    attacker.id !== target.id &&
-    attacker.hp > 0 &&
-    target.hp > 0 &&
-    attacker.mapId === target.mapId &&
-    attacker.pvpEnabled &&
-    target.pvpEnabled
-  );
-}
-
+// Player-owned environmental/status effects may affect the owner, but never
+// another player. Player-vs-player combat was retired with the old PvP UI.
 function playerOwnedEffectMayAffectTarget(sourcePlayerId, target) {
   if (!target || target.hp <= 0) return false;
   if (!sourcePlayerId) return true;
-
-  const source = players.get(sourcePlayerId);
-  if (!source) return false;
-
-  // Self-inflicted fire/status remains possible regardless of PvP toggle.
-  if (source.id === target.id) return true;
-
-  return pvpPlayersCanHarm(source, target);
+  return String(sourcePlayerId) === String(target.id);
 }
 
 
@@ -2451,14 +1824,6 @@ function floorRemovalWouldOrphanObject(mapId, floor) {
   );
 }
 
-function floorAcrossBuildEdge(mapId, floorX, floorY, edge) {
-  if (edge === "north") return floorStructureAt(mapId, floorX, floorY - BUILD_GRID_SIZE);
-  if (edge === "south") return floorStructureAt(mapId, floorX, floorY + BUILD_GRID_SIZE);
-  if (edge === "east") return floorStructureAt(mapId, floorX + BUILD_GRID_SIZE, floorY);
-  if (edge === "west") return floorStructureAt(mapId, floorX - BUILD_GRID_SIZE, floorY);
-  return null;
-}
-
 function doorHasFlankingWalls(mapId, wall) {
   if (!wall) return false;
   const structures = structuresOnMap(mapId);
@@ -2815,21 +2180,16 @@ function handleStructureDestroyRequest(playerId, socket, message) {
 // -----------------------------------------------------------------------------
 // SHARED ENVIRONMENT
 // -----------------------------------------------------------------------------
-// The browser already owns the static art/layout for trees, grass, and flowers.
-// On first connection it sends a deterministic catalog of those persistent
-// entity IDs/positions. From then on this server owns all mutable state.
-//
-// This avoids duplicating the large existing map-layout code while still giving
-// every connected player one authoritative environment for the session.
+// WORLD_CONTENT is the single deterministic definition of trees, grass, rocks,
+// and harvest flowers on both server and client. The server builds its mutable
+// authoritative environment directly at startup; clients never upload a copy
+// of the world catalog during connection anymore.
 const sharedEnvironment = new Map();
 // Secondary map index for persistent world objects. The authoritative entity
 // objects still live in sharedEnvironment; this index only prevents every
 // map-local query from scanning unrelated maps as the world gains more props.
 const sharedEnvironmentByMap = new Map();
 const dirtyEnvironmentIds = new Set();
-// Moving rocks use their own compact 10 Hz correction stream rather than a
-// full generic environmentEntitySnapshot every tick.
-const dirtyRockMotionIds = new Set();
 // Immutable tree positions used only by server-side Hurl collision. These are
 // deliberately separate from sharedEnvironment because they have no mutable
 // state to replicate.
@@ -2982,16 +2342,7 @@ function resetRockToFresh(entity) {
   entity.regrowAt = 0;
   entity.x = entity.homeX;
   entity.y = entity.homeY;
-  entity.carriedBy = null;
-  entity.pickupTime = 0;
-  entity.hurlTime = 0;
-  entity.hurlVelocityX = 0;
-  entity.hurlVelocityY = 0;
-  entity.hurlThrownBy = null;
-  entity.rollTime = 0;
-  entity.rollVelocityX = 0;
-  entity.rollVelocityY = 0;
-  markEnvironmentDirty(entity, true);
+  markEnvironmentDirty(entity);
 }
 
 function environmentMapBucket(mapId, create = false) {
@@ -3061,20 +2412,7 @@ function environmentEntitySnapshot(entity) {
       variant: entity.variant || "plain",
       hp: entity.hp,
       maxHp: entity.maxHp,
-      depleted: Boolean(entity.depleted),
-      carriedBy: entity.carriedBy || null,
-      pickupTime: Number((entity.pickupTime || 0).toFixed(3)),
-      pickupDuration: entity.pickupDuration || 0.18,
-      pickupDirX: Number((entity.pickupDirX || 0).toFixed(3)),
-      pickupDirY: Number((entity.pickupDirY || 0).toFixed(3)),
-      hurlTime: Number((entity.hurlTime || 0).toFixed(3)),
-      hurlDuration: entity.hurlDuration || 0.58,
-      hurlVelocityX: Number((entity.hurlVelocityX || 0).toFixed(2)),
-      hurlVelocityY: Number((entity.hurlVelocityY || 0).toFixed(2)),
-      rollTime: Number((entity.rollTime || 0).toFixed(3)),
-      rollDuration: entity.rollDuration || 0.24,
-      rollVelocityX: Number((entity.rollVelocityX || 0).toFixed(2)),
-      rollVelocityY: Number((entity.rollVelocityY || 0).toFixed(2))
+      depleted: Boolean(entity.depleted)
     };
   }
 
@@ -3099,15 +2437,7 @@ function environmentEntityHasNonDefaultState(entity) {
     return Boolean(entity.cut || entity.burnt || entity.burnTime > 0);
   }
   if (entity.kind === "rock") {
-    return Boolean(
-      entity.hp < entity.maxHp ||
-      entity.depleted ||
-      entity.carriedBy ||
-      entity.hurlTime > 0 ||
-      entity.rollTime > 0 ||
-      Math.abs(entity.x - entity.homeX) > 0.01 ||
-      Math.abs(entity.y - entity.homeY) > 0.01
-    );
+    return Boolean(entity.hp < entity.maxHp || entity.depleted);
   }
   return Boolean(entity.cut || entity.burnt || entity.burnTime > 0 || entity.looted);
 }
@@ -3118,51 +2448,9 @@ function sharedEnvironmentChangesSnapshot(mapId) {
     .map(environmentEntitySnapshot);
 }
 
-function markEnvironmentDirty(entity, fullState = false) {
+function markEnvironmentDirty(entity) {
   if (!entity?.id) return;
-
-  if (entity.kind === "rock" && !fullState) {
-    dirtyRockMotionIds.add(entity.id);
-    return;
-  }
-
-  if (entity.kind === "rock") {
-    dirtyRockMotionIds.delete(entity.id);
-  }
   dirtyEnvironmentIds.add(entity.id);
-}
-
-function compactRockMotionSnapshot(rock) {
-  return [
-    rock.id,
-    Number((Number(rock.x) || 0).toFixed(2)),
-    Number((Number(rock.y) || 0).toFixed(2))
-  ];
-}
-
-function flushRockMotionPatches() {
-  if (dirtyRockMotionIds.size === 0) return;
-
-  const byMap = new Map();
-
-  for (const entityId of dirtyRockMotionIds) {
-    const rock = sharedEnvironment.get(entityId);
-    if (!rock || rock.kind !== "rock") continue;
-
-    if (!byMap.has(rock.mapId)) byMap.set(rock.mapId, []);
-    byMap.get(rock.mapId).push(compactRockMotionSnapshot(rock));
-  }
-
-  dirtyRockMotionIds.clear();
-
-  for (const [mapId, rocks] of byMap.entries()) {
-    if (!rocks.length) continue;
-    broadcastToMap(mapId, {
-      type: "rockMotion",
-      mapId,
-      rocks
-    });
-  }
 }
 
 function flushEnvironmentPatches() {
@@ -3195,43 +2483,23 @@ function flushEnvironmentPatches() {
     }
   }
 
-  flushRockMotionPatches();
 }
 
-function canonicalEnvironmentDefinition(mapId, kind, entityId) {
-  const environment = WORLD_CONTENT.maps?.[mapId]?.environment || null;
-  const collectionName = kind === "tree"
-    ? "trees"
-    : kind === "grass"
-      ? "tallGrass"
-      : kind === "flower"
-        ? "harvestFlowers"
-        : kind === "rock"
-          ? "rocks"
-          : null;
-  if (!environment || !collectionName || !Array.isArray(environment[collectionName])) return null;
-  return environment[collectionName].find(definition => definition?.id === entityId) || null;
-}
-
-function sanitizeEnvironmentCatalogEntity(mapId, source) {
+function serverEnvironmentEntityFromDefinition(
+  mapId,
+  kind,
+  canonical
+) {
   if (
-    !source ||
-    typeof source !== "object" ||
-    !["tree", "grass", "flower", "rock"].includes(source.kind)
+    !canonical ||
+    typeof canonical !== "object" ||
+    !["tree", "grass", "flower", "rock"].includes(kind)
   ) {
     return null;
   }
 
-  const id = String(source.id || "");
-  const kind = source.kind;
-  const canonical = id ? canonicalEnvironmentDefinition(mapId, kind, id) : null;
-
-  // v418: validate mutable scenery against the server's canonical seeded world
-  // definition instead of assuming IDs have the old `${mapId}:${kind}:...`
-  // shape. Procedural meadows/tree rings/stone features intentionally use
-  // feature-specific IDs, and the old prefix gate made those visible but
-  // silently non-interactive.
-  if (!canonical) return null;
+  const id = String(canonical.id || "");
+  if (!id) return null;
 
   const dimensions = mapWorldDimensions(mapId);
   const x = clampNumber(canonical.x, 0, dimensions.width, 0);
@@ -3308,21 +2576,7 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
       hp: 3,
       maxHp: 3,
       depleted: false,
-      regrowAt: 0,
-      carriedBy: null,
-      pickupTime: 0,
-      pickupDuration: 0.18,
-      pickupDirX: 0,
-      pickupDirY: 0,
-      hurlTime: 0,
-      hurlDuration: 0.58,
-      hurlVelocityX: 0,
-      hurlVelocityY: 0,
-      hurlThrownBy: null,
-      rollTime: 0,
-      rollDuration: 0.24,
-      rollVelocityX: 0,
-      rollVelocityY: 0
+      regrowAt: 0
     };
   }
 
@@ -3347,121 +2601,88 @@ function sanitizeEnvironmentCatalogEntity(mapId, source) {
   };
 }
 
-function registerStaticHurlTreeCatalog(mapId, sourceTrees) {
-  if (!Array.isArray(sourceTrees)) return false;
-
-  const dimensions = mapWorldDimensions(mapId);
-  const existing = staticHurlTreesByMap.get(mapId) || [];
-  const trees = existing.slice();
-  const seen = new Set(
-    trees.map(tree => `${Number(tree.x).toFixed(2)}:${Number(tree.y).toFixed(2)}`)
-  );
-  let added = 0;
-
-  for (const source of sourceTrees.slice(0, 500)) {
-    if (!Array.isArray(source) || source.length < 2) continue;
-
-    const x = clampNumber(source[0], 0, dimensions.width, 0);
-    const y = clampNumber(source[1], 0, dimensions.height, 0);
-    const key = `${x.toFixed(2)}:${y.toFixed(2)}`;
-    if (seen.has(key)) continue;
-
-    seen.add(key);
-    trees.push({ x, y });
-    added += 1;
-  }
-
-  if (added > 0 || !staticHurlTreesByMap.has(mapId)) {
-    staticHurlTreesByMap.set(mapId, trees);
-  }
-
-  return added > 0;
-}
-
 function staticHurlTreesOnMap(mapId) {
   return staticHurlTreesByMap.get(mapId) || [];
 }
 
-function handleEnvironmentCatalog(
-  playerId,
-  message,
-  socket = null
-) {
-  const playerState = players.get(playerId);
-  if (!playerState) return;
+function initializeSharedEnvironmentFromWorldContent() {
+  let mutableCount = 0;
+  let staticTreeCount = 0;
 
-  const mapId = String(message.mapId || "");
-  if (!ALLOWED_MAPS.has(mapId)) return;
+  for (const [mapId, mapDefinition] of Object.entries(WORLD_CONTENT.maps || {})) {
+    const environment = mapDefinition?.environment || {};
+    const staticTrees = [];
 
-  const entities =
-    Array.isArray(message.entities)
-      ? message.entities.slice(0, 500)
-      : [];
+    for (const definition of environment.trees || []) {
+      if (
+        Boolean(definition?.fireImmune) &&
+        Boolean(definition?.nonInteractive)
+      ) {
+        staticTrees.push({
+          x: clampNumber(definition.x, 0, mapWorldDimensions(mapId).width, 0),
+          y: clampNumber(definition.y, 0, mapWorldDimensions(mapId).height, 0)
+        });
+        staticTreeCount += 1;
+        continue;
+      }
 
-  const compactStaticTrees = Array.isArray(message.staticTrees)
-    ? message.staticTrees
-    : [];
+      const entity =
+        serverEnvironmentEntityFromDefinition(
+          mapId,
+          "tree",
+          definition
+        );
+      if (entity && registerSharedEnvironmentEntity(entity)) {
+        mutableCount += 1;
+      }
+    }
 
-  const staticCatalogAdded = registerStaticHurlTreeCatalog(
-    mapId,
-    compactStaticTrees
+    for (const definition of environment.tallGrass || []) {
+      const entity =
+        serverEnvironmentEntityFromDefinition(
+          mapId,
+          "grass",
+          definition
+        );
+      if (entity && registerSharedEnvironmentEntity(entity)) {
+        mutableCount += 1;
+      }
+    }
+
+    for (const definition of environment.rocks || []) {
+      const entity =
+        serverEnvironmentEntityFromDefinition(
+          mapId,
+          "rock",
+          definition
+        );
+      if (entity && registerSharedEnvironmentEntity(entity)) {
+        mutableCount += 1;
+      }
+    }
+
+    for (const definition of environment.harvestFlowers || []) {
+      const entity =
+        serverEnvironmentEntityFromDefinition(
+          mapId,
+          "flower",
+          definition
+        );
+      if (entity && registerSharedEnvironmentEntity(entity)) {
+        mutableCount += 1;
+      }
+    }
+
+    staticHurlTreesByMap.set(mapId, staticTrees);
+  }
+
+  console.log(
+    `[WORLD] initialized ${mutableCount} mutable environment entities + ` +
+    `${staticTreeCount} immutable tree collision points from WORLD_CONTENT`
   );
-
-  let addedAny = false;
-  let mutableCatalogCount = 0;
-
-  for (const source of entities) {
-    // Immutable perimeter trees belong in staticTrees and never enter the
-    // mutable authoritative environment registry.
-    if (
-      source?.kind === "tree" &&
-      Boolean(source.fireImmune) &&
-      Boolean(source.nonInteractive)
-    ) {
-      continue;
-    }
-
-    mutableCatalogCount += 1;
-
-    const entity =
-      sanitizeEnvironmentCatalogEntity(
-        mapId,
-        source
-      );
-
-    if (!entity) continue;
-
-    // Existing authoritative state always wins over a reconnecting/default
-    // client's catalog.
-    if (registerSharedEnvironmentEntity(entity)) {
-      addedAny = true;
-    }
-  }
-
-  // The connection/map-entry path already sends the authoritative environment
-  // for the player's current map. Only the very first catalog registration for
-  // that current map needs a reply (the server had no state to send yet).
-  // Off-map catalogs are registration-only: their state will be sent if/when
-  // the player actually enters that map.
-  if (
-    socket &&
-    addedAny &&
-    playerState.mapId === mapId
-  ) {
-    sendJson(socket, {
-      type: "environmentSnapshot",
-      mapId,
-      sparse: true,
-      entities: sharedEnvironmentChangesSnapshot(mapId)
-    });
-  }
-
-  if (addedAny || staticCatalogAdded) {
-    console.log(
-      `Environment catalog registered for ${mapId}: ${mutableCatalogCount} mutable + ${staticHurlTreesOnMap(mapId).length} static trees`
-    );
-  }
 }
+
+initializeSharedEnvironmentFromWorldContent();
 
 function sharedResourceSnapshot(mapId = null) {
   return [...sharedResources.values()]
@@ -3581,7 +2802,7 @@ function inventoryTransferTokenParts(token) {
   }
   if (clean.startsWith("item:")) {
     const id = clean.slice(5);
-    const validEquipment = SHOP_PURCHASE_HISTORY_ITEM_IDS.has(id) || id === "charm_woodRing";
+    const validEquipment = TRANSFERABLE_EQUIPMENT_ITEM_IDS.has(id) || id === "charm_woodRing";
     return validEquipment ? { type: "item", id, token: clean } : null;
   }
   return null;
@@ -3862,8 +3083,8 @@ function handleChestContextClose(playerId, socket, message) {
   if (!activeId || (requestedId && requestedId !== activeId)) return; releaseChestContextForPlayer(playerId, "closed", false); sendJson(socket, { type: "chestContextClosed", chestId: activeId, reason: "closed" });
 }
 function handleChestTakeItem(playerId, socket, message) {
-  const chestId = typeof message?.chestId === "string" ? message.chestId : ""; const legacyItemId = typeof message?.itemId === "string" ? message.itemId : "";
-  const parts = inventoryTransferTokenParts(message?.token || (legacyItemId ? `resource:${legacyItemId}` : "")); if (!chestId || !parts) return;
+  const chestId = typeof message?.chestId === "string" ? message.chestId : "";
+  const parts = inventoryTransferTokenParts(message?.token); if (!chestId || !parts) return;
   const context = chestContextValidation(playerId, socket, chestId, "chestTakeResult"); if (!context) return;
   const inventory = chestInventoryFor(context.chest); const index = inventory.findIndex(stack => stack.token === parts.token);
   if (index < 0 || inventory[index].count <= 0) { sendJson(socket, { type: "chestTakeResult", success: false, chestId, token: parts.token, reason: "empty", slotLimit: CHEST_SLOT_LIMIT, items: chestInventoryPayload(context.chest) }); return; }
@@ -3913,18 +3134,6 @@ function handleChestTakeAll(playerId, socket, message) {
     items: chestInventoryPayload(context.chest),
     transfers
   });
-}
-
-// Backward packet compatibility: old clients can still ask to open/toggle a
-// chest, but the server routes them into the v424 exclusive context model.
-function handleTreasureOpen(playerId, socket, message) {
-  handleChestContextOpen(playerId, socket, message);
-}
-
-function handleChestToggle(playerId, socket, message) {
-  const active = chestContextByPlayer.get(playerId);
-  if (active && active === message?.chestId) handleChestContextClose(playerId, socket, message);
-  else handleChestContextOpen(playerId, socket, message);
 }
 
 const BEACH_QUEST_FIRST_CRAB_GOAL = 10;
@@ -4318,18 +3527,16 @@ const HEALING_POTION_COOLDOWN_MS = 15000;
 const BUFF_POTION_COOLDOWN_MS = 1000;
 const POTION_BUFF_MS = 300000;
 
-function consumableCooldownUntilForItem(playerState, item) {
-  if (item === "healingPotion") return Number(playerState.consumableCooldownUntil) || 0;
+function potionCooldownUntilForItem(playerState, item) {
+  if (item === "healingPotion") return Number(playerState.healingPotionCooldownUntil) || 0;
   if (item === "attackPotion") return Number(playerState.attackPotionCooldownUntil) || 0;
   if (item === "magicPotion") return Number(playerState.magicPotionCooldownUntil) || 0;
   return 0;
 }
 
-function setConsumableCooldown(playerState, item, now) {
+function setPotionCooldown(playerState, item, now) {
   if (item === "healingPotion") {
-    // Legacy field name retained for save/network compatibility. It is now the
-    // shared healing-potion-family cooldown for current and future HP potions.
-    playerState.consumableCooldownUntil = now + HEALING_POTION_COOLDOWN_MS;
+    playerState.healingPotionCooldownUntil = now + HEALING_POTION_COOLDOWN_MS;
   } else if (item === "attackPotion") {
     playerState.attackPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
   } else if (item === "magicPotion") {
@@ -4344,7 +3551,7 @@ function consumableStatePayload(playerState) {
     totalHealingPotions: playerState.healingPotions,
     totalAttackPotions: playerState.attackPotions,
     totalMagicPotions: playerState.magicPotions,
-    consumableCooldownUntil: playerState.consumableCooldownUntil,
+    healingPotionCooldownUntil: playerState.healingPotionCooldownUntil,
     attackPotionCooldownUntil: playerState.attackPotionCooldownUntil,
     magicPotionCooldownUntil: playerState.magicPotionCooldownUntil,
     attackPotionUntil: playerState.attackPotionUntil,
@@ -4360,7 +3567,7 @@ function handleConsumableUse(playerId, socket, message) {
   const now = Date.now();
   let reason = "";
   if (!inventoryKey) reason = "invalid";
-  else if (consumableCooldownUntilForItem(playerState, item) > now) reason = "cooldown";
+  else if (potionCooldownUntilForItem(playerState, item) > now) reason = "cooldown";
   else if ((Number(playerState[inventoryKey]) || 0) <= 0) reason = "empty";
   else if (item === "healingPotion" && playerState.hp >= playerState.maxHp) reason = "fullHp";
   if (reason) {
@@ -4368,7 +3575,7 @@ function handleConsumableUse(playerId, socket, message) {
     return;
   }
   playerState[inventoryKey] -= 1;
-  setConsumableCooldown(playerState, item, now);
+  setPotionCooldown(playerState, item, now);
   if (item === "healingPotion") playerState.hp = Math.min(playerState.maxHp, playerState.hp + 20);
   if (item === "attackPotion") playerState.attackPotionUntil = now + POTION_BUFF_MS;
   if (item === "magicPotion") playerState.magicPotionUntil = now + POTION_BUFF_MS;
@@ -4398,10 +3605,6 @@ function handleArrowUse(playerId, socket) {
 
 const TIGER_PAW_WEAPON_INDEX = 13;
 
-const FIRST_NPC_X = 190;
-const FIRST_NPC_Y = 100;
-const MARNIE_WOOD_GOAL = 10;
-
 const SHOP_VENDOR_CATALOGS = Object.freeze({
   cam: Object.freeze({
     npcType: "camoGuy",
@@ -4429,13 +3632,9 @@ const SHOP_VENDOR_CATALOGS = Object.freeze({
   })
 });
 
-const SHOP_ITEM_IDS = new Set(
-  Object.values(SHOP_VENDOR_CATALOGS).flatMap(vendor => Object.keys(vendor.items)).filter(itemId => itemId !== "arrows")
-);
-
-// Keep historical purchase IDs valid in old character saves even though Marnie
-// no longer sells them and most are intentionally unavailable for now.
-const SHOP_PURCHASE_HISTORY_ITEM_IDS = new Set([
+// Equipment tokens allowed in shared inventory/chest transfers. Vendor
+// availability is defined separately by SHOP_VENDOR_CATALOGS.
+const TRANSFERABLE_EQUIPMENT_ITEM_IDS = new Set([
   "weapon_sword", "weapon_axe", "weapon_katana", "weapon_oldSword", "weapon_bow", "weapon_dreamcatcher",
   "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand", "weapon_pickaxe", "weapon_tigerPaw",
   "weapon_wand", "weapon_rainWand",
@@ -4443,30 +3642,6 @@ const SHOP_PURCHASE_HISTORY_ITEM_IDS = new Set([
   "shirt_traveler", "shirt_jester", "shirt_ninja", "shirt_knight", "shirt_ranger", "shirt_wood", "shirt_arcanist", "shirt_greencap",
   "pants_traveler", "pants_jester", "pants_ninja", "pants_knight", "pants_ranger", "pants_wood", "pants_arcanist", "pants_greencap"
 ]);
-
-function playerNearMarnie(playerState) {
-  if (!playerState) return false;
-  if (playerState.mapId === "spawn" && Math.hypot(playerState.x - FIRST_NPC_X, playerState.y - FIRST_NPC_Y) <= 48) return true;
-  return playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16);
-}
-
-function handleMarnieQuestInteract(playerId, socket, message) {
-  const playerState = players.get(playerId);
-  if (!playerState || !playerNearMarnie(playerState)) return;
-  if (message?.action !== "turnInWood") return;
-
-  if (playerState.marniePickaxeReceived) {
-    sendJson(socket, { type: "marnieQuestResult", success: true, alreadyComplete: true, totalWood: playerState.wood });
-    return;
-  }
-  if ((Number(playerState.wood) || 0) < MARNIE_WOOD_GOAL) {
-    sendJson(socket, { type: "marnieQuestResult", success: false, reason: "needWood", totalWood: playerState.wood, goal: MARNIE_WOOD_GOAL });
-    return;
-  }
-  playerState.wood -= MARNIE_WOOD_GOAL;
-  playerState.marniePickaxeReceived = true;
-  sendJson(socket, { type: "marnieQuestResult", success: true, totalWood: playerState.wood, goal: MARNIE_WOOD_GOAL });
-}
 
 function handleShopPurchase(playerId, socket, message) {
   const playerState = players.get(playerId);
@@ -4497,8 +3672,6 @@ function handleShopPurchase(playerId, socket, message) {
   playerState.coins -= price;
   if (item.repeatable && item.resourceKey === "arrows") {
     playerState.arrows += Math.max(1, Number(item.outputCount) || 1);
-  } else {
-    if (!playerState.shopPurchases.includes(itemId)) playerState.shopPurchases.push(itemId);
   }
 
   sendJson(socket, {
@@ -4852,27 +4025,14 @@ function igniteServerLivingNear(
       continue;
     }
 
-    const pvpSource =
-      sourcePlayerId &&
-      sourcePlayerId !== playerState.id
-        ? players.get(sourcePlayerId)
-        : null;
-
     if (!applyServerPlayerBurn(
       playerState,
       {
-        duration:
-          pvpSource
-            ? PVP_PLAYER_BURN_DURATION
-            : STATUS_RULES.playerBurnDuration,
+        duration: STATUS_RULES.playerBurnDuration,
         sourcePlayerId: sourcePlayerId || null
       }
     )) {
       continue;
-    }
-
-    if (pvpSource) {
-      applyPvpCombatLock(pvpSource, playerState);
     }
 
     changed = true;
@@ -5011,15 +4171,6 @@ function damageServerRock(
   if (rock.hp <= 0) {
     rock.hp = 0;
     rock.depleted = true;
-    rock.carriedBy = null;
-    rock.pickupTime = 0;
-    rock.hurlTime = 0;
-    rock.hurlVelocityX = 0;
-    rock.hurlVelocityY = 0;
-    rock.hurlThrownBy = null;
-    rock.rollTime = 0;
-    rock.rollVelocityX = 0;
-    rock.rollVelocityY = 0;
     scheduleRockRegrow(rock);
     spawnRockStoneDrops(rock);
 
@@ -5029,400 +4180,11 @@ function damageServerRock(
   return rock.depleted;
 }
 
-function ensureServerRockHurlState(rock) {
-  if (!rock || rock.kind !== "rock") return rock;
-
-  rock.carriedBy =
-    typeof rock.carriedBy === "string"
-      ? rock.carriedBy
-      : null;
-  rock.pickupTime = Math.max(0, Number(rock.pickupTime) || 0);
-  rock.pickupDuration = Math.max(0.01, Number(rock.pickupDuration) || 0.18);
-  rock.pickupDirX = Number(rock.pickupDirX) || 0;
-  rock.pickupDirY = Number(rock.pickupDirY) || 0;
-  rock.hurlTime = Math.max(0, Number(rock.hurlTime) || 0);
-  rock.hurlDuration = Math.max(0.01, Number(rock.hurlDuration) || 0.58);
-  rock.hurlVelocityX = Number(rock.hurlVelocityX) || 0;
-  rock.hurlVelocityY = Number(rock.hurlVelocityY) || 0;
-  rock.hurlThrownBy =
-    typeof rock.hurlThrownBy === "string"
-      ? rock.hurlThrownBy
-      : null;
-  rock.rollTime = Math.max(0, Number(rock.rollTime) || 0);
-  rock.rollDuration = Math.max(0.01, Number(rock.rollDuration) || 0.24);
-  rock.rollVelocityX = Number(rock.rollVelocityX) || 0;
-  rock.rollVelocityY = Number(rock.rollVelocityY) || 0;
-  return rock;
-}
-
-function broadcastRockState(rock, stateCode) {
-  if (!rock || rock.kind !== "rock") return;
-
-  dirtyRockMotionIds.delete(rock.id);
-
-  let packet;
-
-  if (stateCode === "c") {
-    packet = [
-      rock.id,
-      "c",
-      rock.carriedBy || null,
-      Number((rock.pickupTime || 0).toFixed(3)),
-      Number((rock.pickupDirX || 0).toFixed(2)),
-      Number((rock.pickupDirY || 0).toFixed(2))
-    ];
-  } else if (stateCode === "t") {
-    packet = [
-      rock.id,
-      "t",
-      Number((rock.x || 0).toFixed(2)),
-      Number((rock.y || 0).toFixed(2)),
-      Number((rock.hurlDuration || 0.58).toFixed(3)),
-      Number((rock.hurlVelocityX || 0).toFixed(2)),
-      Number((rock.hurlVelocityY || 0).toFixed(2))
-    ];
-  } else if (stateCode === "r") {
-    packet = [
-      rock.id,
-      "r",
-      Number((rock.x || 0).toFixed(2)),
-      Number((rock.y || 0).toFixed(2)),
-      Number((rock.rollDuration || 0.24).toFixed(3)),
-      Number((rock.rollVelocityX || 0).toFixed(2)),
-      Number((rock.rollVelocityY || 0).toFixed(2))
-    ];
-  } else {
-    packet = [
-      rock.id,
-      "i",
-      Number((rock.x || 0).toFixed(2)),
-      Number((rock.y || 0).toFixed(2))
-    ];
-  }
-
-  broadcastToMap(rock.mapId, {
-    type: "rockState",
-    mapId: rock.mapId,
-    rock: packet
-  });
-}
-
-function clearServerRockHurlState(rock) {
-  if (!rock || rock.kind !== "rock") return;
-  rock.carriedBy = null;
-  rock.pickupTime = 0;
-  rock.pickupDirX = 0;
-  rock.pickupDirY = 0;
-  rock.hurlTime = 0;
-  rock.hurlVelocityX = 0;
-  rock.hurlVelocityY = 0;
-  rock.hurlThrownBy = null;
-  rock.rollTime = 0;
-  rock.rollVelocityX = 0;
-  rock.rollVelocityY = 0;
-  broadcastRockState(rock, "i");
-}
-
-function playerCarriesAnyHurlObject(playerId) {
-  if (!playerId) return false;
-
-  if (
-    allSharedEnemies().some(enemy =>
-      enemy.carriedBy === playerId
-    )
-  ) {
-    return true;
-  }
-
-  return environmentEntitiesOnMap(
-    players.get(playerId)?.mapId,
-    "rock"
-  ).some(rock => rock.carriedBy === playerId);
-}
-
-function finishServerRockHurl(rock) {
-  if (!rock || rock.kind !== "rock") return;
-  clearServerRockHurlState(rock);
-}
-
-function startServerRockLandingRoll(rock) {
-  if (!rock || rock.kind !== "rock") return;
-
-  const velocityX = Number(rock.hurlVelocityX) || 0;
-  const velocityY = Number(rock.hurlVelocityY) || 0;
-  const speed = Math.hypot(velocityX, velocityY);
-
-  rock.carriedBy = null;
-  rock.pickupTime = 0;
-  rock.hurlTime = 0;
-  rock.hurlThrownBy = null;
-  rock.hurlVelocityX = 0;
-  rock.hurlVelocityY = 0;
-
-  if (speed < 1) {
-    rock.rollTime = 0;
-    rock.rollVelocityX = 0;
-    rock.rollVelocityY = 0;
-    broadcastRockState(rock, "i");
-    return;
-  }
-
-  const rollSpeed = 68;
-  rock.rollTime = rock.rollDuration;
-  rock.rollVelocityX = (velocityX / speed) * rollSpeed;
-  rock.rollVelocityY = (velocityY / speed) * rollSpeed;
-  broadcastRockState(rock, "r");
-}
-
-function rockRollHitsEnemy(rock, x, y) {
-  return sharedEnemiesOnMap(rock.mapId).some(target =>
-    target.alive &&
-    !target.carriedBy &&
-    Math.hypot(target.x - x, target.y - y) <= 9
+function playerCarriesHurlEnemy(playerId) {
+  return Boolean(
+    playerId &&
+    allSharedEnemies().some(enemy => enemy.carriedBy === playerId)
   );
-}
-
-function tickServerRockRoll(rock, dt) {
-  if ((Number(rock.rollTime) || 0) <= 0) return false;
-
-  const duration = Math.max(0.01, Number(rock.rollDuration) || 0.24);
-  const remainingFraction = Math.max(0, Math.min(1, rock.rollTime / duration));
-  const velocityX = (Number(rock.rollVelocityX) || 0) * remainingFraction;
-  const velocityY = (Number(rock.rollVelocityY) || 0) * remainingFraction;
-  const nextX = rock.x + velocityX * dt;
-  const nextY = rock.y + velocityY * dt;
-
-  rock.rollTime = Math.max(0, rock.rollTime - dt);
-
-  if (
-    !mapPointAllowed(rock.mapId, nextX, nextY) ||
-    hurlObjectHitsTree(rock.mapId, nextX, nextY) ||
-    rockRollHitsEnemy(rock, nextX, nextY)
-  ) {
-    finishServerRockHurl(rock);
-    return true;
-  }
-
-  rock.x = nextX;
-  rock.y = nextY;
-  markEnvironmentDirty(rock);
-
-  if (rock.rollTime <= 0) {
-    finishServerRockHurl(rock);
-  }
-
-  return true;
-}
-
-function tryRockHurlCollision(rock) {
-  const attackerId = rock.hurlThrownBy;
-  const velocityX = rock.hurlVelocityX;
-  const velocityY = rock.hurlVelocityY;
-
-  for (const target of sharedEnemiesOnMap(rock.mapId)) {
-    if (
-      !target.alive ||
-      target.carriedBy ||
-      target.hurlTime > 0
-    ) {
-      continue;
-    }
-
-    if (Math.hypot(target.x - rock.x, target.y - rock.y) > 11) {
-      continue;
-    }
-
-    broadcastHurlEnemyDamage(
-      target,
-      8 + Math.floor(Math.random() * 5),
-      attackerId,
-      "hurlRock",
-      velocityX,
-      velocityY
-    );
-
-    if (damageServerRock(rock, 1, attackerId, "hurl")) {
-      return true;
-    }
-
-    finishServerRockHurl(rock);
-    return true;
-  }
-
-  if (
-    hurlObjectHitsTree(
-      rock.mapId,
-      rock.x,
-      rock.y
-    )
-  ) {
-    // Trees are solid Hurl obstacles, not Hurl damage targets. The impact still
-    // chips the thrown rock itself.
-    if (damageServerRock(rock, 1, attackerId, "hurl")) {
-      return true;
-    }
-    finishServerRockHurl(rock);
-    return true;
-  }
-
-  return false;
-}
-
-function tickServerRockHurl(rock, dt) {
-  ensureServerRockHurlState(rock);
-
-  if (rock.carriedBy) {
-    const carrier = players.get(rock.carriedBy);
-
-    if (
-      !carrier ||
-      carrier.hp <= 0 ||
-      carrier.mapId !== rock.mapId
-    ) {
-      clearServerRockHurlState(rock);
-      return;
-    }
-
-    // Carried rocks piggyback visually on the already-replicated player
-    // position. Keep the authoritative server coordinate current for a future
-    // throw/disconnect, but send no rock motion packets while carried.
-    rock.x = carrier.x;
-    rock.y = carrier.y;
-    rock.pickupTime = Math.max(0, rock.pickupTime - dt);
-    return;
-  }
-
-  if (tickServerRockRoll(rock, dt)) return;
-  if (rock.hurlTime <= 0) return;
-
-  rock.hurlTime = Math.max(0, rock.hurlTime - dt);
-
-  const nextX = rock.x + rock.hurlVelocityX * dt;
-  const nextY = rock.y + rock.hurlVelocityY * dt;
-
-  // The large black void is visual space, not legal Hurl space. Rocks land at
-  // their last valid grass position when their center hits the island wall.
-  if (!mapPointAllowed(rock.mapId, nextX, nextY)) {
-    if (!damageServerRock(rock, 1, rock.hurlThrownBy, "hurl")) {
-      finishServerRockHurl(rock);
-    }
-    return;
-  }
-
-  rock.x = nextX;
-  rock.y = nextY;
-  markEnvironmentDirty(rock);
-
-  if (tryRockHurlCollision(rock)) return;
-
-  if (rock.hurlTime <= 0) {
-    if (damageServerRock(rock, 1, rock.hurlThrownBy, "hurl")) {
-      return;
-    }
-    startServerRockLandingRoll(rock);
-  }
-}
-
-function handleRockHurlAction(
-  playerId,
-  rock,
-  action,
-  payload
-) {
-  // v415 Tiger Paw is mob-only. Retain the legacy rock simulation code below
-  // for old state/protocol compatibility, but reject new grab/throw requests.
-  if (action === "hurlGrab" || action === "hurlThrow") return;
-
-  const playerState = players.get(playerId);
-
-  if (
-    !playerState ||
-    playerState.hp <= 0 ||
-    !rock ||
-    rock.kind !== "rock" ||
-    rock.depleted ||
-    rock.mapId !== playerState.mapId
-  ) {
-    return;
-  }
-
-  ensureServerRockHurlState(rock);
-
-  if (action === "hurlGrab") {
-    if (rock.carriedBy || rock.hurlTime > 0 || rock.rollTime > 0) return;
-    if (playerCarriesAnyHurlObject(playerId)) return;
-
-    const distance = Math.hypot(
-      rock.x - playerState.x,
-      rock.y - playerState.y
-    );
-
-    if (distance > 24) return;
-
-    if (
-      sharedEnemyActionRateLimited(
-        playerId,
-        rock.id,
-        "rockHurlGrab",
-        300
-      )
-    ) {
-      return;
-    }
-
-    const pickupDx = rock.x - playerState.x;
-    const pickupDy = rock.y - playerState.y;
-    const pickupLength = Math.hypot(pickupDx, pickupDy) || 1;
-
-    rock.carriedBy = playerId;
-    rock.pickupTime = rock.pickupDuration;
-    rock.pickupDirX = pickupDx / pickupLength;
-    rock.pickupDirY = pickupDy / pickupLength;
-    rock.hurlTime = 0;
-    rock.hurlVelocityX = 0;
-    rock.hurlVelocityY = 0;
-    rock.hurlThrownBy = null;
-    rock.rollTime = 0;
-    rock.rollVelocityX = 0;
-    rock.rollVelocityY = 0;
-    broadcastRockState(rock, "c");
-    return;
-  }
-
-  if (action === "hurlThrow") {
-    if (rock.carriedBy !== playerId) return;
-
-    const aimAngle = Number(payload.aimAngle);
-    if (!Number.isFinite(aimAngle)) return;
-
-    if (
-      sharedEnemyActionRateLimited(
-        playerId,
-        rock.id,
-        "rockHurlThrow",
-        220
-      )
-    ) {
-      return;
-    }
-
-    const throwSpeed = 126;
-
-    rock.x = playerState.x;
-    rock.y = playerState.y;
-    rock.carriedBy = null;
-    rock.pickupTime = 0;
-    rock.pickupDirX = 0;
-    rock.pickupDirY = 0;
-    rock.hurlTime = rock.hurlDuration;
-    rock.hurlVelocityX = Math.cos(aimAngle) * throwSpeed;
-    rock.hurlVelocityY = Math.sin(aimAngle) * throwSpeed;
-    rock.hurlThrownBy = playerId;
-    rock.rollTime = 0;
-    rock.rollVelocityX = 0;
-    rock.rollVelocityY = 0;
-    broadcastRockState(rock, "t");
-  }
 }
 
 function tickSharedEnvironment(dt) {
@@ -5441,9 +4203,6 @@ function tickSharedEnvironment(dt) {
         continue;
       }
 
-      if (!entity.depleted) {
-        tickServerRockHurl(entity, dt);
-      }
       continue;
     }
 
@@ -5669,29 +4428,10 @@ function handleEnvironmentAction(
     return;
   }
 
-  if (
-    entity.kind === "rock" &&
-    (
-      action === "hurlGrab" ||
-      action === "hurlThrow"
-    )
-  ) {
-    handleRockHurlAction(
-      playerId,
-      entity,
-      action,
-      payload
-    );
-    return;
-  }
-
   if (action === "hitRock") {
     if (
       entity.kind !== "rock" ||
       entity.depleted ||
-      entity.carriedBy ||
-      entity.hurlTime > 0 ||
-      entity.rollTime > 0 ||
       !environmentMeleeValid(
         playerState,
         entity,
@@ -5952,8 +4692,6 @@ function makeServerGoblin(spawn) {
 
     aggroTargetId: null,
     aggroEngagementTime: 0,
-    confusionTime: 0,
-    confusionTargetId: null,
     wasEngaged: false,
     returningHome: false,
     returnStuckTime: 0,
@@ -5989,10 +4727,6 @@ function makeServerGoblin(spawn) {
     knockbackX: 0,
     knockbackY: 0,
 
-    tauntTime: 0,
-    tauntX: x,
-    tauntY: y,
-    tauntOwnerId: null,
 
     lastDamagePlayerId: null
   };
@@ -6028,8 +4762,6 @@ function makeServerGhost(spawn) {
 
     aggroTargetId: null,
     aggroEngagementTime: 0,
-    confusionTime: 0,
-    confusionTargetId: null,
     outOfCombatTime: 0,
     wasEngaged: false,
     returningHome: false,
@@ -6056,10 +4788,6 @@ function makeServerGhost(spawn) {
     knockbackX: 0,
     knockbackY: 0,
 
-    tauntTime: 0,
-    tauntX: x,
-    tauntY: y,
-    tauntOwnerId: null,
 
     lastDamagePlayerId: null
   };
@@ -6096,8 +4824,6 @@ function makeServerBigGoldSlime(spawn) {
 
     aggroTargetId: null,
     aggroEngagementTime: 0,
-    confusionTime: 0,
-    confusionTargetId: null,
 
     wanderAngle: Math.random() * Math.PI * 2,
     wanderTimer: 0.9 + Math.random() * 1.4,
@@ -6114,10 +4840,6 @@ function makeServerBigGoldSlime(spawn) {
     knockbackX: 0,
     knockbackY: 0,
 
-    tauntTime: 0,
-    tauntX: x,
-    tauntY: y,
-    tauntOwnerId: null,
 
     lastDamagePlayerId: null
   };
@@ -6139,19 +4861,14 @@ const worldEntitiesByType = new Map(
     enemyType,
     enemySpawnsOfType(enemyType)
       .map(spawn => {
-        const enemy = ensureServerEnemySnareState(
-          ensureServerEnemyHurlState(
-            factory(spawn)
-          )
+        const enemy = ensureServerEnemyHurlState(
+          factory(spawn)
         );
 
         if (typeof spawn.hurlable === "boolean") {
           enemy.hurlable = spawn.hurlable;
         }
 
-        if (typeof spawn.snareable === "boolean") {
-          enemy.snareable = spawn.snareable;
-        }
 
         return enemy;
       })
@@ -6242,8 +4959,6 @@ function sharedEnemySnapshot(enemyType, mapId = null) {
     maxHp: enemy.maxHp,
     alive: enemy.alive,
     aggroTargetId: enemy.aggroTargetId || null,
-    confusionTime: Number((enemy.confusionTime || 0).toFixed(2)),
-    confusionTargetId: enemy.confusionTargetId || null,
     burnTime: Number(enemy.burnTime.toFixed(2)),
     burnDamagePerTick: enemy.burnDamagePerTick,
     respawnTime: Number(enemy.respawnTime.toFixed(2)),
@@ -6254,9 +4969,6 @@ function sharedEnemySnapshot(enemyType, mapId = null) {
     pickupDirY: Number((enemy.pickupDirY || 0).toFixed(3)),
     hurlTime: Number((enemy.hurlTime || 0).toFixed(3)),
     hurlDuration: enemy.hurlDuration || 0.58,
-    snareRootTime: Number((enemy.snareRootTime || 0).toFixed(3)),
-    snareSlowTime: Number((enemy.snareSlowTime || 0).toFixed(3)),
-    snareSlowMultiplier: Number((enemy.snareSlowMultiplier || 0.45).toFixed(3)),
 
     wetTime: Number((enemy.wetTime || 0).toFixed(2)),
     wetDuration: Number((enemy.wetDuration || STATUS_RULES.enemyWetDuration).toFixed(2)),
@@ -6368,7 +5080,7 @@ function broadcastSharedEnemySnapshots() {
       typeof playerId === "string"
         ? players.get(playerId)
         : null;
-    const mapId = playerState?.mapId || "spawn";
+    const mapId = playerState?.mapId || WORLD_CONTENT.worldGrid?.startMapId;
 
     sendSharedEnemySnapshotsToSocket(client, mapId);
   }
@@ -6496,7 +5208,7 @@ function occupiedGridMapIds() {
 }
 
 function gridEnemyMapTier(mapId, activeMapIds = occupiedGridMapIds()) {
-  if (!worldGridMetaForMap(mapId)) return "legacy";
+  if (!worldGridMetaForMap(mapId)) return "cold";
   if (activeMapIds.includes(mapId)) return "active";
   if (activeMapIds.some(activeMapId => gridMapCardinalDistance(mapId, activeMapId) === 1)) {
     return "warm";
@@ -6545,9 +5257,7 @@ function refreshGridEnemyMapLifecycle() {
 }
 
 function enemyMapSimulationActive(mapId) {
-  // Historical non-grid compatibility stays isolated here. The active coordinate
-  // world only simulates enemies on maps that actually have a player.
-  return !worldGridMetaForMap(mapId) || mapHasNetworkRecipients(mapId);
+  return Boolean(worldGridMetaForMap(mapId) && mapHasNetworkRecipients(mapId));
 }
 
 function passiveDiagForMap(mapId) {
@@ -6778,14 +5488,10 @@ function enemyPreciseMotionReasons(enemy) {
   if (enemy.returningHome) reasons.push("returningHome");
   if (!enemy.returningHome && enemyHasNearbyPlayer(enemy)) reasons.push("nearby");
   if (enemy.aggroTargetId) reasons.push("aggroTarget");
-  if ((Number(enemy.confusionTime) || 0) > 0 || enemy.confusionTargetId) reasons.push("confusion");
-  if ((Number(enemy.tauntTime) || 0) > 0 || enemy.tauntOwnerId) reasons.push("redirect");
   if (enemy.carriedBy) reasons.push("carried");
   if ((Number(enemy.pickupTime) || 0) > 0) reasons.push("pickup");
   if ((Number(enemy.hurlTime) || 0) > 0) reasons.push("hurl");
   if ((Number(enemy.lungeTime) || 0) > 0) reasons.push("lunge");
-  if ((Number(enemy.snareRootTime) || 0) > 0) reasons.push("snareRoot");
-  if ((Number(enemy.snareSlowTime) || 0) > 0) reasons.push("snareSlow");
   // Wet and Magic Grass are derived speed modifiers. They do not promote a
   // passive enemy into the 10 Hz precise-motion stream; a changed effective
   // speed produces one new passive wander intent instead.
@@ -7086,7 +5792,7 @@ function noteEnemyHealthReplicated(enemyId, hp) {
 function noteEnemyHealthFromEvent(payload) {
   if (!payload || typeof payload.enemyId !== "string") return;
 
-  if (payload.type === "enemyDamage" || payload.type === "enemyHeal") {
+  if (payload.type === "enemyDamage") {
     noteEnemyHealthReplicated(payload.enemyId, payload.hp);
   } else if (payload.type === "enemyKilled") {
     noteEnemyHealthReplicated(payload.enemyId, 0);
@@ -7365,30 +6071,12 @@ function broadcastSharedEnemyNetworkDeltas() {
   }
 }
 
-function playerIsVisibleToEnemy(playerState, mapId, observerX, observerY) {
-  if (
-    !playerState ||
-    playerState.mapId !== mapId ||
-    playerState.shadowHidden ||
-    playerState.hp <= 0
-  ) {
-    return false;
-  }
-
-  if (!playerState.camouflaged) return true;
-
-  const closeEnough =
-    Number.isFinite(observerX) &&
-    Number.isFinite(observerY) &&
-    Math.hypot(
-      playerState.x - observerX,
-      playerState.y - observerY
-    ) <= CAMOUFLAGE_CLOSE_REVEAL_DISTANCE;
-
-  if (!closeEnough) return false;
-
-  revealServerCamouflage(playerState, "detected");
-  return true;
+function playerIsVisibleToEnemy(playerState, mapId) {
+  return Boolean(
+    playerState &&
+    playerState.mapId === mapId &&
+    playerState.hp > 0
+  );
 }
 
 function nearestVisiblePlayer(
@@ -7503,8 +6191,8 @@ function resolveEnemyAggroTarget(
   );
 
   if (!target && enemy.aggroTargetId) {
-    // Death, map changes, disconnects, Shadow Hide, and Camouflage invalidate
-    // the target immediately. Distance-based escape is handled separately.
+    // Death, map changes, and disconnects invalidate the target immediately.
+    // Distance-based escape is handled separately.
     clearEnemyAggroTarget(enemy);
   }
 
@@ -7629,15 +6317,9 @@ function beginEnemyReturningHome(enemy) {
   enemy.wasEngaged = false;
   clearEnemyAggroTarget(enemy);
 
-  enemy.tauntTime = 0;
-  enemy.tauntOwnerId = null;
-  enemy.tauntCloneId = null;
-  enemy.confusionTime = 0;
-  enemy.confusionTargetId = null;
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
   clearServerEnemyStatuses(enemy);
-  clearServerEnemySnareState(enemy);
   enemy.magicGrassFieldActive = false;
 
   if (enemy.type === "goblin") {
@@ -7730,524 +6412,6 @@ function tickEnemyReturningHome(enemy, dt) {
   }
 
   return true;
-}
-
-const CAMOUFLAGE_CONFUSION_DURATION = CAMOUFLAGE_RULES.CONFUSION_DURATION;
-const CAMOUFLAGE_CLOSE_REVEAL_DISTANCE = CAMOUFLAGE_RULES.CLOSE_REVEAL_DISTANCE;
-const serverCamouflageStates = new Map();
-
-function makeServerCamouflageState(playerState = null) {
-  const now = Date.now();
-  return {
-    phase: "exposed",
-    buildStartedAt: 0,
-    buildCoverId: null,
-    sourceCoverId: null,
-    graceUntil: 0,
-    openerReadyUntil: 0,
-    lastMovementAt: now,
-    mapId: playerState?.mapId || null
-  };
-}
-
-function serverCamouflageStateFor(playerState) {
-  if (!playerState?.id) return null;
-  let state = serverCamouflageStates.get(playerState.id);
-  if (!state) {
-    state = makeServerCamouflageState(playerState);
-    serverCamouflageStates.set(playerState.id, state);
-  }
-  return state;
-}
-
-function playerHasCamouflageUnlocked(playerState) {
-  return Boolean(
-    playerState &&
-    playerState.classId === "precision" &&
-    (Number(playerState.abilities?.camouflage) || 0) > 0
-  );
-}
-
-function serverCamouflageCoverAt(mapId, x, y) {
-  if (!mapId) return null;
-
-  for (const entity of environmentEntitiesOnMap(mapId)) {
-    if (entity.kind === "tree") {
-      if (
-        entity.isStump ||
-        entity.falling ||
-        entity.canopyBurned ||
-        (Number(entity.canopyBurnTime) || 0) > 0
-      ) {
-        continue;
-      }
-
-      if (
-        CAMOUFLAGE_RULES.pointInTreeCover(
-          x,
-          y,
-          entity.x,
-          entity.y
-        )
-      ) {
-        return {
-          id: CAMOUFLAGE_RULES.treeCoverId(
-            mapId,
-            entity.id,
-            entity.x,
-            entity.y
-          ),
-          type: "tree"
-        };
-      }
-      continue;
-    }
-
-    if (entity.kind !== "grass") continue;
-    if (
-      entity.cut ||
-      entity.burnt ||
-      (Number(entity.burnTime) || 0) > 0
-    ) {
-      continue;
-    }
-
-    if (
-      CAMOUFLAGE_RULES.pointInGrassCover(
-        x,
-        y,
-        entity.x,
-        entity.y,
-        entity.width || 13
-      )
-    ) {
-      return {
-        id: CAMOUFLAGE_RULES.grassCoverId(
-          mapId,
-          entity.id,
-          entity.x,
-          entity.y
-        ),
-        type: "grass"
-      };
-    }
-  }
-
-  for (const tree of staticHurlTreesOnMap(mapId)) {
-    if (
-      CAMOUFLAGE_RULES.pointInTreeCover(
-        x,
-        y,
-        tree.x,
-        tree.y
-      )
-    ) {
-      return {
-        id: CAMOUFLAGE_RULES.treeCoverId(
-          mapId,
-          null,
-          tree.x,
-          tree.y
-        ),
-        type: "tree"
-      };
-    }
-  }
-
-  // Rain-created Magic Grass is shared cover too. The server reconstructs the
-  // same deterministic cells as every client, so no extra cover packets are
-  // needed. A cell qualifies independently once grown and stops qualifying
-  // while burning, once consumed, or when its natural lifetime ends.
-  const nowMs = Date.now();
-  for (const field of activeServerRainFields.values()) {
-    if (field.mapId !== mapId || nowMs >= field.expiresAtMs) continue;
-
-    for (const cell of field.cells) {
-      const bit = RAIN_FIELD.cellBit(cell.index);
-      if (field.burntMask & bit) continue;
-      if ((Number(field.burnExpiresAtMs[cell.index]) || 0) > 0) continue;
-      if (!RAIN_FIELD.cellIsGrown(cell, field.startedAtMs, nowMs)) continue;
-      if (
-        nowMs < field.startedAtMs +
-          (cell.growDelay + CAMOUFLAGE_RULES.RAIN_GRASS_COVER_MATURITY_DELAY) * 1000
-      ) {
-        continue;
-      }
-      if (!RAIN_FIELD.cellIsNaturallyAlive(cell, field.startedAtMs, nowMs)) continue;
-
-      if (
-        CAMOUFLAGE_RULES.pointInGrassCover(
-          x,
-          y,
-          cell.x,
-          cell.y,
-          cell.width || 13
-        )
-      ) {
-        return {
-          id: CAMOUFLAGE_RULES.rainGrassCoverId(
-            mapId,
-            field.ownerId,
-            field.patchId,
-            cell.index
-          ),
-          type: CAMOUFLAGE_RULES.RAIN_GRASS_KIND
-        };
-      }
-    }
-  }
-
-  return null;
-}
-
-function playerIsTargetedByPveEnemy(playerId) {
-  if (!playerId) return false;
-
-  for (const enemy of allSharedEnemies()) {
-    if (!enemy?.alive) continue;
-
-    if (enemy.aggroTargetId === playerId) {
-      return true;
-    }
-
-    if (
-      enemy.confusionTargetId === playerId &&
-      (Number(enemy.confusionTime) || 0) > 0
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function enemyIsCloseEnoughToRevealCamouflage(playerState) {
-  if (!playerState) return false;
-
-  for (const enemy of allSharedEnemies()) {
-    if (!enemy?.alive || enemy.mapId !== playerState.mapId) continue;
-    if (
-      Math.hypot(
-        (Number(enemy.x) || 0) - playerState.x,
-        (Number(enemy.y) || 0) - playerState.y
-      ) <= CAMOUFLAGE_CLOSE_REVEAL_DISTANCE
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function broadcastServerCamouflageState(playerState, state, reason = "state") {
-  if (!playerState || !state) return;
-  broadcastToMap(playerState.mapId, {
-    type: "camouflageState",
-    playerId: playerState.id,
-    mapId: playerState.mapId,
-    camouflaged: Boolean(playerState.camouflaged),
-    sourceCoverId: state.sourceCoverId || null,
-    reason
-  });
-}
-
-function resetServerCamouflageState(playerState, reason = "reset", broadcast = false) {
-  if (!playerState?.id) return;
-  const state = serverCamouflageStateFor(playerState);
-  const wasCamouflaged = Boolean(playerState.camouflaged || state.phase === "camouflaged");
-
-  playerState.camouflaged = false;
-  state.phase = "exposed";
-  state.buildStartedAt = 0;
-  state.buildCoverId = null;
-  state.sourceCoverId = null;
-  state.graceUntil = 0;
-  state.openerReadyUntil = 0;
-  state.lastMovementAt = Date.now();
-  state.mapId = playerState.mapId;
-
-  if (broadcast && wasCamouflaged) {
-    broadcastServerCamouflageState(playerState, state, reason);
-  }
-}
-
-function revealServerCamouflage(playerState, reason = "reveal", options = {}) {
-  if (!playerState?.id) return false;
-  const state = serverCamouflageStateFor(playerState);
-  const wasCamouflaged = Boolean(playerState.camouflaged || state.phase === "camouflaged");
-
-  playerState.camouflaged = false;
-  state.phase = "exposed";
-  state.buildStartedAt = 0;
-  state.buildCoverId = null;
-  state.sourceCoverId = null;
-  state.graceUntil = 0;
-  if (!options.keepOpener) state.openerReadyUntil = 0;
-
-  if (wasCamouflaged) {
-    broadcastServerCamouflageState(playerState, state, reason);
-  }
-  return wasCamouflaged;
-}
-
-function enterServerCamouflage(playerState, state, cover, now = Date.now()) {
-  if (!playerState || !state || !cover) return false;
-  if (playerState.camouflaged && state.phase === "camouflaged") return true;
-
-  playerState.camouflaged = true;
-  state.phase = "camouflaged";
-  state.buildStartedAt = 0;
-  state.buildCoverId = null;
-  state.sourceCoverId = cover.id;
-  state.graceUntil = now + CAMOUFLAGE_RULES.GRACE_DURATION * 1000;
-  state.openerReadyUntil = 0;
-  broadcastServerCamouflageState(playerState, state, "entered");
-  return true;
-}
-
-function noteServerCamouflagePlayerUpdate(previousState, nextState) {
-  if (!nextState?.id) return;
-  const state = serverCamouflageStateFor(nextState);
-  const now = Date.now();
-
-  if (state.mapId !== nextState.mapId) {
-    resetServerCamouflageState(nextState, "map", false);
-    state.mapId = nextState.mapId;
-    return;
-  }
-
-  if (!previousState) return;
-
-  const moved =
-    Math.hypot(
-      (Number(nextState.x) || 0) - (Number(previousState.x) || 0),
-      (Number(nextState.y) || 0) - (Number(previousState.y) || 0)
-    ) > 0.01 ||
-    Math.abs(
-      (Number(nextState.walkTime) || 0) - (Number(previousState.walkTime) || 0)
-    ) > 0.001;
-
-  if (moved) {
-    state.lastMovementAt = now;
-    if (state.phase === "building") {
-      state.phase = "exposed";
-      state.buildStartedAt = 0;
-      state.buildCoverId = null;
-    }
-  }
-}
-
-function serverPlayerCanBuildCamouflage(playerState, state, now) {
-  if (
-    !playerHasCamouflageUnlocked(playerState) ||
-    playerState.hp <= 0 ||
-    playerState.shadowHidden ||
-    playerIsTargetedByPveEnemy(playerState.id) ||
-    hunterSnareSetups.has(playerState.id)
-  ) {
-    return false;
-  }
-
-  if (
-    (Number(playerState.attackTime) || 0) > 0 ||
-    playerState.bowDrawing ||
-    playerState.focusFireCasting ||
-    playerState.fireballAiming ||
-    playerState.rainCloudCasting
-  ) {
-    return false;
-  }
-
-  // A motion packet resets lastMovementAt. Waiting one network frame prevents
-  // the server from starting a cover timer on the exact frame movement stops.
-  return now - state.lastMovementAt >= 75;
-}
-
-function updateServerCamouflagePlayer(playerState, now = Date.now()) {
-  if (!playerState?.id) return;
-  const state = serverCamouflageStateFor(playerState);
-
-  if (
-    !playerHasCamouflageUnlocked(playerState) ||
-    playerState.hp <= 0 ||
-    playerState.shadowHidden
-  ) {
-    revealServerCamouflage(playerState, "unavailable");
-    state.phase = "exposed";
-    state.buildStartedAt = 0;
-    state.buildCoverId = null;
-    return;
-  }
-
-  const cover = serverCamouflageCoverAt(
-    playerState.mapId,
-    playerState.x,
-    playerState.y
-  );
-
-
-  if (playerState.camouflaged || state.phase === "camouflaged") {
-    if (
-      playerIsTargetedByPveEnemy(playerState.id) ||
-      enemyIsCloseEnoughToRevealCamouflage(playerState)
-    ) {
-      revealServerCamouflage(playerState, "detected");
-      return;
-    }
-
-    if (cover) {
-      state.graceUntil = now + CAMOUFLAGE_RULES.GRACE_DURATION * 1000;
-      return;
-    }
-
-    if (now >= state.graceUntil) {
-      revealServerCamouflage(playerState, "leftCover");
-    }
-    return;
-  }
-
-  if (!serverPlayerCanBuildCamouflage(playerState, state, now)) {
-    state.phase = "exposed";
-    state.buildStartedAt = 0;
-    state.buildCoverId = null;
-    return;
-  }
-
-  if (!cover) {
-    state.phase = "exposed";
-    state.buildStartedAt = 0;
-    state.buildCoverId = null;
-    return;
-  }
-
-  if (state.phase !== "building" || state.buildCoverId !== cover.id) {
-    state.phase = "building";
-    state.buildStartedAt = now;
-    state.buildCoverId = cover.id;
-    return;
-  }
-
-  if (now - state.buildStartedAt >= CAMOUFLAGE_RULES.BUILD_DURATION * 1000) {
-    enterServerCamouflage(playerState, state, cover, now);
-  }
-}
-
-function tickServerCamouflage() {
-  const now = Date.now();
-  for (const playerState of players.values()) {
-    updateServerCamouflagePlayer(playerState, now);
-  }
-}
-
-function handleCamouflageBreak(playerId) {
-  const playerState = players.get(playerId);
-  if (!playerState) return false;
-
-  // Resolve a just-finished build before validating the attack break. This
-  // avoids a 30 Hz tick-boundary race when the client commits at exactly 1s.
-  updateServerCamouflagePlayer(playerState, Date.now());
-  const state = serverCamouflageStateFor(playerState);
-  if (!playerState.camouflaged || state.phase !== "camouflaged") return false;
-
-  state.openerReadyUntil = Date.now() + CAMOUFLAGE_RULES.OPENER_WINDOW_MS;
-  revealServerCamouflage(playerState, "attack", { keepOpener: true });
-  return true;
-}
-
-function camouflageOpeningIsValid(playerState, payload = {}) {
-  if (!playerState?.id) return false;
-  const state = serverCamouflageStateFor(playerState);
-  // The opener token is granted only by the authoritative camouflageBreak
-  // transition. Damage packets do not get to mint or extend it.
-  return state.openerReadyUntil >= Date.now();
-}
-
-function tryApplyCamouflageConfusion(
-  enemy,
-  playerState,
-  playerId,
-  payload = {}
-) {
-  if (!camouflageOpeningIsValid(playerState, payload)) {
-    return false;
-  }
-
-  const state = serverCamouflageStateFor(playerState);
-  state.openerReadyUntil = 0;
-
-  clearEnemyAggroTarget(enemy);
-  enemy.confusionTime = CAMOUFLAGE_CONFUSION_DURATION;
-  enemy.confusionTargetId = playerId;
-
-  broadcastToMap(enemy.mapId, {
-    type: "enemyConfused",
-    enemyType: enemy.type,
-    enemyId: enemy.id,
-    mapId: enemy.mapId,
-    duration: CAMOUFLAGE_CONFUSION_DURATION,
-    attackerId: playerId
-  });
-
-  return true;
-}
-
-function tickEnemyConfusion(enemy, dt) {
-  if (!enemy || enemy.confusionTime <= 0) {
-    return false;
-  }
-
-  enemy.confusionTime = Math.max(
-    0,
-    enemy.confusionTime - dt
-  );
-
-  if (enemy.confusionTime > 0) {
-    return true;
-  }
-
-  const targetId = enemy.confusionTargetId;
-  enemy.confusionTargetId = null;
-
-  const target = visibleAggroPlayerById(
-    targetId,
-    enemy.mapId,
-    enemy.x,
-    enemy.y
-  );
-
-  if (target) {
-    setEnemyAggroTarget(
-      enemy,
-      target.id
-    );
-  }
-
-  return false;
-}
-
-function serverCircleRectCollision(
-  cx,
-  cy,
-  radius,
-  rx,
-  ry,
-  rw,
-  rh
-) {
-  const closestX = Math.max(
-    rx,
-    Math.min(cx, rx + rw)
-  );
-
-  const closestY = Math.max(
-    ry,
-    Math.min(cy, ry + rh)
-  );
-
-  const dx = cx - closestX;
-  const dy = cy - closestY;
-
-  return dx * dx + dy * dy < radius * radius;
 }
 
 // Goblins intentionally phase through decorative trees. Their movement still
@@ -8363,8 +6527,6 @@ function resetServerGoblin(goblin) {
 
   goblin.aggroTargetId = null;
   goblin.aggroEngagementTime = 0;
-  goblin.confusionTime = 0;
-  goblin.confusionTargetId = null;
   goblin.wasEngaged = false;
   goblin.returningHome = false;
   goblin.returnStuckTime = 0;
@@ -8390,8 +6552,6 @@ function resetServerGoblin(goblin) {
   goblin.knockbackX = 0;
   goblin.knockbackY = 0;
 
-  goblin.tauntTime = 0;
-  goblin.tauntOwnerId = null;
   clearServerEnemyHurlState(goblin);
   goblin.lastDamagePlayerId = null;
 }
@@ -8407,8 +6567,6 @@ function resetServerGhost(ghost) {
 
   ghost.aggroTargetId = null;
   ghost.aggroEngagementTime = 0;
-  ghost.confusionTime = 0;
-  ghost.confusionTargetId = null;
   ghost.wasEngaged = false;
   ghost.returningHome = false;
   ghost.returnStuckTime = 0;
@@ -8423,31 +6581,8 @@ function resetServerGhost(ghost) {
   ghost.knockbackX = 0;
   ghost.knockbackY = 0;
 
-  ghost.tauntTime = 0;
-  ghost.tauntOwnerId = null;
   clearServerEnemyHurlState(ghost);
   ghost.lastDamagePlayerId = null;
-}
-
-const playerSelfDamageRateLimits = new Map();
-const playerHealRateLimits = new Map();
-
-function rateLimitPlayerEvent(
-  store,
-  playerId,
-  key,
-  minimumMs
-) {
-  const rateKey = `${playerId}:${key}`;
-  const now = Date.now();
-  const previous = store.get(rateKey) || 0;
-
-  if (now - previous < minimumMs) {
-    return true;
-  }
-
-  store.set(rateKey, now);
-  return false;
 }
 
 function handleAuthoritativePlayerDeath(target) {
@@ -8458,12 +6593,9 @@ function handleAuthoritativePlayerDeath(target) {
   clearServerPlayerBurn(target);
   target.wetTime = 0;
   resetServerPlayerPresentationState(target);
-  resetServerCamouflageState(target, "death", true);
-
-  focusFireDamageChains.delete(target.id);
   releaseChestContextForPlayer(target.id, "death", true);
 
-  // Snares, clone/rain visuals, taunts, carried enemies, and enemy targeting
+  // Rain visuals, carried enemies, and enemy targeting
   // all end the instant the authoritative HP reaches zero.
   clearPlayerOwnedTransientWorldState(
     target.id,
@@ -8531,15 +6663,6 @@ function applyServerPlayerDamage(
     target.hp - actualDamage
   );
 
-  // Camouflage never prevents collision/contact damage. Being struck reveals
-  // the player immediately on the authoritative server as well as the client.
-  if (actualDamage > 0) {
-    revealServerCamouflage(target, "hit");
-    cancelHunterSnareSetup(
-      target.id,
-      "hit"
-    );
-  }
 
   if (target.hp <= 0) {
     handleAuthoritativePlayerDeath(target);
@@ -8563,113 +6686,6 @@ function applyServerPlayerDamage(
   });
 
   return actualDamage;
-}
-
-function handlePlayerIgniteRequest(playerId, message) {
-  fireDiagnostics.legacyPlayerIgniteRequests += 1;
-  const requester = players.get(playerId);
-  if (!requester || requester.hp <= 0) return;
-
-  const targetId = String(message?.targetId || playerId);
-  const target = players.get(targetId);
-
-  if (
-    !target ||
-    target.hp <= 0 ||
-    target.mapId !== requester.mapId
-  ) {
-    return;
-  }
-
-  // Temporary rain-grass is client-generated, so the server cannot validate a
-  // specific tuft. Keep the request bounded to nearby players on the same map.
-  if (
-    targetId !== playerId &&
-    Math.hypot(target.x - requester.x, target.y - requester.y) > 220
-  ) {
-    return;
-  }
-
-  if (
-    target.id !== requester.id &&
-    !pvpPlayersCanHarm(requester, target)
-  ) {
-    return;
-  }
-
-  // Burning magic grass obeys the same Wet protection rule as other fire.
-  // Player-attributed fire uses the shorter PvP burn window against opponents.
-  const ignited = applyServerPlayerBurn(target, {
-    duration:
-      target.id === requester.id
-        ? STATUS_RULES.playerBurnDuration
-        : PVP_PLAYER_BURN_DURATION,
-    sourcePlayerId: requester.id
-  });
-
-  if (!ignited) {
-    return;
-  }
-
-  if (target.id !== requester.id) {
-    applyPvpCombatLock(requester, target);
-  }
-
-  broadcastToMap(target.mapId, {
-    type: "playerIgnited",
-    targetId: target.id,
-    mapId: target.mapId,
-    burnTime: target.burnTime
-  });
-}
-
-function applyServerPlayerHeal(
-  target,
-  {
-    amount,
-    mapId = target.mapId,
-    sourceType = "world"
-  }
-) {
-  if (
-    !target ||
-    target.hp <= 0 ||
-    target.mapId !== mapId
-  ) {
-    return 0;
-  }
-
-  const requestedHeal = Math.max(
-    0,
-    Math.round(Number(amount) || 0)
-  );
-
-  if (requestedHeal <= 0) {
-    return 0;
-  }
-
-  const actualHeal = Math.min(
-    requestedHeal,
-    target.maxHp - target.hp
-  );
-
-  if (actualHeal <= 0) {
-    return 0;
-  }
-
-  target.hp += actualHeal;
-
-  broadcastToMap(target.mapId, {
-    type: "playerHeal",
-    targetId: target.id,
-    mapId: target.mapId,
-    amount: actualHeal,
-    hp: target.hp,
-    maxHp: target.maxHp,
-    sourceType
-  });
-
-  return actualHeal;
 }
 
 function broadcastEnemyHitPlayer(
@@ -8708,584 +6724,10 @@ function isBowWeaponIndex(index) {
 
 function weaponAttackRateLimitMs(weaponIndex) {
   if (isBowWeaponIndex(weaponIndex)) return 260;
-  const cooldown = typeof COMBAT_BALANCE.weaponAttackCooldown === "function"
-    ? COMBAT_BALANCE.weaponAttackCooldown(weaponIndex)
-    : COMBAT_BALANCE.isWandWeaponIndex(weaponIndex)
-      ? COMBAT_BALANCE.wandAttackCooldown(weaponIndex)
-      : 0.75;
+  const cooldown = COMBAT_BALANCE.weaponAttackCooldown(weaponIndex);
   // Leave a small transport/frame grace while still enforcing the equipped
   // non-bow weapon's Slow / Normal / Quick cadence authoritatively.
   return Math.max(260, Math.round(cooldown * 1000) - 80);
-}
-
-// Compatibility alias for older wand-specific call sites while the cadence
-// table is now shared by all non-bow weapons/tools.
-function wandAttackRateLimitMs(weaponIndex) {
-  return weaponAttackRateLimitMs(weaponIndex);
-}
-
-function pvpAttackRateLimited(
-  attackerId,
-  targetId,
-  source,
-  minimumMs
-) {
-  const key = `${attackerId}:${targetId}:${source}`;
-  const now = Date.now();
-  const previous = pvpAttackRateLimits.get(key) || 0;
-
-  if (now - previous < minimumMs) {
-    return true;
-  }
-
-  pvpAttackRateLimits.set(key, now);
-  return false;
-}
-
-function pvpAimHitsTarget(
-  attacker,
-  target,
-  aimAngle,
-  maxDistance,
-  halfArc
-) {
-  const dx = target.x - attacker.x;
-  const dy = (target.y - 8) - (attacker.y - 8);
-  const distance = Math.hypot(dx, dy);
-
-  if (distance > maxDistance) {
-    return false;
-  }
-
-  const cleanAim = Number(aimAngle);
-  if (!Number.isFinite(cleanAim)) {
-    return false;
-  }
-
-  const targetAngle = Math.atan2(dy, dx);
-
-  return (
-    Math.abs(
-      angleDifference(
-        targetAngle,
-        cleanAim
-      )
-    ) <= halfArc
-  );
-}
-
-function calculateServerPvpDamage(
-  attacker,
-  target,
-  source,
-  critical = false
-) {
-  const rawDamage = COMBAT_BALANCE.calculateDamage({
-    source,
-    weaponIndex: attacker.weaponIndex,
-    playerLevel: attacker.level || 1,
-    stats: attacker.stats || {},
-    classId: attacker.classId || null,
-
-    // Reuse the neutral physical/magic multiplier from slime while still
-    // letting player level differences affect the first-pass PvP tuning.
-    monsterType: "slime",
-    monsterLevel: target.level || 1,
-    critical,
-    abilityLevel: serverCombatAbilityLevel(attacker, source)
-  });
-  const now = Date.now();
-  const physicalSources = new Set(["melee", "basic", "arrow"]);
-  const potionMultiplier = physicalSources.has(source)
-    ? ((Number(attacker.attackPotionUntil) || 0) > now ? 1.15 : 1)
-    : ((Number(attacker.magicPotionUntil) || 0) > now ? 1.15 : 1);
-
-  return Math.max(
-    1,
-    Math.round(
-      rawDamage * PVP_DAMAGE_MULTIPLIER * potionMultiplier
-    )
-  );
-}
-
-function applyPvpCombatLock(attacker, target) {
-  if (!attacker || !target || attacker.mapId !== target.mapId) return;
-
-  const now = Date.now();
-  const until = now + PVP_COMBAT_LOCK_MS;
-  const previousUntil = Math.max(
-    Number(attacker.pvpCombatUntil) || 0,
-    Number(target.pvpCombatUntil) || 0
-  );
-
-  attacker.pvpCombatUntil = Math.max(
-    Number(attacker.pvpCombatUntil) || 0,
-    until
-  );
-
-  target.pvpCombatUntil = Math.max(
-    Number(target.pvpCombatUntil) || 0,
-    until
-  );
-
-  // Continuous Rain/Burn may refresh the lock many times per second. Broadcast
-  // only when the visible client deadline meaningfully advances.
-  if (
-    previousUntil > now &&
-    until - previousUntil < PVP_LOCK_REBROADCAST_GRACE_MS
-  ) {
-    return;
-  }
-
-  broadcastToMap(attacker.mapId, {
-    type: "pvpCombatLock",
-    playerIds: [attacker.id, target.id],
-    until
-  });
-}
-
-function handlePvpToggle(
-  playerId,
-  socket,
-  message
-) {
-  const playerState = players.get(playerId);
-  if (!playerState) return;
-
-  const enabled = Boolean(message.enabled);
-  const now = Date.now();
-
-  if (
-    !enabled &&
-    playerState.pvpEnabled &&
-    now < (Number(playerState.pvpCombatUntil) || 0)
-  ) {
-    sendJson(socket, {
-      type: "pvpToggleResult",
-      ok: false,
-      enabled: true,
-      lockRemainingMs: Math.max(
-        0,
-        playerState.pvpCombatUntil - now
-      )
-    });
-    return;
-  }
-
-  playerState.pvpEnabled = enabled;
-
-  if (!enabled) {
-    playerState.pvpCombatUntil = 0;
-  }
-
-  sendJson(socket, {
-    type: "pvpToggleResult",
-    ok: true,
-    enabled: playerState.pvpEnabled,
-    lockRemainingMs: Math.max(
-      0,
-      (Number(playerState.pvpCombatUntil) || 0) - now
-    )
-  });
-
-  broadcastToMap(playerState.mapId, {
-    type: "playerState",
-    player: publicPlayerState(playerState)
-  });
-}
-
-function handlePvpAttack(
-  attackerId,
-  message
-) {
-  const attacker = players.get(attackerId);
-  const target = players.get(
-    String(message.targetId || "")
-  );
-
-  if (
-    !pvpPlayersCanHarm(attacker, target) ||
-    target.shadowHidden
-  ) {
-    return;
-  }
-
-  const source = String(message.source || "");
-  const payload =
-    message.payload &&
-    typeof message.payload === "object"
-      ? message.payload
-      : {};
-
-  let minimumMs = 260;
-  let knockback = 12;
-  let valid = false;
-  let arrowCharge = null;
-
-  if (source === "melee") {
-    // Melee weapons plus unmastered wand-type weapons use this path.
-    if (![0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12].includes(attacker.weaponIndex)) {
-      return;
-    }
-
-    const maxDistance =
-      attacker.weaponIndex === 4 ? 40 : 36;
-
-    valid = pvpAimHitsTarget(
-      attacker,
-      target,
-      payload.aimAngle,
-      maxDistance,
-      0.92
-    );
-
-    minimumMs = weaponAttackRateLimitMs(attacker.weaponIndex);
-    knockback =
-      attacker.weaponIndex === 1 ? 18 : 15;
-  } else if (source === "wandMasteryMelee") {
-    if (
-      (Number(attacker.abilities?.wandMastery) || 0) <= 0 ||
-      ![2, 3, 8, 9, 10, 12].includes(attacker.weaponIndex)
-    ) {
-      return;
-    }
-
-    valid = pvpAimHitsTarget(
-      attacker,
-      target,
-      payload.aimAngle,
-      57,
-      0.56
-    );
-
-    minimumMs = weaponAttackRateLimitMs(attacker.weaponIndex);
-    knockback = 15;
-  } else if (source === "bowMelee") {
-    if (!isBowWeaponIndex(attacker.weaponIndex)) {
-      return;
-    }
-
-    valid = pvpAimHitsTarget(
-      attacker,
-      target,
-      payload.aimAngle,
-      36,
-      1.05
-    );
-
-    minimumMs = 300;
-    knockback = 7;
-  } else if (source === "arrow") {
-    if (!isBowWeaponIndex(attacker.weaponIndex)) {
-      return;
-    }
-
-    arrowCharge =
-      arrowChargeProfileFromPayload(payload);
-
-    const projectileX = Number(payload.projectileX);
-    const projectileY = Number(payload.projectileY);
-    const hasProjectileHitPoint =
-      Number.isFinite(projectileX) &&
-      Number.isFinite(projectileY);
-
-    if (hasProjectileHitPoint) {
-      const targetDistance = Math.hypot(
-        target.x - projectileX,
-        (target.y - 8) - projectileY
-      );
-      const travelDistance = Math.hypot(
-        projectileX - attacker.x,
-        projectileY - (attacker.y - 8)
-      );
-
-      valid =
-        targetDistance <= 12 &&
-        travelDistance <= arrowCharge.maxDistance + 20;
-    } else {
-      valid = pvpAimHitsTarget(
-        attacker,
-        target,
-        payload.aimAngle,
-        arrowCharge.maxDistance + 12,
-        0.72
-      );
-    }
-
-    minimumMs = 180;
-    knockback = 12;
-  } else if (source === "fireball") {
-    if (
-      (Number(attacker.abilities?.fireball) || 0) <= 0 ||
-      !COMBAT_BALANCE.isWandWeaponIndex(attacker.weaponIndex)
-    ) {
-      return;
-    }
-
-    const impactX = Number(payload.impactX);
-    const impactY = Number(payload.impactY);
-
-    if (
-      !Number.isFinite(impactX) ||
-      !Number.isFinite(impactY) ||
-      Math.hypot(
-        impactX - attacker.x,
-        impactY - (attacker.y - 8)
-      ) > 220
-    ) {
-      return;
-    }
-
-    const targetDistanceFromImpact = Math.hypot(
-      target.x - impactX,
-      (target.y - 8) - impactY
-    );
-    const splashStartX = impactX + (target.x - impactX) * 0.12;
-    const splashStartY = impactY + ((target.y - 8) - impactY) * 0.12;
-    valid =
-      targetDistanceFromImpact <= PVP_FIREBALL_LANDING_RADIUS + 6 &&
-      serverLineOfEffectClear(
-        attacker.mapId,
-        attacker.x,
-        attacker.y - 8,
-        impactX,
-        impactY,
-        1
-      ) &&
-      serverLineOfEffectClear(
-        attacker.mapId,
-        splashStartX,
-        splashStartY,
-        target.x,
-        target.y - 8,
-        0.5
-      );
-
-    minimumMs = 3000;
-    knockback = 18;
-  } else {
-    return;
-  }
-
-  if (
-    valid &&
-    source !== "fireball" &&
-    !serverLineOfEffectClear(
-      attacker.mapId,
-      attacker.x,
-      attacker.y - 8,
-      target.x,
-      target.y - 8,
-      source === "arrow" ? 0.4 : 1
-    )
-  ) {
-    valid = false;
-  }
-
-  if (!valid) return;
-
-  if (
-    pvpAttackRateLimited(
-      attacker.id,
-      target.id,
-      source,
-      minimumMs
-    )
-  ) {
-    return;
-  }
-
-  const critical = Boolean(payload.critical);
-  const baseDamage = calculateServerPvpDamage(
-    attacker,
-    target,
-    source,
-    critical
-  );
-
-  const damage =
-    source === "arrow"
-      ? Math.max(
-          1,
-          Math.round(
-            scaleArrowDamage(
-              baseDamage,
-              payload
-            ) * focusFireDamageMultiplier(
-              attacker.id,
-              target,
-              payload
-            )
-          )
-        )
-      : source === "wandMasteryMelee"
-        ? Math.max(
-            1,
-            Math.round(
-              baseDamage * wandMasteryTargetDamageMultiplier(
-                payload,
-                Number(attacker.abilities?.wandMastery) || 1
-              )
-            )
-          )
-        : baseDamage;
-
-  const aimAngle = Number(payload.aimAngle);
-  const knockbackX =
-    Math.cos(aimAngle) * knockback;
-  const knockbackY =
-    Math.sin(aimAngle) * knockback;
-
-  const applyValidatedPvpHit = () => {
-    const currentAttacker = players.get(attackerId);
-    const currentTarget = players.get(target.id);
-
-    if (
-      !currentAttacker ||
-      !currentTarget ||
-      !pvpPlayersCanHarm(
-        currentAttacker,
-        currentTarget
-      )
-    ) {
-      return;
-    }
-
-    const dealt = applyServerPlayerDamage(
-      currentTarget,
-      {
-        amount: damage,
-        mapId: currentTarget.mapId,
-        sourceType: `pvp:${source}`,
-        sourceId: currentAttacker.id,
-        damageType:
-          COMBAT_BALANCE.profileForAttack(source, currentAttacker.weaponIndex)?.damageType ||
-          "physical",
-        knockbackX,
-        knockbackY,
-        contactCooldown: 0.18
-      }
-    );
-
-    if (dealt > 0) {
-      if (source === "fireball") {
-        applyServerPlayerBurn(
-          currentTarget,
-          {
-            duration: PVP_PLAYER_BURN_DURATION,
-            sourcePlayerId: currentAttacker.id
-          }
-        );
-
-        if ((Number(currentTarget.burnTime) || 0) > 0) {
-          broadcastServerPlayerBurnState(currentTarget);
-        }
-      }
-
-      applyPvpCombatLock(currentAttacker, currentTarget);
-    }
-  };
-
-  const impactDelayMs =
-    source === "wandMasteryMelee"
-      ? clampNumber(payload.impactDelayMs, 0, 180, 0)
-      : 0;
-
-  if (impactDelayMs > 0) {
-    setTimeout(applyValidatedPvpHit, impactDelayMs);
-    return;
-  }
-
-  applyValidatedPvpHit();
-}
-
-function handlePlayerDamageRequest(
-  playerId,
-  message
-) {
-  const target = players.get(playerId);
-  if (!target || target.hp <= 0) return;
-
-  const source = String(message.source || "");
-  const payload =
-    message.payload &&
-    typeof message.payload === "object"
-      ? message.payload
-      : {};
-
-  let damage = 0;
-  let knockbackX = 0;
-  let knockbackY = 0;
-  let contactCooldown = 0.5;
-  let minimumMs = 400;
-
-  if (source === "burn") {
-    // v253+ clients never request their own Burn ticks. Count and ignore any
-    // stale-client request rather than letting it double-apply percentage Burn.
-    fireDiagnostics.legacyPlayerBurnDamageRequests += 1;
-    return;
-  } else {
-    return;
-  }
-
-  if (
-    rateLimitPlayerEvent(
-      playerSelfDamageRateLimits,
-      playerId,
-      source,
-      minimumMs
-    )
-  ) {
-    return;
-  }
-
-  applyServerPlayerDamage(
-    target,
-    {
-      amount: damage,
-      sourceType: source,
-      damageType: "magic",
-      knockbackX,
-      knockbackY,
-      contactCooldown
-    }
-  );
-}
-
-function handlePlayerHealRequest(
-  playerId,
-  message
-) {
-  const target = players.get(playerId);
-  if (!target || target.hp <= 0) return;
-
-  if (
-    rateLimitPlayerEvent(
-      playerHealRateLimits,
-      playerId,
-      "rain",
-      400
-    )
-  ) {
-    return;
-  }
-
-  const power = Math.round(
-    clampNumber(
-      message.power,
-      1,
-      3,
-      2
-    )
-  );
-
-  applyServerPlayerHeal(
-    target,
-    {
-      amount: power,
-      sourceType: "rain"
-    }
-  );
 }
 
 function handlePlayerRespawn(
@@ -9322,7 +6764,6 @@ function handlePlayerRespawn(
   target.burnSourcePlayerId = null;
   target.wetTime = 0;
   resetServerPlayerPresentationState(target);
-  resetServerCamouflageState(target, "respawn", false);
 
   const socket = socketsByPlayerId.get(playerId);
   if (socket) {
@@ -9364,43 +6805,19 @@ function tickServerPlayerBurns(dt) {
 
       const burnSourcePlayerId =
         target.burnSourcePlayerId || null;
-      const burnSource =
-        burnSourcePlayerId &&
-        burnSourcePlayerId !== target.id
-          ? players.get(burnSourcePlayerId)
-          : null;
-
-      if (
-        burnSource &&
-        !pvpPlayersCanHarm(burnSource, target)
-      ) {
-        clearServerPlayerBurn(target);
-        broadcastServerPlayerBurnState(target);
-        break;
-      }
 
       const wholeDamage = Math.floor(target.burnDamageAccumulator + 1e-9);
       if (wholeDamage > 0) {
         target.burnDamageAccumulator -= wholeDamage;
         applyServerPlayerDamage(target, {
           amount: wholeDamage,
-          sourceType:
-            burnSource
-              ? "pvp:burn"
-              : "burn",
-          sourceId:
-            burnSource
-              ? burnSource.id
-              : null,
+          sourceType: "burn",
+          sourceId: burnSourcePlayerId,
           // Burn Resistance will eventually be its own status rule. Ordinary
           // armor/magic resistance should not distort the promised % max-HP rate.
           damageType: "burn",
           contactCooldown: 0
         });
-
-        if (burnSource) {
-          applyPvpCombatLock(burnSource, target);
-        }
       }
 
       fireDiagnostics.playerDamageTicks += 1;
@@ -9507,10 +6924,7 @@ function killSharedEnemy(
   enemy.knockbackX = 0;
   enemy.knockbackY = 0;
   clearServerEnemyHurlState(enemy);
-  clearServerEnemySnareState(enemy);
   clearEnemyAggroTarget(enemy);
-  enemy.confusionTime = 0;
-  enemy.confusionTargetId = null;
   enemy.returningHome = false;
   enemy.wasEngaged = false;
   enemy.returnStuckTime = 0;
@@ -9659,41 +7073,12 @@ function tickSharedGhosts(dt) {
     tickEnemyStatuses(ghost, dt);
     if (!ghost.alive) continue;
 
-    ghost.tauntTime = Math.max(
-      0,
-      ghost.tauntTime - dt
-    );
-    releaseEnemyTauntOnContact(ghost);
-
-    if (ghost.tauntTime > 0) {
-      ghost.wasEngaged = true;
-    }
-
-    const confused =
-      tickEnemyConfusion(ghost, dt);
-
-    let targetX = null;
-    let targetY = null;
-    let targetPlayer = null;
-
-    if (confused) {
-      clearEnemyAggroTarget(ghost);
-    } else if (ghost.tauntTime > 0) {
-      targetX = ghost.tauntX;
-      targetY = ghost.tauntY;
-    } else {
-      targetPlayer = resolveEnemyAggroTarget(ghost, dt);
-
-      if (targetPlayer) {
-        targetX = targetPlayer.x;
-        targetY = targetPlayer.y;
-      }
-    }
+    const targetPlayer = resolveEnemyAggroTarget(ghost, dt);
+    const targetX = targetPlayer ? targetPlayer.x : null;
+    const targetY = targetPlayer ? targetPlayer.y : null;
 
     if (
-      !confused &&
       ghost.wasEngaged &&
-      ghost.tauntTime <= 0 &&
       !targetPlayer &&
       !ghost.aggroTargetId
     ) {
@@ -9706,10 +7091,7 @@ function tickSharedGhosts(dt) {
     let moveY = 0;
     let speed = ghost.speed;
 
-    if (confused) {
-      moveX = 0;
-      moveY = 0;
-    } else if (
+    if (
       targetX !== null
     ) {
       const dx = targetX - ghost.x;
@@ -9751,10 +7133,9 @@ function tickSharedGhosts(dt) {
     const beforeY = ghost.y;
 
     // Ghosts intentionally phase through terrain.
-    const snareMoveMultiplier =
-      serverEnemyMovementMultiplier(ghost);
-    ghost.x += moveX * speed * snareMoveMultiplier * dt;
-    ghost.y += moveY * speed * snareMoveMultiplier * dt;
+    const movementMultiplier = serverEnemyMovementMultiplier(ghost);
+    ghost.x += moveX * speed * movementMultiplier * dt;
+    ghost.y += moveY * speed * movementMultiplier * dt;
 
     const ghostDimensions = mapWorldDimensions(ghost.mapId);
     ghost.x = Math.max(
@@ -9768,9 +7149,7 @@ function tickSharedGhosts(dt) {
     );
 
     if (
-      !confused &&
       !ghost.aggroTargetId &&
-      ghost.tauntTime <= 0 &&
       ghost.pauseTime <= 0 &&
       Math.hypot(
         ghost.wanderTargetX - ghost.x,
@@ -9793,14 +7172,12 @@ function tickSharedGhosts(dt) {
     ghost.knockbackX *= 0.82;
     ghost.knockbackY *= 0.82;
 
-    const contact = confused
-      ? null
-      : nearestVisiblePlayer(
-          ghost.mapId,
-          ghost.x,
-          ghost.y,
-          8.5
-        );
+    const contact = nearestVisiblePlayer(
+      ghost.mapId,
+      ghost.x,
+      ghost.y,
+      8.5
+    );
 
     if (
       contact &&
@@ -9861,16 +7238,6 @@ function tickSharedGoblins(dt) {
       goblin.attackCooldown - dt
     );
 
-    goblin.tauntTime = Math.max(
-      0,
-      goblin.tauntTime - dt
-    );
-    releaseEnemyTauntOnContact(goblin);
-
-    if (goblin.tauntTime > 0) {
-      goblin.wasEngaged = true;
-    }
-
     tickEnemyStatuses(goblin, dt);
     if (!goblin.alive) continue;
 
@@ -9878,16 +7245,9 @@ function tickSharedGoblins(dt) {
       continue;
     }
 
-    const confused =
-      tickEnemyConfusion(goblin, dt);
-
     goblin.moving = false;
 
-    if (confused) {
-      goblin.lungeTime = 0;
-      goblin.lungeTargetId = null;
-      goblin.attackHit = false;
-    } else if (goblin.lungeTime > 0) {
+    if (goblin.lungeTime > 0) {
       goblin.lungeTime -= dt;
       goblin.moving = true;
       goblin.walkTime += dt * 1.8;
@@ -9905,8 +7265,7 @@ function tickSharedGoblins(dt) {
 
       if (
         target &&
-        target.mapId === goblin.mapId &&
-        !target.shadowHidden
+        target.mapId === goblin.mapId
       ) {
         const hitDx =
           target.x - goblin.x;
@@ -9949,13 +7308,6 @@ function tickSharedGoblins(dt) {
             );
           }
         }
-      } else if (target?.shadowHidden) {
-        goblin.lungeTime = 0;
-        goblin.attackHit = false;
-        goblin.attackCooldown = Math.max(
-          goblin.attackCooldown,
-          0.25
-        );
       }
 
       if (goblin.lungeTime <= 0) {
@@ -9965,21 +7317,9 @@ function tickSharedGoblins(dt) {
         goblin.lungeTargetId = null;
       }
     } else {
-      let targetX = null;
-      let targetY = null;
-      let targetPlayer = null;
-
-      if (goblin.tauntTime > 0) {
-        targetX = goblin.tauntX;
-        targetY = goblin.tauntY;
-      } else {
-        targetPlayer = resolveEnemyAggroTarget(goblin, dt);
-
-        if (targetPlayer) {
-          targetX = targetPlayer.x;
-          targetY = targetPlayer.y - 3;
-        }
-      }
+      const targetPlayer = resolveEnemyAggroTarget(goblin, dt);
+      const targetX = targetPlayer ? targetPlayer.x : null;
+      const targetY = targetPlayer ? targetPlayer.y - 3 : null;
 
       let targetDistance = Infinity;
       let targetDx = 0;
@@ -10055,9 +7395,7 @@ function tickSharedGoblins(dt) {
         // passive wandering from an arbitrary combat coordinate. The strict
         // return state owns the trip home and remains precisely replicated.
         if (
-          !confused &&
           goblin.wasEngaged &&
-          goblin.tauntTime <= 0 &&
           !targetPlayer &&
           !goblin.aggroTargetId
         ) {
@@ -10249,142 +7587,19 @@ function validateSharedEnemyMeleeHit(
   );
 }
 
-function validateSharedEnemyWandMasteryHit(
-  playerState,
-  enemy,
-  payload
-) {
-  if (![2, 3, 8, 9, 10, 12].includes(playerState.weaponIndex)) {
-    return false;
-  }
-
-  const profile = serverEnemyProfile(enemy);
-  const targetOffsetY = profile?.bodyOffsetY ?? -11;
-  const bodyRadius = profile?.meleeBodyRadius ?? 7;
-  const dx = enemy.x - playerState.x;
-  const dy =
-    (enemy.y + targetOffsetY) -
-    (playerState.y - 8);
-  const distance = Math.hypot(dx, dy);
-
-  // Passive enemies are reconstructed from server path plans on the client, so
-  // their rendered body can be a few pixels ahead/behind the authoritative
-  // simulation at the instant of a melee swing. Give Wand Mastery a small
-  // reconciliation grace rather than rejecting a hit that visibly connected.
-  const reconciliationRangeGrace = 8;
-  if (distance > 45 + bodyRadius + reconciliationRangeGrace) {
-    return false;
-  }
-
-  const aimAngle = Number(payload.aimAngle);
-  if (!Number.isFinite(aimAngle)) {
-    return false;
-  }
-
-  const targetAngle = Math.atan2(dy, dx);
-  const reconciliationAngleGrace = 0.08;
-  return (
-    Math.abs(angleDifference(targetAngle, aimAngle)) <=
-    0.56 + reconciliationAngleGrace &&
-    serverLineOfEffectClear(
-      playerState.mapId,
-      playerState.x,
-      playerState.y - 8,
-      enemy.x,
-      enemy.y + targetOffsetY,
-      1
-    )
-  );
-}
-
-function validateSharedEnemyBowMeleeHit(
-  playerState,
-  enemy,
-  payload
-) {
-  if (!isBowWeaponIndex(playerState.weaponIndex)) {
-    return false;
-  }
-
-  const profile = serverEnemyProfile(enemy);
-  const targetOffsetY = profile?.bodyOffsetY ?? -11;
-  const bodyRadius = profile?.meleeBodyRadius ?? 7;
-
-  const dx =
-    enemy.x - playerState.x;
-  const dy =
-    (enemy.y + targetOffsetY) -
-    (playerState.y - 8);
-  const distance = Math.hypot(dx, dy);
-
-  if (distance > 28 + bodyRadius) {
-    return false;
-  }
-
-  const aimAngle = Number(payload.aimAngle);
-  if (!Number.isFinite(aimAngle)) {
-    return false;
-  }
-
-  const targetAngle = Math.atan2(dy, dx);
-
-  return (
-    Math.abs(
-      angleDifference(
-        targetAngle,
-        aimAngle
-      )
-    ) <= 1.05 &&
-    serverLineOfEffectClear(
-      playerState.mapId,
-      playerState.x,
-      playerState.y - 8,
-      enemy.x,
-      enemy.y + targetOffsetY,
-      1
-    )
-  );
-}
-
-function serverCombatAbilityLevel(playerState, source) {
-  if (source === "fireball") {
-    return Math.max(0, Number(playerState?.abilities?.fireball) || 0);
-  }
-  if (source === "rain") {
-    return Math.max(0, Number(playerState?.abilities?.rainCloud) || 0);
-  }
-  if (source === "wandMasteryMelee") {
-    return Math.max(0, Number(playerState?.abilities?.wandMastery) || 0);
-  }
-  return 1;
-}
-
 function calculateServerPlayerDamage(
   playerState,
   enemy,
   source,
-  critical = false,
-  options = {}
+  critical = false
 ) {
   const baseDamage = COMBAT_BALANCE.calculateDamage({
     source,
-    weaponIndex:
-      playerState.weaponIndex,
-    playerLevel:
-      playerState.level || 1,
-    stats:
-      playerState.stats || {},
-    classId:
-      playerState.classId || null,
-    monsterType:
-      enemy.type,
-    monsterLevel:
-      enemy.level || 1,
-    critical,
-    rainPower:
-      options.rainPower ?? 2,
-    abilityLevel:
-      options.abilityLevel ?? serverCombatAbilityLevel(playerState, source)
+    weaponIndex: playerState.weaponIndex,
+    playerLevel: playerState.level || 1,
+    monsterType: enemy.type,
+    monsterLevel: enemy.level || 1,
+    critical
   });
   const now = Date.now();
   const physicalSources = new Set(["melee", "basic", "arrow"]);
@@ -10400,8 +7615,7 @@ const FIREBALL_SPLASH_MAX_TOTAL_TARGETS = 5;
 function applyServerFireballSplashBurn(playerId, mapId, payload) {
   const playerState = players.get(playerId);
   if (!playerState || playerState.hp <= 0 || playerState.mapId !== mapId) return 0;
-  if ((Number(playerState.abilities?.fireball) || 0) <= 0) return 0;
-  if (!COMBAT_BALANCE.isWandWeaponIndex(playerState.weaponIndex)) return 0;
+  if (playerState.weaponIndex !== 2) return 0;
 
   const impactX = Number(payload.x);
   const impactY = Number(payload.y);
@@ -10459,8 +7673,7 @@ function applyServerFireballSplashBurn(playerId, mapId, payload) {
         playerState,
         enemy,
         "fireballBurnTick",
-        false,
-        { abilityLevel: 1 }
+        false
       )
     );
 
@@ -10498,84 +7711,6 @@ function scaleArrowDamage(
   );
 }
 
-function wandMasteryMaxTargetsForLevel(level) {
-  const cleanLevel = Math.max(1, Math.floor(Number(level) || 1));
-  if (cleanLevel >= 20) return 3;
-  if (cleanLevel >= 10) return 2;
-  return 1;
-}
-
-function wandMasteryTargetDamageMultiplier(payload = {}, masteryLevel = 1) {
-  const rawCount = Number(payload.targetCount);
-  const maxTargets = wandMasteryMaxTargetsForLevel(masteryLevel);
-  const count = Math.max(
-    1,
-    Math.min(maxTargets, Math.round(Number.isFinite(rawCount) ? rawCount : 1))
-  );
-
-  if (count <= 1) return 1;
-  if (count === 2) return 0.75;
-  return 0.60;
-}
-
-// Eleven uninterrupted Focus Fire hits total exactly 8.0 normal-arrow units.
-// A perfect regular bow fits four shots into the same five-second barrage
-// window, so a full Focus Fire channel is ~2x perfect regular-bow damage.
-// The final three arrows all land at 135%, but the climb into them is now
-// flatter so the barrage feels rewarding throughout instead of spiking only
-// at the very end.
-const FOCUS_FIRE_DAMAGE_CURVE = Object.freeze([
-  0.30, 0.34, 0.38, 0.42, 0.46,
-  0.55, 0.65, 0.85, 1.35, 1.35, 1.35
-]);
-const FOCUS_FIRE_CHAIN_WINDOW_MS = 1300;
-const focusFireDamageChains = new Map();
-
-function focusFireDamageMultiplier(
-  playerId,
-  enemy,
-  payload = {}
-) {
-  if (!payload.focusFire) {
-    focusFireDamageChains.delete(playerId);
-    return 1;
-  }
-
-  const sequence = clampInteger(
-    payload.focusFireShotSequence,
-    1,
-    32,
-    1
-  );
-
-  const now = Date.now();
-  const previous = focusFireDamageChains.get(playerId);
-  const consecutive = Boolean(
-    previous &&
-    previous.enemyId === enemy.id &&
-    sequence === previous.sequence + 1 &&
-    now - previous.hitAt <= FOCUS_FIRE_CHAIN_WINDOW_MS
-  );
-
-  const count = consecutive
-    ? previous.count + 1
-    : 1;
-
-  focusFireDamageChains.set(playerId, {
-    enemyId: enemy.id,
-    sequence,
-    count,
-    hitAt: now
-  });
-
-  const curveIndex = Math.max(
-    0,
-    Math.min(FOCUS_FIRE_DAMAGE_CURVE.length - 1, count - 1)
-  );
-
-  return FOCUS_FIRE_DAMAGE_CURVE[curveIndex];
-}
-
 function handleSharedEnemyDamageAction(
   playerId,
   enemy,
@@ -10599,13 +7734,6 @@ function handleSharedEnemyDamageAction(
   let critical = false;
   let knockback = 0;
   let minimumMs = 180;
-
-  // Camouflage's prepared opener is reserved for the brief Confusion/reacquire
-  // delay after a successful ambush. It no longer modifies attack damage.
-
-  if (source !== "arrow") {
-    focusFireDamageChains.delete(playerId);
-  }
 
   if (source === "melee") {
     if (
@@ -10632,63 +7760,6 @@ function handleSharedEnemyDamageAction(
 
     knockback =
       serverEnemyProfile(enemy)?.damageKnockback?.melee ?? 22;
-  } else if (source === "wandMasteryMelee") {
-    if ((Number(playerState.abilities?.wandMastery) || 0) <= 0) {
-      return;
-    }
-
-    if (
-      !validateSharedEnemyWandMasteryHit(
-        playerState,
-        enemy,
-        payload
-      )
-    ) {
-      return;
-    }
-
-    minimumMs = weaponAttackRateLimitMs(playerState.weaponIndex);
-    critical = Boolean(payload.critical);
-    damage = Math.max(
-      1,
-      Math.round(
-        calculateServerPlayerDamage(
-          playerState,
-          enemy,
-          "wandMasteryMelee",
-          critical
-        ) * wandMasteryTargetDamageMultiplier(
-          payload,
-          Number(playerState.abilities?.wandMastery) || 1
-        )
-      )
-    );
-    knockback =
-      serverEnemyProfile(enemy)?.damageKnockback?.melee ?? 22;
-  } else if (source === "bowMelee") {
-    if (
-      !validateSharedEnemyBowMeleeHit(
-        playerState,
-        enemy,
-        payload
-      )
-    ) {
-      return;
-    }
-
-    minimumMs = 300;
-    critical = Boolean(payload.critical);
-
-    damage =
-      calculateServerPlayerDamage(
-        playerState,
-        enemy,
-        "bowMelee",
-        critical
-      );
-
-    knockback =
-      serverEnemyProfile(enemy)?.damageKnockback?.bowMelee ?? 10;
   } else if (source === "basic") {
     if (
       ![2, 3, 8, 9, 10, 12].includes(playerState.weaponIndex) ||
@@ -10746,35 +7817,20 @@ function handleSharedEnemyDamageAction(
 
     critical = false;
 
-    const focusMultiplier =
-      focusFireDamageMultiplier(
-        playerId,
+    damage = scaleArrowDamage(
+      calculateServerPlayerDamage(
+        playerState,
         enemy,
-        payload
-      );
-
-    damage = Math.max(
-      1,
-      Math.round(
-        scaleArrowDamage(
-          calculateServerPlayerDamage(
-            playerState,
-            enemy,
-            "arrow",
-            critical
-          ),
-          payload
-        ) * focusMultiplier
-      )
+        "arrow",
+        critical
+      ),
+      payload
     );
 
     knockback =
       serverEnemyProfile(enemy)?.damageKnockback?.arrow ?? 16;
   } else if (source === "fireball") {
-    if (
-      (Number(playerState.abilities?.fireball) || 0) <= 0 ||
-      !COMBAT_BALANCE.isWandWeaponIndex(playerState.weaponIndex)
-    ) {
+    if (playerState.weaponIndex !== 2) {
       return;
     }
 
@@ -10834,36 +7890,22 @@ function handleSharedEnemyDamageAction(
     );
     enemy.wasEngaged = true;
 
-    const camouflageConfused =
-      tryApplyCamouflageConfusion(
-        enemy,
-        currentPlayerState,
-        playerId,
-        payload
-      );
-
-    if (!camouflageConfused) {
-      setEnemyAggroTarget(
-        enemy,
-        playerId
-      );
-    }
+    setEnemyAggroTarget(
+      enemy,
+      playerId
+    );
     enemy.lastDamagePlayerId = playerId;
 
     if (source === "fireball") {
-      // Fireball impact and On-Fire both use the same Magic Power -> spell
-      // Power -> resistance/level/mastery damage pipeline. The impact uses the
-      // Fireball skill's current Power (up to 200). Burn is 20 Power/sec and
-      // ticks twice per second, so each authoritative Burn tick is calculated
-      // exactly like a spell hit at 10 Power (minimum 1 damage per tick).
+      // Fireball impact and On-Fire both use the same equipment-power damage
+      // pipeline. Burn ticks twice per second at a fixed fraction of Magic Power.
       const burnDamagePerTick = Math.max(
         1,
         calculateServerPlayerDamage(
           currentPlayerState,
           enemy,
           "fireballBurnTick",
-          false,
-          { abilityLevel: 1 }
+          false
         )
       );
 
@@ -10912,16 +7954,6 @@ function handleSharedEnemyDamageAction(
       killSharedEnemy(enemy, playerId);
     }
   };
-
-  const impactDelayMs =
-    source === "wandMasteryMelee"
-      ? clampNumber(payload.impactDelayMs, 0, 180, 0)
-      : 0;
-
-  if (impactDelayMs > 0) {
-    setTimeout(applyValidatedDamage, impactDelayMs);
-    return;
-  }
 
   applyValidatedDamage();
 }
@@ -10988,128 +8020,6 @@ function handleSharedEnemyAction(
     return;
   }
 
-  if (
-    sharedEnemyActionRateLimited(
-      playerId,
-      enemy.id,
-      action,
-      action === "rainDamage"
-        ? 400
-        : action === "magicGrassSlow" || action === "wet"
-          ? 150
-          : 250
-    )
-  ) {
-    return;
-  }
-
-  if (action === "magicGrassSlow") { rainDiagnostics.legacyMagicGrassSlow += 1; return; }
-  if (action === "wet") { rainDiagnostics.legacyWet += 1; return; }
-  if (action === "rainDamage") { rainDiagnostics.legacyRainDamage += 1; return; }
-
-  if (action === "ignite") {
-    if (!enemy.alive) return;
-
-    // This action is reserved for direct contact with client-temporary magic
-    // grass. Wet now blocks it the same way it blocks other fire sources.
-    applyServerEnemyBurn(enemy, {
-      duration: STATUS_RULES.enemyBurnDuration,
-      sourcePlayerId: playerId
-    });
-    return;
-  }
-
-  if (action === "extinguish") {
-    clearServerEnemyBurn(enemy);
-    return;
-  }
-
-  if (action === "clearRedirect" || action === "clearTaunt") {
-    const cloneId =
-      typeof payload.cloneId === "string"
-        ? payload.cloneId.slice(0, 96)
-        : null;
-
-    if (
-      enemy.tauntOwnerId === playerId &&
-      (
-        !cloneId ||
-        !enemy.tauntCloneId ||
-        enemy.tauntCloneId === cloneId
-      )
-    ) {
-      if (cloneId) {
-        enemy.releasedHallucinationId = cloneId;
-      } else if (enemy.tauntCloneId) {
-        enemy.releasedHallucinationId = enemy.tauntCloneId;
-      }
-
-      enemy.tauntTime = 0;
-      enemy.tauntOwnerId = null;
-      enemy.tauntCloneId = null;
-    }
-    return;
-  }
-
-  if (action === "redirect" || action === "taunt") {
-    if (!enemy.alive || enemy.hurlTime > 0) return;
-
-    const cloneId =
-      typeof payload.cloneId === "string"
-        ? payload.cloneId.slice(0, 96)
-        : null;
-
-    // Once an enemy reaches a specific Hallucination, later pulse messages
-    // from that same clone can never force it back again.
-    if (
-      cloneId &&
-      enemy.releasedHallucinationId === cloneId
-    ) {
-      return;
-    }
-
-    const dimensions = mapWorldDimensions(enemy.mapId);
-
-    const tauntX = clampNumber(
-      payload.x,
-      0,
-      dimensions.width,
-      enemy.x
-    );
-
-    const tauntY = clampNumber(
-      payload.y,
-      0,
-      dimensions.height,
-      enemy.y
-    );
-
-    if (
-      Math.hypot(
-        enemy.x - tauntX,
-        enemy.y - tauntY
-      ) > 126
-    ) {
-      return;
-    }
-
-    const duration = clampNumber(
-      payload.duration,
-      0.5,
-      6.0,
-      4.8
-    );
-
-    enemy.tauntX = tauntX;
-    enemy.tauntY = tauntY;
-    enemy.tauntTime = duration;
-    enemy.tauntOwnerId = playerId;
-    enemy.tauntCloneId = cloneId;
-    enemy.wasEngaged = true;
-    return;
-  }
-
-
 }
 
 // -----------------------------------------------------------------------------
@@ -11163,8 +8073,6 @@ function resetServerBigGoldSlime(slime) {
   slime.respawnTime = 0;
   slime.aggroTargetId = null;
   slime.aggroEngagementTime = 0;
-  slime.confusionTime = 0;
-  slime.confusionTargetId = null;
   slime.outOfCombatTime = 0;
   slime.wanderAngle =
     Math.random() * Math.PI * 2;
@@ -11174,33 +8082,10 @@ function resetServerBigGoldSlime(slime) {
   slime.burnTickTimer = 0;
   slime.knockbackX = 0;
   slime.knockbackY = 0;
-  slime.tauntTime = 0;
-  slime.tauntOwnerId = null;
   clearServerEnemyHurlState(slime);
   slime.lastDamagePlayerId = null;
 }
 
-function releaseEnemyTauntOnContact(enemy, radius = 8.5) {
-  if (!enemy || enemy.tauntTime <= 0) return false;
-
-  if (
-    Math.hypot(
-      enemy.x - enemy.tauntX,
-      enemy.y - enemy.tauntY
-    ) > radius
-  ) {
-    return false;
-  }
-
-  if (enemy.tauntCloneId) {
-    enemy.releasedHallucinationId = enemy.tauntCloneId;
-  }
-
-  enemy.tauntTime = 0;
-  enemy.tauntOwnerId = null;
-  enemy.tauntCloneId = null;
-  return true;
-}
 
 function tickSharedBigGoldSlimes(dt) {
   for (const slime of sharedBigGoldSlimes) {
@@ -11218,32 +8103,9 @@ function tickSharedBigGoldSlimes(dt) {
     tickEnemyStatuses(slime, dt);
     if (!slime.alive) continue;
 
-    slime.tauntTime = Math.max(
-      0,
-      slime.tauntTime - dt
-    );
-    releaseEnemyTauntOnContact(slime);
-
-    const confused =
-      tickEnemyConfusion(slime, dt);
-
-    let targetX = null;
-    let targetY = null;
-    let targetPlayer = null;
-
-    if (confused) {
-      clearEnemyAggroTarget(slime);
-    } else if (slime.tauntTime > 0) {
-      targetX = slime.tauntX;
-      targetY = slime.tauntY;
-    } else {
-      targetPlayer = resolveEnemyAggroTarget(slime, dt);
-
-      if (targetPlayer) {
-        targetX = targetPlayer.x;
-        targetY = targetPlayer.y;
-      }
-    }
+    const targetPlayer = resolveEnemyAggroTarget(slime, dt);
+    const targetX = targetPlayer ? targetPlayer.x : null;
+    const targetY = targetPlayer ? targetPlayer.y : null;
 
     const homeDx = slime.homeX - slime.x;
     const homeDy = slime.homeY - slime.y;
@@ -11252,8 +8114,6 @@ function tickSharedBigGoldSlimes(dt) {
 
     const stillInCombat =
       Boolean(slime.aggroTargetId) ||
-      slime.tauntTime > 0 ||
-      slime.confusionTime > 0 ||
       targetX !== null;
 
     if (stillInCombat) {
@@ -11295,10 +8155,7 @@ function tickSharedBigGoldSlimes(dt) {
     let moveY = 0;
     let speed = slime.speed;
 
-    if (confused) {
-      moveX = 0;
-      moveY = 0;
-    } else if (
+    if (
       targetX !== null &&
       targetY !== null
     ) {
@@ -11345,7 +8202,6 @@ function tickSharedBigGoldSlimes(dt) {
       dt
     );
 
-    if (confused) continue;
 
     const contact = nearestVisiblePlayer(
       slime.mapId,
@@ -11459,18 +8315,9 @@ function makeServerSlime(spawn) {
 
     aggroTargetId: null,
     aggroEngagementTime: 0,
-    confusionTime: 0,
-    confusionTargetId: null,
     wasEngaged: false,
     returningHome: false,
     returnStuckTime: 0,
-
-    // Hallucination decoy. While active, the clone position has priority over
-    // real players.
-    tauntTime: 0,
-    tauntX: x,
-    tauntY: y,
-    tauntOwnerId: null,
 
     wanderTargetX: x,
     wanderTargetY: y,
@@ -11492,7 +8339,7 @@ function makeServerSlime(spawn) {
     knockbackX: 0,
     knockbackY: 0,
 
-    // STR ability: Hurl.
+    // Tiger Paw carry/throw state.
     carriedBy: null,
     pickupTime: 0,
     pickupDuration: 0.18,
@@ -11540,16 +8387,10 @@ function makeServerCrab(spawn) {
 
     aggroTargetId: null,
     aggroEngagementTime: 0,
-    confusionTime: 0,
-    confusionTargetId: null,
     wasEngaged: false,
     returningHome: false,
     returnStuckTime: 0,
 
-    tauntTime: 0,
-    tauntX: x,
-    tauntY: y,
-    tauntOwnerId: null,
 
     wanderTargetX: x,
     wanderTargetY: y,
@@ -11585,16 +8426,9 @@ function resetServerCrab(crab) {
   crab.wanderStuckTime = 0;
   crab.aggroTargetId = null;
   crab.aggroEngagementTime = 0;
-  crab.confusionTime = 0;
-  crab.confusionTargetId = null;
   crab.wasEngaged = false;
   crab.returningHome = false;
   crab.returnStuckTime = 0;
-  crab.tauntTime = 0;
-  crab.tauntX = crab.homeX;
-  crab.tauntY = crab.homeY;
-  crab.tauntOwnerId = null;
-  crab.tauntCloneId = null;
   crab.hp = crab.maxHp;
   crab.alive = true;
   crab.respawnTime = 0;
@@ -11605,7 +8439,6 @@ function resetServerCrab(crab) {
   clearEnemyAggroTarget(crab);
   clearServerEnemyHurlState(crab);
   clearServerEnemyStatuses(crab);
-  clearServerEnemySnareState(crab);
   crab.lastDamagePlayerId = null;
 }
 
@@ -11691,19 +8524,7 @@ function tickSharedCrabs(dt) {
     if (!crab.alive) continue;
     if (tickServerEnemyHurl(crab, dt)) continue;
 
-    if (crab.tauntTime > 0) {
-      crab.tauntTime = Math.max(0, crab.tauntTime - dt);
-      if (crab.tauntTime <= 0) {
-        crab.tauntOwnerId = null;
-        crab.tauntCloneId = null;
-      } else {
-        crab.wasEngaged = true;
-        releaseEnemyTauntOnContact(crab);
-      }
-    }
-
-    const confused = tickEnemyConfusion(crab, dt);
-    if (!confused) tryServerCrabContact(crab);
+    tryServerCrabContact(crab);
 
     if (Math.abs(crab.knockbackX) > 0.1 || Math.abs(crab.knockbackY) > 0.1) {
       const nextX = crab.x + crab.knockbackX * dt;
@@ -11712,21 +8533,6 @@ function tickSharedCrabs(dt) {
       if (slimePositionAllowed(crab, crab.x, nextY)) crab.y = nextY;
       crab.knockbackX *= 0.82;
       crab.knockbackY *= 0.82;
-    }
-
-    if (confused) continue;
-
-    if (crab.tauntTime > 0) {
-      const dx = crab.tauntX - crab.x;
-      const dy = crab.tauntY - crab.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance > 1) {
-        const nav = enemyStructureChaseVector(crab, crab.tauntX, crab.tauntY);
-        const move = crabMovementVector(nav.x, nav.y);
-        moveServerSlime(crab, move.x, move.y, crab.chaseSpeed, dt);
-        if (Math.abs(move.x) > 0.05) crab.dir = move.x >= 0 ? 1 : -1;
-      }
-      continue;
     }
 
     const targetPlayer = resolveEnemyAggroTarget(crab, dt);
@@ -11810,16 +8616,10 @@ function makeServerMushroom(spawn) {
 
     aggroTargetId: null,
     aggroEngagementTime: 0,
-    confusionTime: 0,
-    confusionTargetId: null,
     wasEngaged: false,
     returningHome: false,
     returnStuckTime: 0,
 
-    tauntTime: 0,
-    tauntX: x,
-    tauntY: y,
-    tauntOwnerId: null,
 
     // Sleeping mushrooms do not choose passive wander legs. These home-locked
     // fields let the shared passive network planner emit a stable idle intent.
@@ -11858,17 +8658,10 @@ function resetServerMushroom(mushroom) {
 
   mushroom.aggroTargetId = null;
   mushroom.aggroEngagementTime = 0;
-  mushroom.confusionTime = 0;
-  mushroom.confusionTargetId = null;
   mushroom.wasEngaged = false;
   mushroom.returningHome = false;
   mushroom.returnStuckTime = 0;
 
-  mushroom.tauntTime = 0;
-  mushroom.tauntX = mushroom.homeX;
-  mushroom.tauntY = mushroom.homeY;
-  mushroom.tauntOwnerId = null;
-  mushroom.tauntCloneId = null;
 
   mushroom.hp = mushroom.maxHp;
   mushroom.alive = true;
@@ -11882,22 +8675,18 @@ function resetServerMushroom(mushroom) {
   clearEnemyAggroTarget(mushroom);
   clearServerEnemyHurlState(mushroom);
   clearServerEnemyStatuses(mushroom);
-  clearServerEnemySnareState(mushroom);
 
   mushroom.lastDamagePlayerId = null;
 }
 
 function tryServerMushroomContact(mushroom) {
-  // A sleeping mushroom is harmless until something has actually provoked or
-  // redirected it. Merely walking over an idle spawn does not wake/contact-hit.
+  // A sleeping mushroom is harmless until something has actually provoked it.
+  // Merely walking over an idle spawn does not wake/contact-hit.
   if (
     !mushroom?.alive ||
     mushroom.carriedBy ||
     mushroom.hurlTime > 0 ||
-    (
-      !mushroom.aggroTargetId &&
-      (Number(mushroom.tauntTime) || 0) <= 0
-    )
+    !mushroom.aggroTargetId
   ) {
     return;
   }
@@ -11986,29 +8775,6 @@ function tickSharedMushrooms(dt) {
       continue;
     }
 
-    if (mushroom.tauntTime > 0) {
-      mushroom.tauntTime = Math.max(
-        0,
-        mushroom.tauntTime - dt
-      );
-
-      if (mushroom.tauntTime <= 0) {
-        mushroom.tauntOwnerId = null;
-        mushroom.tauntCloneId = null;
-      } else {
-        mushroom.wasEngaged = true;
-        releaseEnemyTauntOnContact(
-          mushroom
-        );
-      }
-    }
-
-    const confused =
-      tickEnemyConfusion(
-        mushroom,
-        dt
-      );
-
     if (
       Math.abs(mushroom.knockbackX) > 0.1 ||
       Math.abs(mushroom.knockbackY) > 0.1
@@ -12042,42 +8808,6 @@ function tickSharedMushrooms(dt) {
 
       mushroom.knockbackX *= 0.82;
       mushroom.knockbackY *= 0.82;
-    }
-
-    if (confused) {
-      continue;
-    }
-
-    if (mushroom.tauntTime > 0) {
-      tryServerMushroomContact(
-        mushroom
-      );
-
-      const dx =
-        mushroom.tauntX - mushroom.x;
-      const dy =
-        mushroom.tauntY - mushroom.y;
-      const distance =
-        Math.hypot(dx, dy);
-
-      if (distance > 1) {
-        const move = enemyStructureChaseVector(mushroom, mushroom.tauntX, mushroom.tauntY);
-
-        moveServerSlime(
-          mushroom,
-          move.x,
-          move.y,
-          mushroom.chaseSpeed,
-          dt
-        );
-
-        if (Math.abs(move.x) > 0.05) {
-          mushroom.dir =
-            move.x >= 0 ? 1 : -1;
-        }
-      }
-
-      continue;
     }
 
     const targetPlayer =
@@ -12166,20 +8896,6 @@ function getWorldEntity(
 
 
 
-function pointInsideRect(
-  x,
-  y,
-  rect,
-  padding = 0
-) {
-  return (
-    x > rect.x - padding &&
-    x < rect.x + rect.width + padding &&
-    y > rect.y - padding &&
-    y < rect.y + rect.height + padding
-  );
-}
-
 function mapPointAllowed(
   mapId,
   x,
@@ -12187,8 +8903,7 @@ function mapPointAllowed(
   padding = 0,
   { allowWater = false, ignoreStructureDoors = false } = {}
 ) {
-  const dimensions =
-    mapWorldDimensions(mapId);
+  const dimensions = mapWorldDimensions(mapId);
 
   if (
     x < 10 ||
@@ -12199,51 +8914,9 @@ function mapPointAllowed(
     return false;
   }
 
-  const definition =
-    WORLD_CONTENT.maps[mapId] || {};
-
-  const terrainOccupancy = TERRAIN_RULES.circleCanOccupy(
-    definition,
-    x,
-    y,
-    padding,
-    { allowWater }
-  );
-
-  if (terrainOccupancy !== null) {
-    if (!terrainOccupancy) return false;
-  } else {
-    // Legacy maps keep their existing collision contract until they are
-    // deliberately migrated to first-class terrain data.
-    const walkableRects =
-      definition.collision?.walkableRects || [];
-
-    if (
-      walkableRects.length > 0 &&
-      !walkableRects.some(rect =>
-        pointInsideRect(x, y, rect, 0)
-      )
-    ) {
-      return false;
-    }
-
-    if (!allowWater) {
-      const waterRects =
-        definition.collision?.waterRects || [];
-
-      for (const rect of waterRects) {
-        if (
-          pointInsideRect(
-            x,
-            y,
-            rect,
-            padding
-          )
-        ) {
-          return false;
-        }
-      }
-    }
+  const definition = WORLD_CONTENT.maps[mapId] || {};
+  if (TERRAIN_RULES.circleCanOccupy(definition, x, y, padding, { allowWater }) !== true) {
+    return false;
   }
 
   if (serverPointHitsStructureWall(
@@ -12672,16 +9345,10 @@ function resetServerSlime(slime) {
 
   slime.aggroTargetId = null;
   slime.aggroEngagementTime = 0;
-  slime.confusionTime = 0;
-  slime.confusionTargetId = null;
   slime.wasEngaged = false;
   slime.returningHome = false;
   slime.returnStuckTime = 0;
 
-  slime.tauntTime = 0;
-  slime.tauntX = slime.homeX;
-  slime.tauntY = slime.homeY;
-  slime.tauntOwnerId = null;
 
   slime.hp = slime.nightOnly ? 0 : slime.maxHp;
   slime.alive = !slime.nightOnly;
@@ -12698,7 +9365,6 @@ function resetServerSlime(slime) {
   clearEnemyAggroTarget(slime);
 
   clearServerEnemyHurlState(slime);
-  clearServerEnemySnareState(slime);
 
   slime.lastDamagePlayerId = null;
 }
@@ -12766,17 +9432,12 @@ function activateNightSlime(slime) {
   slime.aggroEngagementTime = 0;
   slime.wasEngaged = false;
   slime.returningHome = false;
-  slime.confusionTime = 0;
-  slime.confusionTargetId = null;
-  slime.tauntTime = 0;
-  slime.tauntOwnerId = null;
   slime.burnTime = 0;
   slime.burnTickTimer = 0;
   slime.knockbackX = 0;
   slime.knockbackY = 0;
   clearEnemyAggroTarget(slime);
   clearServerEnemyHurlState(slime);
-  clearServerEnemySnareState(slime);
 }
 
 function chooseNightSlimeExit(slime) {
@@ -12814,15 +9475,10 @@ function beginNightSlimeFlee(slime) {
   slime.nightExitInsideY = exit.insideY;
   slime.nightExitTargetX = exit.outsideX;
   slime.nightExitTargetY = exit.outsideY;
-  slime.tauntTime = 0;
-  slime.tauntOwnerId = null;
-  slime.confusionTime = 0;
-  slime.confusionTargetId = null;
   slime.returningHome = false;
   slime.wasEngaged = false;
   clearEnemyAggroTarget(slime);
   clearServerEnemyHurlState(slime);
-  clearServerEnemySnareState(slime);
 }
 
 function despawnNightSlime(slime) {
@@ -12836,7 +9492,6 @@ function despawnNightSlime(slime) {
   clearEnemyAggroTarget(slime);
   clearServerEnemyStatuses(slime);
   clearServerEnemyHurlState(slime);
-  clearServerEnemySnareState(slime);
   broadcastToMap(slime.mapId, {
     type: "enemyKilled",
     enemyType: slime.type,
@@ -13207,7 +9862,6 @@ function tickServerEnemyHurl(enemy, dt) {
     enemy.knockbackX = 0;
     enemy.knockbackY = 0;
     clearEnemyAggroTarget(enemy);
-    enemy.tauntTime = 0;
     return true;
   }
 
@@ -13259,7 +9913,7 @@ function handleGenericEnemyHurlAction(
     if (playerState.weaponIndex !== TIGER_PAW_WEAPON_INDEX) return;
     if (enemy.carriedBy || enemy.hurlTime > 0) return;
 
-    if (playerCarriesAnyHurlObject(playerId)) {
+    if (playerCarriesHurlEnemy(playerId)) {
       return;
     }
 
@@ -13296,7 +9950,6 @@ function handleGenericEnemyHurlAction(
     enemy.knockbackX = 0;
     enemy.knockbackY = 0;
     clearEnemyAggroTarget(enemy);
-    enemy.tauntTime = 0;
 
     serverEnemyProfile(enemy)?.onHurlGrab?.(enemy);
     return;
@@ -13331,15 +9984,11 @@ function handleGenericEnemyHurlAction(
     enemy.hurlThrownBy = playerId;
     enemy.lastDamagePlayerId = playerId;
     clearEnemyAggroTarget(enemy);
-    enemy.tauntTime = 0;
   }
 }
 
 function tryServerSlimeContact(slime) {
-  // Hallucination redirects the slime's movement/aggro destination only. It
-  // must not make the slime physically harmless to real players it happens
-  // to overlap while chasing the clone. Carry/Hurl transit still suppresses
-  // ordinary touch damage because those are non-contact control states.
+  // Carry/Hurl transit suppresses ordinary touch damage while the mob is in transit.
   if (
     slime.carriedBy ||
     slime.hurlTime > 0
@@ -13467,27 +10116,7 @@ function tickSharedSlimes(dt) {
       continue;
     }
 
-    if (slime.tauntTime > 0) {
-      slime.tauntTime = Math.max(
-        0,
-        slime.tauntTime - dt
-      );
-
-      if (slime.tauntTime <= 0) {
-        slime.tauntOwnerId = null;
-        slime.tauntCloneId = null;
-      } else {
-        slime.wasEngaged = true;
-        releaseEnemyTauntOnContact(slime);
-      }
-    }
-
-    const confused =
-      tickEnemyConfusion(slime, dt);
-
-    if (!confused) {
-      tryServerSlimeContact(slime);
-    }
+    tryServerSlimeContact(slime);
 
     if (
       Math.abs(slime.knockbackX) > 0.1 ||
@@ -13521,41 +10150,6 @@ function tickSharedSlimes(dt) {
 
       slime.knockbackX *= 0.82;
       slime.knockbackY *= 0.82;
-    }
-
-    if (confused) {
-      continue;
-    }
-
-    // The decoy has absolute priority while it exists.
-    if (slime.tauntTime > 0) {
-      const dx =
-        slime.tauntX - slime.x;
-
-      const dy =
-        slime.tauntY - slime.y;
-
-      const distance =
-        Math.hypot(dx, dy);
-
-      if (distance > 1) {
-        const move = enemyStructureChaseVector(slime, slime.tauntX, slime.tauntY);
-
-        moveServerSlime(
-          slime,
-          move.x,
-          move.y,
-          slime.chaseSpeed,
-          dt
-        );
-
-        if (Math.abs(move.x) > 0.05) {
-          slime.dir =
-            move.x >= 0 ? 1 : -1;
-        }
-      }
-
-      continue;
     }
 
     let targetPlayer = resolveEnemyAggroTarget(slime, dt);
@@ -13595,7 +10189,6 @@ function tickSharedSlimes(dt) {
 
     if (
       slime.wasEngaged &&
-      slime.tauntTime <= 0 &&
       !targetPlayer &&
       !slime.aggroTargetId
     ) {
@@ -13697,22 +10290,13 @@ function angleDifference(a, b) {
 
 function serverPointTouchesWater(mapId, x, y, radius = 3) {
   const definition = WORLD_CONTENT.maps[mapId] || {};
-  if (TERRAIN_RULES.terrainDefinition(definition)) {
-    return TERRAIN_RULES.circleTouchesType(
-      definition,
-      x,
-      y,
-      Math.max(0, Number(radius) || 0),
-      "water"
-    );
-  }
-
-  for (const rect of definition.collision?.waterRects || []) {
-    if (pointInsideRect(x, y, rect, Math.max(0, Number(radius) || 0))) {
-      return true;
-    }
-  }
-  return false;
+  return TERRAIN_RULES.circleTouchesType(
+    definition,
+    x,
+    y,
+    Math.max(0, Number(radius) || 0),
+    "water"
+  );
 }
 
 function serverPointUnderAutomaticRoof(mapId, x, y) {
@@ -13822,16 +10406,11 @@ setInterval(() => {
 
   refreshGridEnemyMapLifecycle();
   tickNightSlimeLifecycle(dt);
-  tickSharedEnemySnareStatuses(dt);
   tickServerPlayerBurns(dt);
   refreshServerWaterWetness();
   refreshServerMapWeatherWetness(dt, now);
   tickServerPlayerWetTimers(dt);
   tickServerPlayerPresentation(dt);
-  tickServerCamouflage();
-  tickHunterSnareSetups();
-  tickHunterSnareCharges(dt);
-  tickServerHallucinations(dt);
   tickServerRainClouds(dt);
   tickServerRainGrassMembership();
   tickSharedSlimes(dt);
@@ -13840,7 +10419,6 @@ setInterval(() => {
   tickSharedGoblins(dt);
   tickSharedGhosts(dt);
   tickSharedBigGoldSlimes(dt);
-  tickHunterSnares();
   tickSharedEnvironment(dt);
   tickSharedResources(dt);
   tickSharedCoins(dt);
@@ -13924,10 +10502,6 @@ function handlePlayerAction(playerId, message) {
     target.bowDrawAmount = drawQ / 255;
     target.attackAimAngle = PLAYER_NET_PROTOCOL.decodeAim(aimQ);
     outgoing = [code, Math.round(duration * 1000), drawQ, aimQ];
-  } else if (code === A.FOCUS_FIRE) {
-    const active = data[1] === 1;
-    target.focusFireCasting = active;
-    outgoing = [code, active ? 1 : 0];
   } else if (code === A.FIREBALL_AIM) {
     const active = data[1] === 1;
     target.fireballAiming = active;
@@ -13940,15 +10514,6 @@ function handlePlayerAction(playerId, message) {
     target.rainCloudCastDuration = duration;
     target.rainCloudCastTime = 0;
     outgoing = [code, active ? 1 : 0, Math.round(duration * 1000)];
-  } else if (code === A.SHADOW_HIDE) {
-    const active = data[1] === 1;
-    target.shadowHidden = active;
-    if (active) target.shadowHideRevealTime = 0;
-    outgoing = [code, active ? 1 : 0];
-  } else if (code === A.SHADOW_REVEAL) {
-    const duration = clampNumber((Number(data[1]) || 160) / 1000, 0.03, 1, 0.16);
-    target.shadowHideRevealTime = duration;
-    outgoing = [code, Math.round(duration * 1000)];
   } else if (code === A.HURL_REACH) {
     const duration = clampNumber((Number(data[1]) || 180) / 1000, 0.05, 0.5, 0.18);
     const dx = clampNumber((Number(data[2]) || 0) / 1000, -1, 1, 0);
@@ -13971,20 +10536,16 @@ function resetServerPlayerPresentationState(target) {
   target.bowDrawing = false;
   target.bowDrawAmount = 0;
   target.bowReleaseTime = 0;
-  target.focusFireCasting = false;
   target.fireballAiming = false;
   target.fireballAimTime = 0;
   target.rainCloudCasting = false;
   target.rainCloudCastTime = 0;
-  target.shadowHidden = false;
-  target.shadowHideRevealTime = 0;
   target.hurlReachTime = 0;
 }
 
 function tickServerPlayerPresentation(dt) {
   for (const target of players.values()) {
     target.attackTime = Math.max(0, (Number(target.attackTime) || 0) - dt);
-    target.shadowHideRevealTime = Math.max(0, (Number(target.shadowHideRevealTime) || 0) - dt);
     target.hurlReachTime = Math.max(0, (Number(target.hurlReachTime) || 0) - dt);
     if (target.bowDrawing) {
       target.bowDrawAmount = Math.min(1, (Number(target.bowDrawAmount) || 0) + dt / Math.max(0.05, Number(target.bowDrawDuration) || 1));
@@ -14002,7 +10563,7 @@ function tickServerPlayerPresentation(dt) {
 }
 
 // -----------------------------------------------------------------------------
-// MAP-SCOPED COMBAT / ABILITY VISUAL EVENTS
+// MAP-SCOPED COMBAT / ACTION VISUAL EVENTS
 // -----------------------------------------------------------------------------
 // Presentation-only events. Authoritative gameplay still uses the existing
 // player/enemy HP, status, AI, and drop paths.
@@ -14019,154 +10580,6 @@ function sanitizeVisualVelocity(value) {
 }
 
 // -----------------------------------------------------------------------------
-// SERVER-CLOCKED HALLUCINATION
-// -----------------------------------------------------------------------------
-// The decoy's gameplay clock lives on the server so backgrounding the caster
-// cannot pause its redirect lifetime while other players continue to see the map.
-const SERVER_HALLUCINATION_DURATION = 2.0;
-const SERVER_HALLUCINATION_REDIRECT_RADIUS = 120;
-const SERVER_HALLUCINATION_CONTACT_RADIUS = 8.5;
-const SERVER_HALLUCINATION_RETURN_LOCKOUT_MS = 350;
-const activeServerHallucinations = new Map();
-
-function clearServerHallucinationRedirects(clone) {
-  if (!clone) return;
-  for (const enemy of allSharedEnemies()) {
-    if (
-      enemy.mapId === clone.mapId &&
-      enemy.tauntOwnerId === clone.ownerId &&
-      (!clone.cloneId || enemy.tauntCloneId === clone.cloneId)
-    ) {
-      enemy.tauntTime = 0;
-      enemy.tauntOwnerId = null;
-      enemy.tauntCloneId = null;
-    }
-  }
-}
-
-function removeServerHallucinationForOwner(ownerId, mapId = null) {
-  const clone = activeServerHallucinations.get(ownerId);
-  if (!clone) return false;
-  if (mapId && clone.mapId !== mapId) return false;
-  activeServerHallucinations.delete(ownerId);
-  clearServerHallucinationRedirects(clone);
-  return true;
-}
-
-function startServerHallucination(ownerId, mapId, payload) {
-  removeServerHallucinationForOwner(ownerId);
-  const cloneId = typeof payload.cloneId === "string" && payload.cloneId
-    ? payload.cloneId.slice(0, 96)
-    : `hallucination:${ownerId}:${Date.now().toString(36)}`;
-
-  const startedAtMs = Date.now();
-  const owner = players.get(ownerId);
-  const abilityLevel = Math.max(1, Number(owner?.abilities?.jesterBlink) || 1);
-  const duration = ABILITY_SCALING.hallucinationDecoyDurationAtLevel(abilityLevel);
-  const clone = {
-    ownerId,
-    mapId,
-    cloneId,
-    x: sanitizeVisualPoint(payload.startX, mapId, "x"),
-    y: sanitizeVisualPoint(payload.startY, mapId, "y"),
-    startedAtMs,
-    hatIndex: clampInteger(payload.hatIndex, -1, 10, -1),
-    shirtIndex: clampInteger(payload.shirtIndex, -1, 7, -1),
-    pantsIndex: clampInteger(payload.pantsIndex, -1, 7, -1),
-    duration,
-    expiresAtMs: startedAtMs + duration * 1000,
-    redirectedEnemyIds: new Set(),
-    releasedEnemyIds: new Set()
-  };
-
-  activeServerHallucinations.set(ownerId, clone);
-
-  // Redirect is a one-shot snapshot at cast time, not a pulsing taunt aura.
-  // Only enemies that are already actively targeting this caster are eligible.
-  // Passive enemies, enemies targeting somebody else, and enemies that aggro
-  // after the Hallucination was cast are deliberately left alone.
-  for (const enemy of allSharedEnemies()) {
-    if (!enemy.alive || enemy.mapId !== mapId) continue;
-    if (enemy.returningHome || enemy.hurlTime > 0 || enemy.carriedBy) continue;
-    if (enemy.aggroTargetId !== ownerId) continue;
-    if (Math.hypot(enemy.x - clone.x, enemy.y - clone.y) > SERVER_HALLUCINATION_REDIRECT_RADIUS) continue;
-
-    enemy.tauntX = clone.x;
-    enemy.tauntY = clone.y;
-    enemy.tauntTime = duration;
-    enemy.tauntOwnerId = ownerId;
-    enemy.tauntCloneId = clone.cloneId;
-    clone.redirectedEnemyIds.add(enemy.id);
-  }
-
-  return clone;
-}
-
-function completeServerHallucinationReturn(ownerId, mapId, payload) {
-  const clone = activeServerHallucinations.get(ownerId);
-  const owner = players.get(ownerId);
-  const nowMs = Date.now();
-
-  if (!clone || !owner || owner.hp <= 0) return false;
-  if (clone.mapId !== mapId || owner.mapId !== mapId) return false;
-  if (nowMs >= clone.expiresAtMs) return false;
-  if (nowMs - (Number(clone.startedAtMs) || 0) < SERVER_HALLUCINATION_RETURN_LOCKOUT_MS) return false;
-  if (payload.cloneId && payload.cloneId !== clone.cloneId) return false;
-
-  // The clone position is server-owned. Never trust a client-supplied return
-  // destination; snap the authoritative player record to the active illusion.
-  payload.endX = clone.x;
-  payload.endY = clone.y;
-  payload.cloneId = clone.cloneId;
-  owner.x = clone.x;
-  owner.y = clone.y;
-
-  activeServerHallucinations.delete(ownerId);
-  clearServerHallucinationRedirects(clone);
-  return true;
-}
-
-function tickServerHallucinations(dt) {
-  const nowMs = Date.now();
-
-  for (const [ownerId, clone] of activeServerHallucinations) {
-    const owner = players.get(ownerId);
-    if (
-      !owner ||
-      owner.hp <= 0 ||
-      owner.mapId !== clone.mapId ||
-      nowMs >= clone.expiresAtMs
-    ) {
-      activeServerHallucinations.delete(ownerId);
-      clearServerHallucinationRedirects(clone);
-      continue;
-    }
-
-    // Redirect was assigned once when the clone was created. From here the
-    // server only watches those originally redirected enemies for contact.
-    // There is intentionally no repeating redirect/taunt pulse.
-    for (const enemy of allSharedEnemies()) {
-      if (!clone.redirectedEnemyIds?.has(enemy.id)) continue;
-      if (!enemy.alive || enemy.mapId !== clone.mapId) continue;
-      if (clone.releasedEnemyIds.has(enemy.id)) continue;
-
-      if (Math.hypot(enemy.x - clone.x, enemy.y - clone.y) <= SERVER_HALLUCINATION_CONTACT_RADIUS) {
-        clone.releasedEnemyIds.add(enemy.id);
-        enemy.releasedHallucinationId = clone.cloneId;
-        if (
-          enemy.tauntOwnerId === ownerId &&
-          enemy.tauntCloneId === clone.cloneId
-        ) {
-          enemy.tauntTime = 0;
-          enemy.tauntOwnerId = null;
-          enemy.tauntCloneId = null;
-        }
-      }
-    }
-  }
-}
-
-// -----------------------------------------------------------------------------
 // SERVER-AUTHORITATIVE RAIN CLOUD + MAGIC GRASS FIELD
 // -----------------------------------------------------------------------------
 // One Rain Cloud creates one deterministic 20-cell field. Growth/expiry are
@@ -14180,19 +10593,16 @@ const SERVER_RAIN_CLOUD_MOVE_SPEED = 22;
 const SERVER_RAIN_CLOUD_RADIUS = 24;
 const SERVER_RAIN_CLOUD_EFFECT_INTERVAL = 0.50;
 const SERVER_RAIN_GHOST_DAMAGE_INTERVAL = 0.50;
-const SERVER_RAIN_GHOST_POWER = 2;
 const activeServerRainClouds = new Map();
 const activeServerRainFields = new Map();
 let serverRainPatchSequence = 0;
 function serverRainFieldKey(ownerId, patchId) { return `${String(ownerId)}|${Number(patchId) || 0}`; }
 function createServerRainField(ownerId, mapId, patchId, centerX, centerY, startedAtMs = Date.now()) {
   const dimensions = mapWorldDimensions(mapId);
-  const owner = players.get(ownerId);
-  const abilityLevel = Math.max(1, Number(owner?.abilities?.rainCloud) || 1);
   removeServerRainGrassForOwner(ownerId);
   const cells = RAIN_FIELD.generateCells({ ownerId, patchId, centerX, centerY, worldWidth: dimensions.width, worldHeight: dimensions.height });
-  const field = { ownerId: String(ownerId), mapId, patchId: Number(patchId)||0, centerX, centerY, startedAtMs, abilityLevel,
-    grassSlowMultiplier: ABILITY_SCALING.rainCloudGrassSpeedMultiplierAtLevel(abilityLevel),
+  const field = { ownerId: String(ownerId), mapId, patchId: Number(patchId)||0, centerX, centerY, startedAtMs,
+    grassSlowMultiplier: ACTION_BALANCE.rainCloud.grassSpeedMultiplier,
     expiresAtMs: RAIN_FIELD.fieldExpiresAtMs(startedAtMs), cells, burningMask:0, burntMask:0,
     burnExpiresAtMs:Array(RAIN_FIELD.CELL_COUNT).fill(0), burnSourcePlayerIds:Array(RAIN_FIELD.CELL_COUNT).fill(null) };
   activeServerRainFields.set(serverRainFieldKey(ownerId,patchId),field); rainDiagnostics.fieldsCreated += 1; return field;
@@ -14245,7 +10655,6 @@ function burningServerRainGrassNear(mapId,x,y,radius){const now=Date.now(),r2=ra
 function serverRainGrassSlowMultiplierAtPoint(mapId,x,y,entityRadius=7,now=Date.now()){rainDiagnostics.grassQueries+=1;let multiplier=1;for(const field of activeServerRainFields.values()){if(field.mapId!==mapId)continue;
   const broad=Math.max(RAIN_FIELD.FIELD_RADIUS_X,RAIN_FIELD.FIELD_RADIUS_Y)+entityRadius+16,fdx=field.centerX-x,fdy=field.centerY-y;if(fdx*fdx+fdy*fdy>broad*broad)continue;
   for(const cell of field.cells){rainDiagnostics.grassCellChecks+=1;if(!serverRainFieldCellAvailable(field,cell,now))continue;const r=RAIN_FIELD.combinedHitRadius(cell,entityRadius),dx=x-cell.x,dy=y-cell.y;if(dx*dx+dy*dy<=r*r){multiplier=Math.min(multiplier,Math.max(.1,Math.min(1,Number(field.grassSlowMultiplier)||RAIN_FIELD.SPEED_MULTIPLIER)));break;}}}return multiplier;}
-function pointIsInServerRainGrass(mapId,x,y,entityRadius=7,now=Date.now()){return serverRainGrassSlowMultiplierAtPoint(mapId,x,y,entityRadius,now)<1;}
 function updateEnemyRainGrassDerivedState(enemy,now=Date.now()){if(!enemy?.alive)return false;const multiplier=serverRainGrassSlowMultiplierAtPoint(enemy.mapId,Number(enemy.x)||0,Number(enemy.y)||0,7,now);const active=multiplier<1;
   if(Boolean(enemy.magicGrassFieldActive)!==active){if(active)rainDiagnostics.grassEnters+=1;else rainDiagnostics.grassExits+=1;enemy.magicGrassFieldActive=active;}enemy.magicGrassSlowMultiplier=active?multiplier:RAIN_FIELD.SPEED_MULTIPLIER;return active;}
 function tickServerRainGrassMembership(){const now=Date.now();settleServerRainFields(now);for(const enemy of allSharedEnemies()){if(!enemyMapSimulationActive(enemy.mapId))continue;if(!enemy.alive){enemy.magicGrassFieldActive=false;continue;}updateEnemyRainGrassDerivedState(enemy,now);}}
@@ -14323,8 +10732,8 @@ function clearServerPlayerWet(target){if(!target||(Number(target.wetTime)||0)<=0
 function tickServerPlayerWetTimers(dt){for(const target of players.values()){if((Number(target.wetTime)||0)<=0)continue;target.wetTime=Math.max(0,target.wetTime-dt);if(target.wetTime<=0){rainDiagnostics.playerWetExits+=1;broadcastServerPlayerWetState(target);}}}
 function serverRainCloudAffectsPoint(cloud,x,y,inset=0){const r=Math.max(1,cloud.radius-inset),dx=x-cloud.x,dy=y-cloud.y;return dx*dx+dy*dy<=r*r;}
 function applyServerRainCloudToLiving(cloud,owner,damageTick){for(const enemy of allSharedEnemies()){if(!enemy.alive||enemy.returningHome||enemy.mapId!==cloud.mapId)continue;const profile=serverEnemyProfile(enemy),body=serverEnemyBodyPoint(enemy),inset=profile?.rainRadiusInset??2;if(!serverRainCloudAffectsPoint(cloud,body.x,body.y,inset))continue;
-  const burning=burningServerRainGrassNear(cloud.mapId,body.x,body.y,14);if(profile?.rainEffect==="damage"){if(!burning)clearServerEnemyBurn(enemy);if(!damageTick)continue;if(!owner||owner.hp<=0||(Number(owner.abilities?.rainCloud)||0)<=0||!COMBAT_BALANCE.isWandWeaponIndex(owner.weaponIndex))continue;
-    const damage=calculateServerPlayerDamage(owner,enemy,"rain",false,{rainPower:SERVER_RAIN_GHOST_POWER});enemy.hp=Math.max(0,enemy.hp-damage);setEnemyAggroTarget(enemy,owner.id);enemy.lastDamagePlayerId=owner.id;broadcastToMap(enemy.mapId,{type:"enemyDamage",enemyType:enemy.type,enemyId:enemy.id,mapId:enemy.mapId,amount:damage,hp:enemy.hp,critical:false,source:"rain",element:COMBAT_BALANCE.elementForAttack("rain",owner.weaponIndex),attackerId:owner.id});rainDiagnostics.ghostDamageTicks+=1;if(enemy.hp<=0)killSharedEnemy(enemy,owner.id);continue;}
+  const burning=burningServerRainGrassNear(cloud.mapId,body.x,body.y,14);if(profile?.rainEffect==="damage"){if(!burning)clearServerEnemyBurn(enemy);if(!damageTick)continue;if(!owner||owner.hp<=0||owner.weaponIndex!==3)continue;
+    const damage=calculateServerPlayerDamage(owner,enemy,"rain",false);enemy.hp=Math.max(0,enemy.hp-damage);setEnemyAggroTarget(enemy,owner.id);enemy.lastDamagePlayerId=owner.id;broadcastToMap(enemy.mapId,{type:"enemyDamage",enemyType:enemy.type,enemyId:enemy.id,mapId:enemy.mapId,amount:damage,hp:enemy.hp,critical:false,source:"rain",element:COMBAT_BALANCE.elementForAttack("rain",owner.weaponIndex),attackerId:owner.id});rainDiagnostics.ghostDamageTicks+=1;if(enemy.hp<=0)killSharedEnemy(enemy,owner.id);continue;}
   if(burning){if(enemy.wetTime>0){enemy.wetTime=0;rainDiagnostics.enemyWetExits+=1;}continue;}const wasWet=enemy.wetTime>0;applyServerEnemyWet(enemy,STATUS_RULES.enemyWetDuration);if(!wasWet&&enemy.wetTime>0)rainDiagnostics.enemyWetEnters+=1;}}
 function tickServerRainClouds(dt){const now=Date.now();settleServerRainFields(now);for(const [ownerId,cloud] of activeServerRainClouds){const owner=players.get(ownerId);if(!owner||owner.hp<=0||owner.mapId!==cloud.mapId||now>=cloud.expiresAtMs){activeServerRainClouds.delete(ownerId);continue;}
   cloud.orbitElapsed=Math.max(0,(now-cloud.startedAtMs)/1000);cloud.orbitAngle+=SERVER_RAIN_CLOUD_ORBIT_ANGULAR_SPEED*dt;const progress=Math.max(0,Math.min(1,cloud.orbitElapsed/SERVER_RAIN_CLOUD_ORBIT_EXPAND_TIME)),eased=progress*progress*(3-2*progress);cloud.orbitRadius=SERVER_RAIN_CLOUD_ORBIT_MAX_RADIUS*eased;const d=mapWorldDimensions(cloud.mapId);let orbitTargetX=clampNumber(cloud.orbitCenterX+Math.cos(cloud.orbitAngle)*cloud.orbitRadius,6,d.width-6,cloud.x);let orbitTargetY=clampNumber(cloud.orbitCenterY+Math.sin(cloud.orbitAngle)*cloud.orbitRadius*.72,10,d.height-4,cloud.y);const mapDefinition=WORLD_CONTENT.maps[cloud.mapId]||{};if(TERRAIN_RULES.terrainDefinition(mapDefinition)){const resolved=TERRAIN_RULES.clampSegmentToNonVoid(mapDefinition,cloud.x,cloud.y,orbitTargetX,orbitTargetY);orbitTargetX=resolved.x;orbitTargetY=resolved.y;}cloud.targetX=orbitTargetX;cloud.targetY=orbitTargetY;const dx=cloud.targetX-cloud.x,dy=cloud.targetY-cloud.y,dist=Math.hypot(dx,dy);if(dist>.25){const step=Math.min(dist,cloud.moveSpeed*dt);cloud.x+=dx/dist*step;cloud.y+=dy/dist*step;}else{cloud.x=cloud.targetX;cloud.y=cloud.targetY;}
@@ -14343,14 +10752,7 @@ function tickServerRainClouds(dt){const now=Date.now();settleServerRainFields(no
       continue;
     }
 
-    const isOwner = target.id === ownerId;
-
-    // Your own Rain Cloud still wets you. Against another player, Wet/slow is
-    // a PvP status and therefore requires mutual opt-in just like direct hits.
-    if (
-      !isOwner &&
-      (!owner || !pvpPlayersCanHarm(owner, target))
-    ) {
+    if (target.id !== ownerId) {
       continue;
     }
 
@@ -14372,17 +10774,13 @@ function tickServerRainClouds(dt){const now=Date.now();settleServerRainFields(no
       STATUS_RULES.playerWetDuration
     );
 
-    if (!isOwner && owner) {
-      applyPvpCombatLock(owner, target);
-    }
-
     if (hadBurn && target.burnTime <= 0) {
       broadcastServerPlayerBurnState(target);
     }
   }
 }}
 
-function transientAbilitySnapshotForMap(
+function transientActionSnapshotForMap(
   mapId,
   excludeOwnerId = null
 ) {
@@ -14414,39 +10812,40 @@ function transientAbilitySnapshotForMap(
     });
   }
 
-  const hallucinations = [];
-  for (const [ownerId, clone] of activeServerHallucinations) {
+  const rainFields = [];
+  settleServerRainFields(nowMs);
+  for (const field of activeServerRainFields.values()) {
     if (
-      clone.mapId !== mapId ||
-      (excluded && ownerId === excluded) ||
-      nowMs >= clone.expiresAtMs
+      field.mapId !== mapId ||
+      (excluded && field.ownerId === excluded) ||
+      nowMs >= field.expiresAtMs
     ) {
       continue;
     }
 
-    hallucinations.push({
-      ownerId,
-      cloneId: clone.cloneId,
-      x: clone.x,
-      y: clone.y,
-      remainingLife: Math.max(0, (clone.expiresAtMs - nowMs) / 1000),
-      duration: Math.max(0.05, Number(clone.duration) || SERVER_HALLUCINATION_DURATION),
-      hatIndex: clone.hatIndex,
-      shirtIndex: clone.shirtIndex,
-      pantsIndex: clone.pantsIndex
+    const burnEnds = [];
+    for (let index = 0; index < RAIN_FIELD.CELL_COUNT; index += 1) {
+      if (serverRainFieldCellBurning(field, index, nowMs)) {
+        burnEnds.push([
+          index,
+          Math.max(0, (field.burnExpiresAtMs[index] - nowMs) / 1000)
+        ]);
+      }
+    }
+
+    rainFields.push({
+      ownerId: field.ownerId,
+      patchId: field.patchId,
+      centerX: field.centerX,
+      centerY: field.centerY,
+      age: Math.max(0, (nowMs - field.startedAtMs) / 1000),
+      burningMask: field.burningMask >>> 0,
+      burntMask: field.burntMask >>> 0,
+      burnEnds
     });
   }
 
-  const rainFields = [];
-  settleServerRainFields(nowMs);
-  for (const field of activeServerRainFields.values()) {
-    if (field.mapId !== mapId || (excluded && field.ownerId === excluded) || nowMs >= field.expiresAtMs) continue;
-    const burnEnds = [];
-    for (let index = 0; index < RAIN_FIELD.CELL_COUNT; index += 1) if (serverRainFieldCellBurning(field,index,nowMs)) burnEnds.push([index,Math.max(0,(field.burnExpiresAtMs[index]-nowMs)/1000)]);
-    rainFields.push({ownerId:field.ownerId,patchId:field.patchId,centerX:field.centerX,centerY:field.centerY,age:Math.max(0,(nowMs-field.startedAtMs)/1000),burningMask:field.burningMask>>>0,burntMask:field.burntMask>>>0,burnEnds});
-  }
-
-  return { rainClouds, hallucinations, rainFields };
+  return { rainClouds, rainFields };
 }
 
 function sanitizeVisualEffectPayload(
@@ -14464,33 +10863,26 @@ function sanitizeVisualEffectPayload(
             : payload.projectileType === "arrow"
               ? "arrow"
               : "wand",
-
       x: sanitizeVisualPoint(payload.x, mapId, "x"),
       y: sanitizeVisualPoint(payload.y, mapId, "y"),
       vx: sanitizeVisualVelocity(payload.vx),
       vy: sanitizeVisualVelocity(payload.vy),
-
-      life: clampNumber(
-        payload.life,
-        0.1,
-        2.0,
-        1.2
-      )
+      life: clampNumber(payload.life, 0.1, 2.0, 1.2)
     };
   }
 
-  if (effect === "focusFireArc") {
+  if (effect === "basicProjectileImpact") {
     return {
-      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
-      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
-      targetX: sanitizeVisualPoint(payload.targetX, mapId, "x"),
-      targetY: sanitizeVisualPoint(payload.targetY, mapId, "y"),
-      duration: clampNumber(
-        payload.duration,
-        0.18,
-        0.9,
-        0.4
-      )
+      projectileType:
+        payload.projectileType === "rainWand"
+          ? "rainWand"
+          : payload.projectileType === "shepherdStaff"
+            ? "shepherdStaff"
+            : payload.projectileType === "arrow"
+              ? "arrow"
+              : "wand",
+      x: sanitizeVisualPoint(payload.x, mapId, "x"),
+      y: sanitizeVisualPoint(payload.y, mapId, "y")
     };
   }
 
@@ -14505,25 +10897,9 @@ function sanitizeVisualEffectPayload(
       startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
       targetX: sanitizeVisualPoint(payload.targetX, mapId, "x"),
       targetY: sanitizeVisualPoint(payload.targetY, mapId, "y"),
-      duration: clampNumber(
-        payload.duration,
-        0.18,
-        0.9,
-        0.4
-      ),
-      arcHeight: clampNumber(
-        payload.arcHeight,
-        0,
-        60,
-        20
-      ),
-
-      life: clampNumber(
-        payload.life,
-        0.1,
-        2.5,
-        1.65
-      )
+      duration: clampNumber(payload.duration, 0.18, 0.9, 0.4),
+      arcHeight: clampNumber(payload.arcHeight, 0, 60, 20),
+      life: clampNumber(payload.life, 0.1, 2.5, 1.65)
     };
   }
 
@@ -14537,38 +10913,9 @@ function sanitizeVisualEffectPayload(
     };
   }
 
-  if (effect === "basicProjectileImpact") {
-    return {
-      projectileType:
-        payload.projectileType === "rainWand"
-          ? "rainWand"
-          : payload.projectileType === "shepherdStaff"
-            ? "shepherdStaff"
-            : payload.projectileType === "arrow"
-              ? "arrow"
-              : "wand",
-
-      x: sanitizeVisualPoint(payload.x, mapId, "x"),
-      y: sanitizeVisualPoint(payload.y, mapId, "y")
-    };
-  }
-
-  if (effect === "wandMasteryHit") {
-    return {
-      x: sanitizeVisualPoint(payload.x, mapId, "x"),
-      y: sanitizeVisualPoint(payload.y, mapId, "y"),
-      angle: clampNumber(payload.angle, -20, 20, 0)
-    };
-  }
-
   if (effect === "levelUp") {
     return {
-      level: clampInteger(
-        payload.level,
-        1,
-        999,
-        1
-      ),
+      level: clampInteger(payload.level, 1, 999, 1),
       x: sanitizeVisualPoint(payload.x, mapId, "x"),
       y: sanitizeVisualPoint(payload.y, mapId, "y")
     };
@@ -14580,97 +10927,12 @@ function sanitizeVisualEffectPayload(
       startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
       targetX: sanitizeVisualPoint(payload.targetX, mapId, "x"),
       targetY: sanitizeVisualPoint(payload.targetY, mapId, "y"),
-
       followPlayer: Boolean(payload.followPlayer),
       retarget: Boolean(payload.retarget),
       instant: Boolean(payload.instant),
-
-      cloudLife: clampNumber(
-        payload.cloudLife,
-        4,
-        24,
-        12
-      ),
-      orbitAngle: clampNumber(
-        payload.orbitAngle,
-        -Math.PI * 4,
-        Math.PI * 4,
-        0
-      ),
-      patchId: clampInteger(
-        payload.patchId,
-        0,
-        1000000000,
-        0
-      )
-    };
-  }
-
-
-
-  if (effect === "shadowSmoke") {
-    return {
-      x: sanitizeVisualPoint(payload.x, mapId, "x"),
-      y: sanitizeVisualPoint(payload.y, mapId, "y"),
-
-      count: clampInteger(
-        payload.count,
-        6,
-        60,
-        18
-      ),
-
-      scale: clampNumber(
-        payload.scale,
-        0.6,
-        2.0,
-        1
-      )
-    };
-  }
-
-  if (effect === "jesterBlink") {
-    return {
-      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
-      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
-      endX: sanitizeVisualPoint(payload.endX, mapId, "x"),
-      endY: sanitizeVisualPoint(payload.endY, mapId, "y"),
-      cloneId: typeof payload.cloneId === "string"
-        ? payload.cloneId.slice(0, 96)
-        : "",
-
-      hatIndex: clampInteger(
-        payload.hatIndex,
-        -1,
-        10,
-        -1
-      ),
-
-      shirtIndex: clampInteger(
-        payload.shirtIndex,
-        -1,
-        7,
-        -1
-      ),
-
-      pantsIndex: clampInteger(
-        payload.pantsIndex,
-        -1,
-        7,
-        -1
-      )
-    };
-  }
-
-  if (effect === "jesterReturn") {
-    return {
-      startX: sanitizeVisualPoint(payload.startX, mapId, "x"),
-      startY: sanitizeVisualPoint(payload.startY, mapId, "y"),
-      endX: sanitizeVisualPoint(payload.endX, mapId, "x"),
-      endY: sanitizeVisualPoint(payload.endY, mapId, "y"),
-      cloneId: typeof payload.cloneId === "string"
-        ? payload.cloneId.slice(0, 96)
-        : ""
+      cloudLife: clampNumber(payload.cloudLife, 4, 24, 12),
+      orbitAngle: clampNumber(payload.orbitAngle, -Math.PI * 4, Math.PI * 4, 0),
+      patchId: clampInteger(payload.patchId, 0, 1000000000, 0)
     };
   }
 
@@ -14683,38 +10945,12 @@ function clearPlayerOwnedTransientWorldState(
 ) {
   removeServerRainCloudForOwner(playerId, mapId);
   removeServerRainGrassForOwner(playerId, mapId);
-  removeServerHallucinationForOwner(playerId, mapId);
-
-  cancelHunterSnareSetup(
-    playerId,
-    "ownerCleanup"
-  );
-
-  removeHunterSnaresForOwner(
-    playerId,
-    mapId,
-    "ownerCleanup"
-  );
 
   for (const enemy of allSharedEnemies()) {
-    if (mapId && enemy.mapId !== mapId) {
-      continue;
-    }
+    if (mapId && enemy.mapId !== mapId) continue;
 
-    // Death/map-leave makes the owner cease to exist as a combat target.
     if (enemy.aggroTargetId === playerId) {
       clearEnemyAggroTarget(enemy);
-    }
-
-    if (enemy.confusionTargetId === playerId) {
-      enemy.confusionTime = 0;
-      enemy.confusionTargetId = null;
-    }
-
-    if (enemy.tauntOwnerId === playerId) {
-      enemy.tauntTime = 0;
-      enemy.tauntOwnerId = null;
-      enemy.tauntCloneId = null;
     }
 
     if (enemy.carriedBy === playerId) {
@@ -14722,11 +10958,6 @@ function clearPlayerOwnedTransientWorldState(
     }
   }
 
-  for (const rock of environmentEntitiesOnMap(mapId, "rock")) {
-    if (rock.carriedBy === playerId) {
-      clearServerRockHurlState(rock);
-    }
-  }
 }
 
 function broadcastOwnerTransientCleanup(
@@ -14758,48 +10989,32 @@ function handleVisualEffect(
   if (!playerState || playerState.hp <= 0) return;
 
   const effect = String(message.effect || "");
-
   const allowedEffects = new Set([
     "basicProjectile",
     "basicProjectileImpact",
-    "wandMasteryHit",
-    "focusFireArc",
     "fireball",
     "fireballImpact",
     "levelUp",
-    "rainCast",
-    "shadowSmoke",
-    "jesterBlink",
-    "jesterReturn"
+    "rainCast"
   ]);
 
   if (!allowedEffects.has(effect)) return;
 
-  const payload =
-    sanitizeVisualEffectPayload(
-      effect,
-      message.payload,
-      playerState.mapId
-    );
-
+  const payload = sanitizeVisualEffectPayload(
+    effect,
+    message.payload,
+    playerState.mapId
+  );
   if (!payload) return;
-
-  if (effect === "jesterBlink") {
-    const clone = startServerHallucination(playerId, playerState.mapId, payload);
-    payload.duration = Math.max(0.05, Number(clone?.duration) || SERVER_HALLUCINATION_DURATION);
-  }
-
-  if (effect === "jesterReturn") {
-    if (!completeServerHallucinationReturn(playerId, playerState.mapId, payload)) {
-      return;
-    }
-  }
 
   if (effect === "fireballImpact") {
     applyServerFireballSplashBurn(playerId, playerState.mapId, payload);
   }
 
   if (effect === "rainCast") {
+    // Rain Cloud is the Rain Wand's item action.
+    if (playerState.weaponIndex !== 3) return;
+
     if (payload.retarget) {
       const activeCloud = activeServerRainClouds.get(playerId);
       if (activeCloud && activeCloud.mapId === playerState.mapId) {
@@ -14820,7 +11035,6 @@ function handleVisualEffect(
       payload.targetY = cloud.orbitCenterY;
     }
   }
-
 
   // The source client already rendered the local copy.
   broadcastToMap(
@@ -14846,7 +11060,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
   // Full state packets are the map-transition path, but in the coordinate
   // world the destination must be one cardinal neighbour. This prevents a
-  // modified client from teleporting across the grid or back into legacy maps.
+  // modified client from teleporting across the world grid.
   if (
     previous?.mapId &&
     requestedMapId !== previous.mapId &&
@@ -14866,7 +11080,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     99,
     previous?.level || 1
   );
-  const sanitizedClassId = null; // v377: classes are retired.
   const sanitizedWeaponIndex = clampInteger(source.weaponIndex, -1, TIGER_PAW_WEAPON_INDEX, -1);
   const sanitizedHeldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(source.heldBuildPiece)
     ? source.heldBuildPiece
@@ -14912,7 +11125,7 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     healingPotions: previous && Number.isFinite(previous.healingPotions) ? previous.healingPotions : 0,
     attackPotions: previous && Number.isFinite(previous.attackPotions) ? previous.attackPotions : 0,
     magicPotions: previous && Number.isFinite(previous.magicPotions) ? previous.magicPotions : 0,
-    consumableCooldownUntil: previous && Number.isFinite(previous.consumableCooldownUntil) ? previous.consumableCooldownUntil : 0,
+    healingPotionCooldownUntil: previous && Number.isFinite(previous.healingPotionCooldownUntil) ? previous.healingPotionCooldownUntil : 0,
     attackPotionCooldownUntil: previous && Number.isFinite(previous.attackPotionCooldownUntil) ? previous.attackPotionCooldownUntil : 0,
     magicPotionCooldownUntil: previous && Number.isFinite(previous.magicPotionCooldownUntil) ? previous.magicPotionCooldownUntil : 0,
     attackPotionUntil: previous && Number.isFinite(previous.attackPotionUntil) ? previous.attackPotionUntil : 0,
@@ -14960,11 +11173,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? previous.craftingTables
       : 0,
 
-    // Opened static treasure IDs are progression state only. They are never
-    // included in routine public-player replication.
-    openedTreasureIds: previous && Array.isArray(previous.openedTreasureIds)
-      ? previous.openedTreasureIds.slice(0, 64)
-      : [],
 
     beachQuestStage: previous
       ? beachQuestStage(previous)
@@ -14986,21 +11194,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
       ? myrtleQuestStage(previous)
       : "none",
 
-    hunterSnareCharges:
-      previous && Number.isFinite(previous.hunterSnareCharges)
-        ? Math.max(
-            0,
-            Math.min(
-              HUNTER_SNARE_MAX_CHARGES,
-              Math.floor(previous.hunterSnareCharges)
-            )
-          )
-        : HUNTER_SNARE_MAX_CHARGES,
-
-    hunterSnareChargeTime:
-      previous && Number.isFinite(previous.hunterSnareChargeTime)
-        ? Math.max(0, previous.hunterSnareChargeTime)
-        : 0,
 
     // Session-only first crafting progression. Wood is server-owned, so the
     // bench recipe must be validated/spent here rather than only on the client.
@@ -15039,16 +11232,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
         ? Boolean(previous.woodRingCrafted)
         : false,
 
-    marniePickaxeReceived:
-      previous
-        ? Boolean(previous.marniePickaxeReceived)
-        : false,
-
-    shopPurchases:
-      previous &&
-      Array.isArray(previous.shopPurchases)
-        ? previous.shopPurchases
-        : [],
 
     maxHp: previous && Number.isFinite(previous.maxHp)
       ? previous.maxHp
@@ -15060,17 +11243,6 @@ function sanitizePlayerState(id, source = {}, previous = null) {
 
     isDead: authoritativeDead,
 
-    // PvP permission and combat-lock time are server-owned. Normal movement
-    // packets cannot enable/disable PvP or clear an active lock.
-    pvpEnabled:
-      previous
-        ? Boolean(previous.pvpEnabled)
-        : false,
-
-    pvpCombatUntil:
-      previous && Number.isFinite(previous.pvpCombatUntil)
-        ? previous.pvpCombatUntil
-        : 0,
 
     x: sanitizedX,
     y: sanitizedY,
@@ -15082,52 +11254,8 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     weaponIndex: sanitizedWeaponIndex,
     heldBuildPiece: sanitizedHeldBuildPiece,
 
-    // Progression remains client-owned for now, but server damage uses these
-    // sanitized values instead of trusting a client-supplied damage number.
+    // Level is the only progression input used by combat.
     level: sanitizedLevel,
-
-    classId: sanitizedClassId,
-
-    stats: {
-      strength: clampInteger(
-        source.stats?.strength,
-        0,
-        10,
-        previous?.stats?.strength || 0
-      ),
-
-      dex: clampInteger(
-        source.stats?.dex,
-        0,
-        10,
-        previous?.stats?.dex || 0
-      ),
-
-      luck: clampInteger(
-        source.stats?.luck,
-        0,
-        10,
-        previous?.stats?.luck || 0
-      ),
-
-      int: clampInteger(
-        source.stats?.int,
-        0,
-        10,
-        previous?.stats?.int || 0
-      )
-    },
-
-    // v377: combat capabilities are item-owned, not learned/class-owned.
-    // The server derives these levels from authoritative sanitized equipment
-    // instead of trusting a client-supplied skill tree.
-    abilities: {
-      wandMastery: 0,
-      fireball: sanitizedWeaponIndex === 2 ? 1 : 0,
-      rainCloud: sanitizedWeaponIndex === 3 ? 1 : 0,
-      jesterBlink: 0,
-      camouflage: 0
-    },
 
     walkTime: clampNumber(source.walkTime, 0, 1000000, 0),
     firstRaisedLeg:
@@ -15149,21 +11277,11 @@ function sanitizePlayerState(id, source = {}, previous = null) {
     bowReleaseTime: previous ? clampNumber(previous.bowReleaseTime, 0, 0.5, 0) : 0,
     bowReleaseDuration: previous ? clampNumber(previous.bowReleaseDuration, 0.03, 0.5, 0.12) : clampNumber(source.bowReleaseDuration, 0.03, 0.5, 0.12),
 
-    focusFireCasting: previous ? Boolean(previous.focusFireCasting) : false,
     fireballAiming: previous ? Boolean(previous.fireballAiming) : false,
     fireballAimTime: previous ? Math.max(0, Number(previous.fireballAimTime) || 0) : 0,
     rainCloudCasting: previous ? Boolean(previous.rainCloudCasting) : false,
     rainCloudCastTime: previous ? Math.max(0, Number(previous.rainCloudCastTime) || 0) : 0,
     rainCloudCastDuration: previous ? clampNumber(previous.rainCloudCastDuration, 0.05, 2, 0.50) : clampNumber(source.rainCloudCastDuration, 0.05, 2, 0.50),
-
-    // Camouflage is server-owned. Ordinary client state packets cannot enter,
-    // extend, or leave it; dedicated server state tracks cover and opener use.
-    camouflaged: previous ? Boolean(previous.camouflaged) : false,
-
-    // Hunter's Snare setup is owned by hunterSnareSetups. Client state packets
-    // cannot start, accelerate, complete, or cancel the setup countdown.
-    shadowHidden: previous ? Boolean(previous.shadowHidden) : false,
-    shadowHideRevealTime: previous ? clampNumber(previous.shadowHideRevealTime, 0, 1, 0) : 0,
 
     wetTime: previous
       ? Math.max(0, Number(previous.wetTime) || 0)
@@ -15198,7 +11316,7 @@ function publicPlayerState(playerState) {
 
   // Only properties another browser can actually render/use belong on the
   // outbound presence stream. Inventory, crafting progress, shop purchases,
-  // combat stats, server-only camouflage windows, etc. remain server-side.
+  // inventory, crafting progress, and shop purchases remain server-side.
   return {
     id: playerState.id,
     mapId: playerState.mapId,
@@ -15207,8 +11325,6 @@ function publicPlayerState(playerState) {
     hp: playerState.hp,
     maxHp: playerState.maxHp,
     isDead: playerState.isDead,
-    pvpEnabled: playerState.pvpEnabled,
-    pvpCombatUntil: playerState.pvpCombatUntil,
 
     hatIndex: playerState.hatIndex,
     shirtIndex: playerState.shirtIndex,
@@ -15231,16 +11347,11 @@ function publicPlayerState(playerState) {
     bowDrawDuration: playerState.bowDrawDuration,
     bowReleaseTime: playerState.bowReleaseTime,
     bowReleaseDuration: playerState.bowReleaseDuration,
-    focusFireCasting: playerState.focusFireCasting,
     fireballAiming: playerState.fireballAiming,
     fireballAimTime: playerState.fireballAimTime,
     rainCloudCasting: playerState.rainCloudCasting,
     rainCloudCastTime: playerState.rainCloudCastTime,
     rainCloudCastDuration: playerState.rainCloudCastDuration,
-    camouflaged: playerState.camouflaged,
-
-    shadowHidden: playerState.shadowHidden,
-    shadowHideRevealTime: playerState.shadowHideRevealTime,
     wetTime: playerState.wetTime,
     burnTime: playerState.burnTime,
 
@@ -15275,9 +11386,9 @@ const PLAYER_MOVEMENT_DELTA_FIELDS = new Set(["x", "y", "walkTime", "firstRaised
 const PLAYER_TRANSIENT_DELTA_FIELDS = new Set([
   "attackTime", "attackDuration", "attackDirection", "attackHand", "attackAimAngle",
   "bowDrawing", "bowDrawAmount", "bowDrawDuration", "bowReleaseTime", "bowReleaseDuration",
-  "focusFireCasting", "fireballAiming", "fireballAimTime",
+  "fireballAiming", "fireballAimTime",
   "rainCloudCasting", "rainCloudCastTime", "rainCloudCastDuration",
-  "shadowHidden", "shadowHideRevealTime", "wetTime", "burnTime",
+  "wetTime", "burnTime",
   "hurlReachTime", "hurlReachDuration", "hurlReachDirX", "hurlReachDirY"
 ]);
 
@@ -15314,12 +11425,6 @@ function mergedIncrementalPlayerSource(previousState, patch = {}) {
   return {
     ...previousState,
     ...patch,
-    // Partial updates may contain only one progression stat. Preserve the rest
-    // instead of letting the sanitizer fall back to zero/default values.
-    stats: {
-      ...(previousState.stats || {}),
-      ...(patch.stats || {})
-    },
     // Incremental updates are never allowed to move between maps. Portal/map
     // transitions continue to use the full playerState path so destination
     // scene sync remains atomic and authoritative.
@@ -15338,7 +11443,6 @@ function applyIncrementalPlayerUpdate(id, socket, patch) {
   );
 
   players.set(id, cleanState);
-  noteServerCamouflagePlayerUpdate(previousState, cleanState);
   validatePlayerChestContext(id);
 
   broadcastPublicPlayerDelta(
@@ -15550,12 +11654,6 @@ function sendMapSceneSync(
     });
   }
 
-  sendJson(socket, {
-    type: "hunterSnareSnapshot",
-    mapId,
-    snares: hunterSnareSnapshot(mapId),
-    setups: hunterSnareSetupSnapshot(mapId)
-  });
 
   sendJson(socket, {
     type: "coinSnapshot",
@@ -15584,9 +11682,9 @@ function sendMapSceneSync(
   });
 
   sendJson(socket, {
-    type: "transientAbilitySnapshot",
+    type: "transientActionSnapshot",
     mapId,
-    ...transientAbilitySnapshotForMap(mapId, excludePlayerId)
+    ...transientActionSnapshotForMap(mapId, excludePlayerId)
   });
 
   if (syncCompleteLast) {
@@ -15650,40 +11748,6 @@ function staticContentEncoding(req, filePath, stat) {
   return null;
 }
 
-function loopbackAddress(address) {
-  return address === "127.0.0.1" || address === "::1" ||
-    (typeof address === "string" && address.startsWith("::ffff:127."));
-}
-
-function localEditorWriteAllowed(req, requestUrl) {
-  const hostname = String(requestUrl.hostname || "").toLowerCase();
-  const localHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-  return localHost && loopbackAddress(req.socket?.remoteAddress) && req.headers["x-slime-story-editor"] === "1";
-}
-
-function readJsonRequest(req, limit = 2 * 1024 * 1024) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let bytes = 0;
-    req.on("data", chunk => {
-      bytes += chunk.length;
-      if (bytes > limit) {
-        reject(new Error("Request body is too large."));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => {
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-      } catch (error) {
-        reject(new Error(`Invalid JSON: ${error.message}`));
-      }
-    });
-    req.on("error", reject);
-  });
-}
 
 function safePublicPath(requestPath) {
   let pathname;
@@ -15714,11 +11778,8 @@ const server = http.createServer((req, res) => {
     `http://${req.headers.host || "localhost"}`
   );
 
-  // v288: browsers no longer reconstruct canonical map content from a base
-  // source file plus a second adopted-map source. Serve the exact resolved
-  // WORLD_CONTENT object already used by this Node process instead. After an
-  // editor Apply, restarting Node refreshes this snapshot from the canonical
-  // adopted-map JSON and client/server cannot disagree about which map won.
+  // Serve the exact resolved WORLD_CONTENT object used by this Node process so
+  // the browser and authoritative server always share the same coordinate world.
   if (requestUrl.pathname === "/shared/world-content-runtime.js" && (req.method === "GET" || req.method === "HEAD")) {
     try {
       const source = browserRuntimeWorldContentSource(WORLD_CONTENT);
@@ -15940,9 +12001,7 @@ function applyFullPlayerStateUpdate(
 
   if (mapChanged && previousState?.mapId) {
     releaseChestContextForPlayer(playerId, "map", true);
-    resetServerCamouflageState(previousState, "map", true);
     resetServerPlayerPresentationState(cleanState);
-    cleanState.camouflaged = false;
     leavePlayerMap(
       playerId,
       previousState.mapId,
@@ -15951,7 +12010,6 @@ function applyFullPlayerStateUpdate(
   }
 
   players.set(playerId, cleanState);
-  noteServerCamouflagePlayerUpdate(previousState, cleanState);
   if (!mapChanged) validatePlayerChestContext(playerId);
 
   if (mapChanged) {
@@ -16012,8 +12070,8 @@ function handlePersistentStateRestore(playerId, socket, message) {
   const buffs = state.buffs && typeof state.buffs === "object" ? state.buffs : {};
   playerState.attackPotionUntil = now + Math.min(POTION_BUFF_MS, clampInteger(buffs.attackRemainingMs, 0, POTION_BUFF_MS, 0));
   playerState.magicPotionUntil = now + Math.min(POTION_BUFF_MS, clampInteger(buffs.magicRemainingMs, 0, POTION_BUFF_MS, 0));
-  playerState.consumableCooldownUntil = now + Math.min(HEALING_POTION_COOLDOWN_MS, clampInteger(
-    buffs.healingPotionCooldownRemainingMs ?? buffs.consumableCooldownRemainingMs,
+  playerState.healingPotionCooldownUntil = now + Math.min(HEALING_POTION_COOLDOWN_MS, clampInteger(
+    buffs.healingPotionCooldownRemainingMs,
     0,
     HEALING_POTION_COOLDOWN_MS,
     0
@@ -16030,12 +12088,6 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.torches = clampInteger(resources.torches, 0, 999999, 0);
   playerState.chests = clampInteger(resources.chests, 0, 999999, 0);
   playerState.craftingTables = clampInteger(resources.craftingTables, 0, 999999, 0);
-  playerState.openedTreasureIds = Array.from(new Set(
-    (Array.isArray(state.openedTreasureIds) ? state.openedTreasureIds : [])
-      .filter(id => typeof id === "string" && id.includes(":treasure:"))
-      .slice(0, 64)
-  ));
-
   const story = state.story && typeof state.story === "object"
     ? state.story
     : {};
@@ -16046,7 +12098,6 @@ function handlePersistentStateRestore(playerId, socket, message) {
   playerState.woodChestCrafted = Boolean(story.woodChestCrafted);
   playerState.woodGreavesCrafted = Boolean(story.woodGreavesCrafted);
   playerState.woodRingCrafted = Boolean(story.woodRingCrafted);
-  playerState.marniePickaxeReceived = Boolean(story.marniePickaxeReceived);
 
   const beachQuest = state.beachQuest && typeof state.beachQuest === "object"
     ? state.beachQuest
@@ -16065,15 +12116,6 @@ function handlePersistentStateRestore(playerId, socket, message) {
     ? myrtleQuest.stage
     : "none";
 
-  const purchases = Array.isArray(state.shopPurchases)
-    ? state.shopPurchases
-    : [];
-  playerState.shopPurchases = Array.from(new Set(
-    purchases
-      .filter(itemId => typeof itemId === "string" && SHOP_PURCHASE_HISTORY_ITEM_IDS.has(itemId) && itemId !== "weapon_axe")
-      .slice(0, SHOP_PURCHASE_HISTORY_ITEM_IDS.size)
-  ));
-
   sendJson(socket, {
     type: "persistentStateRestored",
     coins: playerState.coins,
@@ -16084,7 +12126,7 @@ function handlePersistentStateRestore(playerId, socket, message) {
     healingPotions: playerState.healingPotions,
     attackPotions: playerState.attackPotions,
     magicPotions: playerState.magicPotions,
-    consumableCooldownUntil: playerState.consumableCooldownUntil,
+    healingPotionCooldownUntil: playerState.healingPotionCooldownUntil,
     attackPotionCooldownUntil: playerState.attackPotionCooldownUntil,
     magicPotionCooldownUntil: playerState.magicPotionCooldownUntil,
     attackPotionUntil: playerState.attackPotionUntil,
@@ -16099,13 +12141,11 @@ function handlePersistentStateRestore(playerId, socket, message) {
     torches: playerState.torches,
     chests: playerState.chests,
     craftingTables: playerState.craftingTables,
-    openedTreasureIds: playerState.openedTreasureIds.slice(0, 64),
     beachQuestStage: playerState.beachQuestStage,
     beachQuestFirstCrabKills: playerState.beachQuestFirstCrabKills,
     beachQuestSecondCrabKills: playerState.beachQuestSecondCrabKills,
     beachQuestIcedCoffee: playerState.beachQuestIcedCoffee,
-    myrtleQuestStage: playerState.myrtleQuestStage,
-    marniePickaxeReceived: Boolean(playerState.marniePickaxeReceived)
+    myrtleQuestStage: playerState.myrtleQuestStage
   });
 }
 
@@ -16151,53 +12191,12 @@ function handleClientMessage(playerId, socket, message) {
       handleSharedEnemyAction(playerId, message);
       return;
 
-    case "camouflageBreak":
-      handleCamouflageBreak(playerId);
-      return;
-
-    case "hunterSnareBegin":
-      handleHunterSnareBegin(playerId);
-      return;
-
-    case "hunterSnareCancel":
-      handleHunterSnareCancel(playerId);
-      return;
-
-    // v263 and older clients used a client-timed placement packet. Ignore it
-    // rather than letting an old browser bypass the authoritative setup.
-    case "hunterSnarePlace":
-      return;
-
-    case "playerDamageRequest":
-      handlePlayerDamageRequest(playerId, message);
-      return;
-
-    case "playerIgniteRequest":
-      handlePlayerIgniteRequest(playerId, message);
-      return;
-
-    case "pvpToggle":
-      handlePvpToggle(playerId, socket, message);
-      return;
-
-    case "pvpAttack":
-      handlePvpAttack(playerId, message);
-      return;
-
-    case "playerHealRequest":
-      handlePlayerHealRequest(playerId, message);
-      return;
-
     case "playerRespawn":
       handlePlayerRespawn(playerId, message);
       return;
 
     case "visualEffect":
       handleVisualEffect(playerId, socket, message);
-      return;
-
-    case "environmentCatalog":
-      handleEnvironmentCatalog(playerId, message, socket);
       return;
 
     case "environmentAction":
@@ -16249,12 +12248,6 @@ function handleClientMessage(playerId, socket, message) {
     case "chestStoreItem":
       handleChestStoreItem(playerId, socket, message);
       return;
-    case "treasureOpen":
-      handleTreasureOpen(playerId, socket, message);
-      return;
-    case "chestToggle":
-      handleChestToggle(playerId, socket, message);
-      return;
 
     case "structurePlace":
       handleStructurePlaceRequest(playerId, socket, message);
@@ -16266,10 +12259,6 @@ function handleClientMessage(playerId, socket, message) {
 
     case "consumableUse":
       handleConsumableUse(playerId, socket, message);
-      return;
-
-    case "marnieQuestInteract":
-      handleMarnieQuestInteract(playerId, socket, message);
       return;
 
     case "shopPurchase":
@@ -16316,18 +12305,15 @@ wss.on("connection", socket => {
     healingPotions: initialState.healingPotions,
     attackPotions: initialState.attackPotions,
     magicPotions: initialState.magicPotions,
-    consumableCooldownUntil: initialState.consumableCooldownUntil,
+    healingPotionCooldownUntil: initialState.healingPotionCooldownUntil,
     attackPotionCooldownUntil: initialState.attackPotionCooldownUntil,
     magicPotionCooldownUntil: initialState.magicPotionCooldownUntil,
     attackPotionUntil: initialState.attackPotionUntil,
     magicPotionUntil: initialState.magicPotionUntil,
     goldSlimeBubbles: initialState.goldSlimeBubbles,
     arrows: initialState.arrows,
-    hunterSnareCharges: initialState.hunterSnareCharges,
     hp: initialState.hp,
     maxHp: initialState.maxHp,
-    pvpEnabled: initialState.pvpEnabled,
-    pvpCombatUntil: initialState.pvpCombatUntil,
     worldContentVersion:
       WORLD_CONTENT.version,
     worldSeed: WORLD_CONTENT.worldSeed,
@@ -16377,7 +12363,6 @@ wss.on("connection", socket => {
   });
 
   socket.on("close", () => {
-    focusFireDamageChains.delete(id);
     persistentStateRestoredPlayers.delete(id);
     playerDoorPassages.delete(id);
 
@@ -16395,13 +12380,7 @@ wss.on("connection", socket => {
     }
 
     players.delete(id);
-    serverCamouflageStates.delete(id);
 
-    for (const key of [...pvpAttackRateLimits.keys()]) {
-      if (key.startsWith(`${id}:`) || key.includes(`:${id}:`)) {
-        pvpAttackRateLimits.delete(key);
-      }
-    }
 
     unregisterPlayerSocket(socket);
     broadcastPresence();

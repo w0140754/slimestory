@@ -10,7 +10,6 @@ class OnlineClient {
     this.remotePlayers = new Map();
     this.sharedCoins = new Map();
     this.sharedResources = new Map();
-    this.environmentCatalogSent = false;
     this.sendAccumulator = 0;
     this.sendInterval = 0.10; // compact motion can still update at 10 Hz
     this.lastLocalStateSnapshot = null;
@@ -159,13 +158,9 @@ class OnlineClient {
       this.lastAimQuantized = null;
       this.lastAimSentAt = 0;
       this.remotePlayers.clear();
-      player.pvpEnabled = false;
-      player.pvpCombatUntil = 0;
-      player.pvpTogglePending = false;
       this.sharedCoins.clear();
       this.sharedResources.clear();
-      this.environmentCatalogSent = false;
-      cancelPendingMapEnemySync();
+        cancelPendingMapEnemySync();
       this.removeSharedCoinVisuals();
       this.removeSharedResourceVisuals();
       this.setStatus("RECONNECTING…");
@@ -297,7 +292,7 @@ class OnlineClient {
         if (Number.isFinite(message.healingPotions)) player.healingPotions = message.healingPotions;
         if (Number.isFinite(message.attackPotions)) player.attackPotions = message.attackPotions;
         if (Number.isFinite(message.magicPotions)) player.magicPotions = message.magicPotions;
-        if (Number.isFinite(message.consumableCooldownUntil)) player.consumableCooldownUntil = message.consumableCooldownUntil;
+        if (Number.isFinite(message.healingPotionCooldownUntil)) player.healingPotionCooldownUntil = message.healingPotionCooldownUntil;
         if (Number.isFinite(message.attackPotionCooldownUntil)) player.attackPotionCooldownUntil = message.attackPotionCooldownUntil;
         if (Number.isFinite(message.magicPotionCooldownUntil)) player.magicPotionCooldownUntil = message.magicPotionCooldownUntil;
         if (Number.isFinite(message.attackPotionUntil)) player.attackPotionUntil = message.attackPotionUntil;
@@ -312,15 +307,6 @@ class OnlineClient {
         }
       }
 
-      if (Number.isFinite(message.hunterSnareCharges)) {
-        player.hunterSnareCharges = Math.max(
-          0,
-          Math.min(
-            player.hunterSnareMaxCharges,
-            Math.floor(message.hunterSnareCharges)
-          )
-        );
-      }
 
       if (Number.isFinite(message.maxHp)) {
         player.maxHp = message.maxHp;
@@ -330,15 +316,7 @@ class OnlineClient {
         player.hp = message.hp;
       }
 
-      player.pvpEnabled = Boolean(message.pvpEnabled);
-
-      if (Number.isFinite(message.pvpCombatUntil)) {
-        player.pvpCombatUntil = message.pvpCombatUntil;
-      }
-
       updateInventoryUi();
-      updateHunterSnareChargeUi();
-      this.sendEnvironmentCatalog();
       return;
     }
 
@@ -356,13 +334,13 @@ class OnlineClient {
     }
 
     if (message.type === "consumableUseResult") {
-      const successfulPotion = message.success && UTILITY_SLOT_ITEMS.includes(message.item);
+      const successfulPotion = message.success && CONSUMABLE_ITEM_IDS.includes(message.item);
       if (Number.isFinite(message.hp)) player.hp = message.hp;
       if (Number.isFinite(message.maxHp)) player.maxHp = message.maxHp;
       if (Number.isFinite(message.totalHealingPotions)) player.healingPotions = message.totalHealingPotions;
       if (Number.isFinite(message.totalAttackPotions)) player.attackPotions = message.totalAttackPotions;
       if (Number.isFinite(message.totalMagicPotions)) player.magicPotions = message.totalMagicPotions;
-      if (Number.isFinite(message.consumableCooldownUntil)) player.consumableCooldownUntil = message.consumableCooldownUntil;
+      if (Number.isFinite(message.healingPotionCooldownUntil)) player.healingPotionCooldownUntil = message.healingPotionCooldownUntil;
       if (Number.isFinite(message.attackPotionCooldownUntil)) player.attackPotionCooldownUntil = message.attackPotionCooldownUntil;
       if (Number.isFinite(message.magicPotionCooldownUntil)) player.magicPotionCooldownUntil = message.magicPotionCooldownUntil;
       if (Number.isFinite(message.attackPotionUntil)) player.attackPotionUntil = message.attackPotionUntil;
@@ -371,18 +349,6 @@ class OnlineClient {
       if (successfulPotion) triggerPotionFeedback(message.item, player.x, player.y);
       updateInventoryUi();
       updateHotbar();
-      saveLocalCharacterState(true);
-      return;
-    }
-
-    if (message.type === "marnieQuestResult") {
-      if (Number.isFinite(message.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
-      if (message.success) {
-        completeMarniePickaxeReward(tutorialNpc);
-      } else if (message.reason === "needWood") {
-        spawnFloatingText(player.x, player.y - 30, `WOOD ${player.wood} / 10`, "#fff1b0", 1.0);
-      }
-      updateInventoryUi();
       saveLocalCharacterState(true);
       return;
     }
@@ -403,7 +369,7 @@ class OnlineClient {
       if (Number.isFinite(message.healingPotions)) player.healingPotions = Math.max(0, Math.floor(message.healingPotions));
       if (Number.isFinite(message.attackPotions)) player.attackPotions = Math.max(0, Math.floor(message.attackPotions));
       if (Number.isFinite(message.magicPotions)) player.magicPotions = Math.max(0, Math.floor(message.magicPotions));
-      if (Number.isFinite(message.consumableCooldownUntil)) player.consumableCooldownUntil = message.consumableCooldownUntil;
+      if (Number.isFinite(message.healingPotionCooldownUntil)) player.healingPotionCooldownUntil = message.healingPotionCooldownUntil;
       if (Number.isFinite(message.attackPotionCooldownUntil)) player.attackPotionCooldownUntil = message.attackPotionCooldownUntil;
       if (Number.isFinite(message.magicPotionCooldownUntil)) player.magicPotionCooldownUntil = message.magicPotionCooldownUntil;
       if (Number.isFinite(message.attackPotionUntil)) player.attackPotionUntil = message.attackPotionUntil;
@@ -420,61 +386,15 @@ class OnlineClient {
       if (Number.isFinite(message.torches)) player.torches = Math.max(0, Math.floor(message.torches));
       if (Number.isFinite(message.chests)) player.chests = Math.max(0, Math.floor(message.chests));
       if (Number.isFinite(message.craftingTables)) player.craftingTables = Math.max(0, Math.floor(message.craftingTables));
-      if (Array.isArray(message.openedTreasureIds)) {
-        player.openedTreasureIds = new Set(
-          message.openedTreasureIds
-            .filter(id => typeof id === "string" && id.includes(":treasure:"))
-            .slice(0, 64)
-        );
-      }
       if (typeof message.beachQuestStage === "string") player.beachQuest.stage = message.beachQuestStage;
       if (Number.isFinite(message.beachQuestFirstCrabKills)) player.beachQuest.firstCrabKills = Math.max(0, Math.floor(message.beachQuestFirstCrabKills));
       if (Number.isFinite(message.beachQuestSecondCrabKills)) player.beachQuest.secondCrabKills = Math.max(0, Math.floor(message.beachQuestSecondCrabKills));
       if (Number.isFinite(message.beachQuestIcedCoffee)) player.beachQuest.icedCoffee = Math.max(0, Math.min(1, Math.floor(message.beachQuestIcedCoffee)));
       if (typeof message.myrtleQuestStage === "string") player.myrtleQuest.stage = message.myrtleQuestStage;
-      if (typeof message.marniePickaxeReceived === "boolean") player.story.marniePickaxeReceived = message.marniePickaxeReceived;
 
       updateInventoryUi();
       updateShopUi();
       saveLocalCharacterState(true);
-      return;
-    }
-
-    if (message.type === "pvpToggleResult") {
-      player.pvpTogglePending = false;
-      player.pvpEnabled = Boolean(message.enabled);
-
-      if (Number.isFinite(message.lockRemainingMs)) {
-        player.pvpCombatUntil =
-          Date.now() + Math.max(0, message.lockRemainingMs);
-      }
-
-      if (!message.ok && player.pvpEnabled) {
-        spawnFloatingText(
-          player.x,
-          player.y - 38,
-          "PVP LOCKED",
-          "#ff9a86",
-          0.85
-        );
-      }
-
-      updatePvpUi();
-      return;
-    }
-
-    if (message.type === "pvpCombatLock") {
-      if (
-        Array.isArray(message.playerIds) &&
-        message.playerIds.includes(this.localPlayerId) &&
-        Number.isFinite(message.until)
-      ) {
-        player.pvpCombatUntil = Math.max(
-          player.pvpCombatUntil,
-          message.until
-        );
-        updatePvpUi();
-      }
       return;
     }
 
@@ -512,7 +432,7 @@ class OnlineClient {
     }
 
     if (message.type === "playerConsumableEffect") {
-      if (message.playerId !== this.localPlayerId && UTILITY_SLOT_ITEMS.includes(message.item)) {
+      if (message.playerId !== this.localPlayerId && CONSUMABLE_ITEM_IDS.includes(message.item)) {
         const remote = this.remotePlayers.get(message.playerId);
         if (remote && remote.mapId === currentMapId) {
           spawnPotionUseEffect(message.item, remote.x, remote.y);
@@ -521,24 +441,11 @@ class OnlineClient {
       return;
     }
 
-    if (message.type === "camouflageState") {
-      if (message.playerId === this.localPlayerId) {
-        applyAuthoritativeCamouflageState(message);
-      } else {
-        const remote = this.remotePlayers.get(message.playerId);
-        if (remote) {
-          remote.camouflaged = Boolean(message.camouflaged);
-          remote._nextCamouflageParticleAt = 0;
-        }
-      }
-      return;
-    }
 
     if (message.type === "playerLeft") {
       removeRemoteCasterEffectsForOwner(
         message.id
       );
-      removeHunterSnareVisualsForOwner(message.id);
 
       this.remotePlayers.delete(message.id);
       return;
@@ -576,243 +483,17 @@ class OnlineClient {
       return;
     }
 
-    if (message.type === "hunterSnareChargeState") {
-      if (
-        message.ownerId === this.localPlayerId &&
-        Number.isFinite(message.charges)
-      ) {
-        player.hunterSnareCharges = Math.max(
-          0,
-          Math.min(
-            player.hunterSnareMaxCharges,
-            Math.floor(message.charges)
-          )
-        );
-        updateHunterSnareChargeUi();
-      }
-      return;
-    }
 
-    if (
-      message.type === "hunterSnareSetupRejected" ||
-      message.type === "hunterSnarePlaceRejected"
-    ) {
-      if (message.ownerId === this.localPlayerId) {
-        setHunterSnareSetupPresentation(
-          player,
-          false,
-          player.hunterSnareSetDuration
-        );
 
-        if (Number.isFinite(message.charges)) {
-          player.hunterSnareCharges = Math.max(
-            0,
-            Math.min(
-              player.hunterSnareMaxCharges,
-              Math.floor(message.charges)
-            )
-          );
-        }
 
-        if (message.reason === "noCharges") {
-          spawnFloatingText(
-            player.x,
-            player.y - 28,
-            "NO CHARGES",
-            "#d7d0bd",
-            0.7
-          );
-        }
 
-        updateHunterSnareChargeUi();
-      }
-      return;
-    }
 
-    if (message.type === "hunterSnareSetupStarted") {
-      const target =
-        message.ownerId === this.localPlayerId
-          ? player
-          : this.remotePlayers.get(message.ownerId);
 
-      if (target) {
-        const keepLocalProgress =
-          message.ownerId === this.localPlayerId &&
-          target.hunterSnareSetting;
 
-        setHunterSnareSetupPresentation(
-          target,
-          true,
-          Number(message.duration) || 1.25,
-          keepLocalProgress
-            ? target.hunterSnareSetTime
-            : Math.max(0, Number(message.elapsed) || 0)
-        );
-      }
-      return;
-    }
 
-    if (message.type === "hunterSnareSetupCancelled") {
-      const target =
-        message.ownerId === this.localPlayerId
-          ? player
-          : this.remotePlayers.get(message.ownerId);
-
-      if (target) {
-        setHunterSnareSetupPresentation(
-          target,
-          false,
-          Number(message.duration) || 1.25
-        );
-      }
-      return;
-    }
-
-    if (message.type === "hunterSnareSnapshot") {
-      hunterSnareVisuals.clear();
-
-      for (const remote of this.remotePlayers.values()) {
-        if (remote.mapId === message.mapId) {
-          setHunterSnareSetupPresentation(
-            remote,
-            false,
-            remote.hunterSnareSetDuration || 1.25
-          );
-        }
-      }
-
-      for (const snare of message.snares || []) {
-        setHunterSnareVisual(snare);
-      }
-
-      for (const setup of message.setups || []) {
-        const target =
-          setup.ownerId === this.localPlayerId
-            ? player
-            : this.remotePlayers.get(setup.ownerId);
-
-        if (!target) continue;
-
-        setHunterSnareSetupPresentation(
-          target,
-          true,
-          Number(setup.duration) || 1.25,
-          Math.max(0, Number(setup.elapsed) || 0)
-        );
-      }
-      return;
-    }
-
-    if (message.type === "hunterSnarePlaced") {
-      const target =
-        message.ownerId === this.localPlayerId
-          ? player
-          : this.remotePlayers.get(message.ownerId);
-
-      if (target) {
-        setHunterSnareSetupPresentation(
-          target,
-          false,
-          Number(message.setupDuration) || 1.25
-        );
-      }
-
-      setHunterSnareVisual(message);
-      return;
-    }
-
-    if (message.type === "hunterSnareRemoved") {
-      removeHunterSnareVisual(message.snareId);
-      return;
-    }
-
-    if (message.type === "hunterSnareTriggered") {
-      removeHunterSnareVisual(message.snareId);
-
-      if (message.targetPlayerId) {
-        const trappedPlayer =
-          this.playerForNetworkId(message.targetPlayerId);
-
-        if (trappedPlayer) {
-          trappedPlayer.pvpSnareRootTime = Math.max(
-            Number(trappedPlayer.pvpSnareRootTime) || 0,
-            Number(message.rootSeconds) || 0.65
-          );
-          trappedPlayer.pvpSnareSlowTime = Math.max(
-            Number(trappedPlayer.pvpSnareSlowTime) || 0,
-            Number(message.slowSeconds) || 3
-          );
-          trappedPlayer.pvpSnareSlowMultiplier = Math.max(
-            0.1,
-            Math.min(
-              1,
-              Number(message.slowMultiplier) || 0.45
-            )
-          );
-
-          if (message.mapId === currentMapId) {
-            spawnFloatingText(
-              trappedPlayer.x,
-              trappedPlayer.y - 27,
-              "SNARED!",
-              "#d7d0bd",
-              0.9
-            );
-          }
-        }
-        return;
-      }
-
-      const trappedEnemy = findClientWorldEnemy(
-        message.enemyId,
-        message.enemyType,
-        message.mapId
-      );
-
-      if (trappedEnemy) {
-        setReplicatedEnemyCountdown(
-          trappedEnemy,
-          "snareRootTime",
-          Math.max(
-            trappedEnemy.snareRootTime || 0,
-            Number(message.rootSeconds) || 0.65
-          )
-        );
-        setReplicatedEnemyCountdown(
-          trappedEnemy,
-          "snareSlowTime",
-          Math.max(
-            trappedEnemy.snareSlowTime || 0,
-            Number(message.slowSeconds) || 3
-          )
-        );
-
-        if (message.mapId === currentMapId) {
-          const body = enemyBodyPoint(trappedEnemy);
-          spawnFloatingText(
-            body.x,
-            body.y - 19,
-            "SNARED!",
-            "#d7d0bd",
-            0.9
-          );
-        }
-      }
-      return;
-    }
-
-    if (message.type === "enemyConfused") {
-      this.handleEnemyConfused(message);
-      return;
-    }
 
     if (message.type === "enemyDamage") {
       this.handleSharedEnemyDamage(message);
-      return;
-    }
-
-    if (message.type === "enemyHeal") {
-      this.handleSharedEnemyHeal(message);
       return;
     }
 
@@ -821,16 +502,8 @@ class OnlineClient {
       return;
     }
 
-    if (
-      message.type === "playerDamage" ||
-      message.type === "enemyHitPlayer"
-    ) {
+    if (message.type === "playerDamage") {
       this.handlePlayerDamage(message);
-      return;
-    }
-
-    if (message.type === "playerHeal") {
-      this.handlePlayerHeal(message);
       return;
     }
 
@@ -844,8 +517,8 @@ class OnlineClient {
       return;
     }
 
-    if (message.type === "transientAbilitySnapshot") {
-      applyTransientAbilitySnapshot(message);
+    if (message.type === "transientActionSnapshot") {
+      applyTransientActionSnapshot(message);
       return;
     }
 
@@ -918,22 +591,6 @@ class OnlineClient {
       return;
     }
 
-    if (message.type === "rockMotion") {
-      this.applyRockMotion(
-        message.rocks,
-        message.mapId
-      );
-      return;
-    }
-
-    if (message.type === "rockState") {
-      this.applyRockState(
-        message.rock,
-        message.mapId
-      );
-      return;
-    }
-
     if (message.type === "resourceSnapshot") {
       this.applyResourceSnapshot(
         message.resources
@@ -983,24 +640,6 @@ class OnlineClient {
     if (message.type === "chestStoreResult") { applyChestStoreResult(message); return; }
     if (message.type === "inventoryDropResult") { applyInventoryDropResult(message); return; }
 
-    if (message.type === "treasureResult") {
-      const chestId = typeof message.chestId === "string" ? message.chestId : "";
-      if (Number.isFinite(message.totalCoins)) player.coins = Math.max(0, Math.floor(message.totalCoins));
-      if (Number.isFinite(message.totalWood)) player.wood = Math.max(0, Math.floor(message.totalWood));
-      if (Number.isFinite(message.totalStone)) player.stone = Math.max(0, Math.floor(message.totalStone));
-      if (message.success) {
-        const parts = [];
-        if ((Number(message.rewardCoins) || 0) > 0) parts.push(`+${Math.floor(message.rewardCoins)} COINS`);
-        if ((Number(message.rewardWood) || 0) > 0) parts.push(`+${Math.floor(message.rewardWood)} WOOD`);
-        if ((Number(message.rewardStone) || 0) > 0) parts.push(`+${Math.floor(message.rewardStone)} STONE`);
-        spawnFloatingText(player.x, player.y - 26, parts.join(" · ") || "TREASURE!", "#ffe08a", 1.45);
-      } else if (message.reason === "alreadyOpened") {
-        spawnFloatingText(player.x, player.y - 26, "EMPTY", "#c8b9a8", 0.8);
-      }
-      updateInventoryUi();
-      saveLocalCharacterState(true);
-      return;
-    }
 
     if (message.type === "beachQuestState") {
       applyBeachQuestState(message);
@@ -1019,13 +658,6 @@ class OnlineClient {
       player.beachQuest.icedCoffee = Math.max(0, Math.floor(Number(message.icedCoffee) || 0));
       if (beachQuestOpen && beachQuestView) onlineClient.requestBeachGirlQuest("talk");
       saveLocalCharacterState(true);
-      return;
-    }
-
-    if (message.type === "environmentReward") {
-      this.handleEnvironmentReward(
-        message
-      );
       return;
     }
 
@@ -1059,115 +691,6 @@ class OnlineClient {
       this.playerCount = count;
       this.setStatus(this.buildStatusText());
     }
-  }
-
-  environmentCatalogForMap(
-    mapId,
-    state
-  ) {
-    const entities = [];
-
-    const staticTrees = [];
-
-    for (const tree of state.trees || []) {
-      if (!tree.entityId) continue;
-
-      // Fire-immune + non-interactive trees never mutate. Keep them completely
-      // out of the authoritative environment entity registry; the server only
-      // needs their compact positions for Hurl collision.
-      if (tree.fireImmune && tree.nonInteractive) {
-        staticTrees.push([
-          Math.round(Number(tree.x) || 0),
-          Math.round(Number(tree.y) || 0)
-        ]);
-        continue;
-      }
-
-      entities.push({
-        id: tree.entityId,
-        kind: "tree",
-        x: tree.x,
-        y: tree.y,
-        canopyVariant:
-          tree.canopyVariant ?? 0,
-        fireImmune: Boolean(tree.fireImmune),
-        nonInteractive: Boolean(tree.nonInteractive)
-      });
-    }
-
-    for (const grass of state.tallGrass || []) {
-      if (!grass.entityId) continue;
-
-      entities.push({
-        id: grass.entityId,
-        kind: "grass",
-        x: grass.x,
-        y: grass.y,
-        width: Number(grass.width) || 13
-      });
-    }
-
-    for (const rock of state.rocks || []) {
-      if (!rock.entityId) continue;
-
-      entities.push({
-        id: rock.entityId,
-        kind: "rock",
-        x: rock.homeX ?? rock.x,
-        y: rock.homeY ?? rock.y,
-        variant: rock.variant || "plain"
-      });
-    }
-
-    for (
-      const flower
-      of state.harvestFlowers || []
-    ) {
-      if (!flower.entityId) continue;
-
-      entities.push({
-        id: flower.entityId,
-        kind: "flower",
-        x: flower.x,
-        y: flower.y,
-        flowerType: flower.type
-      });
-    }
-
-    return {
-      type: "environmentCatalog",
-      mapId,
-      entities,
-      // Static tree collision uses tiny coordinate pairs rather than mutable
-      // environment objects. This is connection/setup data only.
-      staticTrees
-    };
-  }
-
-  sendEnvironmentCatalog() {
-    if (
-      this.environmentCatalogSent ||
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    for (
-      const [mapId, state]
-      of Object.entries(mapStates)
-    ) {
-      this.socket.send(JSON.stringify(
-        this.environmentCatalogForMap(
-          mapId,
-          state
-        )
-      ));
-    }
-
-    this.environmentCatalogSent = true;
-    return true;
   }
 
   findEnvironmentEntity(
@@ -1319,28 +842,18 @@ class OnlineClient {
     }
 
     if (state.kind === "rock") {
-      const serverX = Number(state.x);
-      const serverY = Number(state.y);
-      const nextCarriedBy =
-        typeof state.carriedBy === "string"
-          ? state.carriedBy
-          : null;
-      const nextHurlTime = Math.max(0, Number(state.hurlTime) || 0);
-      const nextRollTime = Math.max(0, Number(state.rollTime) || 0);
-      const wasMoving =
-        (Number(entity.hurlTime) || 0) > 0 ||
-        (Number(entity.rollTime) || 0) > 0;
-      const willMove = nextHurlTime > 0 || nextRollTime > 0;
+      const oldRockHp = Math.max(0, Number(entity.hp) || Number(entity.maxHp) || 3);
+      const oldRockDepleted = Boolean(entity.depleted);
 
       entity.homeX = Number.isFinite(state.homeX) ? state.homeX : entity.homeX;
       entity.homeY = Number.isFinite(state.homeY) ? state.homeY : entity.homeY;
       entity.variant = state.variant || entity.variant || "plain";
-
-      const oldRockHp = Math.max(0, Number(entity.hp) || Number(entity.maxHp) || 3);
-      const oldRockDepleted = Boolean(entity.depleted);
       entity.maxHp = Math.max(1, Math.floor(Number(state.maxHp) || Number(entity.maxHp) || 3));
       entity.hp = Math.max(0, Math.min(entity.maxHp, Math.floor(Number(state.hp) || 0)));
       entity.depleted = Boolean(state.depleted) || entity.hp <= 0;
+
+      if (Number.isFinite(Number(state.x))) entity.x = Number(state.x);
+      if (Number.isFinite(Number(state.y))) entity.y = Number(state.y);
 
       if (
         animateRegrowth &&
@@ -1359,64 +872,6 @@ class OnlineClient {
         typeof spawnRockChipBurst === "function"
       ) {
         spawnRockChipBurst(entity, false);
-      }
-
-      if (Number.isFinite(serverX)) {
-        entity.x = serverX;
-        entity.serverTargetX = serverX;
-      }
-
-      if (Number.isFinite(serverY)) {
-        entity.y = serverY;
-        entity.serverTargetY = serverY;
-      }
-
-      entity.serverSnapshotAtMs = performance.now();
-      entity.carriedBy = nextCarriedBy;
-      entity.pickupTime = Math.max(0, Number(state.pickupTime) || 0);
-      entity.pickupDuration = Math.max(0.01, Number(state.pickupDuration) || 0.18);
-      entity.pickupDirX = Number(state.pickupDirX) || 0;
-      entity.pickupDirY = Number(state.pickupDirY) || 0;
-      entity.hurlTime = nextHurlTime;
-      entity.hurlDuration = Math.max(0.01, Number(state.hurlDuration) || 0.58);
-      entity.hurlVelocityX = Number(state.hurlVelocityX) || 0;
-      entity.hurlVelocityY = Number(state.hurlVelocityY) || 0;
-      entity.rollTime = nextRollTime;
-      entity.rollDuration = Math.max(0.01, Number(state.rollDuration) || 0.24);
-      entity.rollVelocityX = Number(state.rollVelocityX) || 0;
-      entity.rollVelocityY = Number(state.rollVelocityY) || 0;
-
-      // Exact/full snapshots initialize the render pose. Live motion patches
-      // only correct the predictor; they never make the sprite hop to 10 Hz.
-      if (
-        !animateRegrowth ||
-        nextCarriedBy ||
-        (!wasMoving && !willMove) ||
-        !Number.isFinite(Number(entity.renderX)) ||
-        !Number.isFinite(Number(entity.renderY))
-      ) {
-        if (Number.isFinite(serverX)) entity.renderX = serverX;
-        if (Number.isFinite(serverY)) entity.renderY = serverY;
-      }
-
-      if (!wasMoving && willMove) {
-        entity.visualRotation = 0;
-        const spinSourceX = nextHurlTime > 0
-          ? Number(state.hurlVelocityX) || 0
-          : Number(state.rollVelocityX) || 0;
-        entity.visualSpinDirection = spinSourceX < -0.01 ? -1 : 1;
-      }
-
-      // A landing roll inherits the airborne spin direction. Never let a
-      // later authoritative roll snapshot make the cosmetic spin reverse.
-      if (
-        willMove &&
-        !Number.isFinite(Number(entity.visualSpinDirection))
-      ) {
-        const spinSourceX = nextHurlTime > 0
-          ? Number(state.hurlVelocityX) || 0
-          : Number(state.rollVelocityX) || 0;
-        entity.visualSpinDirection = spinSourceX < -0.01 ? -1 : 1;
       }
 
       return;
@@ -1492,21 +947,6 @@ class OnlineClient {
       rock.depleted = false;
       rock.x = Number.isFinite(rock.homeX) ? rock.homeX : rock.x;
       rock.y = Number.isFinite(rock.homeY) ? rock.homeY : rock.y;
-      rock.serverTargetX = rock.x;
-      rock.serverTargetY = rock.y;
-      rock.serverSnapshotAtMs = performance.now();
-      rock.renderX = rock.x;
-      rock.renderY = rock.y;
-      rock.carriedBy = null;
-      rock.pickupTime = 0;
-      rock.hurlTime = 0;
-      rock.hurlVelocityX = 0;
-      rock.hurlVelocityY = 0;
-      rock.rollTime = 0;
-      rock.rollVelocityX = 0;
-      rock.rollVelocityY = 0;
-      rock.visualRotation = 0;
-      rock.visualSpinDirection = 1;
     }
     for (const flower of state.harvestFlowers || []) {
       flower.serverControlled = true;
@@ -1533,118 +973,6 @@ class OnlineClient {
         true
       );
     }
-  }
-
-  applyRockMotion(entries, mapId = currentMapId) {
-    const snapshotAtMs = performance.now();
-
-    for (const entry of entries || []) {
-      if (!Array.isArray(entry) || entry.length < 3) continue;
-
-      const entity = this.findEnvironmentEntity(
-        String(entry[0] || ""),
-        mapId
-      );
-
-      if (!entity) continue;
-
-      const x = Number(entry[1]);
-      const y = Number(entry[2]);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-
-      entity.serverControlled = true;
-      entity.x = x;
-      entity.y = y;
-      entity.serverTargetX = x;
-      entity.serverTargetY = y;
-      entity.serverSnapshotAtMs = snapshotAtMs;
-    }
-  }
-
-  applyRockState(packet, mapId = currentMapId) {
-    if (!Array.isArray(packet) || packet.length < 2) return;
-
-    const entity = this.findEnvironmentEntity(
-      String(packet[0] || ""),
-      mapId
-    );
-
-    if (!entity) return;
-
-    const stateCode = String(packet[1] || "");
-    entity.serverControlled = true;
-
-    if (stateCode === "c") {
-      entity.carriedBy = typeof packet[2] === "string" ? packet[2] : null;
-      entity.pickupTime = Math.max(0, Number(packet[3]) || 0);
-      entity.pickupDirX = Number(packet[4]) || 0;
-      entity.pickupDirY = Number(packet[5]) || 0;
-      entity.hurlTime = 0;
-      entity.hurlVelocityX = 0;
-      entity.hurlVelocityY = 0;
-      entity.rollTime = 0;
-      entity.rollVelocityX = 0;
-      entity.rollVelocityY = 0;
-      entity.visualRotation = 0;
-      return;
-    }
-
-    const x = Number(packet[2]);
-    const y = Number(packet[3]);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-
-    entity.x = x;
-    entity.y = y;
-    entity.serverTargetX = x;
-    entity.serverTargetY = y;
-    entity.serverSnapshotAtMs = performance.now();
-    entity.carriedBy = null;
-    entity.pickupTime = 0;
-
-    if (stateCode === "t") {
-      const duration = Math.max(0.01, Number(packet[4]) || 0.58);
-      const velocityX = Number(packet[5]) || 0;
-      const velocityY = Number(packet[6]) || 0;
-
-      // The carried pose is tied to the player rather than the old ground
-      // render position, so begin prediction from the authoritative throw
-      // origin when the server accepts the throw.
-      entity.renderX = x;
-      entity.renderY = y;
-      entity.hurlTime = duration;
-      entity.hurlDuration = duration;
-      entity.hurlVelocityX = velocityX;
-      entity.hurlVelocityY = velocityY;
-      entity.rollTime = 0;
-      entity.rollVelocityX = 0;
-      entity.rollVelocityY = 0;
-      entity.visualRotation = 0;
-      entity.visualSpinDirection = velocityX < -0.01 ? -1 : 1;
-      return;
-    }
-
-    if (stateCode === "r") {
-      const duration = Math.max(0.01, Number(packet[4]) || 0.24);
-      entity.hurlTime = 0;
-      entity.hurlVelocityX = 0;
-      entity.hurlVelocityY = 0;
-      entity.rollTime = duration;
-      entity.rollDuration = duration;
-      entity.rollVelocityX = Number(packet[5]) || 0;
-      entity.rollVelocityY = Number(packet[6]) || 0;
-      // Preserve visualRotation + visualSpinDirection so landing inherits the
-      // exact airborne tumble instead of visibly reversing or reorienting.
-      return;
-    }
-
-    // Idle/final state. Preserve the quarter-turn resting orientation and let
-    // the normal presentation settle smoothly onto this exact server point.
-    entity.hurlTime = 0;
-    entity.hurlVelocityX = 0;
-    entity.hurlVelocityY = 0;
-    entity.rollTime = 0;
-    entity.rollVelocityX = 0;
-    entity.rollVelocityY = 0;
   }
 
   sendEnvironmentAction(
@@ -2014,37 +1342,7 @@ class OnlineClient {
     return true;
   }
 
-  requestHunterSnareBegin() {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
 
-    this.socket.send(JSON.stringify({
-      type: "hunterSnareBegin"
-    }));
-
-    return true;
-  }
-
-  requestHunterSnareCancel() {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "hunterSnareCancel"
-    }));
-
-    return true;
-  }
 
   requestArrowUse() {
     if (
@@ -2108,15 +1406,6 @@ class OnlineClient {
     return true;
   }
 
-  // Backward-compatible wrappers retained for any old interaction callsites.
-  requestTreasureOpen(chestId) {
-    return this.requestChestContextOpen(chestId);
-  }
-
-  requestChestToggle(chestId) {
-    return this.requestChestContextOpen(chestId);
-  }
-
   requestCraft(recipe) {
     if (
       !recipe ||
@@ -2156,12 +1445,6 @@ class OnlineClient {
     return true;
   }
 
-  requestMarnieWoodTurnIn() {
-    if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
-    this.socket.send(JSON.stringify({ type: "marnieQuestInteract", action: "turnInWood" }));
-    return true;
-  }
-
   requestShopPurchase(itemId, vendor) {
     if (
       !itemId ||
@@ -2190,8 +1473,6 @@ class OnlineClient {
 
     if (message.success && itemId) {
       if (ALL_EQUIPMENT_ITEM_IDS.has(itemId)) {
-        if (!Array.isArray(player.shopPurchases)) player.shopPurchases = [];
-        if (!player.shopPurchases.includes(itemId)) player.shopPurchases.push(itemId);
         grantInventoryItem(itemId, 1);
       }
       spawnFloatingText(player.x, player.y - 30, "PURCHASED!", "#ffe38b", 0.85);
@@ -2309,8 +1590,8 @@ class OnlineClient {
       return;
     }
 
-    // v427: all craft-result popups are silent. Legacy one-time recipe
-    // reconciliation still repairs the local ownership state when necessary.
+    // v427: all craft-result popups are silent. One-time recipe reconciliation
+    // still repairs local ownership if the authoritative server reports it.
     if (message.reason === "alreadyCrafted") {
       if (recipe.storyKey) player.story[recipe.storyKey] = true;
       if (recipe.itemId && !playerOwnsItem(recipe.itemId)) grantInventoryItem(recipe.itemId, 1);
@@ -2402,53 +1683,6 @@ class OnlineClient {
     updateHotbar();
   }
 
-  handleEnvironmentReward(message) {
-    if (
-      message.targetId !==
-      this.localPlayerId
-    ) {
-      return;
-    }
-
-    if (
-      message.reward ===
-      "woodcuttingExp"
-    ) {
-      awardWoodcuttingExp(
-        Math.max(
-          0,
-          Number(message.amount) || 0
-        )
-      );
-      return;
-    }
-
-    if (
-      message.reward ===
-      "miningExp"
-    ) {
-      awardMiningExp(
-        Math.max(
-          0,
-          Number(message.amount) || 0
-        )
-      );
-      return;
-    }
-
-    if (
-      message.reward ===
-      "flowerHarvestingExp"
-    ) {
-      awardFlowerHarvestingExp(
-        Math.max(
-          0,
-          Number(message.amount) || 0
-        )
-      );
-    }
-  }
-
   handlePlayerIgnited(message) {
     const target =
       this.playerForNetworkId(
@@ -2503,7 +1737,6 @@ class OnlineClient {
     for (const [remoteId, remote] of this.remotePlayers.entries()) {
       if (remote?.mapId === snapshotMapId) {
         removeRemoteCasterEffectsForOwner(remoteId);
-        removeHunterSnareVisualsForOwner(remoteId);
         this.remotePlayers.delete(remoteId);
       }
     }
@@ -2841,15 +2074,7 @@ class OnlineClient {
       return false;
     }
 
-    const outgoingPayload =
-      action === "damage"
-        ? {
-            ...payload,
-            camouflageOpening:
-              Boolean(payload.camouflageOpening) ||
-              consumeCamouflageOpening()
-          }
-        : payload;
+    const outgoingPayload = payload;
 
     this.socket.send(JSON.stringify({
       type: "enemyAction",
@@ -2878,18 +2103,6 @@ class OnlineClient {
     }));
 
     return true;
-  }
-
-  remotePlayerPosition(playerId) {
-    const remote =
-      this.remotePlayers.get(playerId);
-
-    if (!remote) return null;
-
-    return {
-      x: remote.x,
-      y: remote.y
-    };
   }
 
   handleVisualEffect(message) {
@@ -2948,41 +2161,10 @@ class OnlineClient {
       return;
     }
 
-    if (message.effect === "focusFireArc") {
-      const startX = Number(payload.startX) || 0;
-      const startY = Number(payload.startY) || 0;
-      const targetX = Number(payload.targetX) || 0;
-      const targetY = Number(payload.targetY) || 0;
-      const duration = Math.max(
-        0.18,
-        Math.min(0.9, Number(payload.duration) || 0.4)
-      );
-      const dx = targetX - startX;
-      const dy = targetY - startY;
-      const distance = Math.hypot(dx, dy);
-
-      focusFireOpeners.push({
-        startX,
-        startY,
-        targetX,
-        targetY,
-        x: startX,
-        y: startY,
-        elapsed: 0,
-        duration,
-        arcHeight: Math.min(42, 13 + distance * 0.18),
-        angle: Math.atan2(dy, dx),
-        visualOnly: true,
-        ownerId: message.senderId
-      });
-
-      return;
-    }
 
     if (message.effect === "fireball") {
-      const airborne = Boolean(payload.airborne);
-      const startX = Number(payload.startX ?? payload.x) || 0;
-      const startY = Number(payload.startY ?? payload.y) || 0;
+      const startX = Number(payload.startX) || 0;
+      const startY = Number(payload.startY) || 0;
       const targetX = Number(payload.targetX) || startX;
       const targetY = Number(payload.targetY) || startY;
       const duration = Math.max(0.18, Number(payload.duration) || 0.4);
@@ -2998,15 +2180,11 @@ class OnlineClient {
         elapsed: 0,
         duration,
         arcHeight: Math.max(0, Number(payload.arcHeight) || 0),
-        airborne,
+        airborne: true,
         angle,
-        vx: Number(payload.vx) || Math.cos(angle) * 138,
-        vy: Number(payload.vy) || Math.sin(angle) * 138,
-
-        life: Math.max(
-          0.1,
-          Number(payload.life) || 1.65
-        ),
+        vx: Math.cos(angle) * 138,
+        vy: Math.sin(angle) * 138,
+        life: duration + 0.20,
 
         trailTimer: 0,
         visualOnly: true,
@@ -3035,15 +2213,6 @@ class OnlineClient {
       return;
     }
 
-    if (message.effect === "wandMasteryHit") {
-      spawnWandMasteryHitParticles(
-        Number(payload.x) || 0,
-        Number(payload.y) || 0,
-        Number(payload.angle) || 0,
-        Math.max(0, Number(payload.delay) || 0)
-      );
-      return;
-    }
 
     if (message.effect === "levelUp") {
       const remote =
@@ -3072,50 +2241,6 @@ class OnlineClient {
       return;
     }
 
-    if (message.effect === "rainGrassSpawn") {
-      spawnTemporaryRainGrassAt(
-        Number(payload.x) || 0,
-        Number(payload.y) || 0,
-        Number(payload.patchId) || 0,
-        {
-          ownerId: String(payload.grassOwnerId || message.senderId),
-          grassId: payload.grassId,
-          width: Number(payload.width) || 12,
-          phase: Number(payload.phase) || 0,
-          tempLife: Number(payload.tempLife) || TEMP_RAIN_GRASS_LIFETIME,
-          burnDuration: Number(payload.burnDuration) || TEMP_RAIN_GRASS_BURN_DURATION,
-          sync: false
-        }
-      );
-      return;
-    }
-
-    if (message.effect === "rainGrassState") {
-      const grassOwnerId = String(payload.grassOwnerId || message.senderId);
-      const clump = findTemporaryRainGrass(
-        grassOwnerId,
-        payload.grassId
-      );
-
-      if (!clump) return;
-
-      if (payload.state === "burning") {
-        clump.cut = false;
-        clump.burnt = false;
-        clump.burnDuration = TEMP_RAIN_GRASS_BURN_DURATION;
-        clump.burnTime = Math.max(
-          0.1,
-          Number(payload.burnTime) || TEMP_RAIN_GRASS_BURN_DURATION
-        );
-        clump.burnExpiresAtMs = Date.now() + clump.burnTime * 1000;
-      } else if (payload.state === "extinguished") {
-        clump.burnTime = 0;
-        clump.burnExpiresAtMs = 0;
-      }
-
-      return;
-    }
-
     if (message.effect === "rainCast") {
       spawnRemoteRainCast(
         message.senderId,
@@ -3124,37 +2249,7 @@ class OnlineClient {
       return;
     }
 
-    if (message.effect === "shadowSmoke") {
-      spawnShadowSmokePuff(
-        Number(payload.x) || 0,
-        Number(payload.y) || 0,
-        Math.max(
-          6,
-          Math.round(Number(payload.count) || 18)
-        ),
-        Math.max(
-          0.6,
-          Number(payload.scale) || 1
-        )
-      );
-      return;
-    }
-
-    if (message.effect === "jesterBlink") {
-      spawnRemoteJesterBlinkVisual(
-        message.senderId,
-        payload
-      );
-      return;
-    }
-
-    if (message.effect === "jesterReturn") {
-      spawnRemoteJesterReturnVisual(
-        message.senderId,
-        payload
-      );
-    }
-  }
+}
 
   playerForNetworkId(playerId) {
     if (playerId === this.localPlayerId) {
@@ -3185,19 +2280,6 @@ class OnlineClient {
       Number(message.amount) || 0
     );
 
-    if (
-      String(message.sourceType || "").startsWith("pvp:") &&
-      (
-        message.targetId === this.localPlayerId ||
-        message.sourceId === this.localPlayerId
-      )
-    ) {
-      player.pvpCombatUntil = Math.max(
-        player.pvpCombatUntil,
-        Date.now() + 10_000
-      );
-      updatePvpUi();
-    }
 
     // HP stays synchronized for everyone, but floating combat text only exists
     // on clients currently looking at the map where the hit happened.
@@ -3235,56 +2317,12 @@ class OnlineClient {
       Number(message.contactCooldown) || 0
     );
 
-    if (damage > 0 && focusFireIsCasting()) {
-      cancelFocusFire("hit");
-    }
-
-    if (damage > 0 && player.hunterSnareSetting) {
-      cancelHunterSnarePlacement(true);
-    }
-
-    if (damage > 0 && player.camouflaged) {
-      clearCamouflageState(true);
-    }
 
     if (targetIsDead) {
       handlePlayerDeath();
     } else {
       player.isDead = false;
       setRespawnButtonVisible(false);
-    }
-  }
-
-  handlePlayerHeal(message) {
-    const target =
-      this.playerForNetworkId(message.targetId);
-
-    if (!target) return;
-
-    if (Number.isFinite(message.maxHp)) {
-      target.maxHp = message.maxHp;
-    }
-
-    if (Number.isFinite(message.hp)) {
-      target.hp = message.hp;
-    }
-
-    const amount = Math.max(
-      0,
-      Number(message.amount) || 0
-    );
-
-    if (
-      currentMapId === message.mapId &&
-      amount > 0
-    ) {
-      spawnFloatingText(
-        target.x,
-        target.y - 34,
-        `+${amount}`,
-        "#89d9b8",
-        0.95
-      );
     }
   }
 
@@ -3301,118 +2339,6 @@ class OnlineClient {
     this.receiveRemotePlayer(state);
   }
 
-  breakCamouflage() {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "camouflageBreak"
-    }));
-    return true;
-  }
-
-  requestPvpToggle(enabled) {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "pvpToggle",
-      enabled: Boolean(enabled)
-    }));
-
-    return true;
-  }
-
-  sendPvpAttack(
-    targetId,
-    source,
-    payload = {}
-  ) {
-    if (
-      !targetId ||
-      !player.pvpEnabled ||
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "pvpAttack",
-      targetId,
-      source,
-      payload
-    }));
-
-    return true;
-  }
-
-  requestPlayerDamage(
-    source,
-    payload = {}
-  ) {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "playerDamageRequest",
-      source,
-      payload
-    }));
-
-    return true;
-  }
-
-  requestPlayerIgnite(targetId = this.localPlayerId) {
-    if (
-      !targetId ||
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "playerIgniteRequest",
-      targetId
-    }));
-
-    return true;
-  }
-
-  requestPlayerHeal(power) {
-    if (
-      !this.connected ||
-      !this.socket ||
-      this.socket.readyState !== WebSocket.OPEN
-    ) {
-      return false;
-    }
-
-    this.socket.send(JSON.stringify({
-      type: "playerHealRequest",
-      power
-    }));
-
-    return true;
-  }
 
   notifyRespawn() {
     if (
@@ -3444,26 +2370,7 @@ class OnlineClient {
       weaponIndex: player.weaponIndex,
       heldBuildPiece: typeof selectedBuildPiece === "string" ? selectedBuildPiece : null,
 
-      // Progression is still client-owned in this prototype, but combat damage
-      // is calculated server-side from these sanitized values.
       level: player.level,
-      classId: player.classId,
-      stats: {
-        strength: player.stats.strength,
-        dex: player.stats.dex,
-        luck: player.stats.luck,
-        int: player.stats.int
-      },
-
-      // Only combat-relevant learned levels are sent to the authoritative
-      // server. These change rarely, so they add essentially no steady traffic.
-      abilities: {
-        wandMastery: abilityLevel("wandMastery"),
-        fireball: abilityLevel("fireball"),
-        rainCloud: abilityLevel("rainCloud"),
-        jesterBlink: abilityLevel("jesterBlink"),
-        camouflage: abilityLevel("camouflage")
-      },
 
       walkTime: player.walkTime,
       firstRaisedLeg: player.firstRaisedLeg,
@@ -3479,19 +2386,11 @@ class OnlineClient {
       bowDrawDuration: player.bowDrawDuration,
       bowReleaseTime: player.bowReleaseTime,
       bowReleaseDuration: player.bowReleaseDuration,
-      focusFireCasting: focusFireIsCasting(),
       fireballAiming: player.fireballAiming,
       fireballAimTime: player.fireballAimTime,
       rainCloudCasting: player.rainCloudCasting,
       rainCloudCastTime: player.rainCloudCastTime,
       rainCloudCastDuration: player.rainCloudCastDuration,
-
-      // Camouflage is server-owned and replicated through transition events.
-      // The browser predicts buildup/reveal locally for responsiveness only.
-      // Hunter's Snare setup is server-owned and replicated through dedicated
-      // start/cancel/completion events, not the routine player-state stream.
-      shadowHidden: player.shadowHidden,
-      shadowHideRevealTime: player.shadowHideRevealTime,
 
       // Wet and Burn countdowns are server-owned. Their visuals are predicted
       // locally, but they are no longer uploaded in routine playerStatePatch.
@@ -3517,9 +2416,8 @@ class OnlineClient {
     const transientFields = new Set([
       "attackTime", "attackDuration", "attackDirection", "attackHand", "attackAimAngle",
       "bowDrawing", "bowDrawAmount", "bowDrawDuration", "bowReleaseTime", "bowReleaseDuration",
-      "focusFireCasting", "fireballAiming", "fireballAimTime",
+      "fireballAiming", "fireballAimTime",
       "rainCloudCasting", "rainCloudCastTime", "rainCloudCastDuration",
-      "shadowHidden", "shadowHideRevealTime",
       "hurlReachTime", "hurlReachDuration", "hurlReachDirX", "hurlReachDirY"
     ]);
     for (const [key, value] of Object.entries(nextState)) {
@@ -3548,11 +2446,8 @@ class OnlineClient {
       attackTime: Math.max(0, Number(player.attackTime) || 0),
       bowDrawing: Boolean(player.bowDrawing),
       bowReleaseTime: Math.max(0, Number(player.bowReleaseTime) || 0),
-      focusFireCasting: Boolean(focusFireIsCasting()),
       fireballAiming: Boolean(player.fireballAiming),
       rainCloudCasting: Boolean(player.rainCloudCasting),
-      shadowHidden: Boolean(player.shadowHidden),
-      shadowHideRevealTime: Math.max(0, Number(player.shadowHideRevealTime) || 0),
       hurlReachTime: Math.max(0, Number(player.hurlReachTime) || 0)
     };
   }
@@ -3572,16 +2467,13 @@ class OnlineClient {
     if (rose("bowReleaseTime", 0.005)) {
       this.sendPlayerAction([A.BOW_RELEASE, Math.round(Math.max(0.03, Number(player.bowReleaseDuration) || 0.12) * 1000), Math.max(0, Math.min(255, Math.round((Number(player.bowDrawAmount) || 0) * 255))), PLAYER_NET_PROTOCOL.encodeAim(player.attackAimAngle)]);
     }
-    if (current.focusFireCasting !== Boolean(previous.focusFireCasting)) this.sendPlayerAction([A.FOCUS_FIRE, current.focusFireCasting ? 1 : 0]);
     if (current.fireballAiming !== Boolean(previous.fireballAiming)) this.sendPlayerAction([A.FIREBALL_AIM, current.fireballAiming ? 1 : 0]);
     if (current.rainCloudCasting !== Boolean(previous.rainCloudCasting)) this.sendPlayerAction([A.RAIN_CAST, current.rainCloudCasting ? 1 : 0, Math.round(Math.max(0.05, Number(player.rainCloudCastDuration) || 0.50) * 1000)]);
-    if (current.shadowHidden !== Boolean(previous.shadowHidden)) this.sendPlayerAction([A.SHADOW_HIDE, current.shadowHidden ? 1 : 0]);
-    if (rose("shadowHideRevealTime", 0.005)) this.sendPlayerAction([A.SHADOW_REVEAL, Math.round(current.shadowHideRevealTime * 1000)]);
     if (rose("hurlReachTime", 0.005)) {
       this.sendPlayerAction([A.HURL_REACH, Math.round(Math.max(0.05, Number(player.hurlReachDuration) || 0.18) * 1000), Math.round(Math.max(-1, Math.min(1, Number(player.hurlReachDirX) || 0)) * 1000), Math.round(Math.max(-1, Math.min(1, Number(player.hurlReachDirY) || 0)) * 1000)]);
     }
 
-    const aiming = current.bowDrawing || current.focusFireCasting || current.fireballAiming || current.rainCloudCasting;
+    const aiming = current.bowDrawing || current.fireballAiming || current.rainCloudCasting;
     const now = performance.now();
     const aimQ = PLAYER_NET_PROTOCOL.encodeAim(player.attackAimAngle);
     const changed = this.lastAimQuantized === null || PLAYER_NET_PROTOCOL.circularStepDelta(aimQ, this.lastAimQuantized) >= PLAYER_NET_PROTOCOL.AIM_MIN_STEP_DELTA;
@@ -3625,11 +2517,8 @@ class OnlineClient {
       remote.bowReleaseTime = remote.bowReleaseDuration;
       remote.bowDrawAmount = Math.max(0, Math.min(1, (Number(data[2]) || 0) / 255));
       remote.attackAimAngle = PLAYER_NET_PROTOCOL.decodeAim(data[3]);
-    } else if (code === A.FOCUS_FIRE) remote.focusFireCasting = data[1] === 1;
-    else if (code === A.FIREBALL_AIM) { remote.fireballAiming = data[1] === 1; remote.fireballAimTime = 0; }
+    } else if (code === A.FIREBALL_AIM) { remote.fireballAiming = data[1] === 1; remote.fireballAimTime = 0; }
     else if (code === A.RAIN_CAST) { remote.rainCloudCasting = data[1] === 1; remote.rainCloudCastDuration = Math.max(0.05, (Number(data[2]) || 500) / 1000); remote.rainCloudCastTime = 0; }
-    else if (code === A.SHADOW_HIDE) { remote.shadowHidden = data[1] === 1; if (remote.shadowHidden) remote.shadowHideRevealTime = 0; }
-    else if (code === A.SHADOW_REVEAL) remote.shadowHideRevealTime = Math.max(0.03, (Number(data[1]) || 160) / 1000);
     else if (code === A.HURL_REACH) { remote.hurlReachDuration = Math.max(0.05, (Number(data[1]) || 180) / 1000); remote.hurlReachTime = remote.hurlReachDuration; remote.hurlReachDirX = Math.max(-1, Math.min(1, (Number(data[2]) || 0) / 1000)); remote.hurlReachDirY = Math.max(-1, Math.min(1, (Number(data[3]) || 0) / 1000)); }
   }
 
@@ -3721,10 +2610,6 @@ class OnlineClient {
       if (remote.rainCloudCasting) remote.rainCloudCastTime = Math.min(Math.max(0.05, Number(remote.rainCloudCastDuration) || 0.50), Math.max(0, Number(remote.rainCloudCastTime) || 0) + dt);
       else remote.rainCloudCastTime = 0;
 
-      remote.shadowHideRevealTime = Math.max(
-        0,
-        (Number(remote.shadowHideRevealTime) || 0) - dt
-      );
 
       remote.wetTime = Math.max(
         0,
@@ -3754,12 +2639,6 @@ class OnlineClient {
         (Number(remote.hurlReachTime) || 0) - dt
       );
 
-      if (remote.hunterSnareSetting) {
-        remote.hunterSnareSetTime = Math.min(
-          Math.max(0.1, Number(remote.hunterSnareSetDuration) || 1.25),
-          Math.max(0, Number(remote.hunterSnareSetTime) || 0) + dt
-        );
-      }
     }
   }
 

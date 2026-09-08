@@ -16,11 +16,11 @@ const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.431");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/game.js?v=428'));
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('/game.js?v=431'));
 
 function pngDimensions(file) {
   const data = fs.readFileSync(file);
@@ -106,7 +106,8 @@ assert(network.includes("requestChestContextOpen(chestId)"));
 assert(network.includes('type: "chestContextOpen"'));
 assert(server.includes("function handleChestContextOpen(playerId, socket, message)"));
 assert(server.includes('type: "chestContextResult"'));
-assert(server.includes("function handleTreasureOpen(playerId, socket, message)"), "legacy treasure packet alias should remain routed into the new chest context model");
+assert(!server.includes("handleTreasureOpen("), "retired treasureOpen compatibility handler must stay removed");
+assert(!server.includes('case "treasureOpen"'), "retired treasureOpen packet route must stay removed");
 assert(!server.includes("treasureHeartbeat"));
 
 console.log(`v413 Stone Floor + world feature retention check passed on v414: ${generatedBuildingCount} generated building(s), ${generatedTreasureCount} real treasure chest(s), ponds/meadows/tree rings/stone patches.`);

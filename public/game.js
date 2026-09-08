@@ -97,7 +97,7 @@ const sprite = {
   woodLeftLeg: loadImage("assets/wood_armor_leftleg_v1.png"),
   woodRightLeg: loadImage("assets/wood_armor_rightleg_v1.png"),
 
-  // User-drawn Arcanist armor set (Magus class).
+  // User-drawn Arcanist armor set.
   arcanistHat: loadImage("assets/arcanist_hat_v1.png"),
   arcanistTorso: loadImage("assets/arcanist_torso_v1.png"),
   arcanistLeftArm: loadImage("assets/arcanist_leftarm_v1.png"),
@@ -187,30 +187,23 @@ const PICKAXE_PIVOT_Y = 7;
 const PICKAXE_HOLD_OFFSET_Y = 1;
 
 // Spawn-map tutorial NPC and first crafting bench.
-const tutorialNpcImage = new Image();
-tutorialNpcImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABR0lEQVQ4T2NkwA7+w1mogBHOggIMAZDmMC1eBhVJIbgACNx5/o5h1bXPICaKHnQD/ltJsTLICHBgNeDJhx8Mx579BnHh+jAMANkuJcDBoK2qxMDDJwAW/PLpA8PV2/cYnn34geEKDAMKrEQZJhx7DRdABkhyWA2Aaz43vQksoKmlBaavX7sGpo0y60AUiqUwDlzz94NrwAKc9iE42dhcgOJ0mGJ0gK4ZBEAcsOabzz8ybL//i0FXUoTh8vM3cAXIAEkO0wUgwllXnWHv5ZtgWlxOASoFAS+P7WXY+/4PXA1ML7Jz/oOcDnKmsyALg7iVM1yC/dJRhkcC0mCNMDXYDAABsEtAThX78QEmxsAgo8zw6s1bZK9heAEZ4MoHMICiB6sB7r5RDE9fvGW4cnonWEDH1J1BWkKYYefmZSAuHQyAOAQnQHEBAFxrihE+uaraAAAAEGRlQkczRkJDODFCRkU3MEVCQzZDGCjZMwAAAABJRU5ErkJgggAA";
-const hunterNpcImage = loadImage("assets/hunter_npc_v1.png");
-const jesterNpcImage = loadImage("assets/jester_npc_v1.png");
 const beachGirlNpcImage = loadImage("assets/beach_girl_npc.png?v=372");
 const icedCoffeeImage = loadImage("assets/iced_coffee.png?v=372");
 const greenWitchNpcImage = loadImage("assets/green_witch_npc.png?v=372");
 const camoNpcImage = loadImage("assets/camo_npc.png?v=372");
-const classResetCrystalImage = loadImage("assets/class_reset_crystal.png");
-const craftRoleAxeImage = loadImage("assets/crafting_bubble_axe_v1.png");
 
 const woodBenchImage = loadImage("assets/wood_bench_v2.png");
-const greenJellyCubeImage = loadImage("assets/green_jelly_cube.png?v=428");
-const torchImage = loadImage("assets/torch_v1.png?v=428");
+const torchImage = loadImage("assets/torch_v1.png?v=431");
 
 // v395: user-supplied in-world building art. These are separate from the
 // compact inventory/crafting icons under assets/ui/.
-const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=428");
-const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=428");
-const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=428");
-const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=428");
-const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=428");
-const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=428");
-const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=428");
+const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=431");
+const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=431");
+const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=431");
+const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=431");
+const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=431");
+const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=431");
+const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=431");
 
 // Player-drawn wand sprite.
 const wandImage = new Image();
@@ -226,9 +219,9 @@ const shepherdStaffImage = loadImage("assets/shepherd_staff_v1.png");
 const lostKeyWandImage = loadImage("assets/witchs_lost_key_v1.png");
 const hugeSunflowerWandImage = loadImage("assets/huge_sunflower_v1.png");
 const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
-// v415: Tiger Paw inherits the retired Hurl art as a compact inventory/hotbar
-// icon. It is treated like a hand weapon, so no separate held sprite is drawn.
-const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=428");
+// Tiger Paw uses the compact Hurl paw art for its inventory/hotbar icon. It is
+// treated like a hand weapon, so no separate held sprite is drawn.
+const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=431");
 
 const katanaImage = new Image();
 katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
@@ -248,7 +241,6 @@ const WAND_HOLD_OFFSET_Y = 2;
 // slightly longer deliberate gesture and exact historical impact timing.
 const DEFAULT_BASIC_ATTACK_DURATION = 0.30;
 const WAND_BASIC_ATTACK_DURATION = 0.42;
-const WAND_BASIC_ATTACK_FALLBACK_COOLDOWN = 0.83;
 const WAND_BASIC_ATTACK_IMPACT_DELAY = 0.09;
 const MELEE_BASIC_ATTACK_IMPACT_PHASE = 0.34;
 
@@ -262,29 +254,17 @@ const SWORD_PIVOT_Y = 7;
 // -----------------------------------------------------------------------------
 const fireballs = [];
 const fireParticles = [];
-const wandSweepParticles = [];
 const enemyDeathEffects = [];
 const ENEMY_SPAWN_ANIM_DURATION = 0.30;
 const ENEMY_DEATH_ANIM_DURATION = 0.36;
 const growthParticles = [];
 const basicProjectiles = [];
-const focusFireOpeners = [];
-const hunterSnareVisuals = new Map();
 const rainClouds = [];
-const shadowSmokeParticles = [];
-const jesterConfetti = [];
 const levelUpParticles = [];
-const jesterAfterimages = [];
-let jesterClone = null;
-const remoteJesterClones = [];
 let mouseCanvasX = VIEW_W / 2;
 let mouseCanvasY = VIEW_H / 2;
 let primaryAttackHeld = false;
 let pendingBasicAttack = null;
-const JESTER_BLINK_RANGE = 40;
-const JESTER_CLONE_DURATION = 2.0;
-const JESTER_CLONE_CONTACT_RADIUS = 8.5;
-const JESTER_RETURN_LOCKOUT_SECONDS = 0.35;
 
 // Fire spreads in little pulses rather than instantly chaining through an
 // entire field in one frame.
@@ -554,12 +534,6 @@ const FIREBALL_LANDING_RADIUS = 13;
 
 
 
-const FOCUS_FIRE_MIN_RADIUS = 30;
-const FOCUS_FIRE_MAX_RADIUS = 150;
-const FOCUS_FIRE_PULSE_DURATION = 1.35;
-const FOCUS_FIRE_BARRAGE_DURATION = 5.0;
-const FOCUS_FIRE_SHOT_INTERVAL = 0.50;
-const FOCUS_FIRE_LANDING_RADIUS = 12;
 
 
 
@@ -627,18 +601,6 @@ function removeRemoteCasterEffectsForOwner(
 
   clearTemporaryRainGrassForOwner(ownerId);
 
-  removeRemoteJesterForOwner(
-    ownerId
-  );
-
-  for (let i = focusFireOpeners.length - 1; i >= 0; i--) {
-    if (
-      focusFireOpeners[i].visualOnly &&
-      focusFireOpeners[i].ownerId === ownerId
-    ) {
-      focusFireOpeners.splice(i, 1);
-    }
-  }
 
   for (let i = basicProjectiles.length - 1; i >= 0; i--) {
     if (
@@ -899,28 +861,10 @@ function drawPixelGlow(screenX, screenY, size, strength, phase = 0) {
 // visual effect accurately shows the player's reach.
 const SWORD_REACH = 26;
 const SWORD_HALF_ARC = 0.62;
-const WAND_MASTERY_REACH = 45;
-const WAND_MASTERY_HALF_ARC = 0.56;
 
 
 
 
-const BOW_MELEE_TRIGGER_RANGE = 28;
-const BOW_MELEE_HALF_ARC = 1.05;
-
-
-
-
-
-function canOccupyPlayerPoint(x, y) {
-  return (
-    x >= 8 &&
-    x <= world.width - 8 &&
-    y >= 15 &&
-    y <= world.height - 1 &&
-    !hitsSolidObstacle(x, y)
-  );
-}
 
 
 
@@ -1127,19 +1071,12 @@ const {
 // The game still uses the same global gameplay systems. Travelling between
 // maps swaps the active contents of their arrays, so chopped/burned trees and
 // monster health/state remain attached to the map where they belong.
-let currentMapId = "meadow";
+let currentMapId = WORLD_CONTENT?.worldGrid?.startMapId || "world_p0_p0";
 
 const houses = [];
 
 const {
   houseImage,
-  spawnMapX,
-  spawnMapY,
-  tutorialNpc,
-  hunterNpc,
-  jesterNpc,
-  woodCraftBench,
-  classResetCrystal,
   mapStates,
 } = buildClientMapRegistry();
 
@@ -1227,10 +1164,9 @@ const CLIENT_ENEMY_FACTORIES = {
 // -----------------------------------------------------------------------------
 // GENERIC ACTIVE ENEMY RUNTIME
 // -----------------------------------------------------------------------------
-// Shared gameplay systems should use this registry instead of manually
-// enumerating slime/goblin/ghost arrays. Species-specific AI and sprite drawing
-// remain isolated behind each profile. Adding a new enemy species should mostly
-// mean adding one collection/factory/profile rather than editing every skill.
+// Shared gameplay systems use this registry instead of manually enumerating
+// slime/goblin/ghost arrays. Species-specific AI and sprite drawing remain
+// isolated behind each profile.
 const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
   slime: Object.freeze({
     bodyOffsetY: -6,
@@ -1268,9 +1204,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
       }
 
       return enemy.y;
-    },
-    canFocusFire(enemy) {
-      return !enemy.carriedBy;
     },
     applySpawnData(enemy, spawn) {
       enemy.variant =
@@ -1335,9 +1268,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
 
       return enemy.y;
     },
-    canFocusFire(enemy) {
-      return !enemy.carriedBy;
-    }
   }),
 
   crab: Object.freeze({
@@ -1371,9 +1301,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
       }
       return enemy.y;
     },
-    canFocusFire(enemy) {
-      return !enemy.carriedBy;
-    }
   }),
 
   goblin: Object.freeze({
@@ -1411,9 +1338,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     onKilledLocal(enemy) {
       enemy.lungeTime = 0;
       enemy.moving = false;
-    },
-    canFocusFire(enemy) {
-      return !enemy.carriedBy;
     },
     drawSortY(enemy) {
       return enemy.y;
@@ -1641,30 +1565,6 @@ function sendEnemyAction(
 }
 
 
-
-
-
-
-function redirectEnemy(
-  enemy,
-  x,
-  y,
-  duration = JESTER_CLONE_DURATION,
-  cloneId = null
-) {
-  if (!enemy?.alive) return;
-
-  sendEnemyAction(
-    enemy,
-    "redirect",
-    {
-      x,
-      y,
-      duration,
-      cloneId
-    }
-  );
-}
 
 
 
@@ -1931,9 +1831,7 @@ class GameState {
         "shirtIndex",
         "pantsIndex",
         "burnTime",
-        "wetTime",
-        "shadowHidden",
-        "pvpEnabled"
+        "wetTime"
       ]),
 
       entities: {
@@ -2039,22 +1937,15 @@ function setRespawnButtonVisible(visible) {
 }
 
 function removeLocalCasterEffectsOnDeath() {
-  cancelHunterSnarePlacement(false);
-  clearFocusFireState(true);
-  player.focusFireCharging = false;
-  player.focusFireOpening = false;
-  player.focusFireActive = false;
   player.fireballAiming = false;
   player.fireballAimTime = 0;
-  player.fireballBoundKey = null;
   player.fireballAimMapId = null;
 
   // Local caster effects have no `visualOnly` flag. Preserve remote-player
   // effects while immediately deleting everything owned by the dead player.
   for (const collection of [
     fireballs,
-    basicProjectiles,
-    focusFireOpeners
+    basicProjectiles
   ]) {
     for (let i = collection.length - 1; i >= 0; i--) {
       if (!collection[i]?.visualOnly) {
@@ -2066,19 +1957,14 @@ function removeLocalCasterEffectsOnDeath() {
   endLocalRainCloud({ startCooldown: true });
 
   clearTemporaryRainGrass();
-  endLocalHallucination({ burst: false, startCooldown: false });
   player.bowDrawing = false;
   player.bowDrawAmount = 0;
   player.bowReleaseTime = 0;
   player.attackTime = 0;
   player.attackCooldown = 0;
   player.slashTime = 0;
-  player.shadowCritAttack = false;
   player.hurlReachTime = 0;
 
-  clearCamouflageState(false);
-  player.shadowHidden = false;
-  player.shadowHideRevealTime = 0;
   player.wetTime = 0;
   player.burnTime = 0;
   player.burnTickTimer = 0;
@@ -2126,12 +2012,10 @@ function completePlayerRespawn(serverState = null) {
   player.burnTime = 0;
   player.burnTickTimer = 0;
   player.wetTime = 0;
-  player.shadowHidden = false;
-  player.shadowHideRevealTime = 0;
 
   const respawnMapId = typeof serverState?.mapId === "string" && mapStates[serverState.mapId]
     ? serverState.mapId
-    : (WORLD_CONTENT?.defaultPlayerLoad?.mapId || WORLD_CONTENT?.worldGrid?.startMapId || "spawn");
+    : (WORLD_CONTENT?.defaultPlayerLoad?.mapId || WORLD_CONTENT?.worldGrid?.startMapId || "world_p0_p0");
   const respawnSpawnId = WORLD_CONTENT?.defaultPlayerLoad?.spawnId || "center";
   activateMap(respawnMapId, respawnSpawnId);
 
@@ -2164,26 +2048,17 @@ document.getElementById("respawnButton")?.addEventListener(
 );
 
 function clearTransientWorldEffects() {
-  cancelHunterSnarePlacement(false);
   cancelRainCloudCast();
   fireballs.length = 0;
   fireParticles.length = 0;
-  wandSweepParticles.length = 0;
   basicProjectiles.length = 0;
-  focusFireOpeners.length = 0;
-  clearFocusFireState(false);
   endLocalRainCloud({ startCooldown: true });
   // Remote copies are map-local visuals and can be dropped immediately.
   for (let i = rainClouds.length - 1; i >= 0; i--) {
     if (rainClouds[i]?.visualOnly) rainClouds.splice(i, 1);
   }
   clearTemporaryRainGrass();
-  shadowSmokeParticles.length = 0;
-  endLocalHallucination({ burst: false, startCooldown: false });
-  remoteJesterClones.length = 0;
-  jesterConfetti.length = 0;
   levelUpParticles.length = 0;
-  jesterAfterimages.length = 0;
 
   // Pickups remain local to the place where they were dropped. For now,
   // travelling clears loose timed drops rather than carrying world objects
@@ -2253,23 +2128,14 @@ function setMapTransitionNpcLayerHidden(hidden) {
   if (layer) layer.style.visibility = hidden ? "hidden" : "";
 }
 
-function mapTransitionDirectionForTarget(mapId, entrySide) {
+function mapTransitionDirectionForTarget(mapId) {
   const sourceGrid = worldGridMapMeta(currentMapId);
   const targetGrid = worldGridMapMeta(mapId);
-  if (sourceGrid && targetGrid) {
-    return {
-      x: Math.sign(targetGrid.x - sourceGrid.x),
-      y: Math.sign(targetGrid.y - sourceGrid.y)
-    };
-  }
-
-  // Legacy/fallback directional hints use the side on which the player appears
-  // inside the destination map.
-  if (entrySide === "west" || entrySide === "spawnWest") return { x: 1, y: 0 };
-  if (entrySide === "east" || entrySide === "spawnEast") return { x: -1, y: 0 };
-  if (entrySide === "north") return { x: 0, y: 1 };
-  if (entrySide === "south") return { x: 0, y: -1 };
-  return { x: 0, y: 0 };
+  if (!sourceGrid || !targetGrid) return { x: 0, y: 0 };
+  return {
+    x: Math.sign(targetGrid.x - sourceGrid.x),
+    y: Math.sign(targetGrid.y - sourceGrid.y)
+  };
 }
 
 function beginMapTransitionSlide() {
@@ -2364,12 +2230,6 @@ function sharedPlayerSpawnPoint(mapId, spawnId) {
   return spawns.find(spawn => spawn?.id === spawnId) || null;
 }
 
-function sharedDefaultPlayerSpawnId(mapId) {
-  const map = WORLD_CONTENT?.maps?.[mapId];
-  const spawnId = typeof map?.defaultPlayerSpawnId === "string" ? map.defaultPlayerSpawnId : "";
-  return sharedPlayerSpawnPoint(mapId, spawnId) ? spawnId : "center";
-}
-
 function sharedDefaultPlayerLoadTarget() {
   const configured = WORLD_CONTENT?.defaultPlayerLoad;
   if (
@@ -2382,15 +2242,8 @@ function sharedDefaultPlayerLoadTarget() {
     return { mapId: configured.mapId, spawnId: configured.spawnId };
   }
 
-  // Compatibility with the short-lived v329 per-map marker shape.
-  for (const mapId of Object.keys(WORLD_CONTENT?.maps || {})) {
-    const spawnId = sharedDefaultPlayerSpawnId(mapId);
-    if (spawnId !== "center" && sharedPlayerSpawnPoint(mapId, spawnId)) {
-      return { mapId, spawnId };
-    }
-  }
-
-  return { mapId: "spawn", spawnId: "center" };
+  const mapId = WORLD_CONTENT?.worldGrid?.startMapId || Object.keys(mapStates)[0];
+  return { mapId, spawnId: "center" };
 }
 
 function worldGridMapMeta(mapId = currentMapId) {
@@ -2545,13 +2398,6 @@ function updateWorldMiniMap() {
   }
 }
 
-function updateWorldGridStatus() {
-  // v388: the old Spawn/Distance/Radius banner is retired. Keep the historical
-  // function name because map-transition plumbing already calls it, but only
-  // refresh the minimap now.
-  updateWorldMiniMap();
-}
-
 function requestMapTransition(mapId, entrySide) {
   if (!mapStates[mapId]) return false;
   if (mapTransitionPhase !== "idle") return false;
@@ -2563,7 +2409,7 @@ function requestMapTransition(mapId, entrySide) {
     return false;
   }
 
-  const direction = mapTransitionDirectionForTarget(mapId, entrySide);
+  const direction = mapTransitionDirectionForTarget(mapId);
   mapTransitionDirectionX = direction.x;
   mapTransitionDirectionY = direction.y;
 
@@ -2596,44 +2442,6 @@ function requestMapTransition(mapId, entrySide) {
   player.walkTime = 0;
   player.wasMoving = false;
   return true;
-}
-
-function updateSharedMapPortalConnection() {
-  const portals = WORLD_CONTENT?.maps?.[currentMapId]?.portals;
-  if (!Array.isArray(portals) || portals.length === 0) return false;
-
-  for (const portal of portals) {
-    const x = Number(portal?.x);
-    const y = Number(portal?.y);
-    const width = Number(portal?.width);
-    const height = Number(portal?.height);
-
-    if (
-      !Number.isFinite(x) ||
-      !Number.isFinite(y) ||
-      !Number.isFinite(width) ||
-      !Number.isFinite(height) ||
-      width <= 0 ||
-      height <= 0
-    ) {
-      continue;
-    }
-
-    const inside =
-      player.x >= x &&
-      player.x <= x + width &&
-      player.y >= y &&
-      player.y <= y + height;
-
-    if (!inside) continue;
-
-    return requestMapTransition(
-      portal.targetMapId,
-      portal.targetSpawnId
-    );
-  }
-
-  return false;
 }
 
 function updateMapTransition(dt) {
@@ -2678,10 +2486,9 @@ function updateMapTransition(dt) {
   return false;
 }
 
-// Historical name retained so existing render plumbing does not need an
-// overlay-only patch. v378 now composites a directional slide, never a black
-// cover, and keeps the outgoing frame stationary while the server syncs.
-function drawMapTransitionPlayerAtScreen(screenX, screenY) {
+// Draw the live player over the directional transition composite while the
+// outgoing frame remains stationary during server sync.
+function drawMapTransitionLivePlayer(screenX, screenY) {
   // Transition snapshots live in physical backing pixels on mobile, while the
   // player renderer works in logical game pixels. Restore the normal game
   // transform before drawing the one live player sprite over the composite.
@@ -2690,7 +2497,6 @@ function drawMapTransitionPlayerAtScreen(screenX, screenY) {
   const camX = player.x - screenX;
   const camY = player.y - screenY;
   drawPlayer(camX, camY);
-  drawPvpMarker(player, camX, camY);
   ctx.restore();
 }
 
@@ -2704,7 +2510,7 @@ function drawMapTransitionCover() {
   if (mapTransitionPhase === "syncing" || mapTransitionPhase === "starting") {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(mapTransitionOutgoingFrame, 0, 0);
-    drawMapTransitionPlayerAtScreen(
+    drawMapTransitionLivePlayer(
       mapTransitionOutgoingPlayerScreenX,
       mapTransitionOutgoingPlayerScreenY
     );
@@ -2736,7 +2542,7 @@ function drawMapTransitionCover() {
   const playerScreenY =
     mapTransitionOutgoingPlayerScreenY +
     (mapTransitionIncomingPlayerScreenY - mapTransitionOutgoingPlayerScreenY) * progress;
-  drawMapTransitionPlayerAtScreen(playerScreenX, playerScreenY);
+  drawMapTransitionLivePlayer(playerScreenX, playerScreenY);
 
   ctx.restore();
 }
@@ -2753,8 +2559,7 @@ function activateMap(mapId, entrySide, transitionContext = null) {
   currentMapId = mapId;
   activeWorldDimensionMapId = mapId;
   markWorldGridDiscovered(mapId);
-  updateWorldGridStatus();
-  clearCamouflageState(false);
+  updateWorldMiniMap();
 
   // Ensure this map's natural enemy objects exactly match the shared registry
   // before replacing the active collection views.
@@ -2764,29 +2569,6 @@ function activateMap(mapId, entrySide, transitionContext = null) {
 
   loadActiveMapCollections(state);
 
-  if (
-    mapId === "meadow" ||
-    mapId === "ghostGrove"
-  ) {
-    console.log(
-      `Activated ${mapId}:`,
-      {
-        ghosts:
-          ghosts.map(ghost => ({
-            id: ghost.entityId,
-            mapId:
-              ghost.networkMapId,
-            alive:
-              ghost.alive
-          }))
-      }
-    );
-  }
-
-  pond.x = state.pond.x;
-  pond.y = state.pond.y;
-  pond.width = state.pond.width;
-  pond.height = state.pond.height;
 
   clearTransientWorldEffects();
 
@@ -2820,53 +2602,10 @@ function activateMap(mapId, entrySide, transitionContext = null) {
       player.y = dy > 0 ? 16 : world.height - 2;
     }
   } else {
-    // Historical non-grid maps can name entry points explicitly; otherwise they
-    // retain their older side-based entry rules.
-    const sharedSpawn = sharedPlayerSpawnPoint(mapId, entrySide);
-
-    if (sharedSpawn) {
-      player.x = Number(sharedSpawn.x) || 0;
-      player.y = Number(sharedSpawn.y) || 0;
-    } else if (entrySide === "center") {
-      player.x = world.width / 2;
-      player.y = world.height / 2;
-    } else if (entrySide === "west") {
-      player.x = 26;
-      player.y = 200;
-    } else if (entrySide === "spawnWest") {
-      player.x = 26;
-      player.y = spawnMapY(200);
-    } else if (entrySide === "spawnEast") {
-      player.x = world.width - 30;
-      player.y = spawnMapY(200);
-    } else if (entrySide === "prototypeEast") {
-      const layout = getPrototypeIslandLayout(mapId);
-      if (layout?.eastBridge) {
-        player.x = layout.eastBridge.x + layout.eastBridge.width - 14;
-        player.y = layout.eastBridge.y + Math.round(layout.eastBridge.height / 2);
-      } else {
-        player.x = world.width - 26;
-        player.y = 200;
-      }
-    } else if (entrySide === "prototypeWest") {
-      const layout = getPrototypeIslandLayout(mapId);
-      if (layout?.westBridge) {
-        player.x = layout.westBridge.x + 14;
-        player.y = layout.westBridge.y + Math.round(layout.westBridge.height / 2);
-      } else {
-        player.x = 26;
-        player.y = 200;
-      }
-    } else if (entrySide === "north") {
-      player.x = world.width / 2;
-      player.y = 26;
-    } else if (entrySide === "south") {
-      player.x = world.width / 2;
-      player.y = world.height - 26;
-    } else {
-      player.x = world.width - 26;
-      player.y = 200;
-    }
+    const sharedSpawn = sharedPlayerSpawnPoint(mapId, entrySide) ||
+      sharedPlayerSpawnPoint(mapId, "center");
+    player.x = Number(sharedSpawn?.x) || world.width / 2;
+    player.y = Number(sharedSpawn?.y) || world.height / 2;
   }
 
   // Map entry is latency-sensitive because the transition stays covered until
@@ -2917,283 +2656,7 @@ function updateWorldGridMapConnection() {
 }
 
 function updateMapConnection() {
-  // v377 coordinate-world maps connect on all four edges instead of using
-  // authored portal rectangles. Legacy maps stay intact for rollback/tools.
-  if (worldGridMapMeta()) {
-    updateWorldGridMapConnection();
-    return;
-  }
-
-  // Maps that define explicit portal rectangles own their connections entirely
-  // through shared map data. This is the path the visual editor will author.
-  if (updateSharedMapPortalConnection()) {
-    return;
-  }
-
-  const horizontalGateCenterY =
-    currentMapId === "spawn"
-      ? spawnMapY(200)
-      : 200;
-  const insideHorizontalGate =
-    player.y >= horizontalGateCenterY - 26 &&
-    player.y <= horizontalGateCenterY + 26;
-
-  const verticalGateCenter = world.width / 2;
-  const insideVerticalGate =
-    player.x >= verticalGateCenter - 44 &&
-    player.x <= verticalGateCenter + 44;
-
-  // Safe spawn clearing -> Slime Meadow.
-  if (
-    currentMapId === "spawn" &&
-    insideHorizontalGate &&
-    player.x <= 9
-  ) {
-    requestMapTransition(
-      "prototypeIsland",
-      "eastBridge"
-    );
-    return;
-  }
-
-  if (
-    currentMapId === "spawn" &&
-    insideHorizontalGate &&
-    player.x >= world.width - 12
-  ) {
-    requestMapTransition(
-      "meadow",
-      "west"
-    );
-    return;
-  }
-
-  // Prototype Island / West connections are now defined by WORLD_CONTENT
-  // portal rectangles above, so no map-specific coordinate code lives here.
-
-  if (currentMapId === "meadow") {
-    if (
-      insideHorizontalGate &&
-      player.x <= 9
-    ) {
-      requestMapTransition(
-        "spawn",
-        "spawnEast"
-      );
-      return;
-    }
-
-    if (
-      insideHorizontalGate &&
-      player.x >= world.width - 9
-    ) {
-      requestMapTransition(
-        "goblinWoods",
-        "west"
-      );
-      return;
-    }
-
-    if (
-      insideVerticalGate &&
-      player.y <= 16
-    ) {
-      requestMapTransition(
-        "ghostGrove",
-        "south"
-      );
-      return;
-    }
-
-    if (
-      insideVerticalGate &&
-      player.y >= world.height - 9
-    ) {
-      requestMapTransition(
-        "hunterHollow",
-        "north"
-      );
-      return;
-    }
-  }
-
-  if (currentMapId === "hunterHollow") {
-    if (
-      insideVerticalGate &&
-      player.y <= 16
-    ) {
-      requestMapTransition(
-        "meadow",
-        "south"
-      );
-      return;
-    }
-
-    if (
-      insideVerticalGate &&
-      player.y >= world.height - 9
-    ) {
-      requestMapTransition(
-        "goldSlimeDen",
-        "north"
-      );
-      return;
-    }
-  }
-
-  if (
-    currentMapId === "goldSlimeDen" &&
-    insideVerticalGate &&
-    player.y <= 16
-  ) {
-    requestMapTransition(
-      "hunterHollow",
-      "south"
-    );
-    return;
-  }
-
-  // Goblin Woods -> Slime Meadow.
-  if (
-    currentMapId === "goblinWoods" &&
-    insideHorizontalGate &&
-    player.x <= 9
-  ) {
-    requestMapTransition(
-      "meadow",
-      "east"
-    );
-    return;
-  }
-
-  // Ghost Grove -> Slime Meadow.
-  if (
-    currentMapId === "ghostGrove" &&
-    insideVerticalGate &&
-    player.y >= world.height - 9
-  ) {
-    requestMapTransition(
-      "meadow",
-      "north"
-    );
-  }
-}
-
-function drawMapConnection(camX, camY) {
-  // Coordinate-world maps use the entire map edge as the connection.
-  if (worldGridMapMeta()) return;
-
-  const gateY = currentMapId === "spawn" ? spawnMapY(200) : 200;
-  const screenY = Math.round(gateY - camY);
-
-  function drawHorizontalPath(x, width) {
-    ctx.fillStyle = "#77934f";
-    ctx.fillRect(x, screenY - 12, width, 25);
-
-    ctx.fillStyle = "#9a8352";
-    ctx.fillRect(x, screenY - 9, width, 18);
-
-    ctx.fillStyle = "#b09a63";
-    ctx.fillRect(x + 8, screenY - 5, 12, 2);
-    ctx.fillRect(x + Math.max(20, width - 25), screenY + 4, 11, 2);
-  }
-
-  function drawVerticalPath(y, height) {
-    const screenX =
-      Math.round(
-        world.width / 2 - camX
-      );
-
-    ctx.fillStyle = "#77934f";
-    ctx.fillRect(
-      screenX - 12,
-      y,
-      25,
-      height
-    );
-
-    ctx.fillStyle = "#9a8352";
-    ctx.fillRect(
-      screenX - 9,
-      y,
-      18,
-      height
-    );
-
-    ctx.fillStyle = "#b09a63";
-    ctx.fillRect(
-      screenX - 5,
-      y + 8,
-      2,
-      11
-    );
-
-    ctx.fillRect(
-      screenX + 4,
-      y + Math.max(
-        20,
-        height - 25
-      ),
-      2,
-      11
-    );
-  }
-
-  if (currentMapId === "spawn") {
-    // Quiet path from the house area through the middle of the safe clearing
-    // and out the east gate.
-    const pathStart = Math.round(spawnMapX(267) - camX);
-    const pathEnd = Math.round(world.width - camX);
-    drawHorizontalPath(pathStart, pathEnd - pathStart);
-
-    // Small west path for the new prototype-island exit.
-    const westEdgeX = Math.round(-camX);
-    drawHorizontalPath(westEdgeX, 48);
-    return;
-  }
-
-  if (isPrototypeIslandMap(currentMapId)) {
-    // The island sections use simple grass bridges instead of dirt paths.
-    return;
-  }
-
-  if (currentMapId === "meadow") {
-    // WEST -> safe spawn.
-    const westEdgeX = Math.round(-camX);
-    drawHorizontalPath(westEdgeX, 48);
-
-    // EAST -> Goblin Woods.
-    const eastEdgeX = Math.round(world.width - camX);
-    drawHorizontalPath(eastEdgeX - 48, 48);
-
-    // NORTH -> Ghost Grove.
-    drawVerticalPath(
-      Math.round(-camY),
-      48
-    );
-
-    return;
-  }
-
-  if (currentMapId === "goblinWoods") {
-    // Goblin Woods WEST -> Meadow.
-    const westEdgeX = Math.round(-camX);
-    drawHorizontalPath(westEdgeX, 48);
-    return;
-  }
-
-  if (currentMapId === "ghostGrove") {
-    // Ghost Grove SOUTH -> Meadow.
-    const southEdgeY =
-      Math.round(
-        world.height - camY
-      );
-
-    drawVerticalPath(
-      southEdgeY - 48,
-      48
-    );
-  }
+  updateWorldGridMapConnection();
 }
 
 const damageNumbers = [];
@@ -3450,10 +2913,6 @@ function spawnPotionUseEffect(itemId, x, y) {
   });
 }
 
-function spawnHealingPotionEffect(x, y) {
-  spawnPotionUseEffect("healingPotion", x, y);
-}
-
 function triggerPotionFeedback(itemId, x = player.x, y = player.y) {
   spawnPotionUseEffect(itemId, x, y);
   if (itemId !== "healingPotion") return;
@@ -3463,10 +2922,6 @@ function triggerPotionFeedback(itemId, x = player.x, y = player.y) {
   void wrap.offsetWidth;
   wrap.classList.add("healing-pulse");
   window.setTimeout(() => wrap.classList.remove("healing-pulse"), 700);
-}
-
-function triggerHealingPotionFeedback(x = player.x, y = player.y) {
-  triggerPotionFeedback("healingPotion", x, y);
 }
 
 function updatePotionUseEffects(dt) {
@@ -3886,14 +3341,7 @@ function tryHitRock() {
   let bestDistance = Infinity;
 
   for (const rock of rocks) {
-    if (
-      rock.depleted ||
-      rock.carriedBy ||
-      (Number(rock.hurlTime) || 0) > 0 ||
-      (Number(rock.rollTime) || 0) > 0
-    ) {
-      continue;
-    }
+    if (rock.depleted) continue;
 
     const targetX = rock.x;
     const targetY = rock.y - 4;
@@ -3933,7 +3381,6 @@ function tryHitRock() {
   if (bestRock.hp <= 0) {
     bestRock.depleted = true;
     player.stone += 2;
-    awardMiningExp(1);
     updateInventoryUi();
   }
 }
@@ -3973,59 +3420,30 @@ const player = {
   bowReleaseTime: 0,
   bowReleaseDuration: 0.12,
 
-  // Precision skill: Camouflage. Stand still in natural cover to prepare an
-  // ambush. Leaving cover keeps the camouflage briefly so the player can step
-  // out and take the opening shot.
-  camouflaged: false,
-  camouflageBuildTime: 0,
-  camouflageBuildDuration: CAMOUFLAGE_RULES.BUILD_DURATION,
-  camouflageGraceTime: 0,
-  camouflageGraceDuration: CAMOUFLAGE_RULES.GRACE_DURATION,
-  camouflageCoverType: null,
-  camouflageSourceCover: null,
-  camouflageParticleTimer: 0,
 
-  // Precision skill: Hunter's Snare. Placement is intentionally a committed
-  // setup action rather than something the hunter can spam while kiting.
-  hunterSnareSetting: false,
-  hunterSnareSetTime: 0,
-  hunterSnareSetDuration: 1.25,
-  hunterSnareSetStartX: 0,
-  hunterSnareSetStartY: 0,
-  hunterSnareCharges: 3,
-  hunterSnareMaxCharges: 3,
 
-  // PvP Hunter's Snare status. The server decides when a trap catches a
-  // player; these short client timers make the authoritative root/slow feel
-  // immediate without turning the trap into a new movement protocol.
-  pvpSnareRootTime: 0,
-  pvpSnareSlowTime: 0,
-  pvpSnareSlowMultiplier: 0.45,
 
-  // Fireball uses an expanding targeting pulse similar to Focus Fire.
+  // Fireball uses an expanding targeting pulse before release.
   fireballAiming: false,
   fireballAimTime: 0,
-  fireballBoundKey: null,
   fireballAimMapId: null,
   fireballTargetX: null,
   fireballTargetY: null,
   fireballTargetAngle: null,
 
-  // Active-skill cooldowns are tracked locally. Rain Cloud begins its cooldown
+  // Item-action cooldowns are tracked locally. Rain Cloud begins its cooldown
   // only after the summoned cloud expires; Fireball begins on successful release.
-  skillCooldowns: {
+  actionCooldowns: {
     fireball: 0,
     rainCloud: 0
   },
-  // Cooldowns use wall-clock deadlines so background-tab throttling cannot
-  // pause them. The numeric values above remain for UI/backward compatibility.
-  skillCooldownEndTimes: {
+  // Cooldowns use wall-clock deadlines so background-tab throttling cannot pause them.
+  actionCooldownEndTimes: {
     fireball: 0,
     rainCloud: 0
   },
 
-  // Rain Cloud is a committed cast whose duration scales with skill level.
-  // Its destination is snapshotted when the cast begins and cannot be retargeted.
+  // Rain Cloud is a committed item action. Its destination is snapshotted when the cast begins.
   rainCloudCasting: false,
   rainCloudCastTime: 0,
   rainCloudCastDuration: 2.00,
@@ -4033,20 +3451,6 @@ const player = {
   rainCloudCastTargetX: null,
   rainCloudCastTargetY: null,
 
-  // Precision skill: Focus Fire. The opener is aimed with a cycling pulse;
-  // a successful landing locks one monster for a five-second barrage.
-  focusFireCharging: false,
-  focusFireOpening: false,
-  focusFireActive: false,
-  focusFireChargeTime: 0,
-  focusFireBoundKey: null,
-  focusFireMapId: null,
-  focusFireTarget: null,
-  focusFireTargetType: null,
-  focusFireTargetId: null,
-  focusFireTime: 0,
-  focusFireShotTimer: 0,
-  focusFireShotSequence: 0,
 
   attackTime: 0,
   attackDuration: DEFAULT_BASIC_ATTACK_DURATION,
@@ -4072,12 +3476,6 @@ const player = {
   hp: 50,
   isDead: false,
 
-  // Opt-in PvP state. Permission is authoritative on the server; the local
-  // fields mirror server messages so the menu and overhead marker stay clear.
-  pvpEnabled: false,
-  pvpCombatUntil: 0,
-  pvpTogglePending: false,
-
   // Fire debuff state. Player fire lasts longer than monster fire so
   // catching flame feels more consequential and gives the rain spell value.
   burnTime: 0,
@@ -4089,21 +3487,9 @@ const player = {
   wetTime: 0,
   wetDuration: 3.0,
 
-  // Jester mobility / trick skill.
-  jesterBlinkCooldown: 0,
-  jesterBlinkCooldownEndAtMs: 0,
-  jesterBlinkCooldownDuration: 15.0,
-  jesterBlinkFadeTime: 0,
-  jesterBlinkFadeDuration: 0.18,
 
-  // Active skill: hide in the shadows until the player performs
-  // any gameplay action other than movement.
-  shadowHidden: false,
-  shadowHideRevealTime: 0,
-  shadowHideRevealDuration: 0.16,
-  shadowCritAttack: false,
 
-  // Hurl whiff / reach feedback when the ability is pressed without
+  // Tiger Paw reach feedback when its grab/throw action is used without
   // a valid slime target.
   hurlReachTime: 0,
   hurlReachDuration: 0.18,
@@ -4119,7 +3505,7 @@ const player = {
   healingPotions: 0,
   attackPotions: 0,
   magicPotions: 0,
-  consumableCooldownUntil: 0, // shared healing-potion-family cooldown
+  healingPotionCooldownUntil: 0,
   attackPotionCooldownUntil: 0,
   magicPotionCooldownUntil: 0,
   attackPotionUntil: 0,
@@ -4135,9 +3521,6 @@ const player = {
   chests: 0,
   craftingTables: 0,
 
-  // Legacy per-character opened-treasure IDs are retained only for old saves.
-  // v414 chest open state is shared map mutation state.
-  openedTreasureIds: new Set(),
 
   // Count-based item ownership. v420 starter loadout: every brand-new character
   // begins able to gather/build without a tutorial handoff NPC. Existing browser
@@ -4148,29 +3531,14 @@ const player = {
     weapon_axe: 1
   },
 
-  // Historical vendor-purchase IDs are retained for backwards-compatible saves.
-  // Item quantities live in player.items and are no longer unique.
-  shopPurchases: [],
 
   // v424 unified player-arranged weapon/tool belt (physical keys 1-0).
   hotbarAssignments: [
     "weapon_sword", "weapon_pickaxe", "weapon_axe", null, null, null, null, null, null, null
   ],
 
-  // Legacy v376 consumable-hotkey fields are retained only so old saves can
-  // still be read without losing data. Consumables are no longer number-key slots.
-  utilityHotbarAssignments: [
-    null,
-    null,
-    null
-  ],
-  utilityHotbarCustomized: false,
-
-  // Tiny first-progression quest state. Persistent storage comes later;
-  // for now these flags live for the current browser session.
+  // Crafting-history flags used by recipe recovery/persistence.
   story: {
-    axeReceived: false,
-    marniePickaxeReceived: false,
     woodSwordCrafted: false,
     woodBowCrafted: false,
     shepherdStaffCrafted: false,
@@ -4198,59 +3566,10 @@ const player = {
   level: 1,
   exp: 0,
   expToNext: 5,
-  skillPoints: 0,
-  abilityPoints: 0,
-
-  // Choosing a class is permanent for this character/session. Persistence is
-  // intentionally deferred until the save system exists, but all skill access
-  // respects this lock immediately after selection.
-  classId: null,
-
-  abilities: {
-    shadowHide: 0,
-    hurl: 0,
-    jesterBlink: 0,
-    wandMastery: 0,
-    fireball: 0,
-    strafe: 0,
-    camouflage: 0,
-    focusFire: 0,
-    huntersSnare: 0,
-    rainCloud: 0
-  },
-
-  // Enhancements are now toggled directly inside their parent skill.
-  // Missing entries default ON as soon as the enhancement is learned.
-  enhancementToggles: {},
-
-  stats: {
-    strength: 0,
-    dex: 0,
-    luck: 0,
-    int: 0
-  },
-
-  // Gathering skill progression.
-  woodcutting: {
-    level: 1,
-    exp: 0,
-    expToNext: 5
-  },
-  mining: {
-    level: 1,
-    exp: 0,
-    expToNext: 5
-  },
-  flowerHarvesting: {
-    level: 1,
-    exp: 0,
-    expToNext: 5
-  }
 };
 
 const HOTBAR_SLOT_COUNT = 10;
-const UTILITY_HOTBAR_SLOT_COUNT = 3;
-const UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
+const CONSUMABLE_ITEM_IDS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
 const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);
 const HOTBAR_RESOURCE_ITEM_BY_KEY = Object.freeze({
   woodFloors: "woodFloor",
@@ -4527,26 +3846,22 @@ const HEALING_POTION_COOLDOWN_MS = 15000;
 const BUFF_POTION_COOLDOWN_MS = 1000;
 const POTION_BUFF_MS = 300000;
 
-function consumableCooldownDurationMs(itemId) {
-  return itemId === "healingPotion" ? HEALING_POTION_COOLDOWN_MS : BUFF_POTION_COOLDOWN_MS;
-}
-
-function consumableCooldownUntil(itemId) {
-  if (itemId === "healingPotion") return Number(player.consumableCooldownUntil) || 0;
+function potionCooldownUntil(itemId) {
+  if (itemId === "healingPotion") return Number(player.healingPotionCooldownUntil) || 0;
   if (itemId === "attackPotion") return Number(player.attackPotionCooldownUntil) || 0;
   if (itemId === "magicPotion") return Number(player.magicPotionCooldownUntil) || 0;
   return 0;
 }
 
 function setLocalConsumableCooldown(itemId, now) {
-  if (itemId === "healingPotion") player.consumableCooldownUntil = now + HEALING_POTION_COOLDOWN_MS;
+  if (itemId === "healingPotion") player.healingPotionCooldownUntil = now + HEALING_POTION_COOLDOWN_MS;
   if (itemId === "attackPotion") player.attackPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
   if (itemId === "magicPotion") player.magicPotionCooldownUntil = now + BUFF_POTION_COOLDOWN_MS;
 }
 
 function useConsumable(itemId) {
-  if (!UTILITY_SLOT_ITEMS.includes(itemId)) return false;
-  if (Date.now() < consumableCooldownUntil(itemId)) return false;
+  if (!CONSUMABLE_ITEM_IDS.includes(itemId)) return false;
+  if (Date.now() < potionCooldownUntil(itemId)) return false;
   if (consumableCount(itemId) <= 0) return false;
   if (itemId === "healingPotion" && player.hp >= player.maxHp) {
     spawnFloatingText(player.x, player.y - 42, "HP FULL", "#f6c8df", 0.8);
@@ -4712,79 +4027,6 @@ function weaponItemIdForIndex(index) {
     : null;
 }
 
-function isUtilityHotbarAssignableItem(itemId) {
-  return UTILITY_SLOT_ITEMS.includes(itemId);
-}
-
-function utilityHotbarItemCanBeAssigned(itemId) {
-  return Boolean(itemId && isUtilityHotbarAssignableItem(itemId));
-}
-
-function utilityHotbarSlotForItem(itemId) {
-  return Array.isArray(player.utilityHotbarAssignments)
-    ? player.utilityHotbarAssignments.indexOf(itemId)
-    : -1;
-}
-
-function sanitizeUtilityHotbarAssignments() {
-  const source = Array.isArray(player.utilityHotbarAssignments)
-    ? player.utilityHotbarAssignments
-    : [];
-  const seen = new Set();
-
-  player.utilityHotbarAssignments = Array.from(
-    { length: UTILITY_HOTBAR_SLOT_COUNT },
-    (_, index) => {
-      const itemId = source[index];
-      if (!isUtilityHotbarAssignableItem(itemId) || seen.has(itemId)) return null;
-      seen.add(itemId);
-      return itemId;
-    }
-  );
-}
-
-function assignUtilityItemToHotbar(itemId, slotIndex) {
-  if (
-    !utilityHotbarItemCanBeAssigned(itemId) ||
-    slotIndex < 0 ||
-    slotIndex >= UTILITY_HOTBAR_SLOT_COUNT
-  ) {
-    return false;
-  }
-
-  sanitizeUtilityHotbarAssignments();
-  const currentSlot = utilityHotbarSlotForItem(itemId);
-  if (currentSlot === slotIndex) return true;
-
-  const displacedItem = player.utilityHotbarAssignments[slotIndex] || null;
-  if (currentSlot >= 0) {
-    player.utilityHotbarAssignments[currentSlot] = displacedItem;
-  }
-  player.utilityHotbarAssignments[slotIndex] = itemId;
-  player.utilityHotbarCustomized = true;
-
-  updateHotbar();
-  updateInventoryUi();
-  return true;
-}
-
-function clearUtilityItemFromHotbar(itemId) {
-  sanitizeUtilityHotbarAssignments();
-  let changed = false;
-  for (let index = 0; index < UTILITY_HOTBAR_SLOT_COUNT; index++) {
-    if (player.utilityHotbarAssignments[index] === itemId) {
-      player.utilityHotbarAssignments[index] = null;
-      changed = true;
-    }
-  }
-  if (changed) {
-    player.utilityHotbarCustomized = true;
-    updateHotbar();
-    updateInventoryUi();
-  }
-  return changed;
-}
-
 function utilityItemDisplayName(itemId) {
   if (itemId === "healingPotion") return "Healing Potion";
   if (itemId === "attackPotion") return "Attack Potion";
@@ -4854,9 +4096,8 @@ function hotbarAssignmentCanPersist(itemId) {
 }
 
 function showHotbarAssignmentRestriction(itemId) {
-  const requiredClass = equipmentRequiredClass(itemId);
-  if (requiredClass && player.classId !== requiredClass) {
-    showEquipmentClassRestriction(itemId);
+  if (equipmentMissingRequirements(itemId).length) {
+    showEquipmentRestriction(itemId);
     return;
   }
   showMenuFeedback("ITEM CANNOT BE HOTKEYED", "#ffb4bc", 0.9);
@@ -4901,7 +4142,7 @@ function sanitizeHotbarAssignments() {
 }
 
 function unequipItemIfNoLongerAssigned(itemId) {
-  if (!itemId || focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
+  if (!itemId || fireballIsAiming() || player.rainCloudCasting) return false;
 
   const equippedItemId =
     weaponItemIdForIndex(
@@ -4920,7 +4161,7 @@ function unequipItemIfNoLongerAssigned(itemId) {
 }
 
 function assignItemToHotbar(itemId, slotIndex) {
-  if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
+  if (fireballIsAiming() || player.rainCloudCasting) return false;
 
   if (
     !isHotbarAssignableItem(itemId) ||
@@ -4972,7 +4213,7 @@ function assignItemToHotbar(itemId, slotIndex) {
 }
 
 function clearItemFromHotbar(itemId) {
-  if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
+  if (fireballIsAiming() || player.rainCloudCasting) return false;
 
   let changed = false;
 
@@ -5076,9 +4317,6 @@ function placedNpcDefinitionsForMap(mapId = currentMapId) {
 }
 
 const NPC_DEFAULT_NAMES = Object.freeze({
-  shopkeeper: "Marnie",
-  hunter: "Bramble",
-  jester: "Jinx",
   beachGirl: "Sunny",
   greenWitch: "Myrtle",
   camoGuy: "Cam"
@@ -5108,45 +4346,16 @@ function nearbyChestContextTarget() {
 function nearbySpawnInteraction() {
   const candidates = [];
 
-  if (currentMapId === "spawn") {
-    candidates.push(
-      {
-        kind: "npc",
-        x: tutorialNpc.x,
-        y: tutorialNpc.y,
-        radius:
-          tutorialNpc.interactionRadius
-      },
-      {
-        kind: "classResetCrystal",
-        x: classResetCrystal.x,
-        y: classResetCrystal.y,
-        radius:
-          classResetCrystal.interactionRadius
-      }
-    );
-  }
-
-  if (currentMapId === "hunterHollow") {
-    candidates.push({
-      kind: "hunterNpc",
-      x: hunterNpc.x,
-      y: hunterNpc.y,
-      radius:
-        hunterNpc.interactionRadius
-    });
-  }
-
   for (const npc of placedNpcDefinitionsForMap(currentMapId)) {
     const type = npc?.type;
-    if (!["shopkeeper", "hunter", "beachGirl", "greenWitch", "camoGuy", "classResetCrystal"].includes(type)) continue;
+    if (!["beachGirl", "greenWitch", "camoGuy"].includes(type)) continue;
     candidates.push({
       kind: "placedNpc",
       npcType: type,
       npc,
       x: Number(npc.x) || 0,
       y: Number(npc.y) || 0,
-      radius: Math.max(8, Number(npc.interactionRadius) || (type === "classResetCrystal" ? 28 : 24))
+      radius: Math.max(8, Number(npc.interactionRadius) || 24)
     });
   }
 
@@ -5228,90 +4437,6 @@ function showRewardToast(title, detail, imageObject) {
     toast.classList.remove("show");
     rewardToastTimer = null;
   }, 2800);
-}
-
-function completeMarniePickaxeReward(sourceNpc = tutorialNpc) {
-  player.story.marniePickaxeReceived = true;
-  if (!playerOwnsItem("weapon_pickaxe")) grantInventoryItem("weapon_pickaxe", 1);
-  showRewardToast(
-    "PICKAXE RECEIVED!",
-    "Marnie took 10 Wood · Pickaxe added to Inventory",
-    pickaxeImage
-  );
-  spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, "PICKAXE RECEIVED!", "#fff1b0", 1.25);
-  updateInventoryUi();
-  updateHotbar();
-  saveLocalCharacterState(true);
-}
-
-function interactWithTutorialNpc(npc = tutorialNpc) {
-  const sourceNpc = npc || tutorialNpc;
-
-  if (playerOwnsItem("weapon_pickaxe")) {
-    player.story.marniePickaxeReceived = true;
-  }
-
-  if (!player.story.axeReceived) {
-    player.story.axeReceived = true;
-    if (!playerOwnsItem("weapon_axe")) grantInventoryItem("weapon_axe", 1);
-    showRewardToast(
-      "AXE RECEIVED!",
-      "Added to Inventory · Gather 10 Wood and return to Marnie",
-      axeImage
-    );
-    spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, "BRING ME 10 WOOD", "#fff1b0", 1.35);
-    updateInventoryUi();
-    updateHotbar();
-    saveLocalCharacterState(true);
-    return;
-  }
-
-  if (!player.story.marniePickaxeReceived) {
-    const wood = Math.max(0, Math.floor(Number(player.wood) || 0));
-    if (wood < 10) {
-      showRewardToast(
-        npcDisplayName("shopkeeper", sourceNpc),
-        `Bring me 10 Wood for a Pickaxe · ${wood} / 10`,
-        axeImage
-      );
-      spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, `WOOD ${wood} / 10`, "#fff1b0", 1.1);
-      return;
-    }
-
-    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
-      if (onlineClient.requestMarnieWoodTurnIn()) {
-        spawnFloatingText(sourceNpc.x, sourceNpc.y - 34, "TURNING IN...", "#fff1b0", 0.9);
-      }
-      return;
-    }
-
-    player.wood = Math.max(0, wood - 10);
-    completeMarniePickaxeReward(sourceNpc);
-    return;
-  }
-
-  showRewardToast(
-    npcDisplayName("shopkeeper", sourceNpc),
-    "That pickaxe should open up plenty of new paths. Good luck out there!",
-    pickaxeImage
-  );
-}
-
-function interactWithHunterNpc(npc = hunterNpc) {
-  const sourceNpc = npc || hunterNpc;
-  showRewardToast(
-    npcDisplayName("hunter", sourceNpc),
-    "Come talk to me when you're ready to become a real hunter.",
-    hunterNpcImage
-  );
-
-  spawnFloatingText(
-    sourceNpc.x,
-    sourceNpc.y - 26,
-    "REAL HUNTER?",
-    "#fff1b0",
-    1.0
-  );
 }
 
 function interactWithCamoNpc(npc) {
@@ -5506,8 +4631,9 @@ function syncCraftPanelToViewport() {
   const viewport = document.getElementById("gameViewport");
   if (!viewport) return;
   const rect = viewport.getBoundingClientRect();
+  const mobileLandscape = window.matchMedia("(hover: none) and (pointer: coarse) and (orientation: landscape)").matches;
   const top = Math.round(rect.top + 86);
-  const left = Math.round(rect.left + 8);
+  const left = Math.round(rect.left + (mobileLandscape ? 2 : 8));
   const maxHeight = `${Math.max(96, Math.round(rect.bottom - top - 8))}px`;
 
   for (const panel of [craftPanel, chestPanel]) {
@@ -5536,7 +4662,13 @@ function syncContextOverlayVisibility() {
 function chestContextItemName(token) { return inventoryTransferName(token); }
 function chestContextItemImage(token) { return inventoryTransferImageForToken(token); }
 function normalizedChestContextItems(items) {
-  return (Array.isArray(items) ? items : []).map(item => { const legacy = typeof item?.itemId === "string" ? item.itemId : ""; const token = typeof item?.token === "string" ? item.token : legacy ? `resource:${legacy}` : ""; return { token, count: Math.max(0, Math.floor(Number(item?.count) || 0)) }; }).filter(item => inventoryTransferTokenParts(item.token) && item.count > 0).slice(0, Math.max(1, chestContextSlotLimit));
+  return (Array.isArray(items) ? items : [])
+    .map(item => ({
+      token: typeof item?.token === "string" ? item.token : "",
+      count: Math.max(0, Math.floor(Number(item?.count) || 0))
+    }))
+    .filter(item => inventoryTransferTokenParts(item.token) && item.count > 0)
+    .slice(0, Math.max(1, chestContextSlotLimit));
 }
 function renderChestContextUi() {
   const grid = document.getElementById("chestGrid");
@@ -5718,7 +4850,7 @@ function applyChestStoreResult(message) {
 function applyInventoryDropResult(message){const token=typeof message?.token==="string"?message.token:"";if(!token||inventoryDropPendingToken!==token)return;inventoryDropPendingToken=null;if(!message?.success)return;const parts=inventoryTransferTokenParts(token);if(parts?.type==="resource"&&Number.isFinite(message.playerCount)){player[parts.id]=Math.max(0,Math.floor(Number(message.playerCount)));updateInventoryUi();updateHotbar();saveLocalCharacterState(true);}else if(parts?.type==="item")applyInventoryTransferDelta(token,-Math.max(1,Math.floor(Number(message.amount)||1)));}
 
 function updateNearbyChestContext() {
-  const target = (player.isDead || shopOpen || classResetConfirmOpen || beachQuestOpen)
+  const target = (player.isDead || shopOpen || beachQuestOpen)
     ? null
     : nearbyChestContextTarget();
   const nextId = target?.id || null;
@@ -5771,34 +4903,6 @@ window.addEventListener("resize", () => {
 window.visualViewport?.addEventListener("resize", () => {
   if (craftingOpen || chestContextOpen) syncCraftPanelToViewport();
 }, { passive: true });
-
-function setClassResetConfirmOpen(open) {
-  classResetConfirmOpen = Boolean(open);
-
-  const overlay = document.getElementById("classResetConfirmOverlay");
-  if (!overlay) return;
-
-  overlay.classList.toggle("open", classResetConfirmOpen);
-  overlay.setAttribute(
-    "aria-hidden",
-    classResetConfirmOpen ? "false" : "true"
-  );
-
-  inputController.clearKeys();
-  if (classResetConfirmOpen) {
-    inputController.clearCommands();
-    const noButton = document.getElementById("classResetNo");
-    if (noButton) noButton.focus({ preventScroll: true });
-  }
-}
-
-function interactWithClassResetCrystal() {
-  setClassResetConfirmOpen(true);
-}
-
-function interactWithWoodBench() {
-  setCraftingOpen(true);
-}
 
 let beachQuestView = null;
 
@@ -5936,28 +5040,8 @@ function interactWithNearbyObject() {
     return false;
   }
 
-  breakShadowHide();
-
-
-  if (interaction.kind === "npc") {
-    interactWithTutorialNpc();
-    return true;
-  }
-
-  if (interaction.kind === "hunterNpc") {
-    interactWithHunterNpc();
-    return true;
-  }
 
   if (interaction.kind === "placedNpc") {
-    if (interaction.npcType === "shopkeeper") {
-      interactWithTutorialNpc(interaction.npc);
-      return true;
-    }
-    if (interaction.npcType === "hunter") {
-      interactWithHunterNpc(interaction.npc);
-      return true;
-    }
     if (interaction.npcType === "beachGirl") {
       interactWithBeachGirl();
       return true;
@@ -5970,316 +5054,41 @@ function interactWithNearbyObject() {
       interactWithCamoNpc(interaction.npc);
       return true;
     }
-    if (interaction.npcType === "classResetCrystal") {
-      interactWithClassResetCrystal();
-      return true;
-    }
   }
 
-
-  if (interaction.kind === "classResetCrystal") {
-    interactWithClassResetCrystal();
-    return true;
-  }
 
   return false;
 }
 
-const ACTIVE_SKILLS = {
-  shadowHide: {
-    name: "Shadow Hide",
-    classId: "guile",
-    maxLevel: 5,
-    noEnhancements: true
-  },
-  hurl: {
-    name: "Hurl",
-    classId: "might",
-    maxLevel: 5,
-    noEnhancements: true
-  },
-  jesterBlink: {
-    name: "Mirage",
-    classId: "arcana",
-    maxLevel: 20,
-    noEnhancements: true,
-    progressionMilestones: [
-      { level: 1, name: "30px Blink", effectText: "2.0s return window · 20.0s cooldown from cast." },
-      { level: 10, name: "44px Blink", effectText: "3.4s return window · 17.6s cooldown from cast." },
-      { level: 20, name: "60px Blink", effectText: "5.0s return window · 15.0s cooldown from cast." }
-    ]
-  },
-  wandMastery: {
-    name: "Spellshred",
-    classId: "arcana",
-    maxLevel: 20,
-    passive: true,
-    noEnhancements: true,
-    progressionMilestones: [
-      { level: 1, name: "55 Power", effectText: "Target up to 0 additional foes." },
-      { level: 10, name: "64 Power", effectText: "Target up to 1 additional foe." },
-      { level: 20, name: "75 Power", effectText: "Target up to 2 additional foes." }
-    ]
-  },
-  fireball: {
-    name: "Ignite",
-    classId: "arcana",
-    maxLevel: 20,
-    cooldown: 3.5,
-    noEnhancements: true,
-    progressionMilestones: [
-      { level: 1, name: "100 Power", effectText: "Primary target takes full impact + On-Fire. Up to 4 nearby enemies receive On-Fire only. Burn: 20 Power/sec for 3s. 7.0s cooldown." },
-      { level: 10, name: "150 Power", effectText: "Primary target takes full impact + On-Fire. Up to 4 nearby enemies receive On-Fire only. Burn: 20 Power/sec for 3s. 5.3s cooldown." },
-      { level: 20, name: "200 Power", effectText: "Primary target takes full impact + On-Fire. Up to 4 nearby enemies receive On-Fire only. Burn: 20 Power/sec for 3s. 3.5s cooldown." }
-    ]
-  },
-  strafe: {
-    name: "Strafe",
-    classId: "precision",
-    maxLevel: 5,
-    passive: true,
-    levelProgression: [
-      { name: "30% Move", effectText: "Move at 30% of normal speed while drawing the bow." },
-      { name: "35% Move", effectText: "Move at 35% of normal speed while drawing the bow." },
-      { name: "40% Move", effectText: "Move at 40% of normal speed while drawing the bow." },
-      { name: "45% Move", effectText: "Move at 45% of normal speed while drawing the bow." },
-      { name: "50% Move", effectText: "Move at 50% of normal speed while drawing the bow." }
-    ],
-    enhancementName: "Strafe Movement",
-    enhancementEffect: "Toggle Strafe movement while drawing a bow or using Focus Fire.",
-    singleScalingEnhancement: true,
-    enhancementUnlockLevel: 1
-  },
-  camouflage: {
-    name: "Camouflage",
-    classId: "precision",
-    maxLevel: 1,
-    passive: true,
-    noEnhancements: true,
-    levelProgression: [
-      {
-        name: "Ambush Cover",
-        effectText: "Stand still in tree canopy cover, tall grass, or fully grown Magic Grass for 1 second. Camouflage hides you from enemy sight. In PvP you are completely hidden from opted-in opponents, with only an intermittent leaf tell. Your first attack breaks Camouflage; if that opening attack hits, the target is confused for 1.25 seconds before normal aggro."
-      }
-    ]
-  },
-  focusFire: {
-    name: "Focus Fire",
-    classId: "precision",
-    maxLevel: 1,
-    noEnhancements: true,
-    levelProgression: [
-      {
-        name: "Focus Fire",
-        effectText: "Hold to set distance, release an arcing marker arrow, then fire every 0.5s for 5s. In PvP each follow-up aims at the locked player\'s position when that arrow is released; arrows never home after launch, and Camouflage breaks the lock. The first hits are deliberately weak, but consecutive hits ramp sharply toward the end."
-      }
-    ]
-  },
-  huntersSnare: {
-    name: "Hunter's Snare",
-    classId: "precision",
-    maxLevel: 1,
-    noEnhancements: true,
-    levelProgression: [
-      {
-        name: "Hunter's Snare",
-        effectText: "Store up to 3 charges. Stand still for 1.25 seconds to spend 1 charge and set a trap at your feet. Freed charges recover every 15 seconds. Keep up to 3 active traps. The first eligible monster to cross one is rooted for 0.65 seconds, then moves at 45% speed for 3 seconds."
-      }
-    ]
-  },
-  rainCloud: {
-    name: "Rainbloom",
-    classId: "arcana",
-    maxLevel: 20,
-    cooldown: 30.0,
-    noEnhancements: true,
-    progressionMilestones: [
-      { level: 1, name: "10% Grass Slow", effectText: "2.0s cast · Magic Grass lasts 30s per tuft · 30.0s cooldown after cloud expiry." },
-      { level: 10, name: "19% Grass Slow", effectText: "1.3s cast · Magic Grass lasts 30s per tuft · 25.3s cooldown after cloud expiry." },
-      { level: 20, name: "30% Grass Slow", effectText: "0.5s cast · Magic Grass lasts 30s per tuft · 20.0s cooldown after cloud expiry." }
-    ]
-  }
-};
-
-const SKILL_ICON_PATHS = {
-  shadowHide: "./assets/skills/shadow_hide_approved.png",
-  hurl: "./assets/skills/hurl_approved.png",
-  jesterBlink: "./assets/skills/jester_blink_approved.png",
-  wandMastery: "./assets/shepherd_staff_v1.png",
-  fireball: "./assets/skills/fireball_approved.png",
-  strafe: "./assets/skills/strafe_precision_v2.png",
-  camouflage: "./assets/skills/camouflage_precision_v2.png",
-  focusFire: "./assets/skills/focus_fire_precision_v2.png",
-  huntersSnare: "./assets/skills/hunters_snare_precision_v1.png",
-  rainCloud: "./assets/skills/rain_cloud_approved.png"
-};
-
-function skillIconPath(skillId) {
-  return SKILL_ICON_PATHS[skillId] || "";
-}
-
-function skillLevelProgression(skillId) {
-  const skill = ACTIVE_SKILLS[skillId];
-  if (!skill) return [];
-
-  if (Array.isArray(skill.progressionMilestones)) {
-    return skill.progressionMilestones.map(entry => ({
-      level: Math.max(1, Math.floor(Number(entry.level) || 1)),
-      name: entry.name || `LV ${entry.level}`,
-      effectText: entry.effectText || ""
-    }));
-  }
-
-  if (Array.isArray(skill.levelProgression)) {
-    return Array.from(
-      { length: skill.maxLevel },
-      (_, index) => {
-        const custom = skill.levelProgression[index] || {};
-        return {
-          level: index + 1,
-          name: custom.name || `LV ${index + 1}`,
-          effectText: custom.effectText || ""
-        };
-      }
-    );
-  }
-
-  const entries = [
-    { level: 1, name: "Unlock Ability", effectText: "Unlocks the base ability." }
-  ];
-
-  for (let level = 2; level <= skill.maxLevel; level++) {
-    const tier = level - 1;
-    const custom = Array.isArray(skill.enhancementUnlocks)
-      ? skill.enhancementUnlocks[tier - 1]
-      : null;
-
-    entries.push({
-      level,
-      name: custom?.name || `Enhancement ${romanTier(tier)}`,
-      effectText: custom?.effectText || skill.enhancementEffect
-    });
-  }
-
-  return entries;
-}
-
-// Active abilities are independent of equipped weapons/armor.
-// Skills begin locked and are manually assigned after being unlocked.
-const skillBindings = {
-  shift: null,
-  space: null,
-  e: null,
-  r: null
-};
-
-function skillDisplayName(skillId) {
-  return skillId && ACTIVE_SKILLS[skillId]
-    ? ACTIVE_SKILLS[skillId].name
-    : "Empty";
-}
-
-const PLAYER_CLASSES = Object.freeze({
-  might: Object.freeze({ name: "Bruiser" }),
-  arcana: Object.freeze({ name: "Magus" }),
-  precision: Object.freeze({ name: "Ranger" }),
-  guile: Object.freeze({ name: "Rogue" })
+// Equipment progression is intentionally simple: gear can have an optional level gate.
+const EQUIPMENT_LEVEL_REQUIREMENTS = Object.freeze({
+  hat_jester: 20,
+  shirt_jester: 20,
+  pants_jester: 20,
+  hat_arcanist: 10,
+  shirt_arcanist: 10,
+  pants_arcanist: 10,
+  hat_ranger: 10,
+  shirt_ranger: 10,
+  pants_ranger: 10,
+  weapon_sapgemWand: 10,
+  weapon_lostKey: 15,
+  weapon_hugeSunflower: 20,
+  weapon_dreamcatcher: 20,
+  hat_greencap: 5,
+  shirt_greencap: 5,
+  pants_greencap: 5
 });
 
-const CLASS_SELECTION_LEVEL = 10;
-const SELECTABLE_CLASS_IDS = new Set(["arcana", "precision"]);
-
-const ARMOR_CLASS_REQUIREMENTS = Object.freeze({
-  hat_jester: "arcana",
-  shirt_jester: "arcana",
-  pants_jester: "arcana",
-  hat_arcanist: "arcana",
-  shirt_arcanist: "arcana",
-  pants_arcanist: "arcana",
-
-  hat_knight: "might",
-  shirt_knight: "might",
-  pants_knight: "might",
-
-  hat_ninja: "guile",
-  shirt_ninja: "guile",
-  pants_ninja: "guile",
-
-  hat_ranger: "precision",
-  shirt_ranger: "precision",
-  pants_ranger: "precision"
-});
-
-const EQUIPMENT_ATTRIBUTE_REQUIREMENTS = Object.freeze({
-  hat_jester: Object.freeze({ level: 20, luck: 10 }),
-  shirt_jester: Object.freeze({ level: 20, luck: 10 }),
-  pants_jester: Object.freeze({ level: 20, luck: 10 }),
-  hat_arcanist: Object.freeze({ level: 10, luck: 10 }),
-  shirt_arcanist: Object.freeze({ level: 10, luck: 10 }),
-  pants_arcanist: Object.freeze({ level: 10, luck: 10 }),
-
-  hat_ranger: Object.freeze({ level: 10 }),
-  shirt_ranger: Object.freeze({ level: 10 }),
-  pants_ranger: Object.freeze({ level: 10 }),
-
-  weapon_sapgemWand: Object.freeze({ level: 10 }),
-  weapon_lostKey: Object.freeze({ level: 15 }),
-  weapon_hugeSunflower: Object.freeze({ level: 20 }),
-  weapon_dreamcatcher: Object.freeze({ level: 20 }),
-
-  hat_greencap: Object.freeze({ level: 5 }),
-  shirt_greencap: Object.freeze({ level: 5 }),
-  pants_greencap: Object.freeze({ level: 5 })
-});
-
-const WEAPON_CLASS_REQUIREMENTS = Object.freeze({
-  weapon_wand: "arcana",
-  weapon_rainWand: "arcana",
-  weapon_lostKey: "arcana",
-  weapon_hugeSunflower: "arcana",
-  weapon_sapgemWand: "arcana",
-  weapon_dreamcatcher: "precision",
-  weapon_katana: "guile"
-});
-
-function armorRequiredClass(itemId) {
-  return ARMOR_CLASS_REQUIREMENTS[itemId] || null;
-}
-
-function weaponRequiredClass(itemId) {
-  return WEAPON_CLASS_REQUIREMENTS[itemId] || null;
-}
-
-function equipmentRequiredClass(itemId) {
-  // v377 pivot: classes are retired. Historical class-lock tables are kept
-  // above so old data remains understandable, but equipment is now governed
-  // only by its level/stat requirements.
-  void itemId;
-  return null;
-}
-
-function equipmentAttributeRequirements(itemId) {
-  return EQUIPMENT_ATTRIBUTE_REQUIREMENTS[itemId] || null;
+function equipmentRequiredLevel(itemId) {
+  return Math.max(0, Number(EQUIPMENT_LEVEL_REQUIREMENTS[itemId]) || 0);
 }
 
 function equipmentMissingRequirements(itemId) {
-  const missing = [];
-  const requiredClass = equipmentRequiredClass(itemId);
-  const attributeRequirements = equipmentAttributeRequirements(itemId);
-  const requiredLevel = Number(attributeRequirements?.level) || 0;
-  const requiredLuck = Number(attributeRequirements?.luck) || 0;
-
-  if (requiredClass && player.classId !== requiredClass) {
-    missing.push(`Requires ${PLAYER_CLASSES[requiredClass]?.name || "Class"}`);
-  }
-  if (requiredLevel > 0 && Number(player.level) < requiredLevel) {
-    missing.push(`Requires Lv ${requiredLevel}`);
-  }
-  if (requiredLuck > 0 && Number(player.stats?.luck) < requiredLuck) {
-    missing.push(`Requires LUK ${requiredLuck}`);
-  }
-
-  return missing;
+  const requiredLevel = equipmentRequiredLevel(itemId);
+  return requiredLevel > 0 && Number(player.level) < requiredLevel
+    ? [`Requires Lv ${requiredLevel}`]
+    : [];
 }
 
 function equipmentItemCanBeEquipped(itemId) {
@@ -6290,25 +5099,19 @@ function armorItemCanBeEquipped(itemId) {
   return equipmentItemCanBeEquipped(itemId);
 }
 
-function showEquipmentClassRestriction(itemId) {
+function showEquipmentRestriction(itemId) {
   const missing = equipmentMissingRequirements(itemId);
   if (!missing.length) return;
-
-  spawnFloatingText(
-    player.x,
-    player.y - 31,
-    missing.join(" · ").toUpperCase(),
-    "#ffb4bc",
-    0.9
-  );
+  spawnFloatingText(player.x, player.y - 31, missing.join(" · ").toUpperCase(), "#ffb4bc", 0.9);
 }
 
-function showArmorClassRestriction(itemId) {
-  showEquipmentClassRestriction(itemId);
-}
 
 function shopCategoryForItem(item) {
-  return item?.category || equipmentRequiredClass(item?.id) || "common";
+  if (!item?.id) return "common";
+  if (item.id === "arrows") return "consumables";
+  if (WEAPON_ITEM_IDS.includes(item.id)) return "weapons";
+  if (HAT_ITEM_IDS.includes(item.id) || SHIRT_ITEM_IDS.includes(item.id) || PANTS_ITEM_IDS.includes(item.id) || CHARM_ITEM_IDS.includes(item.id)) return "armor";
+  return "common";
 }
 
 function weaponTypeForShopItem(itemId) {
@@ -6378,13 +5181,7 @@ function itemDetailData(itemId) {
   if (!itemId) return null;
 
   const image = shopImageForItemId(itemId);
-  const requiredClass = equipmentRequiredClass(itemId);
-  const classLabel = requiredClass
-    ? PLAYER_CLASSES[requiredClass]?.name || "Unknown"
-    : "Common";
-  const attributeRequirements = equipmentAttributeRequirements(itemId);
-  const requiredLevel = Number(attributeRequirements?.level) || 0;
-  const requiredLuck = Number(attributeRequirements?.luck) || 0;
+  const requiredLevel = equipmentRequiredLevel(itemId);
   const weaponProfile = weaponCombatProfileForItemId(itemId);
 
   if (weaponProfile) {
@@ -6403,16 +5200,10 @@ function itemDetailData(itemId) {
       ? COMBAT_BALANCE.isBowWeaponIndex(weaponIndex)
       : weaponIndex === 6 || weaponIndex === 7;
     if (!isBowWeapon) {
-      const speedLabel = typeof COMBAT_BALANCE.weaponAttackSpeedLabel === "function"
-        ? COMBAT_BALANCE.weaponAttackSpeedLabel(weaponIndex)
-        : typeof COMBAT_BALANCE.wandAttackSpeedLabel === "function" && COMBAT_BALANCE.isWandWeaponIndex?.(weaponIndex)
-          ? COMBAT_BALANCE.wandAttackSpeedLabel(weaponIndex)
-          : "Normal";
+      const speedLabel = COMBAT_BALANCE.weaponAttackSpeedLabel(weaponIndex);
       rows.push(["Attack Speed", speedLabel]);
     }
-    rows.push(["Class", classLabel]);
     if (requiredLevel > 0) rows.push(["Required Lv", `${requiredLevel}`]);
-    if (requiredLuck > 0) rows.push(["Required LUK", `${requiredLuck}`]);
 
     return {
       name: itemDisplayNameForId(itemId),
@@ -6431,9 +5222,7 @@ function itemDetailData(itemId) {
       rows: [
         ["Armor", `${armorRatingForItemId(itemId)}`],
         ["Resist", `${armorResistForItemId(itemId)}`],
-        ["Class", classLabel],
-        ...(requiredLevel > 0 ? [["Required Lv", `${requiredLevel}`]] : []),
-        ...(requiredLuck > 0 ? [["Required LUK", `${requiredLuck}`]] : [])
+        ...(requiredLevel > 0 ? [["Required Lv", `${requiredLevel}`]] : [])
       ]
     };
   }
@@ -6547,23 +5336,10 @@ function shopItemMetadata(item) {
   if (!item?.id) return "";
   if (item.id === "arrows") return "Ammo · 50 arrows per purchase";
 
-  const requiredClass = equipmentRequiredClass(item.id);
   const armor = armorRatingForItemId(item.id);
   const resist = armorResistForItemId(item.id);
-  const attributeRequirements = equipmentAttributeRequirements(item.id);
-  const requirementParts = [];
-
-  if (requiredClass) {
-    requirementParts.push(`Requires ${PLAYER_CLASSES[requiredClass]?.name || "Unknown"}`);
-  } else {
-    requirementParts.push("Common");
-  }
-  if ((Number(attributeRequirements?.level) || 0) > 0) {
-    requirementParts.push(`Lv ${Number(attributeRequirements.level)}`);
-  }
-  if ((Number(attributeRequirements?.luck) || 0) > 0) {
-    requirementParts.push(`LUK ${Number(attributeRequirements.luck)}`);
-  }
+  const requiredLevel = equipmentRequiredLevel(item.id);
+  const requirement = requiredLevel > 0 ? ` · Lv ${requiredLevel}` : "";
 
   if (WEAPON_ITEM_IDS.includes(item.id)) {
     const weaponType = weaponTypeForShopItem(item.id);
@@ -6571,1147 +5347,15 @@ function shopItemMetadata(item) {
     const power = [];
     if ((Number(profile?.attackPower) || 0) > 0) power.push(`ATK ${profile.attackPower}`);
     if ((Number(profile?.magicPower) || 0) > 0) power.push(`MAG ${profile.magicPower}`);
-    return `${weaponType} · ${power.join(" · ")} · ${requirementParts.join(" · ")}`;
+    return `${weaponType}${power.length ? ` · ${power.join(" · ")}` : ""}${requirement}`;
   }
 
-  if (requiredClass || attributeRequirements) {
-    return `Armor ${armor} · Resist ${resist} · ${requirementParts.join(" · ")}`;
-  }
-
-  if (HAT_ITEM_IDS.includes(item.id)) return `Head Armor · Armor ${armor} · Resist ${resist} · Common`;
-  if (SHIRT_ITEM_IDS.includes(item.id)) return `Torso Armor · Armor ${armor} · Resist ${resist} · Common`;
-  if (PANTS_ITEM_IDS.includes(item.id)) return `Leg Armor · Armor ${armor} · Resist ${resist} · Common`;
-  return "Common";
+  if (HAT_ITEM_IDS.includes(item.id)) return `Head Armor · Armor ${armor} · Resist ${resist}${requirement}`;
+  if (SHIRT_ITEM_IDS.includes(item.id)) return `Torso Armor · Armor ${armor} · Resist ${resist}${requirement}`;
+  if (PANTS_ITEM_IDS.includes(item.id)) return `Leg Armor · Armor ${armor} · Resist ${resist}${requirement}`;
+  if (CHARM_ITEM_IDS.includes(item.id)) return `Charm · Armor ${armor} · Resist ${resist}${requirement}`;
+  return requiredLevel > 0 ? `Lv ${requiredLevel}` : "Common";
 }
-
-function playerHasChosenClass() {
-  return Boolean(player.classId && PLAYER_CLASSES[player.classId]);
-}
-
-function refundAllAbilityPoints() {
-  let refunded = 0;
-
-  for (const skillId of Object.keys(player.abilities || {})) {
-    const level = Math.max(0, Number(player.abilities[skillId]) || 0);
-    refunded += level;
-    player.abilities[skillId] = 0;
-  }
-
-  player.abilityPoints = Math.max(0, Number(player.abilityPoints) || 0) + refunded;
-  return refunded;
-}
-
-function clearSkillToolbarBindings() {
-  for (const key of Object.keys(skillBindings)) {
-    skillBindings[key] = null;
-  }
-}
-
-function clearClassLockedHotbarItems() {
-  let removed = 0;
-
-  for (let slotIndex = 0; slotIndex < HOTBAR_SLOT_COUNT; slotIndex++) {
-    const itemId = player.hotbarAssignments?.[slotIndex];
-    if (!itemId) continue;
-
-    if (equipmentRequiredClass(itemId)) {
-      player.hotbarAssignments[slotIndex] = null;
-      removed += 1;
-    }
-  }
-
-  sanitizeHotbarAssignments();
-  return removed;
-}
-
-function resetClassAndSkills() {
-  if (focusFireIsCasting()) cancelFocusFire();
-  if (fireballIsAiming()) cancelFireballAim();
-  if (player.hunterSnareSetting) cancelHunterSnarePlacement(false);
-
-  const refunded = refundAllAbilityPoints();
-  clearSkillToolbarBindings();
-  player.enhancementToggles = {};
-  player.classId = null;
-
-  player.hatIndex = -1;
-  player.shirtIndex = -1;
-  player.pantsIndex = -1;
-  player.weaponIndex = -1;
-
-  const removedHotbar = clearClassLockedHotbarItems();
-  player.skillCooldowns = { fireball: 0, rainCloud: 0 };
-  player.skillCooldownEndTimes = { fireball: 0, rainCloud: 0 };
-  player.jesterBlinkCooldown = 0;
-  player.jesterBlinkCooldownEndAtMs = 0;
-
-  updateInventoryUi();
-
-  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
-    onlineClient.sendLocalState(true);
-  }
-
-  const note = [];
-  if (refunded > 0) note.push(`+${refunded} AP`);
-  if (removedHotbar > 0) note.push(`${removedHotbar} hotbar`);
-  const suffix = note.length ? ` (${note.join(" · ")})` : "";
-
-  spawnFloatingText(
-    player.x,
-    player.y - 36,
-    `SKILLS RESET${suffix}`,
-    "#e6c8ff",
-    1.1
-  );
-
-  return true;
-}
-
-function skillBelongsToSelectedClass(skillId) {
-  const skill = ACTIVE_SKILLS[skillId];
-  return Boolean(
-    skill &&
-    playerHasChosenClass() &&
-    skill.classId === player.classId
-  );
-}
-
-function choosePlayerClass(classId) {
-  if (playerHasChosenClass()) return false;
-  if (!PLAYER_CLASSES[classId]) return false;
-
-  if (Number(player.level) < CLASS_SELECTION_LEVEL) {
-    showMenuFeedback(`CLASSES UNLOCK AT LV ${CLASS_SELECTION_LEVEL}`, "#ffe38b", 1.2);
-    return false;
-  }
-
-  if (!SELECTABLE_CLASS_IDS.has(classId)) {
-    showMenuFeedback(`${PLAYER_CLASSES[classId].name.toUpperCase()} COMING SOON`, "#c9c2bc", 1.2);
-    return false;
-  }
-
-  player.classId = classId;
-
-  // Any test bindings made before choosing a class are cleared if they point
-  // outside the chosen tree. Existing ability levels are left untouched so a
-  // dev/test session never loses AP, but off-class skills become unusable.
-  for (const key of Object.keys(skillBindings)) {
-    const skillId = skillBindings[key];
-    if (skillId && ACTIVE_SKILLS[skillId]?.classId !== classId) {
-      skillBindings[key] = null;
-    }
-  }
-
-  showSkillCategory(classId);
-  updateInventoryUi();
-
-  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
-    onlineClient.sendLocalState(true);
-  }
-
-  return true;
-}
-
-function updateClassSelectionUi() {
-  const skillsPage = document.getElementById("skillsPage");
-  const chosen = playerHasChosenClass();
-
-  if (typeof updateSkillClassHeading === "function") {
-    updateSkillClassHeading();
-  }
-
-  if (skillsPage) {
-    skillsPage.classList.toggle("class-unselected", !chosen);
-    skillsPage.classList.toggle("class-selected", chosen);
-  }
-
-  document.querySelectorAll("[data-class-choice]").forEach(button => {
-    const classId = button.dataset.classChoice;
-    const available = SELECTABLE_CLASS_IDS.has(classId);
-    const levelReady = Number(player.level) >= CLASS_SELECTION_LEVEL;
-    button.disabled = chosen || !available || !levelReady;
-    button.classList.toggle("class-coming-soon", !available);
-    button.classList.toggle("class-level-locked", !chosen && available && !levelReady);
-
-    let status = button.querySelector(".class-selection-status");
-    if (!status) {
-      status = document.createElement("span");
-      status.className = "class-selection-status";
-      button.append(status);
-    }
-    status.textContent = !available
-      ? "Coming soon"
-      : !levelReady
-        ? `Requires Lv ${CLASS_SELECTION_LEVEL}`
-        : "Available";
-  });
-
-  document.querySelectorAll(".skill-category-tab").forEach(tab => {
-    const unavailableTree = !SELECTABLE_CLASS_IDS.has(tab.dataset.skillCategory);
-    const locked = (chosen && tab.dataset.skillCategory !== player.classId) || (!chosen && unavailableTree);
-    tab.disabled = locked;
-    tab.classList.toggle("class-locked", locked);
-    tab.setAttribute("aria-disabled", locked ? "true" : "false");
-  });
-
-  document.querySelectorAll(".skill-category-panel").forEach(panel => {
-    panel.classList.toggle(
-      "class-locked",
-      chosen && panel.dataset.skillCategoryPanel !== player.classId
-    );
-  });
-}
-
-
-
-function upgradeAbility(skillId) {
-  const skill = ACTIVE_SKILLS[skillId];
-  if (!skill || !skillBelongsToSelectedClass(skillId)) return false;
-
-  const level = abilityLevel(skillId);
-  if (level >= skill.maxLevel) return false;
-  if (player.abilityPoints <= 0) return false;
-
-  player.abilityPoints -= 1;
-  player.abilities[skillId] = level + 1;
-
-  updateInventoryUi();
-
-  if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
-    onlineClient.sendLocalState(true);
-  }
-
-  // Spending a point while the card is already hovered should update the
-  // visible tooltip immediately. Previously the tooltip contents were only
-  // rebuilt on mouse-enter, so the player had to move off the card and back.
-  const tooltip = document.getElementById("skillDetailTooltip");
-  if (
-    tooltip?.classList.contains("show") &&
-    tooltip.dataset.skillId === skillId
-  ) {
-    refreshSkillDetailTooltip(skillId);
-  }
-
-  return true;
-}
-
-function romanTier(n) {
-  const numerals = ["I", "II", "III", "IV"];
-  return numerals[n - 1] || String(n);
-}
-
-function getAvailableEnhancements() {
-  const list = [];
-
-  for (const [skillId, skill] of Object.entries(ACTIVE_SKILLS)) {
-    if (!skillBelongsToSelectedClass(skillId)) {
-      continue;
-    }
-
-    const level = abilityLevel(skillId);
-
-    if (skill.noEnhancements) {
-      continue;
-    }
-
-    // Some skills (currently Strafe) own one enhancement that levels alongside
-    // the skill instead of spawning a new enhancement entry at each rank.
-    if (skill.singleScalingEnhancement) {
-      const unlockLevel = Math.max(1, Number(skill.enhancementUnlockLevel) || 1);
-
-      if (level >= unlockLevel) {
-        list.push({
-          id: `${skillId}_enh_1`,
-          skillId,
-          tier: 1,
-          enhancementLevel: level,
-          maxEnhancementLevel: skill.maxLevel,
-          scaling: true,
-          unlockLevel,
-          name: skill.enhancementName || `${skill.name} Enhancement`,
-          effectText:
-            `${skill.enhancementEffect} Enhancement LV ${level} / ${skill.maxLevel}.`
-        });
-      }
-
-      continue;
-    }
-
-    if (Array.isArray(skill.enhancementUnlockLevels)) {
-      skill.enhancementUnlockLevels.forEach((unlockLevel, index) => {
-        if (level < unlockLevel) return;
-
-        const tier = index + 1;
-        const custom = Array.isArray(skill.enhancementUnlocks)
-          ? skill.enhancementUnlocks[index]
-          : null;
-
-        list.push({
-          id: `${skillId}_enh_${tier}`,
-          skillId,
-          tier,
-          unlockLevel,
-          name: custom?.name || skill.enhancementName || `${skill.name} Enhancement`,
-          effectText: custom?.effectText || skill.enhancementEffect
-        });
-      });
-
-      continue;
-    }
-
-    // Default active-skill progression: LV2-LV5 unlock one enhancement each.
-    for (let tier = 1; tier <= Math.max(0, level - 1); tier++) {
-      const custom = Array.isArray(skill.enhancementUnlocks)
-        ? skill.enhancementUnlocks[tier - 1]
-        : null;
-
-      list.push({
-        id: `${skillId}_enh_${tier}`,
-        skillId,
-        tier,
-        name: custom?.name || `${skill.enhancementName} ${romanTier(tier)}`,
-        effectText: custom?.effectText || skill.enhancementEffect
-      });
-    }
-  }
-
-  return list;
-}
-
-function enhancementById(id) {
-  return getAvailableEnhancements().find(entry => entry.id === id) || null;
-}
-
-function enhancementToggleState(id) {
-  if (!enhancementById(id)) return false;
-
-  const toggles = player.enhancementToggles || (player.enhancementToggles = {});
-  // Newly learned enhancements begin enabled automatically.
-  return toggles[id] !== false;
-}
-
-function setEnhancementToggle(id, enabled) {
-  if (!enhancementById(id)) return false;
-
-  const toggles = player.enhancementToggles || (player.enhancementToggles = {});
-  toggles[id] = Boolean(enabled);
-  updateInventoryUi();
-  return true;
-}
-
-function hasEnhancement(id) {
-  return enhancementToggleState(id);
-}
-
-function renderSkillEnhancementToggles(node, skillId) {
-  const enhancements = getAvailableEnhancements().filter(entry => entry.skillId === skillId);
-  let list = node.querySelector(".skill-enhancement-list");
-
-  if (!enhancements.length) {
-    if (list) list.remove();
-    return;
-  }
-
-  if (!list) {
-    list = document.createElement("div");
-    list.className = "skill-enhancement-list";
-    const description = node.querySelector(".skill-description");
-    if (description) {
-      description.insertAdjacentElement("afterend", list);
-    } else {
-      node.appendChild(list);
-    }
-  }
-
-  const signature = enhancements.map(enh =>
-    `${enh.id}:${enh.enhancementLevel || enh.tier || 1}:${enhancementToggleState(enh.id) ? 1 : 0}`
-  ).join("|");
-
-  if (list.dataset.signature === signature) return;
-  list.dataset.signature = signature;
-
-  list.innerHTML = `
-    <div class="skill-enhancement-title">Enhancements</div>
-    ${enhancements.map(enh => {
-      const enabled = enhancementToggleState(enh.id);
-      return `
-        <div class="skill-enhancement-row ${enabled ? "enabled" : ""}">
-          <div class="skill-enhancement-copy">
-            <div class="skill-enhancement-name">${enh.name}</div>
-            <div class="skill-enhancement-desc">${enh.effectText}</div>
-          </div>
-          <button type="button"
-                  class="skill-enhancement-toggle ${enabled ? "active" : ""}"
-                  data-enh-id="${enh.id}"
-                  aria-pressed="${enabled ? "true" : "false"}">
-            ${enabled ? "ON" : "OFF"}
-          </button>
-        </div>
-      `;
-    }).join("")}
-  `;
-}
-
-
-
-function getBoundKeyForSkill(skillId) {
-  for (const [key, boundSkill] of Object.entries(skillBindings)) {
-    if (boundSkill === skillId) return key;
-  }
-  return null;
-}
-
-function bindSkillToKey(skillId, key) {
-  if (!ACTIVE_SKILLS[skillId]) return;
-  if (!skillBelongsToSelectedClass(skillId)) return;
-  if (!isAbilityUnlocked(skillId)) return;
-
-  // A skill occupies at most one active key.
-  for (const existingKey of Object.keys(skillBindings)) {
-    if (skillBindings[existingKey] === skillId) {
-      skillBindings[existingKey] = null;
-    }
-  }
-
-  // Empty string means explicitly unbind this skill.
-  if (key && Object.prototype.hasOwnProperty.call(skillBindings, key)) {
-    // One skill per key: assigning here automatically displaces the old one.
-    skillBindings[key] = skillId;
-  }
-
-  updateSkillBindingUi();
-}
-
-function moveSkillBinding(sourceKey, targetKey) {
-  if (sourceKey === targetKey) return true;
-  if (!Object.prototype.hasOwnProperty.call(skillBindings, sourceKey)) return false;
-  if (!Object.prototype.hasOwnProperty.call(skillBindings, targetKey)) return false;
-
-  const movingSkill = skillBindings[sourceKey];
-  if (!movingSkill || !ACTIVE_SKILLS[movingSkill] || !isAbilityUnlocked(movingSkill)) {
-    return false;
-  }
-
-  const displacedSkill = skillBindings[targetKey] || null;
-  skillBindings[targetKey] = movingSkill;
-  skillBindings[sourceKey] = displacedSkill;
-
-  updateSkillBindingUi();
-  renderSkillTreeSelectionState();
-  return true;
-}
-
-let selectedSkillTreeSkillId = null;
-
-function skillTreePanelForClass(classId) {
-  return document.querySelector(
-    `.skill-category-panel[data-skill-category-panel="${classId}"]`
-  );
-}
-
-function ensureSelectedSkillForClass(classId = player.classId) {
-  if (
-    selectedSkillTreeSkillId &&
-    ACTIVE_SKILLS[selectedSkillTreeSkillId]?.classId === classId
-  ) {
-    return selectedSkillTreeSkillId;
-  }
-
-  const panel = skillTreePanelForClass(classId);
-  const firstNode = panel?.querySelector(".skill-node[data-skill-node]");
-  selectedSkillTreeSkillId = firstNode?.dataset.skillNode || null;
-  return selectedSkillTreeSkillId;
-}
-
-function selectSkillTreeSkill(skillId) {
-  if (!ACTIVE_SKILLS[skillId]) return false;
-  selectedSkillTreeSkillId = skillId;
-  renderSkillTreeSelectionState();
-  return true;
-}
-
-function renderSkillTreeSelectionState() {
-  document.querySelectorAll(".skill-node[data-skill-node]").forEach(node => {
-    const skillId = node.dataset.skillNode;
-    const skill = ACTIVE_SKILLS[skillId];
-    const draggable = Boolean(
-      skill && !skill.passive && isAbilityUnlocked(skillId)
-    );
-
-    node.classList.toggle("selected", skillId === selectedSkillTreeSkillId);
-    node.classList.toggle("bound", Boolean(getBoundKeyForSkill(skillId)));
-    node.classList.toggle("skill-draggable", draggable);
-    node.draggable = draggable;
-    node.setAttribute("aria-grabbed", "false");
-    node.title = "";
-
-    const icon = node.querySelector(".skill-node-icon");
-    if (icon) {
-      icon.draggable = false;
-      icon.removeAttribute("title");
-    }
-  });
-
-  const activeSkill = selectedSkillTreeSkillId;
-  document.querySelectorAll(".skill-key-slot[data-skill-key]").forEach(slot => {
-    const key = slot.dataset.skillKey;
-    const canBind = Boolean(
-      activeSkill &&
-      ACTIVE_SKILLS[activeSkill] &&
-      !ACTIVE_SKILLS[activeSkill].passive &&
-      isAbilityUnlocked(activeSkill)
-    );
-    slot.classList.toggle("bind-target", canBind && skillBindings[key] !== activeSkill);
-    slot.classList.toggle("bound", Boolean(skillBindings[key]));
-  });
-}
-
-function skillDescriptionFromNode(skillId) {
-  const skill = ACTIVE_SKILLS[skillId];
-  if (!skill) return "";
-  const panel = skillTreePanelForClass(skill.classId);
-  return panel
-    ?.querySelector(`.skill-node[data-skill-node="${skillId}"] .skill-description`)
-    ?.textContent?.trim() || "";
-}
-
-function skillLevelEffectText(skillId, level) {
-  const skill = ACTIVE_SKILLS[skillId];
-  if (!skill) return "";
-  const cleanLevel = Math.max(0, Math.floor(Number(level) || 0));
-  if (cleanLevel <= 0) return "Not unlocked.";
-
-  if (
-    skillId === "fireball" &&
-    typeof COMBAT_BALANCE !== "undefined" &&
-    typeof COMBAT_BALANCE.abilityPowerAtLevel === "function"
-  ) {
-    const power = COMBAT_BALANCE.abilityPowerAtLevel(skillId, cleanLevel);
-    const cooldown = fireballCooldownAtLevel(cleanLevel);
-    return `${power} Power · Fire element. Burn: 20 Power/sec for 3s (2 ticks/sec). ${cooldown.toFixed(1)}s cooldown.`;
-  }
-
-  if (skillId === "rainCloud" && typeof ABILITY_SCALING !== "undefined") {
-    const slowPercent = ABILITY_SCALING.rainCloudGrassSlowPercentAtLevel(cleanLevel);
-    const cooldown = ABILITY_SCALING.rainCloudCooldownAtLevel(cleanLevel);
-    const castTime = typeof ABILITY_SCALING.rainCloudCastTimeAtLevel === "function"
-      ? ABILITY_SCALING.rainCloudCastTimeAtLevel(cleanLevel)
-      : 0.5;
-    const grassLifetime = typeof RAIN_FIELD !== "undefined" ? RAIN_FIELD.CELL_LIFETIME : 30;
-    return `${Math.round(slowPercent)}% Magic Grass slow. ${castTime.toFixed(1)}s cast. ${grassLifetime.toFixed(0)}s grass duration per tuft. ${cooldown.toFixed(1)}s cooldown after cloud expiry.`;
-  }
-
-  if (skillId === "jesterBlink" && typeof ABILITY_SCALING !== "undefined") {
-    const blinkRange = ABILITY_SCALING.hallucinationBlinkRangeAtLevel(cleanLevel);
-    const decoyDuration = ABILITY_SCALING.hallucinationDecoyDurationAtLevel(cleanLevel);
-    const cooldown = ABILITY_SCALING.hallucinationCooldownAtLevel(cleanLevel);
-    return `${Math.round(blinkRange)}px blink. ${decoyDuration.toFixed(1)}s return window. ${cooldown.toFixed(1)}s cooldown from cast.`;
-  }
-
-  if (
-    skillId === "wandMastery" &&
-    typeof COMBAT_BALANCE !== "undefined" &&
-    typeof COMBAT_BALANCE.abilityPowerAtLevel === "function"
-  ) {
-    const power = COMBAT_BALANCE.abilityPowerAtLevel("wandMasteryMelee", cleanLevel);
-    const additionalFoes = Math.max(0, wandMasteryMaxTargets(cleanLevel) - 1);
-    return `${power} Power. Target up to ${additionalFoes} additional ${additionalFoes === 1 ? "foe" : "foes"}.`;
-  }
-
-  const progression = skillLevelProgression(skillId);
-  const exact = progression.find(entry => entry.level === cleanLevel);
-  if (exact) {
-    return [exact.name, exact.effectText].filter(Boolean).join(" · ");
-  }
-
-  const prior = progression
-    .filter(entry => entry.level <= cleanLevel)
-    .sort((a, b) => b.level - a.level)[0];
-
-  return prior
-    ? [prior.name, prior.effectText].filter(Boolean).join(" · ")
-    : `Skill level ${cleanLevel}.`;
-}
-
-function positionSkillDetailTooltip(clientX, clientY) {
-  const tooltip = document.getElementById("skillDetailTooltip");
-  if (!tooltip || !tooltip.classList.contains("show")) return;
-
-  const margin = 12;
-  const width = tooltip.offsetWidth || 292;
-  const height = tooltip.offsetHeight || 250;
-  let left = clientX + 14;
-  let top = clientY + 14;
-
-  if (left + width + margin > window.innerWidth) {
-    left = clientX - width - 14;
-  }
-  if (top + height + margin > window.innerHeight) {
-    top = clientY - height - 14;
-  }
-
-  tooltip.style.left = `${Math.max(margin, left)}px`;
-  tooltip.style.top = `${Math.max(margin, top)}px`;
-}
-
-function refreshSkillDetailTooltip(skillId) {
-  const skill = ACTIVE_SKILLS[skillId];
-  const tooltip = document.getElementById("skillDetailTooltip");
-  if (!skill || !tooltip) return false;
-
-  const level = abilityLevel(skillId);
-  const nextLevel = level < skill.maxLevel ? level + 1 : null;
-  const image = document.getElementById("skillTooltipImage");
-  const name = document.getElementById("skillTooltipName");
-  const meta = document.getElementById("skillTooltipMeta");
-  const description = document.getElementById("skillTooltipDescription");
-  const current = document.getElementById("skillTooltipCurrent");
-  const next = document.getElementById("skillTooltipNext");
-
-  if (image) {
-    image.src = skillIconPath(skillId);
-    image.alt = skill.name;
-  }
-  if (name) name.textContent = skill.name;
-  if (meta) {
-    meta.textContent = (skillId === "wandMastery" || skillId === "fireball")
-      ? (skill.passive ? "[Passive Skill]" : "[Active Skill]")
-      : `${skill.passive ? "Passive" : "Active"} · LV ${level} / ${skill.maxLevel}`;
-  }
-  if (description) description.textContent = skillDescriptionFromNode(skillId);
-  if (current) current.textContent = skillLevelEffectText(skillId, level);
-  if (next) {
-    next.textContent = nextLevel
-      ? `LV ${nextLevel}: ${skillLevelEffectText(skillId, nextLevel)}`
-      : "Max level reached.";
-  }
-
-  tooltip.dataset.skillId = skillId;
-  return true;
-}
-
-function showSkillDetailTooltip(skillId, clientX, clientY) {
-  const tooltip = document.getElementById("skillDetailTooltip");
-  if (!tooltip || !refreshSkillDetailTooltip(skillId)) return;
-  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
-
-  tooltip.classList.add("show");
-  tooltip.setAttribute("aria-hidden", "false");
-  positionSkillDetailTooltip(clientX, clientY);
-}
-
-function hideSkillDetailTooltip() {
-  const tooltip = document.getElementById("skillDetailTooltip");
-  if (!tooltip) return;
-  tooltip.classList.remove("show");
-  tooltip.setAttribute("aria-hidden", "true");
-  delete tooltip.dataset.skillId;
-}
-
-function updateSkillClassHeading() {
-  const heading = document.getElementById("skillClassHeading");
-  if (!heading) return;
-  const className = PLAYER_CLASSES[player.classId]?.name;
-  heading.textContent = className
-    ? `Introduction to the ${className}`
-    : "Skill Arts";
-}
-
-function setupSkillTreeUi() {
-  const skillsPage = document.getElementById("skillsPage");
-  if (!skillsPage) return;
-
-  const header = skillsPage.querySelector(".stats-header");
-  const heading = header?.querySelector(".menu-section-title");
-  if (heading) heading.id = "skillClassHeading";
-
-  const abilityPointText = document.getElementById("abilityPointText");
-  const categoryTabs = skillsPage.querySelector(".skill-category-tabs");
-  const panels = Array.from(
-    skillsPage.querySelectorAll(".skill-category-panel[data-skill-category-panel]")
-  );
-  const keyStrip = document.querySelector("#menuSkillHotkeyRail .skill-key-strip");
-
-  let workspace = skillsPage.querySelector(".skill-workspace");
-  if (!workspace) {
-    workspace = document.createElement("div");
-    workspace.className = "skill-workspace";
-
-    const listPane = document.createElement("div");
-    listPane.className = "skill-list-pane";
-
-    if (categoryTabs) categoryTabs.insertAdjacentElement("afterend", workspace);
-    else if (header) header.insertAdjacentElement("afterend", workspace);
-    else skillsPage.appendChild(workspace);
-
-    workspace.appendChild(listPane);
-
-    for (const panel of panels) listPane.appendChild(panel);
-
-    if (abilityPointText) {
-      const footer = document.createElement("div");
-      footer.className = "skill-list-footer";
-      footer.appendChild(abilityPointText);
-      listPane.appendChild(footer);
-    }
-  }
-
-  const slotKeys = ["shift", "space", "e", "r"];
-  keyStrip?.querySelectorAll(".skill-key-slot").forEach((slot, index) => {
-    slot.dataset.skillKey = slotKeys[index] || "";
-    slot.tabIndex = 0;
-    slot.title = "Drop a skill here · right-click to clear";
-  });
-
-  skillsPage.addEventListener("click", event => {
-    const upgrade = event.target.closest(".ability-upgrade-button[data-ability-id]");
-    if (upgrade) {
-      selectSkillTreeSkill(upgrade.dataset.abilityId);
-      return;
-    }
-
-    const node = event.target.closest(".skill-node[data-skill-node]");
-    if (node) selectSkillTreeSkill(node.dataset.skillNode);
-  });
-
-  skillsPage.addEventListener("mouseover", event => {
-    const node = event.target.closest(".skill-node[data-skill-node]");
-    if (!node) return;
-    const fromNode = event.relatedTarget?.closest?.(".skill-node[data-skill-node]");
-    if (fromNode === node) return;
-    showSkillDetailTooltip(node.dataset.skillNode, event.clientX, event.clientY);
-  });
-
-  skillsPage.addEventListener("mousemove", event => {
-    if (document.getElementById("skillDetailTooltip")?.classList.contains("show")) {
-      positionSkillDetailTooltip(event.clientX, event.clientY);
-    }
-  });
-
-  skillsPage.addEventListener("mouseout", event => {
-    const node = event.target.closest(".skill-node[data-skill-node]");
-    if (!node) return;
-    const nextNode = event.relatedTarget?.closest?.(".skill-node[data-skill-node]");
-    if (nextNode === node) return;
-    hideSkillDetailTooltip();
-  });
-
-  skillsPage.addEventListener("focusin", event => {
-    const node = event.target.closest(".skill-node[data-skill-node]");
-    if (!node) return;
-    const rect = node.getBoundingClientRect();
-    showSkillDetailTooltip(node.dataset.skillNode, rect.right, rect.top);
-  });
-
-  skillsPage.addEventListener("focusout", event => {
-    if (event.target.closest(".skill-node[data-skill-node]")) hideSkillDetailTooltip();
-  });
-
-  skillsPage.addEventListener("dragstart", event => {
-    const node = event.target.closest(".skill-node[data-skill-node]");
-    if (!node || event.target.closest(".ability-upgrade-button")) {
-      event.preventDefault();
-      return;
-    }
-
-    const skillId = node.dataset.skillNode;
-    if (!skillId || ACTIVE_SKILLS[skillId]?.passive || !isAbilityUnlocked(skillId)) {
-      event.preventDefault();
-      return;
-    }
-
-    selectSkillTreeSkill(skillId);
-    hideSkillDetailTooltip();
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", skillId);
-    node.classList.add("dragging");
-    node.setAttribute("aria-grabbed", "true");
-  });
-
-  skillsPage.addEventListener("dragend", event => {
-    const node = event.target.closest(".skill-node[data-skill-node]");
-    node?.classList.remove("dragging");
-    node?.setAttribute("aria-grabbed", "false");
-    document.querySelectorAll("#menuSkillHotkeyRail .skill-key-slot.drag-over")
-      .forEach(slot => slot.classList.remove("drag-over"));
-  });
-
-  keyStrip?.addEventListener("click", event => {
-    const slot = event.target.closest(".skill-key-slot[data-skill-key]");
-    if (!slot) return;
-
-    const selected = selectedSkillTreeSkillId;
-    if (
-      selected &&
-      ACTIVE_SKILLS[selected] &&
-      !ACTIVE_SKILLS[selected].passive &&
-      isAbilityUnlocked(selected)
-    ) {
-      bindSkillToKey(selected, slot.dataset.skillKey);
-      return;
-    }
-
-    const existing = skillBindings[slot.dataset.skillKey];
-    if (existing) selectSkillTreeSkill(existing);
-  });
-
-  keyStrip?.addEventListener("dragstart", event => {
-    const slot = event.target.closest(".skill-key-slot[data-skill-key]");
-    if (!slot) return;
-
-    const sourceKey = slot.dataset.skillKey;
-    const skillId = skillBindings[sourceKey];
-    if (!skillId || !isAbilityUnlocked(skillId)) {
-      event.preventDefault();
-      return;
-    }
-
-    selectSkillTreeSkill(skillId);
-    hideSkillDetailTooltip();
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/x-slime-skill-key", sourceKey);
-    event.dataTransfer.setData("application/x-slime-skill", skillId);
-    event.dataTransfer.setData("text/plain", skillId);
-    slot.classList.add("dragging");
-  });
-
-  keyStrip?.addEventListener("dragend", event => {
-    event.target.closest(".skill-key-slot[data-skill-key]")?.classList.remove("dragging");
-    keyStrip.querySelectorAll(".skill-key-slot.drag-over")
-      .forEach(slot => slot.classList.remove("drag-over"));
-  });
-
-  keyStrip?.addEventListener("dragover", event => {
-    const slot = event.target.closest(".skill-key-slot[data-skill-key]");
-    if (!slot) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    slot.classList.add("drag-over");
-  });
-
-  keyStrip?.addEventListener("dragleave", event => {
-    const slot = event.target.closest(".skill-key-slot[data-skill-key]");
-    slot?.classList.remove("drag-over");
-  });
-
-  keyStrip?.addEventListener("drop", event => {
-    const slot = event.target.closest(".skill-key-slot[data-skill-key]");
-    if (!slot) return;
-    event.preventDefault();
-    slot.classList.remove("drag-over");
-
-    const targetKey = slot.dataset.skillKey;
-    const sourceKey = event.dataTransfer.getData("application/x-slime-skill-key");
-    if (sourceKey) {
-      const movedSkill = skillBindings[sourceKey];
-      if (moveSkillBinding(sourceKey, targetKey) && movedSkill) {
-        selectSkillTreeSkill(movedSkill);
-      }
-      return;
-    }
-
-    const skillId =
-      event.dataTransfer.getData("application/x-slime-skill") ||
-      event.dataTransfer.getData("text/plain");
-    bindSkillToKey(skillId, targetKey);
-    if (skillId) selectSkillTreeSkill(skillId);
-  });
-
-  keyStrip?.addEventListener("contextmenu", event => {
-    const slot = event.target.closest(".skill-key-slot[data-skill-key]");
-    if (!slot) return;
-    event.preventDefault();
-    const key = slot.dataset.skillKey;
-    if (Object.prototype.hasOwnProperty.call(skillBindings, key)) {
-      skillBindings[key] = null;
-      updateSkillBindingUi();
-    }
-  });
-
-  document.querySelectorAll(".skill-node[data-skill-node]").forEach(node => {
-    node.tabIndex = 0;
-  });
-
-  ensureSelectedSkillForClass(player.classId || "might");
-  updateSkillClassHeading();
-  renderSkillTreeSelectionState();
-}
-
-function updateAbilityTreeUi() {
-  updateClassSelectionUi();
-
-  const availableEnhancementIds = new Set(
-    getAvailableEnhancements().map(entry => entry.id)
-  );
-  const toggles = player.enhancementToggles || (player.enhancementToggles = {});
-  for (const id of Object.keys(toggles)) {
-    if (!availableEnhancementIds.has(id)) delete toggles[id];
-  }
-
-  const abilityPointText = document.getElementById("abilityPointText");
-  if (abilityPointText) {
-    abilityPointText.textContent = `Ability Points ${player.abilityPoints}`;
-  }
-
-  document.querySelectorAll(".skill-node[data-skill-node]").forEach(node => {
-    const skillId = node.dataset.skillNode;
-    const skill = ACTIVE_SKILLS[skillId];
-    if (!skill) return;
-
-    const level = abilityLevel(skillId);
-    const requirementMet = skillBelongsToSelectedClass(skillId);
-    const unlocked = level > 0 && requirementMet;
-    const maxed = level >= skill.maxLevel;
-
-    node.classList.toggle("unlocked", unlocked);
-    node.classList.toggle("locked", !unlocked);
-    node.classList.toggle("ready", !unlocked && requirementMet);
-
-    const status = node.querySelector(".skill-status");
-    if (status) {
-      status.textContent =
-        !requirementMet ? "Class Locked" :
-        maxed ? "MAX" :
-        unlocked ? `LV ${level}` :
-        "Ready";
-    }
-
-    let progression = node.querySelector(".skill-progression");
-    if (!progression) {
-      progression = document.createElement("div");
-      progression.className = "skill-progression";
-      const levelRow = node.querySelector(".skill-level-row");
-      if (levelRow) {
-        node.insertBefore(progression, levelRow);
-      }
-    }
-
-    if (progression) {
-      const progressionSignature = `${skillId}:${level}`;
-      if (progression.dataset.signature !== progressionSignature) {
-        progression.dataset.signature = progressionSignature;
-        progression.innerHTML = skillLevelProgression(skillId).map(entry => {
-          const reached = level >= entry.level;
-          const current = level === entry.level;
-          return `
-            <div class="skill-progress-step ${reached ? "reached" : ""} ${current ? "current" : ""}"
-                 title="${entry.effectText}">
-              <span class="skill-progress-level">LV ${entry.level}</span>
-              <span class="skill-progress-name">${entry.name}</span>
-            </div>
-          `;
-        }).join("");
-      }
-    }
-
-    const levelText = node.querySelector(".skill-level-text");
-    if (levelText) {
-      levelText.textContent = `LV ${level} / ${skill.maxLevel}`;
-    }
-
-    const upgradeButton = node.querySelector(".ability-upgrade-button");
-    if (upgradeButton) {
-      upgradeButton.textContent = maxed ? "MAX" : "+";
-      upgradeButton.title = maxed
-        ? "Max level"
-        : level === 0
-          ? `Unlock ${skill.name}`
-          : `Level up ${skill.name}`;
-
-      upgradeButton.disabled =
-        !requirementMet ||
-        maxed ||
-        player.abilityPoints <= 0;
-    }
-
-    renderSkillEnhancementToggles(node, skillId);
-  });
-}
-
-function updateAbilityCooldownHud() {
-  const slotIds = {
-    shift: { hud: "abilitySlotShift" },
-    space: { hud: "abilitySlotSpace" },
-    e: { hud: "abilitySlotE" },
-    r: { hud: "abilitySlotR" }
-  };
-
-  for (const [key, targets] of Object.entries(slotIds)) {
-    const boundSkill = skillBindings[key];
-    const validSkill =
-      boundSkill && isAbilityUnlocked(boundSkill)
-        ? boundSkill
-        : null;
-    const hudSlot = document.getElementById(targets.hud);
-    if (!hudSlot) continue;
-
-    const cooldownRemaining = validSkill
-      ? skillCooldownRemaining(validSkill)
-      : 0;
-    const cooldownDuration = validSkill
-      ? skillCooldownDuration(validSkill)
-      : 0;
-
-    // Hallucination has two simultaneous clocks after the first blink:
-    // the short clone-return window and the longer cooldown that already began
-    // on cast. While the clone exists, surface the return window in the hotbar.
-    // As soon as it is consumed/expires, reveal the already-elapsed cooldown.
-    let displayRemaining = cooldownRemaining;
-    let displayDuration = cooldownDuration;
-    let displayKind = "cooldown";
-    if (validSkill === "jesterBlink" && jesterClone?.mapId === currentMapId) {
-      const cloneDuration = Math.max(0, Number(jesterClone.duration) || 0);
-      const cloneRemaining = Number.isFinite(Number(jesterClone.expiresAtMs))
-        ? Math.max(0, (Number(jesterClone.expiresAtMs) - Date.now()) / 1000)
-        : Math.max(0, Number(jesterClone.life) || 0);
-      if (cloneRemaining > 0 && cloneDuration > 0) {
-        displayRemaining = cloneRemaining;
-        displayDuration = cloneDuration;
-        displayKind = "return";
-      }
-    }
-
-    const showingTimer = displayRemaining > 0 && displayDuration > 0;
-    const coolingDown = displayKind === "cooldown" && showingTimer;
-    const returnWindow = displayKind === "return" && showingTimer;
-    const cooldownMask = hudSlot.querySelector(".ability-cooldown-mask");
-    const cooldownText = hudSlot.querySelector(".ability-cooldown-text");
-
-    hudSlot.classList.toggle("cooling-down", coolingDown);
-    hudSlot.classList.toggle("return-window", returnWindow);
-
-    if (cooldownMask) {
-      const fraction = showingTimer
-        ? Math.max(0, Math.min(1, displayRemaining / displayDuration))
-        : 0;
-      cooldownMask.style.height = `${Math.round(fraction * 100)}%`;
-    }
-
-    if (cooldownText) {
-      cooldownText.style.display = showingTimer ? "flex" : "none";
-      cooldownText.textContent = showingTimer
-        ? (displayRemaining >= 10
-            ? String(Math.ceil(displayRemaining))
-            : displayRemaining.toFixed(1))
-        : "";
-    }
-
-    const label = hudSlot.querySelector(".hotbar-label")?.textContent || key.toUpperCase();
-    hudSlot.title = validSkill
-      ? `${label}: ${skillDisplayName(validSkill)}${returnWindow
-          ? ` · ${displayRemaining.toFixed(1)}s return window`
-          : coolingDown
-            ? ` · ${displayRemaining.toFixed(1)}s cooldown`
-            : ""}`
-      : `${label}: Empty`;
-  }
-}
-
-function updateSkillBindingUi() {
-  const slotIds = {
-    shift: { text: "skillSlotShift", icon: "skillSlotShiftIcon", hud: "abilitySlotShift" },
-    space: { text: "skillSlotSpace", icon: "skillSlotSpaceIcon", hud: "abilitySlotSpace" },
-    e: { text: "skillSlotE", icon: "skillSlotEIcon", hud: "abilitySlotE" },
-    r: { text: "skillSlotR", icon: "skillSlotRIcon", hud: "abilitySlotR" }
-  };
-
-  document.querySelectorAll("[data-skill-icon]").forEach(icon => {
-    const skillId = icon.dataset.skillIcon;
-    const path = skillIconPath(skillId);
-    if (path) icon.src = path;
-  });
-
-  for (const [key, targets] of Object.entries(slotIds)) {
-    const boundSkill = skillBindings[key];
-    const validSkill =
-      boundSkill && isAbilityUnlocked(boundSkill)
-        ? boundSkill
-        : null;
-
-    const textEl = document.getElementById(targets.text);
-    if (textEl) {
-      textEl.textContent = validSkill
-        ? skillDisplayName(validSkill)
-        : "Empty";
-    }
-
-    const menuSlot = document.querySelector(
-      `#menuSkillHotkeyRail .skill-key-slot[data-skill-key="${key}"]`
-    );
-    if (menuSlot) {
-      menuSlot.draggable = Boolean(validSkill);
-      menuSlot.classList.toggle("bound", Boolean(validSkill));
-      menuSlot.title = validSkill
-        ? `${skillDisplayName(validSkill)} · drag to move/swap · right-click to clear`
-        : "Drop a skill here · right-click to clear";
-    }
-
-    const iconEl = document.getElementById(targets.icon);
-    if (iconEl) {
-      if (validSkill) {
-        iconEl.src = skillIconPath(validSkill);
-        iconEl.alt = skillDisplayName(validSkill);
-        iconEl.style.visibility = "visible";
-      } else {
-        iconEl.removeAttribute("src");
-        iconEl.alt = "";
-        iconEl.style.visibility = "hidden";
-      }
-    }
-
-    const hudSlot = document.getElementById(targets.hud);
-    if (hudSlot) {
-      hudSlot.classList.toggle("empty", !validSkill);
-      hudSlot.classList.toggle("active", Boolean(validSkill));
-      const hudImg = hudSlot.querySelector(".ability-slot-img");
-      if (hudImg) {
-        if (validSkill) {
-          hudImg.src = skillIconPath(validSkill);
-          hudImg.alt = skillDisplayName(validSkill);
-          hudImg.style.visibility = "visible";
-        } else {
-          hudImg.removeAttribute("src");
-          hudImg.alt = "";
-          hudImg.style.visibility = "hidden";
-        }
-      }
-      const chargeBadge = hudSlot.querySelector(".ability-charge");
-      if (chargeBadge) {
-        const showCharges = validSkill === "huntersSnare";
-        chargeBadge.style.display = showCharges ? "flex" : "none";
-        if (showCharges) {
-          chargeBadge.textContent = String(
-            Math.max(0, Math.floor(Number(player.hunterSnareCharges) || 0))
-          );
-        }
-      }
-
-    }
-  }
-
-  updateAbilityCooldownHud();
-  updateHunterSnareChargeUi();
-
-  document.querySelectorAll(".skill-bind-button").forEach(button => {
-    const skillId = button.dataset.skillId;
-    const key = button.dataset.skillKey || "";
-    const boundKey = getBoundKeyForSkill(skillId);
-    const unlocked = isAbilityUnlocked(skillId);
-
-    button.disabled = !unlocked;
-    button.classList.toggle(
-      "active",
-      unlocked && (key ? boundKey === key : boundKey === null)
-    );
-  });
-
-  if (playerHasChosenClass()) {
-    ensureSelectedSkillForClass(player.classId);
-    renderSkillTreeSelectionState();
-  }
-}
-
-
 
 const HURL_GRAB_RANGE = 22;
 
@@ -7771,10 +5415,6 @@ function expNeededForLevel(level) {
   return 5 + (level - 1) * 2;
 }
 
-function woodcuttingExpNeeded(level) {
-  // Separate gathering curve so it grows a little more gradually.
-  return 5 + (level - 1) * 3;
-}
 
 function awardExp(amount) {
   player.exp += amount;
@@ -7784,9 +5424,6 @@ function awardExp(amount) {
   while (player.exp >= player.expToNext) {
     player.exp -= player.expToNext;
     player.level += 1;
-    player.skillPoints += 5;
-    // Active abilities now belong to equipment, so level-ups no longer award AP.
-    player.abilityPoints = 0;
     player.expToNext = expNeededForLevel(player.level);
     levelsGained += 1;
   }
@@ -7829,50 +5466,11 @@ function awardExp(amount) {
   );
 }
 
-function awardWoodcuttingExp(amount) {
-  // v377: gathering talents are retired. Resource harvesting remains intact.
-  void amount;
-  return false;
-}
 
-function miningExpNeeded(level) {
-  return 5 + (Math.max(1, Number(level) || 1) - 1) * 3;
-}
-
-function awardMiningExp(amount) {
-  // v377: gathering talents are retired. Resource harvesting remains intact.
-  void amount;
-  return false;
-}
-
-function flowerHarvestingExpNeeded(level) {
-  return 5 + (Math.max(1, Number(level) || 1) - 1) * 3;
-}
-
-function awardFlowerHarvestingExp(amount) {
-  // v377: gathering talents are retired. Resource harvesting remains intact.
-  void amount;
-  return false;
-}
-
-const MAX_PLAYER_STAT = 10;
-
-function spendSkillPoint(stat) {
-  if (player.skillPoints <= 0) return;
-  if (!Object.prototype.hasOwnProperty.call(player.stats, stat)) return;
-  if ((Number(player.stats[stat]) || 0) >= MAX_PLAYER_STAT) return;
-
-  player.stats[stat] = Math.min(
-    MAX_PLAYER_STAT,
-    (Number(player.stats[stat]) || 0) + 1
-  );
-  player.skillPoints -= 1;
-  updateInventoryUi();
-}
 
 let remotePlayerDrawDepth = 0;
 // v387: declare build-selection state before any startup UI helper can read it.
-// setupSkillTreeUi/updateHotbar run before the lower building helper section initializes.
+// Hotbar setup runs before the lower building helper section initializes.
 let selectedBuildPiece = null;
 
 function heldBuildPieceForCurrentDraw() {
@@ -7925,7 +5523,7 @@ function currentPantsStyle() {
 
 
 function equipWeaponIndex(index) {
-  if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return false;
+  if (fireballIsAiming() || player.rainCloudCasting) return false;
   if (player.attackTime > 0) return false;
 
   if (
@@ -7938,7 +5536,7 @@ function equipWeaponIndex(index) {
 
   const itemId = weaponItemIdForIndex(index);
   if (!equipmentItemCanBeEquipped(itemId)) {
-    showEquipmentClassRestriction(itemId);
+    showEquipmentRestriction(itemId);
     return false;
   }
 
@@ -8015,73 +5613,49 @@ function cycleHotbarSelection(direction) {
   return true;
 }
 
-function updateMenuItemHotkeyRail() {
-  const equippedItemId = weaponItemIdForIndex(player.weaponIndex);
-
-  document.querySelectorAll("[data-menu-hotbar-slot]").forEach(slot => {
-    const slotIndex = Number(slot.dataset.menuHotbarSlot);
-    const itemId = player.hotbarAssignments?.[slotIndex] || null;
-    const assigned = Boolean(itemId && hotbarAssignmentCanPersist(itemId));
-    const available = assigned && hotbarItemInventoryCount(itemId) > 0;
-    const image = slot.querySelector("img");
-    const name = slot.querySelector(".menu-hotkey-item-name");
-
-    slot.classList.toggle("empty", !assigned);
-    slot.classList.toggle("active", available && (selectedBuildPiece ? itemId === selectedBuildPiece : itemId === equippedItemId));
-    slot.draggable = assigned;
-
-    if (assigned) {
-      const itemImage = hotkeyImageForItemId(itemId);
-      if (image && itemImage) {
-        image.src = itemImage.src;
-        image.alt = hotbarItemDisplayName(itemId);
-      }
-      if (name) name.textContent = hotbarItemDisplayName(itemId);
-      slot.style.opacity = available ? "1" : "0.55";
-      slot.title = `${hotbarItemDisplayName(itemId)} · key ${hotbarKeyLabel(slotIndex)} · drag to move/swap · right-click to clear`;
-    } else {
-      slot.style.opacity = "";
-      if (image) {
-        image.removeAttribute("src");
-        image.alt = "";
-      }
-      if (name) name.textContent = "Empty";
-      slot.title = "Drop an inventory item here";
-    }
-  });
+function hotbarActionIdForItemId(itemId) {
+  if (itemId === "weapon_wand") return "fireball";
+  if (itemId === "weapon_rainWand") return "rainCloud";
+  return null;
 }
 
-function updateMenuUtilityHotkeyRail() {
-  sanitizeUtilityHotbarAssignments();
+function updateHotbarActionCooldownSlot(slot, itemId, available) {
+  if (!slot) return;
+  const itemActionId = hotbarActionIdForItemId(itemId);
+  const cooldownRemaining = available && itemActionId
+    ? Math.max(0, actionCooldownRemaining(itemActionId))
+    : 0;
+  const cooldownDuration = itemActionId
+    ? Math.max(0.001, actionCooldownDuration(itemActionId))
+    : 1;
+  const cooldownMask = slot.querySelector(".utility-cooldown-mask");
+  const cooldownText = slot.querySelector(".utility-cooldown-text");
 
-  document.querySelectorAll("[data-menu-utility-slot]").forEach(slot => {
-    const slotIndex = Number(slot.dataset.menuUtilitySlot);
-    const itemId = player.utilityHotbarAssignments?.[slotIndex] || null;
-    const valid = Boolean(itemId && utilityHotbarItemCanBeAssigned(itemId));
-    const image = slot.querySelector("img");
-    const name = slot.querySelector(".menu-hotkey-item-name");
+  if (cooldownMask) {
+    cooldownMask.style.height = cooldownRemaining > 0
+      ? `${Math.min(100, cooldownRemaining / cooldownDuration * 100)}%`
+      : "0%";
+  }
+  if (cooldownText) {
+    cooldownText.textContent = cooldownRemaining > 0
+      ? cooldownRemaining.toFixed(1)
+      : "";
+  }
+  slot.classList.toggle("cooling-down", cooldownRemaining > 0);
+}
 
-    slot.classList.toggle("empty", !valid);
-    slot.classList.toggle("active", valid && consumableCount(itemId) > 0);
-    slot.draggable = valid;
-
-    if (valid) {
-      const itemImage = potionImageForItem(itemId);
-      if (image && itemImage) {
-        image.src = itemImage.src;
-        image.alt = utilityItemDisplayName(itemId);
-      }
-      if (name) name.textContent = utilityItemDisplayName(itemId);
-      slot.title = `${utilityItemDisplayName(itemId)} · key ${slotIndex + 1} · drag to move/swap · right-click to clear`;
-    } else {
-      if (image) {
-        image.removeAttribute("src");
-        image.alt = "";
-      }
-      if (name) name.textContent = "Empty";
-      slot.title = "Drop a consumable here";
-    }
-  });
+function updateHotbarActionCooldownHud() {
+  for (let slotIndex = 0; slotIndex < HOTBAR_SLOT_COUNT; slotIndex++) {
+    const slot = document.getElementById(`slot${slotIndex + 1}`);
+    if (!slot) continue;
+    const itemId = player.hotbarAssignments?.[slotIndex] || null;
+    const available = Boolean(
+      itemId &&
+      hotbarAssignmentCanPersist(itemId) &&
+      hotbarItemInventoryCount(itemId) > 0
+    );
+    updateHotbarActionCooldownSlot(slot, itemId, available);
+  }
 }
 
 function updateHotbar() {
@@ -8127,34 +5701,10 @@ function updateHotbar() {
         ? String(hotbarItemInventoryCount(itemId))
         : "";
     }
-    const cooldownMask = slot.querySelector(".utility-cooldown-mask");
-    const cooldownText = slot.querySelector(".utility-cooldown-text");
-    const itemAbilityId = itemId === "weapon_wand"
-      ? "fireball"
-      : itemId === "weapon_rainWand"
-        ? "rainCloud"
-        : null;
-    const cooldownRemaining = available && itemAbilityId
-      ? Math.max(0, skillCooldownRemaining(itemAbilityId))
-      : 0;
-    const cooldownDuration = itemAbilityId
-      ? Math.max(0.001, skillCooldownDuration(itemAbilityId))
-      : 1;
-    if (cooldownMask) {
-      cooldownMask.style.height = cooldownRemaining > 0
-        ? `${Math.min(100, cooldownRemaining / cooldownDuration * 100)}%`
-        : "0%";
-    }
-    if (cooldownText) {
-      cooldownText.textContent = cooldownRemaining > 0
-        ? cooldownRemaining.toFixed(1)
-        : "";
-    }
-    slot.classList.toggle("cooling-down", cooldownRemaining > 0);
+    updateHotbarActionCooldownSlot(slot, itemId, available);
     slot.style.opacity = assigned ? (available ? "1" : "0.5") : "0.48";
   }
 
-  updateMenuItemHotkeyRail();
 }
 
 let inventoryOpen = false;
@@ -8174,7 +5724,6 @@ let draggingChestItemId = null;
 let draggingInventoryToken = null;
 let inventoryDropPendingToken = null;
 let inventoryDropDraft = null;
-let classResetConfirmOpen = false;
 let beachQuestOpen = false;
 let rewardToastTimer = null;
 let selectedHotbarInventoryItemId = null;
@@ -8404,182 +5953,6 @@ function weaponImageForIndex(index) {
   return swordImage;
 }
 
-function updateHotbarAssignmentUi() {
-  const panel =
-    document.getElementById(
-      "hotbarAssignPanel"
-    );
-
-  if (!panel) return;
-
-  const itemId =
-    selectedHotbarInventoryItemId;
-
-  const equipmentSelection = Boolean(itemId && hotbarItemCanBeAssigned(itemId));
-  const utilitySelection = false; // v377: consumables are used from Inventory, not number-key slots.
-  const validSelection = equipmentSelection;
-
-  const image =
-    document.getElementById(
-      "hotbarAssignImg"
-    );
-
-  const name =
-    document.getElementById(
-      "hotbarAssignName"
-    );
-
-  const equipmentButtons = document.getElementById("equipmentHotbarAssignButtons");
-  const utilityButtons = document.getElementById("utilityHotbarAssignButtons");
-  const assignHelp = document.getElementById("hotbarAssignHelp");
-
-  if (equipmentButtons) equipmentButtons.style.display = equipmentSelection ? "flex" : "none";
-  if (utilityButtons) utilityButtons.style.display = utilitySelection ? "flex" : "none";
-  if (assignHelp) {
-    assignHelp.textContent = "Choose an action hotkey (1–0)";
-  }
-
-  document
-    .querySelectorAll(
-      "[data-hotbar-assign-slot], [data-utility-assign-slot], #hotbarAssignClear"
-    )
-    .forEach(button => {
-      button.disabled = !validSelection;
-    });
-
-  if (!validSelection) {
-    selectedHotbarInventoryItemId =
-      null;
-
-    if (image) {
-      image.removeAttribute("src");
-      image.style.visibility =
-        "hidden";
-    }
-
-    if (name) {
-      name.textContent =
-        "Select a usable item";
-    }
-
-    document
-      .querySelectorAll(
-        "[data-hotbar-assign-slot], [data-utility-assign-slot]"
-      )
-      .forEach(button => {
-        button.classList.remove("active");
-      });
-
-    if (equipmentButtons) equipmentButtons.style.display = "none";
-    if (utilityButtons) utilityButtons.style.display = "none";
-    if (assignHelp) assignHelp.textContent = "Select a usable item";
-    return;
-  }
-
-  const itemImage = hotkeyImageForItemId(itemId);
-
-  if (image && itemImage) {
-    image.src = itemImage.src;
-    image.style.visibility =
-      "visible";
-  }
-
-  const shopItem = SHOP_ITEMS.find(item => item.id === itemId);
-
-  if (name) {
-    if (utilitySelection) {
-      name.textContent = `${utilityItemDisplayName(itemId)} · ${consumableCount(itemId)} owned`;
-    } else {
-      const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
-      const combatProfile = typeof COMBAT_BALANCE !== "undefined"
-        ? COMBAT_BALANCE.weaponProfiles[weaponIndex]
-        : null;
-      const itemDisplayName = shopItem?.name || combatProfile?.name || hotbarItemDisplayName(itemId);
-
-      if (combatProfile) {
-        const powerBits = [];
-        if ((Number(combatProfile.attackPower) || 0) > 0) powerBits.push(`ATK ${combatProfile.attackPower}`);
-        if ((Number(combatProfile.magicPower) || 0) > 0) powerBits.push(`MAG ${combatProfile.magicPower}`);
-        name.textContent = `${itemDisplayName} · ${powerBits.join(" / ")}`;
-      } else {
-        name.textContent = itemDisplayName;
-      }
-    }
-  }
-
-  const assignedSlot = utilitySelection
-    ? utilityHotbarSlotForItem(itemId)
-    : hotbarSlotForItem(itemId);
-
-  document.querySelectorAll("[data-hotbar-assign-slot]").forEach(button => {
-    button.classList.toggle("active", equipmentSelection && Number(button.dataset.hotbarAssignSlot) === assignedSlot);
-  });
-document.querySelectorAll("[data-utility-assign-slot]").forEach(button => {
-    button.classList.toggle("active", utilitySelection && Number(button.dataset.utilityAssignSlot) === assignedSlot);
-  });
-}
-
-function updatePvpUi() {
-  const badge = document.getElementById("pvpStatusBadge");
-  const status = document.getElementById("pvpStatusText");
-  const button = document.getElementById("pvpToggleButton");
-  const lockText = document.getElementById("pvpLockText");
-
-  if (!badge || !status || !button || !lockText) {
-    return;
-  }
-
-  const connected =
-    Boolean(window.onlineClient?.connected);
-
-  const remainingMs = Math.max(
-    0,
-    (Number(player.pvpCombatUntil) || 0) - Date.now()
-  );
-
-  const locked =
-    player.pvpEnabled &&
-    remainingMs > 0;
-
-  badge.textContent =
-    player.pvpEnabled ? "ON" : "OFF";
-
-  badge.classList.toggle(
-    "on",
-    player.pvpEnabled
-  );
-
-  status.textContent =
-    player.pvpEnabled
-      ? "PvP is enabled. Other opted-in players can damage you."
-      : "PvP is disabled. Other players cannot damage you.";
-
-  button.classList.toggle(
-    "on",
-    player.pvpEnabled
-  );
-
-  button.textContent =
-    player.pvpEnabled
-      ? locked
-        ? `In Combat · ${Math.ceil(remainingMs / 1000)}s`
-        : "Disable PvP"
-      : "Enable PvP";
-
-  button.disabled =
-    !connected ||
-    player.pvpTogglePending ||
-    locked;
-
-  lockText.textContent =
-    !connected
-      ? "Connect to the multiplayer server to use PvP."
-      : locked
-        ? "PvP cannot be disabled while you are in combat."
-        : "Both players must opt in. PvP attacks deal 50% damage. Magic is not enabled for PvP yet.";
-}
-
-
 // -----------------------------------------------------------------------------
 // v422 LIVE INVENTORY OVERLAY
 // -----------------------------------------------------------------------------
@@ -8783,7 +6156,7 @@ function equipInventoryArmorItemToSlot(itemId, slot) {
   if (!itemId || !slot || inventoryItemCount(itemId) <= 0) return false;
   if (equipmentSlotForInventoryItem(itemId) !== slot) return false;
   if (!armorItemCanBeEquipped(itemId)) {
-    showArmorClassRestriction(itemId);
+    showEquipmentRestriction(itemId);
     return false;
   }
 
@@ -8960,76 +6333,9 @@ function updateInventoryUi() {
       }
     });
 
-  updateHotbarAssignmentUi();
-
-  document
-    .querySelectorAll(
-      "#equipmentPage [data-owned-item]"
-    )
-    .forEach(element => {
-      const visible =
-        playerOwnsItem(
-          element.dataset.ownedItem
-        );
-
-      element.style.display =
-        visible ? "" : "none";
-    });
-
-  const woodcuttingFill = document.getElementById("woodcuttingFill");
-  const woodcuttingBarText = document.getElementById("woodcuttingBarText");
-  const woodcuttingLevelText = document.getElementById("woodcuttingLevelText");
-
-  if (woodcuttingFill) {
-    const pct = Math.max(
-      0,
-      Math.min(1, player.woodcutting.exp / player.woodcutting.expToNext)
-    );
-    woodcuttingFill.style.width = `${pct * 100}%`;
-  }
-
-  if (woodcuttingBarText) {
-    woodcuttingBarText.textContent =
-      `${player.woodcutting.exp} / ${player.woodcutting.expToNext} EXP`;
-  }
-
-  if (woodcuttingLevelText) {
-    woodcuttingLevelText.textContent = `LV ${player.woodcutting.level}`;
-  }
-
-  const miningFill = document.getElementById("miningFill");
-  const miningBarText = document.getElementById("miningBarText");
-  const miningLevelText = document.getElementById("miningLevelText");
-
-  if (miningFill) {
-    const pct = Math.max(0, Math.min(1, player.mining.exp / player.mining.expToNext));
-    miningFill.style.width = `${pct * 100}%`;
-  }
-  if (miningBarText) {
-    miningBarText.textContent = `${player.mining.exp} / ${player.mining.expToNext} EXP`;
-  }
-  if (miningLevelText) {
-    miningLevelText.textContent = `LV ${player.mining.level}`;
-  }
-
-  const flowerHarvestingFill = document.getElementById("flowerHarvestingFill");
-  const flowerHarvestingBarText = document.getElementById("flowerHarvestingBarText");
-  const flowerHarvestingLevelText = document.getElementById("flowerHarvestingLevelText");
-  if (flowerHarvestingFill) {
-    const pct = Math.max(0, Math.min(1, player.flowerHarvesting.exp / player.flowerHarvesting.expToNext));
-    flowerHarvestingFill.style.width = `${pct * 100}%`;
-  }
-  if (flowerHarvestingBarText) {
-    flowerHarvestingBarText.textContent = `${player.flowerHarvesting.exp} / ${player.flowerHarvesting.expToNext} EXP`;
-  }
-  if (flowerHarvestingLevelText) {
-    flowerHarvestingLevelText.textContent = `LV ${player.flowerHarvesting.level}`;
-  }
-
   const hatStyle = currentHatStyle();
   const shirtStyle = currentShirtStyle();
   const pantsStyle = currentPantsStyle();
-  const weaponStyle = equippedWeapon();
 
   const equippedHatImg = document.getElementById("equippedHatImg");
   const equippedHatName = document.getElementById("equippedHatName");
@@ -9039,8 +6345,6 @@ function updateInventoryUi() {
   const equippedPantsName = document.getElementById("equippedPantsName");
   const equippedCharmImg = document.getElementById("equippedCharmImg");
   const equippedCharmName = document.getElementById("equippedCharmName");
-  const equippedWeaponImg = document.getElementById("equippedWeaponImg");
-  const equippedWeaponName = document.getElementById("equippedWeaponName");
 
   if (equippedHatImg) equippedHatImg.src = hatImageForIndex(player.hatIndex).src;
   if (equippedHatName) equippedHatName.textContent = hatDisplayName(hatStyle);
@@ -9057,174 +6361,25 @@ function updateInventoryUi() {
       equippedCharmImg.style.visibility = "hidden";
     }
   }
-  if (equippedCharmName) equippedCharmName.textContent = player.charmIndex >= 0 ? itemDisplayNameForId(CHARM_ITEM_IDS[player.charmIndex]) : "Empty";
-
-  const equippedBoxes = document.querySelectorAll(".equipped-box[data-gear-panel]");
-  if (equippedBoxes[0]) {
-    const itemId = player.hatIndex >= 0 ? HAT_ITEM_IDS[player.hatIndex] : null;
-    if (itemId) equippedBoxes[0].dataset.itemDetailId = itemId;
-    else delete equippedBoxes[0].dataset.itemDetailId;
-  }
-  if (equippedBoxes[1]) {
-    const itemId = player.shirtIndex >= 0 ? SHIRT_ITEM_IDS[player.shirtIndex] : null;
-    if (itemId) equippedBoxes[1].dataset.itemDetailId = itemId;
-    else delete equippedBoxes[1].dataset.itemDetailId;
-  }
-  if (equippedBoxes[2]) {
-    const itemId = player.pantsIndex >= 0 ? PANTS_ITEM_IDS[player.pantsIndex] : null;
-    if (itemId) equippedBoxes[2].dataset.itemDetailId = itemId;
-    else delete equippedBoxes[2].dataset.itemDetailId;
-  }
-  if (equippedBoxes[3]) {
-    const itemId = player.charmIndex >= 0 ? CHARM_ITEM_IDS[player.charmIndex] : null;
-    if (itemId) equippedBoxes[3].dataset.itemDetailId = itemId;
-    else delete equippedBoxes[3].dataset.itemDetailId;
+  if (equippedCharmName) {
+    equippedCharmName.textContent = player.charmIndex >= 0
+      ? itemDisplayNameForId(CHARM_ITEM_IDS[player.charmIndex])
+      : "Empty";
   }
 
-  if (equippedWeaponImg) {
-    const equippedWeaponImage = weaponImageForIndex(player.weaponIndex);
-
-    if (equippedWeaponImage) {
-      equippedWeaponImg.src = equippedWeaponImage.src;
-      equippedWeaponImg.style.visibility = "visible";
-    } else {
-      equippedWeaponImg.removeAttribute("src");
-      equippedWeaponImg.style.visibility = "hidden";
-    }
-  }
-
-  if (equippedWeaponName) {
-    equippedWeaponName.textContent =
-      player.weaponIndex === 7
-        ? "Dreamcatcher"
-        : weaponDisplayName(weaponStyle);
-  }
-
-  document.querySelectorAll(".hat-choice").forEach(button => {
-    button.classList.toggle(
-      "active",
-      Number(button.dataset.hatIndex) === player.hatIndex
-    );
+  const equippedItemBySlot = {
+    head: player.hatIndex >= 0 ? HAT_ITEM_IDS[player.hatIndex] : null,
+    shirt: player.shirtIndex >= 0 ? SHIRT_ITEM_IDS[player.shirtIndex] : null,
+    pants: player.pantsIndex >= 0 ? PANTS_ITEM_IDS[player.pantsIndex] : null,
+    charm: player.charmIndex >= 0 ? CHARM_ITEM_IDS[player.charmIndex] : null
+  };
+  document.querySelectorAll("#equipmentPage .equipped-box[data-equipment-slot]").forEach(box => {
+    const itemId = equippedItemBySlot[box.dataset.equipmentSlot] || null;
+    if (itemId) box.dataset.itemDetailId = itemId;
+    else delete box.dataset.itemDetailId;
   });
 
-  document.querySelectorAll(".weapon-choice").forEach(button => {
-    button.classList.toggle(
-      "active",
-      Number(button.dataset.weaponIndex) === player.weaponIndex
-    );
-  });
-
-  document.querySelectorAll(".shirt-choice").forEach(button => {
-    button.classList.toggle(
-      "active",
-      Number(button.dataset.shirtIndex) === player.shirtIndex
-    );
-  });
-
-  document.querySelectorAll(".pants-choice").forEach(button => {
-    button.classList.toggle(
-      "active",
-      Number(button.dataset.pantsIndex) === player.pantsIndex
-    );
-  });
-
-  document.querySelectorAll(".charm-choice").forEach(button => {
-    button.classList.toggle(
-      "active",
-      Number(button.dataset.charmIndex) === player.charmIndex
-    );
-  });
-
-  const skillPointText = document.getElementById("skillPointText");
-  const statStrength = document.getElementById("statStrength");
-  const statDex = document.getElementById("statDex");
-  const statLuck = document.getElementById("statLuck");
-  const statInt = document.getElementById("statInt");
-  const statArmor = document.getElementById("statArmor");
-  const statResist = document.getElementById("statResist");
-  const statMoveSpeed = document.getElementById("statMoveSpeed");
-  const statAccuracy = document.getElementById("statAccuracy");
-  const statAttackPower = document.getElementById("statAttackPower");
-  const statMagicPower = document.getElementById("statMagicPower");
-  const statMastery = document.getElementById("statMastery");
-  const statMasteryLabel = document.getElementById("statMasteryLabel");
-
-  if (skillPointText) {
-    skillPointText.textContent = `Stat Points ${player.skillPoints}`;
-  }
-
-  if (statStrength) statStrength.textContent = `${player.stats.strength}`;
-  if (statDex) statDex.textContent = `${player.stats.dex}`;
-  if (statLuck) statLuck.textContent = `${player.stats.luck}`;
-  if (statInt) statInt.textContent = `${player.stats.int}`;
-
-  if (window.COMBAT_BALANCE) {
-    const equippedProtection = {
-      hatIndex: player.hatIndex,
-      shirtIndex: player.shirtIndex,
-      pantsIndex: player.pantsIndex,
-      charmIndex: player.charmIndex
-    };
-    if (statArmor) {
-      statArmor.textContent = `${COMBAT_BALANCE.playerArmorFromGear(equippedProtection)}`;
-    }
-    if (statResist) {
-      statResist.textContent = `${COMBAT_BALANCE.playerResistFromGear(equippedProtection)}`;
-    }
-  }
-
-  if (statMoveSpeed) {
-    statMoveSpeed.textContent = `${Math.round(
-      Number(player.speed) || GAME_CONFIG.player.baseSpeed
-    )}`;
-  }
-  if (statAccuracy) {
-    statAccuracy.textContent = "—";
-  }
-
-  if (statAttackPower && window.COMBAT_BALANCE) {
-    statAttackPower.textContent = `${Math.round(COMBAT_BALANCE.calculateAttackPower(
-      player.weaponIndex,
-      player.stats
-    ))}`;
-  }
-
-  if (statMagicPower && window.COMBAT_BALANCE) {
-    statMagicPower.textContent = `${Math.round(COMBAT_BALANCE.calculateMagicPower(
-      player.weaponIndex,
-      player.stats
-    ))}`;
-  }
-
-  if (statMastery && window.COMBAT_BALANCE) {
-    statMastery.textContent = `${Math.round(
-      COMBAT_BALANCE.calculateMastery(player.classId) * 100
-    )}%`;
-  }
-
-  if (statMasteryLabel) {
-    statMasteryLabel.textContent = player.classId === "arcana"
-      ? "Magic Mastery"
-      : playerHasChosenClass()
-        ? "Attack Mastery"
-        : "Mastery";
-  }
-
-  document.querySelectorAll(".stat-plus").forEach(button => {
-    const stat = button.dataset.stat;
-    const atMax =
-      stat &&
-      (Number(player.stats?.[stat]) || 0) >= MAX_PLAYER_STAT;
-
-    button.disabled = player.skillPoints <= 0 || atMax;
-    button.title = atMax ? `Max ${MAX_PLAYER_STAT}` : "";
-  });
-
-
-  updateAbilityTreeUi();
-  updateSkillBindingUi();
   renderInventoryOverlaySelection();
-  updatePvpUi();
 }
 
 // -----------------------------------------------------------------------------
@@ -9261,8 +6416,6 @@ function validSavedItemIds(items) {
 function buildLocalCharacterSave() {
   const story = {};
   for (const key of [
-    "axeReceived",
-    "marniePickaxeReceived",
     "woodSwordCrafted",
     "woodBowCrafted",
     "shepherdStaffCrafted",
@@ -9274,18 +6427,6 @@ function buildLocalCharacterSave() {
     story[key] = Boolean(player.story?.[key]);
   }
 
-  const abilities = {};
-  for (const [skillId, skill] of Object.entries(ACTIVE_SKILLS)) {
-    abilities[skillId] = Math.max(
-      0,
-      Math.min(Number(skill.maxLevel) || 0, Math.floor(Number(player.abilities?.[skillId]) || 0))
-    );
-  }
-
-  const bindings = {};
-  for (const key of Object.keys(skillBindings)) {
-    bindings[key] = skillBindings[key] || null;
-  }
 
   return {
     version: LOCAL_CHARACTER_SAVE_VERSION,
@@ -9294,37 +6435,7 @@ function buildLocalCharacterSave() {
 
     level: clampLocalSaveInteger(player.level, 1, 99, 1),
     exp: Math.max(0, Math.floor(Number(player.exp) || 0)),
-    skillPoints: Math.max(0, Math.floor(Number(player.skillPoints) || 0)),
-    abilityPoints: 0,
 
-    classId: PLAYER_CLASSES[player.classId] ? player.classId : null,
-    abilities,
-    enhancementToggles: { ...(player.enhancementToggles || {}) },
-    skillBindings: bindings,
-
-    stats: {
-      strength: clampLocalSaveInteger(player.stats?.strength, 0, MAX_PLAYER_STAT, 0),
-      dex: clampLocalSaveInteger(player.stats?.dex, 0, MAX_PLAYER_STAT, 0),
-      luck: clampLocalSaveInteger(player.stats?.luck, 0, MAX_PLAYER_STAT, 0),
-      int: clampLocalSaveInteger(player.stats?.int, 0, MAX_PLAYER_STAT, 0)
-    },
-
-    woodcutting: {
-      level: clampLocalSaveInteger(player.woodcutting?.level, 1, 99, 1),
-      exp: Math.max(0, Math.floor(Number(player.woodcutting?.exp) || 0))
-    },
-
-    mining: {
-      level: clampLocalSaveInteger(player.mining?.level, 1, 99, 1),
-      exp: Math.max(0, Math.floor(Number(player.mining?.exp) || 0))
-    },
-
-    flowerHarvesting: {
-      level: clampLocalSaveInteger(player.flowerHarvesting?.level, 1, 99, 1),
-      exp: Math.max(0, Math.floor(Number(player.flowerHarvesting?.exp) || 0))
-    },
-
-    openedTreasureIds: Array.from(player.openedTreasureIds || []).slice(0, 64),
 
     resources: {
       coins: Math.max(0, Math.floor(Number(player.coins) || 0)),
@@ -9348,10 +6459,6 @@ function buildLocalCharacterSave() {
     },
 
     items: validSavedItemIds(player.items),
-    shopPurchases: Array.from(new Set(
-      (Array.isArray(player.shopPurchases) ? player.shopPurchases : [])
-        .filter(itemId => ALL_EQUIPMENT_ITEM_IDS.has(itemId))
-    )),
 
     equipment: {
       hatIndex: clampLocalSaveInteger(player.hatIndex, -1, HAT_ITEM_IDS.length - 1, -1),
@@ -9365,16 +6472,10 @@ function buildLocalCharacterSave() {
       { length: HOTBAR_SLOT_COUNT },
       (_, index) => player.hotbarAssignments?.[index] || null
     ),
-    utilityHotbarAssignments: Array.from(
-      { length: UTILITY_HOTBAR_SLOT_COUNT },
-      (_, index) => player.utilityHotbarAssignments?.[index] || null
-    ),
-    utilityHotbarCustomized: Boolean(player.utilityHotbarCustomized),
-
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
       magicRemainingMs: Math.max(0, (Number(player.magicPotionUntil) || 0) - Date.now()),
-      healingPotionCooldownRemainingMs: Math.max(0, (Number(player.consumableCooldownUntil) || 0) - Date.now()),
+      healingPotionCooldownRemainingMs: Math.max(0, (Number(player.healingPotionCooldownUntil) || 0) - Date.now()),
       attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
       magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
     },
@@ -9406,64 +6507,17 @@ function applyLocalCharacterSave(save) {
       worldGridDiscoveredCells.add(String(key));
     }
   }
-  // Spawn is always known even for saves created before the v378 minimap.
+  // The world-grid origin is always known even for saves created before the v378 minimap.
   worldGridDiscoveredCells.add(worldGridCellKey(0, 0));
 
   player.level = clampLocalSaveInteger(save.level, 1, 99, 1);
   player.expToNext = expNeededForLevel(player.level);
   player.exp = clampLocalSaveInteger(save.exp, 0, Math.max(0, player.expToNext - 1), 0);
-  player.skillPoints = clampLocalSaveInteger(save.skillPoints, 0, 9999, 0);
-  player.abilityPoints = 0;
-
-  // v377 migration: classes/talent-style active skills are retired. Keep old
-  // save fields readable, but do not reactivate them in the new item-driven game.
-  player.classId = null;
-
-  for (const skillId of Object.keys(ACTIVE_SKILLS)) {
-    player.abilities[skillId] = 0;
-  }
-
-  player.enhancementToggles = {};
-  if (save.enhancementToggles && typeof save.enhancementToggles === "object") {
-    for (const [id, enabled] of Object.entries(save.enhancementToggles)) {
-      player.enhancementToggles[id] = Boolean(enabled);
-    }
-  }
-
-  player.stats.strength = clampLocalSaveInteger(save.stats?.strength, 0, MAX_PLAYER_STAT, 0);
-  player.stats.dex = clampLocalSaveInteger(save.stats?.dex, 0, MAX_PLAYER_STAT, 0);
-  player.stats.luck = clampLocalSaveInteger(save.stats?.luck, 0, MAX_PLAYER_STAT, 0);
-  player.stats.int = clampLocalSaveInteger(save.stats?.int, 0, MAX_PLAYER_STAT, 0);
-
-  player.woodcutting.level = clampLocalSaveInteger(save.woodcutting?.level, 1, 99, 1);
-  player.woodcutting.expToNext = woodcuttingExpNeeded(player.woodcutting.level);
-  player.woodcutting.exp = clampLocalSaveInteger(
-    save.woodcutting?.exp,
-    0,
-    Math.max(0, player.woodcutting.expToNext - 1),
-    0
-  );
-  player.mining.level = clampLocalSaveInteger(save.mining?.level, 1, 99, 1);
-  player.mining.expToNext = miningExpNeeded(player.mining.level);
-  player.mining.exp = clampLocalSaveInteger(
-    save.mining?.exp,
-    0,
-    Math.max(0, player.mining.expToNext - 1),
-    0
-  );
-  player.flowerHarvesting.level = clampLocalSaveInteger(save.flowerHarvesting?.level, 1, 99, 1);
-  player.flowerHarvesting.expToNext = flowerHarvestingExpNeeded(player.flowerHarvesting.level);
-  player.flowerHarvesting.exp = clampLocalSaveInteger(
-    save.flowerHarvesting?.exp,
-    0,
-    Math.max(0, player.flowerHarvesting.expToNext - 1),
-    0
-  );
 
   player.coins = clampLocalSaveInteger(save.resources?.coins, 0, 999999, 0);
   player.wood = clampLocalSaveInteger(save.resources?.wood, 0, 999999, 0);
   player.stone = clampLocalSaveInteger(save.resources?.stone, 0, 999999, 0);
-  player.whiteFlowers = clampLocalSaveInteger(save.resources?.whiteFlowers ?? save.resources?.flowers, 0, 999999, 0);
+  player.whiteFlowers = clampLocalSaveInteger(save.resources?.whiteFlowers, 0, 999999, 0);
   player.blueFlowers = clampLocalSaveInteger(save.resources?.blueFlowers, 0, 999999, 0);
   player.healingPotions = clampLocalSaveInteger(save.resources?.healingPotions, 0, 999999, 0);
   player.attackPotions = clampLocalSaveInteger(save.resources?.attackPotions, 0, 999999, 0);
@@ -9471,8 +6525,8 @@ function applyLocalCharacterSave(save) {
   const saveNow = Date.now();
   player.attackPotionUntil = saveNow + Math.min(POTION_BUFF_MS, clampLocalSaveInteger(save.buffs?.attackRemainingMs, 0, POTION_BUFF_MS, 0));
   player.magicPotionUntil = saveNow + Math.min(POTION_BUFF_MS, clampLocalSaveInteger(save.buffs?.magicRemainingMs, 0, POTION_BUFF_MS, 0));
-  player.consumableCooldownUntil = saveNow + Math.min(HEALING_POTION_COOLDOWN_MS, clampLocalSaveInteger(
-    save.buffs?.healingPotionCooldownRemainingMs ?? save.buffs?.consumableCooldownRemainingMs,
+  player.healingPotionCooldownUntil = saveNow + Math.min(HEALING_POTION_COOLDOWN_MS, clampLocalSaveInteger(
+    save.buffs?.healingPotionCooldownRemainingMs,
     0,
     HEALING_POTION_COOLDOWN_MS,
     0
@@ -9489,24 +6543,12 @@ function applyLocalCharacterSave(save) {
   player.torches = clampLocalSaveInteger(save.resources?.torches, 0, 999999, 0);
   player.chests = clampLocalSaveInteger(save.resources?.chests, 0, 999999, 0);
   player.craftingTables = clampLocalSaveInteger(save.resources?.craftingTables, 0, 999999, 0);
-  player.openedTreasureIds = new Set(
-    (Array.isArray(save.openedTreasureIds) ? save.openedTreasureIds : [])
-      .filter(id => typeof id === "string" && id.includes(":treasure:"))
-      .slice(0, 64)
-  );
-
   player.items = validSavedItemIds(save.items);
-  player.shopPurchases = Array.from(new Set(
-    (Array.isArray(save.shopPurchases) ? save.shopPurchases : [])
-      .filter(itemId => ALL_EQUIPMENT_ITEM_IDS.has(itemId))
-  ));
-
-  // A persisted purchase always implies ownership, even if an older save
-  // happened to omit the parallel item dictionary entry.
-  for (const itemId of player.shopPurchases) {
-    player.items[itemId] = Math.max(1, inventoryItemCount(itemId));
+  // v431: old browser saves can no longer depend on retired tutorial handoffs.
+  // Bring every migrated character up to the current starter loadout.
+  for (const starterItemId of ["weapon_sword", "weapon_pickaxe", "weapon_axe"]) {
+    player.items[starterItemId] = Math.max(1, Number(player.items[starterItemId]) || 0);
   }
-
   for (const key of Object.keys(player.story)) {
     if (Object.prototype.hasOwnProperty.call(save.story || {}, key)) {
       player.story[key] = Boolean(save.story[key]);
@@ -9570,17 +6612,6 @@ function applyLocalCharacterSave(save) {
   );
   sanitizeHotbarAssignments();
 
-  const savedUtilityAssignments = save.utilityHotbarAssignments;
-  player.utilityHotbarCustomized = save.utilityHotbarCustomized === true;
-  player.utilityHotbarAssignments = player.utilityHotbarCustomized && Array.isArray(savedUtilityAssignments)
-    ? Array.from({ length: UTILITY_HOTBAR_SLOT_COUNT }, (_, index) => savedUtilityAssignments[index] || null)
-    : Array.from({ length: UTILITY_HOTBAR_SLOT_COUNT }, () => null);
-  sanitizeUtilityHotbarAssignments();
-
-  for (const key of Object.keys(skillBindings)) {
-    skillBindings[key] = null;
-  }
-
   return true;
 }
 
@@ -9638,7 +6669,6 @@ function persistentServerBootstrapPayload() {
   if (!localCharacterSaveLoaded) return null;
 
   return {
-    openedTreasureIds: Array.from(player.openedTreasureIds || []).slice(0, 64),
     resources: {
       coins: player.coins,
       wood: player.wood,
@@ -9662,12 +6692,11 @@ function persistentServerBootstrapPayload() {
     buffs: {
       attackRemainingMs: Math.max(0, (Number(player.attackPotionUntil) || 0) - Date.now()),
       magicRemainingMs: Math.max(0, (Number(player.magicPotionUntil) || 0) - Date.now()),
-      healingPotionCooldownRemainingMs: Math.max(0, (Number(player.consumableCooldownUntil) || 0) - Date.now()),
+      healingPotionCooldownRemainingMs: Math.max(0, (Number(player.healingPotionCooldownUntil) || 0) - Date.now()),
       attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
       magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
     },
     story: {
-      marniePickaxeReceived: Boolean(player.story.marniePickaxeReceived),
       woodSwordCrafted: Boolean(player.story.woodSwordCrafted),
       woodBowCrafted: Boolean(player.story.woodBowCrafted),
       shepherdStaffCrafted: Boolean(player.story.shepherdStaffCrafted),
@@ -9684,10 +6713,7 @@ function persistentServerBootstrapPayload() {
     },
     myrtleQuest: {
       stage: player.myrtleQuest.stage
-    },
-    shopPurchases: Array.isArray(player.shopPurchases)
-      ? player.shopPurchases.slice(0, 64)
-      : []
+    }
   };
 }
 
@@ -9721,8 +6747,8 @@ function activeVendorShopItems() {
 }
 
 function shopVendorTitle(vendor = activeShopVendor) {
-  if (vendor === "cam") return "Cam's Ranger Shop";
-  if (vendor === "myrtle") return "Myrtle's Magus Shop";
+  if (vendor === "cam") return "Cam's Shop";
+  if (vendor === "myrtle") return "Myrtle's Shop";
   return "Shop";
 }
 
@@ -9745,7 +6771,7 @@ function updateShopUi() {
 
   if (coinText) coinText.textContent = `Coins ${player.coins}`;
   if (title) title.textContent = shopVendorTitle();
-  if (footer) footer.textContent = "Prices vary by item · Level/class requirements apply · Esc to close";
+  if (footer) footer.textContent = "Prices vary by item · Level requirements apply · Esc to close";
   if (!grid) return;
 
   grid.innerHTML = "";
@@ -9758,7 +6784,7 @@ function updateShopUi() {
       ? Math.max(0, Math.floor(Number(player.arrows) || 0))
       : inventoryItemCount(item.id);
     const pending = player.shopPurchasePending === item.id;
-    const requiredLevel = Math.max(0, Number(equipmentAttributeRequirements(item.id)?.level) || 0);
+    const requiredLevel = equipmentRequiredLevel(item.id);
     const levelLocked = requiredLevel > 0 && Number(player.level) < requiredLevel;
 
     const button = document.createElement("button");
@@ -9799,8 +6825,6 @@ function setShopOpen(open) {
   shopOpen = Boolean(open && activeShopVendor);
   if (!shopOpen) hideItemDetailTooltip();
 
-  if (shopOpen && player.hunterSnareSetting) cancelHunterSnarePlacement(false);
-  if (shopOpen && focusFireIsCasting()) cancelFocusFire();
   if (shopOpen && fireballIsAiming()) cancelFireballAim();
 
   const overlay = document.getElementById("shopOverlay");
@@ -9828,7 +6852,7 @@ function tryPurchaseShopItem(itemId) {
   const item = activeVendorShopItems().find(entry => entry.id === itemId);
   if (!shopOpen || !item || player.shopPurchasePending) return;
 
-  const requiredLevel = Math.max(0, Number(equipmentAttributeRequirements(itemId)?.level) || 0);
+  const requiredLevel = equipmentRequiredLevel(itemId);
   if (requiredLevel > 0 && Number(player.level) < requiredLevel) {
     spawnFloatingText(player.x, player.y - 30, `REQUIRES LV ${requiredLevel}`, "#ffe38b", 0.85);
     return;
@@ -9851,7 +6875,6 @@ function tryPurchaseShopItem(itemId) {
   if (item.resourceKey === "arrows") {
     player.arrows += Math.max(1, Number(item.outputCount) || 1);
   } else {
-    if (!player.shopPurchases.includes(itemId)) player.shopPurchases.push(itemId);
     grantInventoryItem(itemId, 1);
   }
   spawnFloatingText(player.x, player.y - 30, "PURCHASED!", "#ffe38b", 0.85);
@@ -9878,7 +6901,6 @@ function setInventoryOpen(open) {
   inventoryOpen = Boolean(open);
   if (!inventoryOpen) {
     hideItemDetailTooltip();
-    hideSkillDetailTooltip();
   }
 
   if (inventoryOpen && shopOpen) setShopOpen(false);
@@ -9905,40 +6927,6 @@ window.visualViewport?.addEventListener("resize", () => {
   if (inventoryOpen) syncInventoryOverlayToViewport();
 }, { passive: true });
 
-function updateMenuHotkeyRailVisibility(pageId) {
-  const inventoryContext = pageId === "inventoryPage";
-  document.getElementById("menuItemHotkeyRail")?.classList.toggle("context-hidden", !inventoryContext);
-  document.getElementById("menuUtilityHotkeyRail")?.classList.add("context-hidden");
-  document.getElementById("menuSkillHotkeyRail")?.classList.add("context-hidden");
-}
-
-function showInventoryPage(pageId) {
-  if (pageId !== "skillsPage") hideSkillDetailTooltip();
-
-  if (pageId === "skillsPage") {
-    updateClassSelectionUi();
-    if (playerHasChosenClass()) {
-      showSkillCategory(player.classId);
-    }
-  }
-
-  document.querySelectorAll(".inventory-page").forEach(page => {
-    page.classList.toggle("active", page.id === pageId);
-  });
-
-  document.querySelectorAll(".inventory-tab").forEach(tab => {
-    tab.classList.toggle("active", tab.dataset.page === pageId);
-  });
-
-  updateMenuHotkeyRailVisibility(pageId);
-}
-
-document.querySelectorAll(".inventory-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    showInventoryPage(tab.dataset.page);
-  });
-});
-
 document.getElementById("menuHudButton")?.addEventListener("click", () => {
   setInventoryOpen(!inventoryOpen);
 });
@@ -9957,7 +6945,7 @@ document.getElementById("chestHudButton")?.addEventListener("click", () => {
 });
 
 window.addEventListener("wheel", event => {
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
+  if (shopOpen || beachQuestOpen) return;
   if (!Number.isFinite(event.deltaY) || Math.abs(event.deltaY) < 1) return;
   const panel = event.target?.closest?.("#inventoryPage, #craftPanel, #chestPanel, #dropQuantityPanel");
   if (panel) { const scrollTarget = panel.id === "inventoryPage" ? document.getElementById("inventoryScroll") : panel.id === "craftPanel" ? document.getElementById("craftGrid") : panel.id === "chestPanel" ? document.getElementById("chestGrid") : null; if (scrollTarget) scrollTarget.scrollTop += event.deltaY; event.preventDefault(); return; }
@@ -9969,7 +6957,7 @@ const topHotbar = document.getElementById("hotbar");
 // so right-click never selects/saves the rendered game surface.
 canvas?.addEventListener("contextmenu", event => event.preventDefault());
 topHotbar?.addEventListener("click", event => {
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
+  if (shopOpen || beachQuestOpen) return;
 
   const slot = event.target.closest(".hotbar-slot");
   if (!slot || !topHotbar.contains(slot)) return;
@@ -9987,121 +6975,6 @@ topHotbar?.addEventListener("click", event => {
     });
   }
 });
-
-function showSkillCategory(categoryId) {
-  if (
-    playerHasChosenClass() &&
-    categoryId !== player.classId
-  ) {
-    categoryId = player.classId;
-  }
-
-  document.querySelectorAll(".skill-category-tab").forEach(tab => {
-    tab.classList.toggle("active", tab.dataset.skillCategory === categoryId);
-  });
-
-  document.querySelectorAll(".skill-category-panel").forEach(panel => {
-    panel.classList.toggle(
-      "active",
-      panel.dataset.skillCategoryPanel === categoryId
-    );
-  });
-
-  ensureSelectedSkillForClass(categoryId);
-  updateSkillClassHeading();
-  renderSkillTreeSelectionState();
-}
-
-document.querySelectorAll(".skill-category-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    showSkillCategory(tab.dataset.skillCategory);
-  });
-});
-
-document.querySelectorAll("[data-class-choice]").forEach(button => {
-  button.addEventListener("click", () => {
-    choosePlayerClass(button.dataset.classChoice);
-  });
-});
-
-const pvpToggleButton = document.getElementById("pvpToggleButton");
-if (pvpToggleButton) {
-  pvpToggleButton.addEventListener("click", () => {
-    if (
-      player.pvpTogglePending ||
-      typeof onlineClient === "undefined" ||
-      !onlineClient?.connected
-    ) {
-      return;
-    }
-
-    const remainingMs = Math.max(
-      0,
-      (Number(player.pvpCombatUntil) || 0) - Date.now()
-    );
-
-    if (player.pvpEnabled && remainingMs > 0) {
-      return;
-    }
-
-    player.pvpTogglePending = true;
-
-    if (!onlineClient.requestPvpToggle(!player.pvpEnabled)) {
-      player.pvpTogglePending = false;
-    }
-
-    updatePvpUi();
-  });
-}
-
-function showGearPanel(panelId) {
-  document.querySelectorAll(".gear-panel").forEach(panel => {
-    panel.classList.toggle("active", panel.id === panelId);
-  });
-
-  document.querySelectorAll(".equipped-box[data-gear-panel]").forEach(button => {
-    button.classList.toggle("active", button.dataset.gearPanel === panelId);
-  });
-}
-
-document.querySelectorAll(".equipped-box[data-gear-panel]").forEach(button => {
-  button.addEventListener("click", () => {
-    showGearPanel(button.dataset.gearPanel);
-  });
-});
-
-setupSkillTreeUi();
-updateMenuHotkeyRailVisibility(document.querySelector(".inventory-page.active")?.id || "inventoryPage");
-
-document.querySelectorAll(".skill-bind-button").forEach(button => {
-  button.addEventListener("click", () => {
-    bindSkillToKey(
-      button.dataset.skillId,
-      button.dataset.skillKey || null
-    );
-  });
-});
-
-document.querySelectorAll(".ability-upgrade-button").forEach(button => {
-  button.addEventListener("click", () => {
-    breakShadowHide();
-    upgradeAbility(button.dataset.abilityId);
-  });
-});
-
-const skillsPageEl = document.getElementById("skillsPage");
-if (skillsPageEl) {
-  skillsPageEl.addEventListener("click", event => {
-    const button = event.target.closest(".skill-enhancement-toggle");
-    if (!button) return;
-
-    const enhId = button.dataset.enhId;
-    setEnhancementToggle(
-      enhId,
-      !enhancementToggleState(enhId)
-    );
-  });
-}
 
 document.getElementById("inventoryClose").addEventListener("click", () => {
   setInventoryOpen(false);
@@ -10155,14 +7028,6 @@ document.getElementById("chestClose")?.addEventListener("click", () => {
   closeChestContext(true, "closed");
 });
 
-document.getElementById("classResetYes").addEventListener("click", () => {
-  setClassResetConfirmOpen(false);
-  resetClassAndSkills();
-});
-
-document.getElementById("classResetNo").addEventListener("click", () => {
-  setClassResetConfirmOpen(false);
-});
 
 document.getElementById("beachQuestClose")?.addEventListener("click", () => {
   setBeachQuestOpen(false);
@@ -10508,303 +7373,6 @@ topHotbar?.addEventListener("drop", event => {
   }
 });
 
-const menuItemHotkeyRail = document.getElementById("menuItemHotkeyRail");
-menuItemHotkeyRail?.addEventListener("dragstart", event => {
-  const slot = event.target.closest("[data-menu-hotbar-slot]");
-  if (!slot) return;
-
-  const slotIndex = Number(slot.dataset.menuHotbarSlot);
-  const itemId = player.hotbarAssignments?.[slotIndex] || null;
-  if (!hotbarItemCanBeAssigned(itemId)) {
-    event.preventDefault();
-    return;
-  }
-
-  selectedHotbarInventoryItemId = itemId;
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("application/x-slime-item", itemId);
-  event.dataTransfer.setData("application/x-slime-hotbar-source", String(slotIndex));
-  event.dataTransfer.setData("text/plain", itemId);
-  slot.classList.add("dragging");
-});
-
-menuItemHotkeyRail?.addEventListener("dragend", event => {
-  event.target.closest("[data-menu-hotbar-slot]")?.classList.remove("dragging");
-  menuItemHotkeyRail.querySelectorAll("[data-menu-hotbar-slot].drag-over")
-    .forEach(slot => slot.classList.remove("drag-over"));
-});
-
-menuItemHotkeyRail?.addEventListener("dragover", event => {
-  const slot = event.target.closest("[data-menu-hotbar-slot]");
-  if (!slot) return;
-  const itemId = event.dataTransfer.getData("application/x-slime-item") || selectedHotbarInventoryItemId;
-  if (!hotbarItemCanBeAssigned(itemId)) return;
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
-  slot.classList.add("drag-over");
-});
-
-menuItemHotkeyRail?.addEventListener("dragleave", event => {
-  event.target.closest("[data-menu-hotbar-slot]")?.classList.remove("drag-over");
-});
-
-menuItemHotkeyRail?.addEventListener("drop", event => {
-  const slot = event.target.closest("[data-menu-hotbar-slot]");
-  if (!slot) return;
-  event.preventDefault();
-  slot.classList.remove("drag-over");
-  const itemId = event.dataTransfer.getData("application/x-slime-item") || event.dataTransfer.getData("text/plain");
-  assignItemToHotbar(itemId, Number(slot.dataset.menuHotbarSlot));
-});
-
-menuItemHotkeyRail?.addEventListener("click", event => {
-  const slot = event.target.closest("[data-menu-hotbar-slot]");
-  if (!slot || !selectedHotbarInventoryItemId) return;
-  assignItemToHotbar(selectedHotbarInventoryItemId, Number(slot.dataset.menuHotbarSlot));
-});
-
-menuItemHotkeyRail?.addEventListener("contextmenu", event => {
-  const slot = event.target.closest("[data-menu-hotbar-slot]");
-  if (!slot) return;
-  event.preventDefault();
-  const slotIndex = Number(slot.dataset.menuHotbarSlot);
-  const itemId = player.hotbarAssignments?.[slotIndex];
-  if (itemId) clearItemFromHotbar(itemId);
-});
-
-const menuUtilityHotkeyRail = document.getElementById("menuUtilityHotkeyRail");
-menuUtilityHotkeyRail?.addEventListener("click", event => {
-  const slot = event.target.closest("[data-menu-utility-slot]");
-  if (!slot || !utilityHotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) return;
-  assignUtilityItemToHotbar(
-    selectedHotbarInventoryItemId,
-    Number(slot.dataset.menuUtilitySlot)
-  );
-});
-
-menuUtilityHotkeyRail?.addEventListener("dragstart", event => {
-  const slot = event.target.closest("[data-menu-utility-slot]");
-  if (!slot) return;
-  const slotIndex = Number(slot.dataset.menuUtilitySlot);
-  const itemId = player.utilityHotbarAssignments?.[slotIndex] || null;
-  if (!utilityHotbarItemCanBeAssigned(itemId)) {
-    event.preventDefault();
-    return;
-  }
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("application/x-slime-utility-item", itemId);
-  event.dataTransfer.setData("application/x-slime-utility-source", String(slotIndex));
-  event.dataTransfer.setData("text/plain", itemId);
-  slot.classList.add("dragging");
-});
-
-menuUtilityHotkeyRail?.addEventListener("dragend", event => {
-  event.target.closest("[data-menu-utility-slot]")?.classList.remove("dragging");
-  menuUtilityHotkeyRail.querySelectorAll("[data-menu-utility-slot].drag-over")
-    .forEach(slot => slot.classList.remove("drag-over"));
-});
-
-menuUtilityHotkeyRail?.addEventListener("dragover", event => {
-  const slot = event.target.closest("[data-menu-utility-slot]");
-  if (!slot) return;
-  const itemId = event.dataTransfer.getData("application/x-slime-utility-item");
-  if (!utilityHotbarItemCanBeAssigned(itemId)) return;
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
-  slot.classList.add("drag-over");
-});
-
-menuUtilityHotkeyRail?.addEventListener("dragleave", event => {
-  event.target.closest("[data-menu-utility-slot]")?.classList.remove("drag-over");
-});
-
-menuUtilityHotkeyRail?.addEventListener("drop", event => {
-  const slot = event.target.closest("[data-menu-utility-slot]");
-  if (!slot) return;
-  event.preventDefault();
-  slot.classList.remove("drag-over");
-  const itemId = event.dataTransfer.getData("application/x-slime-utility-item");
-  if (!utilityHotbarItemCanBeAssigned(itemId)) return;
-  assignUtilityItemToHotbar(itemId, Number(slot.dataset.menuUtilitySlot));
-});
-
-menuUtilityHotkeyRail?.addEventListener("contextmenu", event => {
-  const slot = event.target.closest("[data-menu-utility-slot]");
-  if (!slot) return;
-  event.preventDefault();
-  const slotIndex = Number(slot.dataset.menuUtilitySlot);
-  const itemId = player.utilityHotbarAssignments?.[slotIndex] || null;
-  if (itemId) clearUtilityItemFromHotbar(itemId);
-});
-
-document.querySelectorAll("[data-utility-assign-slot]").forEach(button => {
-  button.addEventListener("click", () => {
-    if (!selectedHotbarInventoryItemId || !utilityHotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) return;
-    assignUtilityItemToHotbar(selectedHotbarInventoryItemId, Number(button.dataset.utilityAssignSlot));
-  });
-});
-
-document.querySelectorAll("[data-hotbar-assign-slot]").forEach(button => {
-  button.addEventListener("click", () => {
-    if (!selectedHotbarInventoryItemId) {
-      return;
-    }
-
-    assignItemToHotbar(
-      selectedHotbarInventoryItemId,
-      Number(
-        button.dataset.hotbarAssignSlot
-      )
-    );
-  });
-});
-
-document.getElementById("hotbarAssignClear")?.addEventListener("click", () => {
-  if (!selectedHotbarInventoryItemId) return;
-  if (utilityHotbarItemCanBeAssigned(selectedHotbarInventoryItemId)) {
-    clearUtilityItemFromHotbar(selectedHotbarInventoryItemId);
-    return;
-  }
-  clearItemFromHotbar(selectedHotbarInventoryItemId);
-});
-
-document.querySelectorAll(".hat-choice").forEach(button => {
-  button.addEventListener("click", () => {
-    const index =
-      Number(
-        button.dataset.hatIndex
-      );
-
-    if (
-      index >= 0 &&
-      !playerOwnsHatIndex(index)
-    ) {
-      return;
-    }
-
-    if (index >= 0) {
-      const itemId = HAT_ITEM_IDS[index];
-      if (!armorItemCanBeEquipped(itemId)) {
-        showArmorClassRestriction(itemId);
-        return;
-      }
-    }
-
-    player.hatIndex = index;
-    updateInventoryUi();
-  });
-});
-
-document.querySelectorAll(".weapon-choice").forEach(button => {
-  button.addEventListener("click", () => {
-    if (focusFireIsCasting() || fireballIsAiming() || player.rainCloudCasting) return;
-
-    const index =
-      Number(
-        button.dataset.weaponIndex
-      );
-
-    if (index === -1) {
-      player.weaponIndex = -1;
-    } else if (
-      playerOwnsWeaponIndex(index)
-    ) {
-      equipWeaponIndex(index);
-    }
-
-    updateInventoryUi();
-    updateHotbar();
-  });
-});
-
-document.querySelectorAll(".shirt-choice").forEach(button => {
-  button.addEventListener("click", () => {
-    const index =
-      Number(
-        button.dataset.shirtIndex
-      );
-
-    if (
-      index >= 0 &&
-      !playerOwnsShirtIndex(index)
-    ) {
-      return;
-    }
-
-    if (index >= 0) {
-      const itemId = SHIRT_ITEM_IDS[index];
-      if (!armorItemCanBeEquipped(itemId)) {
-        showArmorClassRestriction(itemId);
-        return;
-      }
-    }
-
-    player.shirtIndex = index;
-    updateInventoryUi();
-  });
-});
-
-document.querySelectorAll(".pants-choice").forEach(button => {
-  button.addEventListener("click", () => {
-    const index =
-      Number(
-        button.dataset.pantsIndex
-      );
-
-    if (
-      index >= 0 &&
-      !playerOwnsPantsIndex(index)
-    ) {
-      return;
-    }
-
-    if (index >= 0) {
-      const itemId = PANTS_ITEM_IDS[index];
-      if (!armorItemCanBeEquipped(itemId)) {
-        showArmorClassRestriction(itemId);
-        return;
-      }
-    }
-
-    player.pantsIndex = index;
-    updateInventoryUi();
-  });
-});
-
-document.querySelectorAll(".charm-choice").forEach(button => {
-  button.addEventListener("click", () => {
-    const index =
-      Number(
-        button.dataset.charmIndex
-      );
-
-    if (
-      index >= 0 &&
-      !playerOwnsCharmIndex(index)
-    ) {
-      return;
-    }
-
-    if (index >= 0) {
-      const itemId = CHARM_ITEM_IDS[index];
-      if (!armorItemCanBeEquipped(itemId)) {
-        showArmorClassRestriction(itemId);
-        return;
-      }
-    }
-
-    player.charmIndex = index;
-    updateInventoryUi();
-  });
-});
-
-document.querySelectorAll(".stat-plus").forEach(button => {
-  button.addEventListener("click", () => {
-    breakShadowHide();
-    spendSkillPoint(button.dataset.stat);
-  });
-});
-
 
 // -----------------------------------------------------------------------------
 // PLAYER BUILDING (v384 edge-wall model)
@@ -10815,7 +7383,6 @@ const worldStructureStatesByMap = new Map();
 let placedStructureRevision = 0;
 const BUILD_GRID_SIZE = 16;
 const BUILD_PLACE_RANGE = 96;
-const BUILD_WALL_EDGES = Object.freeze(["north", "east", "south", "west"]);
 const BUILD_FLOOR_STRUCTURE_KINDS = Object.freeze(["woodFloor", "stoneFloor"]);
 const BUILD_EDGE_STRUCTURE_KINDS = Object.freeze(["woodWall", "woodDoor"]);
 const DOOR_ADJACENT_DISTANCE = 10;
@@ -10957,10 +7524,6 @@ function drawStructureFloor(structure, camX, camY, alpha = 1) {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(image, x, y, 16, 16);
   ctx.restore();
-}
-
-function drawWoodFloor(structure, camX, camY, alpha = 1) {
-  drawStructureFloor(structure, camX, camY, alpha);
 }
 
 function drawChestStructure(structure, camX, camY, alpha = 1) {
@@ -11854,27 +8417,6 @@ function floorAtWorldPoint(worldX, worldY) {
   return best;
 }
 
-function floorBelongsToCompletedRoof(floor) {
-  if (!floor) return false;
-  const key = structureCellKey(floor.x, floor.y);
-  return automaticRoofRegions().some(region => region.floorKeys?.has(key));
-}
-
-function buildFloorExistsAt(x, y) {
-  return currentMapStructures().some(structure =>
-    BUILD_FLOOR_STRUCTURE_KINDS.includes(structure?.kind) &&
-    Math.abs(Number(structure.x) - Number(x)) < 1 &&
-    Math.abs(Number(structure.y) - Number(y)) < 1
-  );
-}
-
-function floorExistsAcrossBuildEdge(floorX, floorY, edge) {
-  if (edge === "north") return buildFloorExistsAt(floorX, floorY - BUILD_GRID_SIZE);
-  if (edge === "south") return buildFloorExistsAt(floorX, floorY + BUILD_GRID_SIZE);
-  if (edge === "east") return buildFloorExistsAt(floorX + BUILD_GRID_SIZE, floorY);
-  if (edge === "west") return buildFloorExistsAt(floorX - BUILD_GRID_SIZE, floorY);
-  return false;
-}
 
 function doorCandidateHasFlankingWalls(candidate) {
   if (!candidate) return false;
@@ -12134,6 +8676,15 @@ function tryPlaceSelectedBuildPiece(event) {
 
 function drawBuildPlacementPreview(camX, camY) {
   if (!selectedBuildPiece) return;
+  // v430: on touch devices, simply holding a placeable is not the same as
+  // choosing a placement target. Suppress the ghost entirely until the player
+  // has tapped the world and established the mobile build cursor.
+  if (
+    typeof mobileControlsEnabled !== "undefined" &&
+    mobileControlsEnabled &&
+    typeof mobileBuildCursorWorldPoint === "function" &&
+    !mobileBuildCursorWorldPoint()
+  ) return;
   const point = selectedBuildPlacementWorldPoint(camX, camY);
   const worldX = point.x;
   const worldY = point.y;
@@ -12306,7 +8857,7 @@ function worldClockPhase(minutes = currentWorldClockMinutes()) {
 
 const WORLD_DARKNESS_COLOR = "#020307";
 const INTERIOR_DAY_AMBIENT_ALPHA = 0.54;
-const LOCAL_NIGHT_SIGHT_RADIUS = 28;
+const LOCAL_NIGHT_SIGHT_RADIUS = 18;
 
 function worldClockLightingAlpha(minutes = currentWorldClockMinutes()) {
   const hour = minutes / 60;
@@ -12816,7 +9367,7 @@ function collectTorchLightSources() {
       y: light.y,
       visibilityX: visibility.x,
       visibilityY: visibility.y,
-      radius: 82,
+      radius: 74,
       seed: Number(structure.x) * 0.021 + Number(structure.y) * 0.013,
       structure
     });
@@ -12829,7 +9380,7 @@ function collectTorchLightSources() {
       y: Number(player.y) - 10,
       visibilityX: Number(player.x),
       visibilityY: Number(player.y),
-      radius: 74,
+      radius: 68,
       seed: 9.7,
       ownerId: (typeof onlineClient !== "undefined" ? onlineClient?.localPlayerId : null) || "local"
     });
@@ -12853,7 +9404,7 @@ function collectTorchLightSources() {
         y: ry - 10,
         visibilityX: rx,
         visibilityY: ry,
-        radius: 74,
+        radius: 68,
         seed: stableTorchLightSeed(remote.id),
         ownerId: remote.id
       });
@@ -13446,106 +9997,32 @@ function hitsHouseObstacle(x, y, playerRadius = 4) {
   return false;
 }
 
-function hitsSpawnFixtureObstacle(
-  x,
-  y,
-  playerRadius = 4
-) {
-  if (currentMapId === "hunterHollow") {
-    return circleRectCollision(
-      x,
-      y,
-      playerRadius,
-      hunterNpc.x - 5,
-      hunterNpc.y - 8,
-      10,
-      8
-    );
-  }
-
-  if (currentMapId !== "spawn") {
+function hitsTerrainVoid(x, y, playerRadius = 4) {
+  const definition = WORLD_CONTENT?.maps?.[currentMapId] || null;
+  if (
+    !definition ||
+    typeof TERRAIN_RULES === "undefined" ||
+    !TERRAIN_RULES.terrainDefinition(definition)
+  ) {
     return false;
   }
 
-  // NPC feet/body footprint.
-  if (
-    circleRectCollision(
-      x,
-      y,
-      playerRadius,
-      tutorialNpc.x - 4,
-      tutorialNpc.y - 7,
-      8,
-      7
-    )
-  ) {
-    return true;
-  }
-
-  // Workbench footprint.
-  if (
-    circleRectCollision(
-      x,
-      y,
-      playerRadius,
-      woodCraftBench.x - 7,
-      woodCraftBench.y - 6,
-      14,
-      6
-    )
-  ) {
-    return true;
-  }
-
-  // The reset crystal is narrow, so only its grounded base blocks movement.
-  if (
-    circleRectCollision(
-      x,
-      y,
-      playerRadius,
-      classResetCrystal.x - 5,
-      classResetCrystal.y - 8,
-      10,
-      8
-    )
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function hitsPrototypeIslandVoid(x, y, playerRadius = 4) {
-  const definition = WORLD_CONTENT?.maps?.[currentMapId] || null;
-  const hasAuthoredTerrain = Boolean(
-    definition &&
-    typeof TERRAIN_RULES !== "undefined" &&
-    TERRAIN_RULES.terrainDefinition(definition)
-  );
-
-  if (hasAuthoredTerrain) {
-    const terrainOccupancy = TERRAIN_RULES.circleCanOccupy(
-      definition,
-      x,
-      y,
-      playerRadius,
-      { allowWater: true }
-    );
-    return terrainOccupancy === false;
-  }
-
-  if (!isPrototypeIslandMap(currentMapId)) return false;
-  return !pointInPrototypeIslandWalkableArea(x, y);
+  return TERRAIN_RULES.circleCanOccupy(
+    definition,
+    x,
+    y,
+    playerRadius,
+    { allowWater: true }
+  ) === false;
 }
 
 function hitsSolidObstacle(x, y, options = {}) {
   return (
-    hitsPrototypeIslandVoid(x, y) ||
+    hitsTerrainVoid(x, y) ||
     hitsTreeObstacle(x, y) ||
     hitsSceneryRockObstacle(x, y) ||
     hitsHouseObstacle(x, y) ||
-    hitsPlayerStructureObstacle(x, y, 4, options) ||
-    hitsSpawnFixtureObstacle(x, y)
+    hitsPlayerStructureObstacle(x, y, 4, options)
   );
 }
 
@@ -13555,23 +10032,6 @@ function hitsSolidObstacle(x, y, options = {}) {
 // -----------------------------------------------------------------------------
 // Everything below this point is presentation. A future authoritative server
 // should not need canvas, sprites, camera state, particles, or floating text.
-function drawGround(camX, camY) {
-  ctx.fillStyle = "#6f9f52";
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-
-  // Very subtle grass variation so movement/camera motion is easier to see.
-  ctx.fillStyle = "#6a984d";
-  for (let y = Math.floor(camY / 16) * 16; y < camY + VIEW_H + 16; y += 16) {
-    for (let x = Math.floor(camX / 16) * 16; x < camX + VIEW_W + 16; x += 16) {
-      if (((x / 16) + (y / 16)) % 5 === 0) {
-        ctx.fillRect(Math.round(x - camX), Math.round(y - camY), 16, 16);
-      }
-    }
-  }
-}
-
-
-
 function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = undefined) {
   const pinLocalPlayerToCamera =
     mobileControlsEnabled &&
@@ -13627,21 +10087,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     return;
   }
 
-  const blinkFadeAlpha =
-    !reflectionMode && player.jesterBlinkFadeTime > 0
-      ? 0.30 + 0.70 * (1 - (player.jesterBlinkFadeTime / player.jesterBlinkFadeDuration))
-      : 1;
-
-  const shadowHideAlpha =
-    player.shadowHidden
-      ? (player.shadowHideRevealTime > 0 ? 1 : 0.42)
-      : 1;
-  const camouflageAlpha =
-    player.camouflaged && !player.shadowHidden
-      ? 0.64
-      : 1;
-  const playerDrawAlpha =
-    blinkFadeAlpha * shadowHideAlpha * camouflageAlpha;
+  const playerDrawAlpha = 1;
 
   const plantedBaseX = screenX - 8;
   const plantedBaseY = screenY - 15;
@@ -13741,13 +10187,11 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   // Ground shadow stays planted at the real player position.
   // Reflections do not mirror the shadow into the pond.
   if (!reflectionMode) {
-    const visuallyHidden = player.shadowHidden && player.shadowHideRevealTime <= 0;
-
     const wading =
       typeof terrainEntityIsWading === "function" &&
       terrainEntityIsWading(player.x, player.y, currentMapId);
 
-    if (!visuallyHidden && !wading) {
+    if (!wading) {
       ctx.fillStyle = "rgba(35, 52, 37, .48)";
       ctx.fillRect(screenX - 5, screenY, 10, 3);
     }
@@ -13855,79 +10299,6 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
     );
   }
 
-  // Hunter's Snare setup is a deliberate hands-on-ground action. The player
-  // settles onto one knee, leans forward, and alternates their hands while the
-  // existing setup bar fills. This is presentation-only; world position and
-  // collision never move.
-  const snareSetupActive =
-    Boolean(player.hunterSnareSetting) &&
-    !carryingEnemy;
-
-  const snareSetupProgress =
-    snareSetupActive
-      ? Math.max(
-          0,
-          Math.min(
-            1,
-            (Number(player.hunterSnareSetTime) || 0) /
-              Math.max(0.1, Number(player.hunterSnareSetDuration) || 1.25)
-          )
-        )
-      : 0;
-
-  const snarePoseBlend =
-    snareSetupActive
-      ? Math.min(1, snareSetupProgress / 0.10)
-      : 0;
-
-  const snareWorkWave =
-    snareSetupActive
-      ? Math.sin(worldTime * 9.0)
-      : 0;
-
-  if (snareSetupActive) {
-    baseX += Math.round(snarePoseBlend * 1);
-    // Keep the upper body mostly at its normal height. The kneeling legs do
-    // most of the posing work so the torso/head do not look vertically squashed.
-    baseY += Math.round(snarePoseBlend * 1);
-
-    // One planted leg, one compressed knee.
-    leftLegScaleY = 1 - 0.42 * snarePoseBlend;
-    rightLegScaleY = 1 - 0.12 * snarePoseBlend;
-
-    // Only a light head dip/bob while the hands work near the ground.
-    headOffsetY += Math.round(
-      snarePoseBlend * 1 +
-      (snareWorkWave > 0.35 ? 1 : 0)
-    );
-
-    leftArmOffsetY = 0;
-    rightArmOffsetY = 0;
-  }
-
-  // Give Ninja Hide a tiny flourish before the stealth visually kicks in:
-  // a short hop plus a little empty-hand arm motion.
-  if (player.shadowHidden && player.shadowHideRevealTime > 0) {
-    const hideProgress =
-      1 - (player.shadowHideRevealTime / player.shadowHideRevealDuration);
-    const hideHop = Math.sin(hideProgress * Math.PI);
-
-    baseY -= Math.round(hideHop * 3);
-    headOffsetY -= Math.round(hideHop);
-
-    const currentWeaponForHide = equippedWeapon();
-
-    if (currentWeaponForHide) {
-      // Idle tools are held in the left hand, so flourish with the empty right hand.
-      rightArmOffsetY -= 2 + Math.round(hideHop);
-      leftArmOffsetY += 1;
-    } else {
-      // Unarmed: do a tiny two-arm flourish, biased toward the right arm.
-      rightArmOffsetY -= 2 + Math.round(hideHop);
-      leftArmOffsetY += 1;
-    }
-  }
-
   function drawLeg(img, scaleY, drawBaseX = baseX, drawBaseY = baseY) {
     const legTop = 12;
     const legHeight = 4;
@@ -14015,40 +10386,24 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   const bowPoseActive =
     currentWeaponForPose === "bow";
 
-  const focusFireBowPose =
-    bowPoseActive &&
-    focusFireIsCasting();
-
   const bowDrawAmount =
     bowPoseActive
-      ? (
-          focusFireBowPose
-            ? 1
-            : Math.max(
-                0,
-                Math.min(
-                  1,
-                  Number(player.bowDrawAmount) || 0
-                )
-              )
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            Number(player.bowDrawAmount) || 0
+          )
         )
       : 0;
 
   const bowAimingActive =
     bowPoseActive &&
     (
-      focusFireBowPose ||
       player.bowDrawing ||
       player.bowReleaseTime > 0 ||
       bowDrawAmount > 0.025
     );
-
-  const bowMeleeActive =
-    bowPoseActive &&
-    !focusFireBowPose &&
-    player.attackTime > 0 &&
-    !player.bowDrawing &&
-    player.bowReleaseTime <= 0;
 
   const attacking = player.attackTime > 0;
 
@@ -14058,7 +10413,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   const useRightHand =
     bowPoseActive
       ? (
-          (bowAimingActive || bowMeleeActive)
+          bowAimingActive
             ? player.attackHand === "right"
             : false
         )
@@ -14413,23 +10768,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   };
 
   if (!carryingEnemy) {
-    if (snareSetupActive) {
-      const handStep = snareWorkWave >= 0 ? 1 : 0;
-
-      // Pull both hands inward and low, alternating by a pixel so the player
-      // looks like they are actually fastening/setting something on the ground.
-      ctx.drawImage(
-        appearance.leftArm,
-        baseX + 1,
-        baseY + 2 + handStep
-      );
-
-      ctx.drawImage(
-        appearance.rightArm,
-        baseX - 1,
-        baseY + 3 - handStep
-      );
-    } else if (bowPoseActive) {
+    if (bowPoseActive) {
       const drawPoseStarted =
         bowDrawAmount > 0.025;
 
@@ -14826,8 +11165,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
 
   if (
     currentWeapon === "bow" &&
-    !carryingEnemy &&
-    !snareSetupActive
+    !carryingEnemy
   ) {
     const aim =
       Number(player.attackAimAngle) || 0;
@@ -14840,20 +11178,18 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
       Math.PI / 4;
 
     const bowRotation =
-      bowMeleeActive
-        ? swordAngle
-        : bowAimingActive
-          ? (
-              Math.round(
-                (
-                  aim +
-                  Math.PI / 2
-                ) /
-                rotationStep
-              ) *
+      bowAimingActive
+        ? (
+            Math.round(
+              (
+                aim +
+                Math.PI / 2
+              ) /
               rotationStep
-            )
-          : Math.PI / 2;
+            ) *
+            rotationStep
+          )
+        : Math.PI / 2;
 
     const cosR =
       Math.cos(bowRotation);
@@ -14862,12 +11198,12 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
       Math.sin(bowRotation);
 
     const bowRestOffsetX =
-      (bowAimingActive || bowMeleeActive)
+      bowAimingActive
         ? 0
         : 2;
 
     const bowRestOffsetY =
-      (bowAimingActive || bowMeleeActive)
+      bowAimingActive
         ? 0
         : -1;
 
@@ -15025,7 +11361,6 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
       !reflectionMode &&
       remotePlayerDrawDepth === 0 &&
       player.bowDrawing &&
-      !player.focusFireCharging &&
       bowDrawAmount > 0.025;
 
     if (shouldDrawBowAimGuide) {
@@ -15068,8 +11403,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   } else if (
     currentWeapon &&
     currentWeapon !== "tigerPaw" &&
-    !carryingEnemy &&
-    !snareSetupActive
+    !carryingEnemy
   ) {
     const weaponImage =
       currentWeapon === "axe"
@@ -15145,8 +11479,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   if (
     heldBuildPiece === "torch" &&
     (remotePlayerDrawDepth > 0 || buildPieceCount("torch") > 0) &&
-    !carryingEnemy &&
-    !snareSetupActive
+    !carryingEnemy
   ) {
     const torchX = Math.round(handX - 8);
     const torchY = Math.round(handY - 14);
@@ -15279,215 +11612,30 @@ function drawHouse(house, camX, camY) {
   ctx.fillRect(screenX + 25, screenY - 4, 1, 2);
 }
 
-
-function drawBubbleMarker(screenX, anchorY, drawIcon) {
-  // Compact 18x18 bubble: a one-pixel frame around the native 16x16 icon.
-  const bubbleWidth = 18;
-  const bubbleHeight = 18;
-  const tailY = anchorY + bubbleHeight;
-  const left = screenX - Math.floor(bubbleWidth / 2);
-
-  ctx.fillStyle = "#233323";
-  ctx.fillRect(left + 1, anchorY, bubbleWidth - 2, bubbleHeight);
-  ctx.fillRect(left, anchorY + 1, bubbleWidth, bubbleHeight - 2);
-  ctx.fillRect(screenX - 1, tailY, 2, 2);
-  ctx.fillRect(screenX, tailY + 2, 1, 1);
-
-  // Let some of the world show through the speech bubble without dimming the icon.
-  ctx.fillStyle = "rgba(248, 244, 221, 0.78)";
-  ctx.fillRect(left + 1, anchorY + 1, 16, 16);
-  ctx.fillRect(screenX - 1, tailY + 1, 2, 1);
-  ctx.fillRect(screenX, tailY + 2, 1, 1);
-
-  if (typeof drawIcon === "function") {
-    // Native 16x16 art: no scaling and no icon shadow pass.
-    drawIcon(left + 1, anchorY + 1);
-  }
-}
-
-function drawNpcRoleMarker(screenX, screenY) {
-  const bubbleY = screenY - 42;
-  if (!player.story.axeReceived) {
-    drawBubbleMarker(screenX, bubbleY, (left, top) => {
-      const midX = left + 8;
-      ctx.fillStyle = "#ffe06a";
-      ctx.fillRect(midX - 1, top + 2, 3, 8);
-      ctx.fillRect(midX - 1, top + 12, 3, 3);
-    });
-    return;
-  }
-  if (!player.story.marniePickaxeReceived) {
-    drawBubbleMarker(screenX, bubbleY, (left, top) => {
-      ctx.drawImage(woodImage, left, top);
-    });
-  }
-}
-
-function drawCraftRoleMarker(screenX, screenY) {
-  // Same height and native-scale presentation as the shop bubble.
-  const bubbleY = screenY - 42;
-  drawBubbleMarker(screenX, bubbleY, (left, top) => {
-    ctx.drawImage(craftRoleAxeImage, left, top);
-  });
-}
-
-function drawTutorialNpc(camX, camY) {
-  const screenX =
-    Math.round(tutorialNpc.x - camX);
-
-  const screenY =
-    Math.round(tutorialNpc.y - camY);
-
-  // A tiny grounded sway reads better than a vertical bob for this sprite.
-  const swayOffset =
-    Math.round(Math.sin(worldTime * 1.0 + 0.35) * 1);
-
-  ctx.fillStyle =
-    "rgba(34, 46, 28, .32)";
-
-  ctx.fillRect(
-    screenX - 5,
-    screenY,
-    10,
-    2
-  );
-
-  ctx.drawImage(
-    tutorialNpcImage,
-    screenX - 8 + swayOffset,
-    screenY - 15
-  );
-
-  drawNpcRoleMarker(screenX, screenY);
-  drawNpcNameTag(npcDisplayName("shopkeeper", tutorialNpc), screenX, screenY, "tutorialNpc");
-}
-
-function drawHunterNpc(camX, camY) {
-  const screenX =
-    Math.round(hunterNpc.x - camX);
-
-  const screenY =
-    Math.round(hunterNpc.y - camY);
-
-  const swayOffset =
-    Math.round(Math.sin(worldTime * 0.95 + 1.15) * 1);
-
-  ctx.fillStyle =
-    "rgba(34, 46, 28, .28)";
-
-  ctx.fillRect(
-    screenX - 5,
-    screenY + 1,
-    10,
-    2
-  );
-
-  ctx.drawImage(
-    hunterNpcImage,
-    screenX - 8 + swayOffset,
-    screenY - 19
-  );
-
-  drawNpcNameTag(npcDisplayName("hunter", hunterNpc), screenX, screenY, "hunterNpc");
-}
-
-function drawJesterNpc(camX, camY) {
-  const screenX =
-    Math.round(jesterNpc.x - camX);
-
-  const screenY =
-    Math.round(jesterNpc.y - camY);
-
-  const swayOffset =
-    Math.round(Math.sin(worldTime * 1.08 + 2.35) * 1);
-
-  ctx.fillStyle =
-    "rgba(34, 46, 28, .24)";
-
-  ctx.fillRect(
-    screenX - 5,
-    screenY + 1,
-    10,
-    2
-  );
-
-  ctx.drawImage(
-    jesterNpcImage,
-    screenX - 8 + swayOffset,
-    screenY - 19
-  );
-
-  drawNpcNameTag(npcDisplayName("jester", jesterNpc), screenX, screenY, "jesterNpc");
-}
-
 function drawPlacedNpc(npc, camX, camY) {
   if (!npc) return;
-  const allowed = ["shopkeeper", "hunter", "jester", "beachGirl", "greenWitch", "camoGuy", "craftingTable", "classResetCrystal", "treasureChest"];
-  const type = allowed.includes(npc.type) ? npc.type : "shopkeeper";
+  const allowed = ["beachGirl", "greenWitch", "camoGuy"];
+  if (!allowed.includes(npc.type)) return;
+
+  const type = npc.type;
   const screenX = Math.round((Number(npc.x) || 0) - camX);
   const screenY = Math.round((Number(npc.y) || 0) - camY);
   const phase = Array.from(String(npc.id || type)).reduce((sum, char) => sum + char.charCodeAt(0), 0) * 0.07;
+  const swayOffset = Math.round(Math.sin(worldTime * 1.08 + phase) * 1);
+  const image = type === "beachGirl"
+    ? beachGirlNpcImage
+    : type === "greenWitch"
+      ? greenWitchNpcImage
+      : camoNpcImage;
+  const height = type === "beachGirl" ? 17 : 20;
+  const width = type === "beachGirl" ? 13 : 20;
+  const shadowWidth = type === "greenWitch" ? 14 : type === "camoGuy" ? 8 : 10;
 
-  if (type === "craftingTable") {
-    ctx.fillStyle = "rgba(34, 46, 28, .26)";
-    ctx.fillRect(screenX - 7, screenY, 14, 2);
-    const benchWidth = woodBenchImage.width || 18;
-    const benchHeight = woodBenchImage.height || 18;
-    ctx.drawImage(woodBenchImage, screenX - Math.round(benchWidth / 2), screenY - (benchHeight - 1));
-    drawCraftRoleMarker(screenX, screenY);
-    return;
-  }
-
-  if (type === "classResetCrystal") {
-    const bob = Math.round(Math.sin(worldTime * 1.65 + phase) * 1);
-    ctx.fillStyle = "rgba(20, 45, 38, .30)";
-    ctx.fillRect(screenX - 7, screenY + 1, 14, 3);
-    ctx.drawImage(classResetCrystalImage, screenX - 16, screenY - 31 + bob, 32, 32);
-    return;
-  }
-
-  if (type === "treasureChest") {
-    const opened = player.openedTreasureIds?.has(String(npc.id || ""));
-    ctx.fillStyle = "rgba(30, 24, 18, .28)";
-    ctx.fillRect(screenX - 7, screenY, 14, 2);
-    ctx.drawImage(opened ? chestOpenStructureImage : chestClosedStructureImage, screenX - 8, screenY - 16, 16, 16);
-    return;
-  }
-
-  const swaySpeed = type === "shopkeeper" ? 1.0 : type === "hunter" ? 0.95 : 1.08;
-  const swayOffset = Math.round(Math.sin(worldTime * swaySpeed + phase) * 1);
-  const image = type === "hunter"
-    ? hunterNpcImage
-    : type === "jester"
-      ? jesterNpcImage
-      : type === "beachGirl"
-        ? beachGirlNpcImage
-        : type === "greenWitch"
-          ? greenWitchNpcImage
-          : type === "camoGuy"
-            ? camoNpcImage
-        : tutorialNpcImage;
-  const height = type === "shopkeeper" ? 16 : type === "beachGirl" ? 17 : 20;
-  const width = type === "hunter" ? 17 : type === "beachGirl" ? 13 : ["greenWitch", "camoGuy"].includes(type) ? 20 : 16;
-
-  ctx.fillStyle = type === "shopkeeper"
-    ? "rgba(34, 46, 28, .32)"
-    : type === "hunter"
-      ? "rgba(34, 46, 28, .28)"
-      : "rgba(34, 46, 28, .24)";
-  const shadowY = ["beachGirl", "greenWitch", "camoGuy"].includes(type)
-    ? screenY - 1
-    : screenY + (type === "shopkeeper" ? 0 : 1);
-  const shadowWidth = type === "greenWitch"
-    ? 14
-    : type === "camoGuy"
-      ? 8
-      : 10;
-  ctx.fillRect(screenX - Math.floor(shadowWidth / 2), shadowY, shadowWidth, 2);
+  ctx.fillStyle = "rgba(34, 46, 28, .24)";
+  ctx.fillRect(screenX - Math.floor(shadowWidth / 2), screenY - 1, shadowWidth, 2);
   ctx.drawImage(image, screenX - Math.floor(width / 2) + swayOffset, screenY - height);
-
-  if (type === "shopkeeper") drawNpcRoleMarker(screenX, screenY);
   drawNpcNameTag(npcDisplayName(type, npc), screenX, screenY, npc.id || type);
+
   if (type === "beachGirl") {
     const quest = player.beachQuest || {};
     const firstReady = quest.stage === "firstActive" && quest.firstCrabKills >= 10 && quest.icedCoffee >= 1;
@@ -15553,56 +11701,6 @@ function endNpcNameTagFrame() {
   for (const [key, node] of npcNameLabelNodes) {
     if (!activeNpcNameLabelKeys.has(key)) node.hidden = true;
   }
-}
-
-function drawWoodCraftBench(camX, camY) {
-  const screenX =
-    Math.round(
-      woodCraftBench.x - camX
-    );
-
-  const screenY =
-    Math.round(
-      woodCraftBench.y - camY
-    );
-
-  ctx.fillStyle =
-    "rgba(34, 46, 28, .26)";
-
-  ctx.fillRect(
-    screenX - 7,
-    screenY,
-    14,
-    2
-  );
-
-  const benchWidth = woodBenchImage.width || 18;
-  const benchHeight = woodBenchImage.height || 18;
-
-  ctx.drawImage(
-    woodBenchImage,
-    screenX - Math.round(benchWidth / 2),
-    screenY - (benchHeight - 1)
-  );
-
-  drawCraftRoleMarker(screenX, screenY);
-}
-
-function drawClassResetCrystal(camX, camY) {
-  const screenX = Math.round(classResetCrystal.x - camX);
-  const screenY = Math.round(classResetCrystal.y - camY);
-  const bob = Math.round(Math.sin(worldTime * 1.65 + 0.7) * 1);
-
-  ctx.fillStyle = "rgba(20, 45, 38, .30)";
-  ctx.fillRect(screenX - 7, screenY + 1, 14, 3);
-
-  ctx.drawImage(
-    classResetCrystalImage,
-    screenX - 16,
-    screenY - 31 + bob,
-    32,
-    32
-  );
 }
 
 function drawStaticPixelText(
@@ -15710,7 +11808,7 @@ function drawInteractionPrompt(
   camX,
   camY
 ) {
-  if (shopOpen || classResetConfirmOpen || beachQuestOpen) return;
+  if (shopOpen || beachQuestOpen) return;
 
   const interaction =
     nearbySpawnInteraction();
@@ -15727,16 +11825,10 @@ function drawInteractionPrompt(
       interaction.y - camY
     );
 
-  const placedKind = interaction.kind === "placedNpc" ? interaction.npcType : null;
-  const promptText =
-    interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal"
-      ? "F RESET"
-      : "F TALK";
-
   drawStaticPixelText(
-    promptText,
+    "F TALK",
     screenX,
-    screenY - ((interaction.kind === "classResetCrystal" || placedKind === "classResetCrystal") ? 40 : 24),
+    screenY - 24,
     "#fff3b0",
     1
   );
@@ -15764,23 +11856,11 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "bowDrawDuration",
   "bowReleaseTime",
   "bowReleaseDuration",
-  "focusFireCharging",
-  "focusFireOpening",
-  "focusFireActive",
   "fireballAiming",
   "fireballAimTime",
   "rainCloudCasting",
   "rainCloudCastTime",
   "rainCloudCastDuration",
-  "camouflaged",
-  "hunterSnareSetting",
-  "hunterSnareSetTime",
-  "hunterSnareSetDuration",
-  "jesterBlinkFadeTime",
-  "jesterBlinkFadeDuration",
-  "shadowHidden",
-  "shadowHideRevealTime",
-  "shadowHideRevealDuration",
   "wetTime",
   "wetDuration",
   "burnTime",
@@ -15792,71 +11872,12 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "isDead"
 ];
 
-function drawPvpMarker(
-  entity,
-  camX,
-  camY
-) {
-  if (!entity?.pvpEnabled) return;
-
-  const screenX = Math.round(entity.x - camX);
-  const screenY = Math.round(entity.y - camY - 29);
-
-  drawStaticPixelText(
-    "PVP",
-    screenX,
-    screenY,
-    "#ff7968",
-    1
-  );
-
-  if (
-    Number.isFinite(entity.hp) &&
-    Number.isFinite(entity.maxHp) &&
-    entity.maxHp > 0
-  ) {
-    const width = 18;
-    const fill = Math.max(
-      0,
-      Math.min(
-        width,
-        Math.round(width * entity.hp / entity.maxHp)
-      )
-    );
-
-    ctx.fillStyle = "rgba(20, 18, 15, .82)";
-    ctx.fillRect(screenX - 9, screenY + 7, width, 3);
-    ctx.fillStyle = "#cf5b4d";
-    ctx.fillRect(screenX - 9, screenY + 7, fill, 2);
-  }
-}
-
 function drawRemotePlayer(
   remote,
   camX,
   camY,
   reflectionMode = false
 ) {
-  // In mutual PvP, Camouflage is true concealment: the opponent sprite,
-  // equipment, reflection, HP bar and PvP marker are not drawn at all.
-  // Position replication still exists so unguided attacks can physically hit
-  // the hidden Ranger if the attacker correctly guesses where they are.
-  const hiddenFromLocalPvpOpponent = Boolean(
-    remote?.camouflaged &&
-    player.pvpEnabled &&
-    remote.pvpEnabled
-  );
-
-  if (!reflectionMode) {
-    // The sparse leaf burst is the intended PvP tell. It must be emitted even
-    // while the actual remote player draw is suppressed.
-    emitRemoteCamouflageParticles(remote);
-  }
-
-  if (hiddenFromLocalPvpOpponent) {
-    return;
-  }
-
   const backup = {};
 
   for (const key of REMOTE_PLAYER_DRAW_FIELDS) {
@@ -15921,33 +11942,11 @@ function drawRemotePlayer(
     );
   player.bowReleaseDuration = Math.max(0.03, Number(remote.bowReleaseDuration) || 0.12);
 
-  player.focusFireCharging = Boolean(remote.focusFireCasting);
-  player.focusFireOpening = false;
-  player.focusFireActive = false;
   player.fireballAiming = Boolean(remote.fireballAiming);
   player.fireballAimTime = Math.max(0, Number(remote.fireballAimTime) || 0);
   player.rainCloudCasting = Boolean(remote.rainCloudCasting);
   player.rainCloudCastTime = Math.max(0, Number(remote.rainCloudCastTime) || 0);
   player.rainCloudCastDuration = Math.max(0.05, Number(remote.rainCloudCastDuration) || 0.50);
-  player.camouflaged = Boolean(remote.camouflaged);
-
-  player.hunterSnareSetting = Boolean(remote.hunterSnareSetting);
-  player.hunterSnareSetTime = Math.max(
-    0,
-    Number(remote.hunterSnareSetTime) || 0
-  );
-  player.hunterSnareSetDuration = Math.max(
-    0.1,
-    Number(remote.hunterSnareSetDuration) || 1.25
-  );
-
-  player.jesterBlinkFadeTime = 0;
-  player.jesterBlinkFadeDuration = 0.18;
-
-  player.shadowHidden = Boolean(remote.shadowHidden);
-  player.shadowHideRevealTime =
-    Number(remote.shadowHideRevealTime) || 0;
-  player.shadowHideRevealDuration = 0.16;
 
   player.wetTime = Number(remote.wetTime) || 0;
   player.wetDuration = GAME_CONFIG.player.wetDuration;
@@ -15985,7 +11984,6 @@ function drawRemotePlayer(
   }
 
   if (!reflectionMode) {
-    drawPvpMarker(remote, camX, camY);
   }
 }
 
@@ -15995,68 +11993,31 @@ function drawRemotePlayerReflection(
   camX,
   camY
 ) {
+  if (typeof terrainWaterReflectionInfo !== "function") return;
+
+  const reflection = terrainWaterReflectionInfo(
+    remote.x,
+    remote.y,
+    currentMapId,
+    16
+  );
+  if (!reflection) return;
+
+  const mirrorScreenY = Math.round(reflection.mirrorWorldY - camY);
+
+  ctx.save();
   if (
-    remote.shadowHidden &&
-    (Number(remote.shadowHideRevealTime) || 0) <= 0
+    typeof terrainWaterClipPath !== "function" ||
+    !terrainWaterClipPath(currentMapId, camX, camY)
   ) {
-    return;
-  }
-
-  const terrainDefinition = WORLD_CONTENT?.maps?.[currentMapId] || null;
-  const usesAuthoredTerrain = Boolean(TERRAIN_RULES.terrainDefinition(terrainDefinition));
-
-  if (usesAuthoredTerrain && typeof terrainWaterReflectionInfo === "function") {
-    const reflection = terrainWaterReflectionInfo(remote.x, remote.y, currentMapId, 16);
-    if (!reflection) return;
-
-    const mirrorScreenY = Math.round(reflection.mirrorWorldY - camY);
-
-    ctx.save();
-    if (
-      typeof terrainWaterClipPath !== "function" ||
-      !terrainWaterClipPath(currentMapId, camX, camY)
-    ) {
-      ctx.restore();
-      return;
-    }
-    ctx.clip();
-    ctx.translate(0, mirrorScreenY * 2);
-    ctx.scale(1, -1);
-    ctx.globalAlpha = 0.18 * reflection.fade;
-    drawRemotePlayer(remote, camX, camY, true);
     ctx.restore();
     return;
   }
 
-  // Legacy pond reflection path.
-  const withinX =
-    remote.x > pond.x - 8 &&
-    remote.x < pond.x + pond.width + 8;
-
-  if (!withinX) return;
-
-  let mirrorWorldY = null;
-  let distanceToShore = 999;
-
-  if (remote.y <= pond.y) {
-    distanceToShore = pond.y - remote.y;
-    if (distanceToShore <= 16) mirrorWorldY = pond.y;
-  } else if (remote.y >= pond.y + pond.height) {
-    distanceToShore = remote.y - (pond.y + pond.height);
-    if (distanceToShore <= 16) mirrorWorldY = pond.y + pond.height;
-  }
-
-  if (mirrorWorldY === null) return;
-
-  const fade = Math.max(0, 1 - distanceToShore / 16);
-  const mirrorScreenY = Math.round(mirrorWorldY - camY);
-
-  ctx.save();
-  pondPath(camX, camY, 2);
   ctx.clip();
   ctx.translate(0, mirrorScreenY * 2);
   ctx.scale(1, -1);
-  ctx.globalAlpha = 0.18 * fade;
+  ctx.globalAlpha = 0.18 * reflection.fade;
   drawRemotePlayer(remote, camX, camY, true);
   ctx.restore();
 }

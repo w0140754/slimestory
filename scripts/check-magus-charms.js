@@ -1,3 +1,4 @@
+"use strict";
 const fs = require("fs");
 
 const game = fs.readFileSync("public/game.js", "utf8");
@@ -8,17 +9,16 @@ const enemies = fs.readFileSync("public/client-enemies.js", "utf8");
 const server = fs.readFileSync("server.js", "utf8");
 
 const checks = [
-  [game.includes('name: "Spellshred"') && game.includes('name: "Ignite"') && game.includes('name: "Rainbloom"') && game.includes('name: "Mirage"'), "magus skill renames"],
-  [html.includes('Spellshred, Mirage, Ignite, and Rainbloom.') && html.includes('data-skill-node="wandMastery"') && html.includes('Wood Ring'), "skill and UI copy"],
   [game.includes('const CHARM_ITEM_IDS = [') && game.includes('"charm_woodRing"') && game.includes('player.charmIndex = recipe.equipIndex;'), "charm item plumbing"],
-  [html.includes('data-gear-panel="gearCharmPanel"') && html.includes('id="equippedCharmImg"') && html.includes('data-charm-index="0"'), "charm equipment UI"],
+  [html.includes('data-equipment-slot="charm"') && html.includes('id="equippedCharmImg"') && html.includes('data-owned-item="charm_woodRing"') && !html.includes('gearCharmPanel'), "live charm equipment dock without retired chooser panel"],
   [combat.includes('charms: Object.freeze([1])') && combat.includes('armorSlotValue(values.charms, charmIndex)'), "charm armor values"],
   [network.includes('charmIndex: player.charmIndex') && server.includes('charmIndex: clampInteger(source.charmIndex, -1, 0, -1)'), "charm network sync"],
-  [enemies.includes('coin_loot_v2.png') && enemies.includes('healing_potion_v2.png'), "new loot and potion art wired"],
+  [enemies.includes('coin_loot_v2.png') && enemies.includes('healing_potion_v2.png'), "loot and potion art wired"],
+  [!game.includes('Spellshred') && !html.includes('data-skill-node='), "retired learned-skill UI is absent"]
 ];
 
 for (const [ok, label] of checks) {
-  if (!ok) throw new Error(`Magus/charms regression: ${label}`);
+  if (!ok) throw new Error(`Charm regression: ${label}`);
 }
 
-console.log("Magus renames / charm slot regression checks passed.");
+console.log("Charm slot/equipment regression checks passed without legacy skill UI.");

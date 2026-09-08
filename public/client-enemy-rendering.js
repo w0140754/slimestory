@@ -456,7 +456,6 @@ function mushroomIsAwakePresentation(mushroom) {
 
   return Boolean(
     mushroom.aggroTargetId ||
-    (Number(mushroom.confusionTime) || 0) > 0 ||
     (Number(mushroom.hitFlash) || 0) > 0 ||
     (Number(mushroom.burnTime) || 0) > 0 ||
     motionSpeed > 0.75 ||

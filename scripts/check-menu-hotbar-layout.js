@@ -14,8 +14,8 @@ const checks = [
   [/#inventoryDetailPanel,[\s\S]*?#inventoryPage,[\s\S]*?#equipmentPage\s*\{[\s\S]*?pointer-events:\s*auto;/.test(html), "only visible inventory panels capture pointer input"],
   [game.includes('topHotbar?.addEventListener("drop"'), "real top hotbar is the assignment drop target"],
   [html.includes('data-equipment-slot="head"') && html.includes('data-equipment-slot="shirt"') && html.includes('data-equipment-slot="pants"') && html.includes('data-equipment-slot="charm"'), "right equipment dock exposes armor destinations"],
-  [/#statsPage,[\s\S]*?#pvpPage,[\s\S]*?display:\s*none !important;/.test(html), "Stats and PvP pages are removed from the presented menu"],
-  [html.includes('/client-input.js?v=428') && html.includes('/game.js?v=428'), "v422 client cache keys"],
+  [!html.includes('id="statsPage"') && !html.includes('id="pvpPage"') && !html.includes('id="skillsPage"'), "retired Stats/PvP/Skills pages are absent"],
+  [html.includes('/client-input.js?v=431') && html.includes('/game.js?v=431'), "v422 client cache keys"],
 ];
 
 for (const [ok, label] of checks) {

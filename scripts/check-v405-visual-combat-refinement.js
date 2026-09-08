@@ -15,13 +15,13 @@ const game = read("public", "game.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.431");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/game.js?v=428'));
-assert(html.includes('/client-enemy-rendering.js?v=428'));
-assert(html.includes('/client-combat.js?v=428'));
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('/game.js?v=431'));
+assert(html.includes('/client-enemy-rendering.js?v=431'));
+assert(html.includes('/client-combat.js?v=431'));
 
 // v405's live-tested house darkness and wall-face lighting experiments were
 // deliberately rolled back in v406; keep a regression assertion that they do
@@ -41,12 +41,9 @@ assert(enemyRendering.includes("function slimePresentationHopPhase(slime)"));
 assert(enemyRendering.includes("worldTime * 6.2 + slimePresentationHopPhase(slime)"));
 assert(!server.includes("presentationHopPhase"));
 
-// Ordinary weapon/tool attacks remain single-target. Deliberate Wand Mastery
-// remains the existing multi-target exception.
-for (const needle of [
-  'tryHitEnemies("melee", 1);',
-  'tryHitEnemies("bowMelee", 1);'
-]) assert(combat.includes(needle), `missing single-target basic attack rule: ${needle}`);
-assert(combat.includes('tryHitEnemies(\n        "wandMasteryMelee",\n        masteryTargets'));
+// Ordinary weapon/tool attacks remain single-target; retired mastery and bow-melee fallback paths are gone.
+assert(combat.includes('tryHitEnemies("melee", 1);'), "missing single-target melee attack rule");
+assert(!combat.includes("executeBowMeleeAttack"));
+assert(!combat.includes("wandMastery"));
 
 console.log("v405 retained check passed: staggered slime hops and single-target basics remain, while v406 intentionally replaces the rejected darkness/occlusion experiments.");

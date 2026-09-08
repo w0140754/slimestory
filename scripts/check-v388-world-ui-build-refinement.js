@@ -14,9 +14,9 @@ const html = read("public", "index.html");
 const server = read("server.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert.strictEqual(pkg.version, "0.6.11.431");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");
@@ -29,12 +29,11 @@ assert(html.includes("transition: transform 340ms"), "minimap marker glide missi
 assert(game.includes("function ensureWorldMiniMapCells("), "fixed-world minimap cell builder missing");
 assert(game.includes("playerMarker.style.transform = `translate(${x}px, ${y}px)`"), "minimap player-marker glide target missing");
 
-assert(game.includes("function drawMapTransitionPlayerAtScreen("), "mobile-safe transition player renderer missing");
+assert(game.includes("function drawMapTransitionLivePlayer("), "mobile-safe transition player renderer missing");
 assert(game.includes("ctx.setTransform(GAME_RENDER_SCALE, 0, 0, GAME_RENDER_SCALE, 0, 0);"), "transition player must restore logical render scale");
 
-assert(html.includes("#menuItemHotkeyRail {\n    width: 208px;"), "desktop assignment rail must be large enough for readable icons");
-assert(html.includes("min-height: 62px;"), "desktop assignment boxes must be enlarged");
-assert(html.includes("width: 34px;\n    height: 34px;"), "desktop assignment icons must be readable");
+assert(!html.includes('id="menuItemHotkeyRail"'), "retired duplicate desktop assignment rail must stay removed");
+assert(html.includes('id="hotbar"') && html.includes('id="slot10"'), "live 1–0 HUD must remain the unified assignment surface");
 
 for (const retired of ["grantBowVisualTest", "grantDebugProgressionPoints", "requestDebugCoins", "requestDebugArrows", "debugGrantCoins", "debugGrantArrows"]) {
   assert(!input.includes(retired) && !network.includes(retired) && !server.includes(retired), `retired F8/F9 debug path remains: ${retired}`);

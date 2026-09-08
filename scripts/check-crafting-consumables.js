@@ -15,7 +15,7 @@ const checks = [
   [server.includes('item === "healingPotion" && playerState.hp >= playerState.maxHp') && server.includes("playerState.hp + 20"), "healing validation"],
   [server.includes("playerState.attackPotionUntil = now + POTION_BUFF_MS") && server.includes("playerState.magicPotionUntil = now + POTION_BUFF_MS"), "buff refresh"],
   [server.includes("? 1.15 : 1"), "damage multiplier"],
-  [game.includes('UTILITY_SLOT_ITEMS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"])'), "utility mapping"],
+  [game.includes('CONSUMABLE_ITEM_IDS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"])'), "consumable item mapping"],
   [!input.includes('key === "1" || key === "2" || key === "3"') && game.includes('document.getElementById("inventoryDetailAction")?.addEventListener("click"') && game.includes('useConsumable(itemId);'), "v422 consumables use from selected Inventory detail action"],
   [html.includes('id="slot1"') && html.includes('id="slot9"') && game.includes('const HOTBAR_SLOT_COUNT = 10;'), "v377 unified weapon/tool HUD 1-0"],
   [html.includes('data-craft-recipe="woodRing"') && html.includes('id="craftWoodRingImg"'), "wood ring craft button"],

@@ -237,27 +237,11 @@
       display: block;
     }
 
-    #abilityBar {
-      right: max(10px, env(safe-area-inset-right));
-      top: 12px;
-      transform: none;
-      grid-template-columns: repeat(4, 46px);
-      grid-template-rows: 46px;
-      gap: 6px;
-      pointer-events: auto;
-    }
+    
 
-    .ability-slot {
-      width: 46px;
-      height: 46px;
-      pointer-events: auto;
-      touch-action: none;
-    }
+    
 
-    .ability-slot img {
-      width: 34px;
-      height: 34px;
-    }
+    
 
     #bottomUi {
       transform: translateX(-50%) scale(.72);
@@ -278,10 +262,7 @@
   }
 
   @media (hover: none) and (pointer: coarse) {
-    .item-detail-tooltip.show,
-    .skill-detail-tooltip.show {
-      display: none !important;
-    }
+    
   }
 
   #onlineStatus {
@@ -387,117 +368,29 @@
     white-space: nowrap;
   }
 
-  #abilityBar {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: grid;
-    grid-template-columns: 63px;
-    grid-template-rows: repeat(4, 63px);
-    gap: 9px;
-    pointer-events: none;
-    z-index: 13;
-  }
+  
 
-  .ability-slot {
-    width: 63px;
-    height: 63px;
-    position: relative;
-    background: rgba(20, 24, 20, 0.88);
-    border: 2px solid #6e6282;
-    box-shadow: 3px 3px 0 rgba(0,0,0,.35);
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  
 
-  .ability-slot img {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 45px;
-    height: 45px;
-    transform: translate(-50%, -50%);
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  
 
-  .ability-slot .ability-cooldown-mask {
-    position: absolute;
-    left: 2px;
-    right: 2px;
-    bottom: 2px;
-    height: 0%;
-    background: rgba(12, 14, 16, .72);
-    pointer-events: none;
-    z-index: 2;
-  }
+  
 
-  .ability-slot .ability-cooldown-text {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    color: #fff8dc;
-    font: 13px/1 monospace;
-    text-shadow: 1px 1px 0 #000;
-    pointer-events: none;
-    z-index: 3;
-  }
+  
 
-  .ability-slot.cooling-down .ability-slot-img {
-    opacity: .52;
-  }
+  
 
-  .ability-slot.return-window .ability-slot-img {
-    opacity: .78;
-  }
+  
 
-  .ability-slot.return-window .ability-cooldown-mask {
-    background: rgba(38, 44, 48, .58);
-  }
+  
 
-  .ability-slot.empty {
-    opacity: 0.42;
-    border-color: #5b5367;
-  }
+  
 
-  .ability-slot.active {
-    border-color: #d9b9ff;
-    box-shadow: 0 0 0 1px rgba(253,238,255,.45) inset, 3px 3px 0 rgba(0,0,0,.35);
-    background: rgba(48, 38, 57, 0.92);
-  }
+  
 
-  .ability-slot .hotbar-label {
-    left: 2px;
-    top: 2px;
-    bottom: auto;
-    transform: none;
-    padding: 1px 2px;
-    background: rgba(10, 12, 14, .78);
-    font: 10px/1 monospace;
-    z-index: 5;
-  }
+  
 
-  .ability-slot .ability-charge {
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 3px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 18, 15, .92);
-    border: 1px solid #d8c98c;
-    color: #fff2b3;
-    font: 11px/14px monospace;
-    text-shadow: 1px 1px 0 #000;
-    box-sizing: border-box;
-    z-index: 4;
-  }
+  
 
   #hotbar {
     display: flex;
@@ -663,12 +556,6 @@
     margin-left: 24px;
   }
 
-  .utility-slot img {
-    transform: translate(-50%, -50%);
-    width: 39px;
-    height: 39px;
-  }
-
   .utility-count {
     position: absolute;
     right: 3px;
@@ -677,11 +564,6 @@
     font: 11px/1 monospace;
     text-shadow: 1px 1px 0 #000;
     z-index: 4;
-  }
-
-  .utility-slot.buff-active {
-    border-color: #d9b9ff;
-    box-shadow: 0 0 0 1px #fff2b3 inset, 3px 3px 0 rgba(0,0,0,.35);
   }
 
   .utility-cooldown-mask {
@@ -718,28 +600,8 @@
     white-space: nowrap;
   }
 
-  #hotbarHint {
-    position: fixed;
-    left: 50%;
-    bottom: 82px;
-    transform: translateX(-50%);
-    color: #fff6d4;
-    font: 12px/1 monospace;
-    text-shadow: 1px 1px 0 rgba(0,0,0,.6);
-    pointer-events: none;
-  }
-
-  .hotbar-empty {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    color: #b6ac83;
-    font: 16px/1 monospace;
-  }
-
-  /* v322: the enlarged top hotbar steps down earlier on narrower rendered
-     layouts so it stays clear of the independent right-side skill column. */
+/* v322: the enlarged top hotbar steps down earlier on narrower rendered
+     layouts so it stays clear of the independent right-side HUD area. */
   @media (max-width: 760px) {
     #hotbar {
       gap: 5px;
@@ -755,11 +617,6 @@
       height: 38px;
     }
 
-    .utility-slot img {
-      width: 34px;
-      height: 34px;
-    }
-
     #slot4 {
       margin-left: 16px;
     }
@@ -767,7 +624,7 @@
 
   /* v314: all three HUD groups remain independent siblings anchored to the
      rendered 16:9 game viewport: item/equipment hotbar top-center, HP/EXP
-     bottom-center, and the skill column centered vertically on the right. */
+     bottom-center, and the right-side action area centered vertically. */
   @media (max-width: 560px), (max-height: 480px) {
     #bottomUi {
       top: 16px;
@@ -787,40 +644,19 @@
       height: 29px;
     }
 
-    .utility-slot img {
-      width: 26px;
-      height: 26px;
-    }
-
     #slot4 {
       margin-left: 12px;
     }
 
-    #abilityBar {
-      right: 8px;
-      top: 50%;
-      grid-template-columns: 54px;
-      grid-template-rows: repeat(4, 54px);
-      gap: 6px;
-    }
+    
 
-    .ability-slot {
-      width: 54px;
-      height: 54px;
-    }
+    
 
-    .ability-slot img {
-      width: 39px;
-      height: 39px;
-    }
+    
 
-    .ability-slot .hotbar-label {
-      font-size: 9px;
-    }
+    
 
-    .ability-slot .ability-cooldown-text {
-      font-size: 11px;
-    }
+    
 
     #hudBuffs {
       right: calc(100% + 8px);
@@ -897,32 +733,15 @@
       height: 26px;
     }
 
-    .utility-slot img {
-      width: 23px;
-      height: 23px;
-    }
-
     #slot4 {
       margin-left: 9px;
     }
 
-    #abilityBar {
-      right: 6px;
-      top: 50%;
-      grid-template-columns: 38px;
-      grid-template-rows: repeat(4, 38px);
-      gap: 4px;
-    }
+    
 
-    .ability-slot {
-      width: 38px;
-      height: 38px;
-    }
+    
 
-    .ability-slot img {
-      width: 28px;
-      height: 28px;
-    }
+    
 
     #hudBuffs {
       right: calc(100% + 6px);
@@ -991,42 +810,19 @@
       height: 19px;
     }
 
-    .utility-slot img {
-      width: 18px;
-      height: 18px;
-    }
-
     #slot4 {
       margin-left: 6px;
     }
 
-    #abilityBar {
-      right: 4px;
-      top: 50%;
-      grid-template-columns: 30px;
-      grid-template-rows: repeat(4, 30px);
-      gap: 3px;
-    }
+    
 
-    .ability-slot {
-      width: 30px;
-      height: 30px;
-    }
+    
 
-    .ability-slot img {
-      width: 22px;
-      height: 22px;
-    }
+    
 
-    .ability-slot .hotbar-label {
-      left: 1px;
-      top: 1px;
-      font-size: 6px;
-    }
+    
 
-    .ability-slot .ability-cooldown-text {
-      font-size: 8px;
-    }
+    
 
     #hudBuffs {
       right: calc(100% + 4px);
@@ -1333,24 +1129,11 @@
   }
 
   #menuItemHotkeyRail { grid-column: 1; }
-  #menuUtilityHotkeyRail,
-  #menuSkillHotkeyRail { grid-column: 3; }
+  
 
-  /* v317: every Escape workspace child shares one grid row. Explicit row placement
-     prevents contextual rails from pushing the centered main menu onto an implicit
-     second row when multiple rails are visible. */
-  #menuItemHotkeyRail,
-  #menuUtilityHotkeyRail,
-  #menuSkillHotkeyRail,
-  #inventoryPanel {
-    grid-row: 1;
-  }
+  
 
-  .menu-hotkey-rail.context-hidden {
-    display: none;
-  }
-
-  .menu-hotkey-rail-title {
+.menu-hotkey-rail-title {
     margin: 1px 0 8px;
     color: #d7c786;
     font: 9px/1 monospace;
@@ -1359,82 +1142,21 @@
     text-transform: uppercase;
   }
 
-  .menu-hotkey-stack,
-  #menuSkillHotkeyRail .skill-key-strip {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    margin: 0;
-  }
+  
 
-  .menu-item-hotkey-slot,
-  #menuSkillHotkeyRail .skill-key-slot {
-    position: relative;
-    min-height: 56px;
-    padding: 6px 5px 6px 31px;
-    border: 2px solid #748356;
-    background: rgba(40, 52, 38, .82);
-    box-sizing: border-box;
-    cursor: pointer;
-    user-select: none;
-  }
+  
 
-  .menu-item-hotkey-slot .menu-hotkey-key,
-  #menuSkillHotkeyRail .skill-key-name {
-    position: absolute;
-    left: 5px;
-    top: 5px;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #887a51;
-    background: #202820;
-    color: #f2df9d;
-    font: bold 9px/1 monospace;
-    box-sizing: border-box;
-  }
+  
 
-  .menu-item-hotkey-slot img,
-  #menuSkillHotkeyRail .skill-key-icon {
-    display: block;
-    width: 28px;
-    height: 28px;
-    margin: 0 auto 3px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  
 
-  .menu-item-hotkey-slot .menu-hotkey-item-name,
-  #menuSkillHotkeyRail .skill-key-skill {
-    display: block;
-    overflow: hidden;
-    color: #c9c09f;
-    font: 7px/1.1 monospace;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  
 
-  .menu-item-hotkey-slot.empty img,
-  #menuSkillHotkeyRail .skill-key-slot:not(.bound) .skill-key-icon {
-    visibility: hidden;
-  }
+  
 
-  .menu-item-hotkey-slot.active,
-  #menuSkillHotkeyRail .skill-key-slot.bound {
-    border-color: #8ea66e;
-  }
+  
 
-  .menu-item-hotkey-slot.drag-over,
-  #menuSkillHotkeyRail .skill-key-slot.drag-over,
-  #menuSkillHotkeyRail .skill-key-slot.bind-target {
-    border-color: #e1c86e;
-    background: #3b4733;
-    box-shadow: 0 0 0 1px rgba(255,240,173,.18) inset;
-  }
+  
 
   .menu-hotkey-rail-help {
     margin-top: 8px;
@@ -1456,34 +1178,13 @@
       padding: 5px;
     }
 
-    .menu-hotkey-rail-title,
-    .menu-hotkey-rail-help,
-    .menu-item-hotkey-slot .menu-hotkey-item-name,
-    #menuSkillHotkeyRail .skill-key-skill {
-      display: none;
-    }
+    
 
-    .menu-item-hotkey-slot,
-    #menuSkillHotkeyRail .skill-key-slot {
-      min-height: 46px;
-      padding: 5px 4px 4px 25px;
-    }
+    
 
-    .menu-item-hotkey-slot img,
-    #menuSkillHotkeyRail .skill-key-icon {
-      width: 24px;
-      height: 24px;
-      margin-top: 6px;
-    }
+    
 
-    .menu-item-hotkey-slot .menu-hotkey-key,
-    #menuSkillHotkeyRail .skill-key-name {
-      left: 3px;
-      top: 3px;
-      width: 18px;
-      height: 18px;
-      font-size: 8px;
-    }
+    
   }
 
   #craftOverlay {
@@ -1659,79 +1360,23 @@
     text-align: center;
   }
 
-  #classResetConfirmOverlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(10, 14, 10, 0.54);
-    pointer-events: auto;
-    z-index: 55;
-  }
+  
 
-  #classResetConfirmOverlay.open {
-    display: flex;
-  }
+  
 
-  #classResetConfirmPanel {
-    width: min(360px, calc(100vw - 34px));
-    padding: 16px;
-    border: 3px solid #7ec9a9;
-    background: #202820;
-    box-shadow:
-      0 0 0 2px #355a4c inset,
-      6px 6px 0 rgba(0,0,0,.40);
-    color: #fff6d4;
-    font-family: monospace;
-    text-align: center;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  
 
-  #classResetConfirmIcon {
-    width: 56px;
-    height: 56px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  
 
-  #classResetConfirmTitle {
-    margin-top: 6px;
-    color: #9be9c8;
-    font: bold 12px/1 monospace;
-  }
+  
 
-  #classResetConfirmQuestion {
-    margin: 12px 0 14px;
-    color: #fff2b5;
-    font: 11px/1.35 monospace;
-  }
+  
 
-  #classResetConfirmButtons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-  }
+  
 
-  #classResetConfirmButtons button {
-    appearance: none;
-    min-width: 82px;
-    padding: 8px 12px;
-    border: 2px solid #5f573d;
-    background: #293329;
-    color: #fff6d4;
-    font: 10px/1 monospace;
-    cursor: pointer;
-  }
+  
 
-  #classResetConfirmButtons button:hover,
-  #classResetConfirmButtons button:focus-visible {
-    border-color: #9be9c8;
-    background: #34463d;
-    outline: none;
-  }
+  
 
   #beachQuestOverlay {
     position: fixed;
@@ -1899,30 +1544,7 @@
     flex-direction: column;
   }
 
-  #inventoryTop {
-    display: flex;
-    align-items: stretch;
-    border-bottom: 2px solid #5f573d;
-  }
-
-  .inventory-tab,
-  .inventory-action-button {
-    appearance: none;
-    border: 0;
-    border-right: 2px solid #5f573d;
-    padding: 9px 10px;
-    background: #293329;
-    color: #cfc49a;
-    font: 11px/1 monospace;
-    cursor: pointer;
-  }
-
-  .inventory-tab.active {
-    background: #3a4734;
-    color: #fff2b5;
-  }
-
-  #inventoryClose {
+#inventoryClose {
     appearance: none;
     margin-left: auto;
     width: 38px;
@@ -1935,10 +1557,7 @@
   }
 
   #inventoryClose:hover,
-  .inventory-tab:hover,
-  .inventory-action-button:hover,
-  .menu-item:hover,
-  .equip-choice:hover {
+  .menu-item:hover {
     filter: brightness(1.14);
   }
 
@@ -1983,8 +1602,7 @@
     margin-bottom: 16px;
   }
 
-  .menu-item,
-  .equip-choice {
+  .menu-item {
     min-height: 72px;
     border: 2px solid #665d43;
     background: #273027;
@@ -2018,14 +1636,12 @@
 
   .inventory-stack-count[hidden] { display: none !important; }
 
-  button.menu-item,
-  button.equip-choice {
+  button.menu-item {
     appearance: none;
     cursor: pointer;
   }
 
-  .menu-item img,
-  .equip-choice img {
+  .menu-item img {
     width: 32px;
     height: 32px;
     object-fit: contain;
@@ -2072,75 +1688,7 @@
     font: 8px/1 monospace;
   }
 
-  .hotbar-assign-panel {
-    display: none;
-    flex: 0 0 auto;
-    margin: 0;
-    padding: 10px 14px 12px;
-    border-top: 2px solid #665d43;
-    background: #202820;
-    box-shadow: 0 -3px 0 rgba(0,0,0,.16);
-  }
-
-  .hotbar-assign-header {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-bottom: 9px;
-  }
-
-  .hotbar-assign-header img {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
-
-  .hotbar-assign-name {
-    color: #fff2b5;
-    font: 10px/1 monospace;
-  }
-
-  .hotbar-assign-help {
-    margin-top: 4px;
-    color: #9f9878;
-    font: 8px/1 monospace;
-  }
-
-  .hotbar-assign-buttons {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
-  }
-
-  .hotbar-assign-buttons button {
-    appearance: none;
-    min-height: 28px;
-    border: 2px solid #665d43;
-    background: #293329;
-    color: #e9dfba;
-    font: 9px/1 monospace;
-    cursor: pointer;
-  }
-
-  .hotbar-assign-buttons button.active {
-    border-color: #e1c86e;
-    background: #3b4733;
-    color: #fff2b5;
-    box-shadow: 0 0 0 1px #fff0ad inset;
-  }
-
-  .hotbar-assign-buttons button:hover:not(:disabled) {
-    filter: brightness(1.14);
-  }
-
-  .hotbar-assign-buttons button:disabled {
-    opacity: .38;
-    cursor: default;
-  }
-
-  .resource-menu-item {
+.resource-menu-item {
     min-height: 58px;
     flex-direction: row;
     gap: 8px;
@@ -2167,51 +1715,15 @@
     text-align: center;
   }
 
-  .skill-card {
-    margin-bottom: 16px;
-    padding: 10px 12px;
-    border: 2px solid #665d43;
-    background: #273027;
-    color: #eee4bf;
-    box-sizing: border-box;
-  }
+  
 
-  .skill-card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font: 10px/1 monospace;
-    color: #fff2be;
-  }
+  
 
-  .skill-bar {
-    position: relative;
-    height: 14px;
-    border: 2px solid #6f6442;
-    background: #1a211a;
-    overflow: hidden;
-  }
+  
 
-  .skill-fill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 0%;
-    background: #79a84d;
-  }
+  
 
-  .skill-bar-text {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff7d5;
-    font: 9px/1 monospace;
-    text-shadow: 1px 1px 0 rgba(0,0,0,.75);
-  }
+  
 
   .equipment-layout {
     display: grid;
@@ -2262,20 +1774,7 @@
     text-transform: uppercase;
   }
 
-  .equip-choice.active {
-    border-color: #e1c86e;
-    background: #3b4733;
-    box-shadow: 0 0 0 1px #fff0ad inset;
-  }
-
-  .equip-options {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(72px, 1fr));
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .item-detail-tooltip {
+.item-detail-tooltip {
     position: fixed;
     z-index: 120;
     display: none;
@@ -2349,788 +1848,29 @@
     font-weight: normal;
   }
 
-  .gear-subtabs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-
-  .gear-subtab {
-    appearance: none;
-    min-height: 30px;
-    border: 2px solid #665d43;
-    background: #273027;
-    color: #d8cea5;
-    font: 10px/1 monospace;
-    cursor: pointer;
-  }
-
-  .gear-subtab.active {
-    border-color: #e1c86e;
-    background: #3b4733;
-    color: #fff2b5;
-    box-shadow: 0 0 0 1px #fff0ad inset;
-  }
-
-  .gear-panel {
-    display: none;
-  }
-
-  .gear-panel.active {
-    display: block;
-  }
-
-  .skill-tree {
-    padding: 2px 0 8px;
-  }
-
-  .skill-tree-root {
-    width: 132px;
-    margin: 0 auto 20px;
-    padding: 9px 8px;
-    border: 2px solid #807149;
-    background: #354132;
-    color: #fff2b5;
-    font: 11px/1 monospace;
-    text-align: center;
-    position: relative;
-  }
-
-  .skill-tree-root::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    width: 2px;
-    height: 12px;
-    background: #665d43;
-    transform: translateX(-50%);
-  }
-
-  .skill-tree-branches {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    position: relative;
-  }
-
-  .skill-tree-branches::before {
-    display: none;
-  }
-
-  .skill-node {
-    position: relative;
-    min-height: 0;
-    padding: 11px 12px;
-    box-sizing: border-box;
-    border: 2px solid #665d43;
-    background: #273027;
-  }
-
-  .skill-node::before {
-    display: none;
-  }
-
-  .skill-node.unlocked {
-    border-color: #807149;
-  }
-
-  .skill-node.locked {
-    border-color: #4f4937;
-    background: #242a24;
-  }
-
-  .skill-node.ready {
-    border-color: #9b8650;
-    box-shadow: 0 0 0 1px rgba(225, 200, 110, .18) inset;
-  }
-
-  .skill-node-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 7px;
-  }
-
-  .skill-node-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .skill-node-icon {
-    width: 26px;
-    height: 26px;
-    flex: 0 0 auto;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
-
-  .skill-node-name {
-    color: #fff2be;
-    font: 11px/1.15 monospace;
-  }
-
-  .skill-status {
-    color: #9fce86;
-    font: 8px/1 monospace;
-    text-transform: uppercase;
-  }
-
-  .skill-description {
-    min-height: 0;
-    color: #bdb494;
-    font: 9px/1.35 monospace;
-    margin-bottom: 8px;
-  }
-
-  .skill-progression {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 5px;
-    margin: 9px 0;
-  }
-
-  .skill-progress-step {
-    min-height: 43px;
-    padding: 5px 4px;
-    box-sizing: border-box;
-    border: 1px solid #4f4937;
-    background: #202720;
-    text-align: center;
-  }
-
-  .skill-progress-step.reached {
-    border-color: #807149;
-    background: #303a2e;
-  }
-
-  .skill-progress-step.current {
-    border-color: #e1c86e;
-    box-shadow: 0 0 0 1px rgba(255,240,173,.18) inset;
-  }
-
-  .skill-progress-level {
-    display: block;
-    color: #f0d77d;
-    font: 8px/1 monospace;
-    margin-bottom: 4px;
-  }
-
-  .skill-progress-name {
-    display: block;
-    color: #cfc6a4;
-    font: 7px/1.15 monospace;
-  }
-
-  .skill-progress-step.reached .skill-progress-name {
-    color: #fff2be;
-  }
-
-  .skill-requirement {
-    color: #c5b98d;
-    font: 10px/1.35 monospace;
-    margin-bottom: 8px;
-  }
-
-  .skill-requirement.met {
-    color: #9fce86;
-  }
-
-  .skill-level-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 28px;
-    margin-bottom: 9px;
-  }
-
-  .skill-level-text {
-    color: #fff0b0;
-    font: 10px/1 monospace;
-  }
-
-  .ability-upgrade-button {
-    appearance: none;
-    min-width: 74px;
-    min-height: 25px;
-    border: 2px solid #807149;
-    background: #354132;
-    color: #f4df8d;
-    font: 9px/1 monospace;
-    cursor: pointer;
-  }
-
-  .ability-upgrade-button:hover:not(:disabled) {
-    filter: brightness(1.18);
-  }
-
-  .ability-upgrade-button:disabled,
-  .skill-bind-button:disabled {
-    opacity: 0.32;
-    cursor: default;
-  }
-
-  #abilityPointText {
-    color: #e7c7ff;
-    font: 10px/1 monospace;
-  }
-
-  .skill-bind-label {
-    margin-bottom: 5px;
-    color: #d7c786;
-    font: 9px/1 monospace;
-    text-transform: uppercase;
-  }
-
-  .skill-bind-row {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 4px;
-  }
-
-  .skill-bind-button {
-    appearance: none;
-    min-height: 25px;
-    padding: 0 3px;
-    border: 2px solid #5d563e;
-    background: #202820;
-    color: #cfc49a;
-    font: 8px/1 monospace;
-    cursor: pointer;
-  }
-
-  .skill-bind-button.active {
-    border-color: #e1c86e;
-    background: #3b4733;
-    color: #fff2b5;
-  }
-
-  .skill-key-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-bottom: 16px;
-  }
-
-  .enhancement-slots {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-
-  .enhancement-slot {
-    min-height: 62px;
-    padding: 8px 6px;
-    border: 2px solid #6c6347;
-    background: #273027;
-    box-sizing: border-box;
-    text-align: center;
-  }
-
-  .enhancement-slot-label {
-    display: block;
-    color: #f0d77d;
-    font: 10px/1 monospace;
-    margin-bottom: 8px;
-  }
-
-  .enhancement-slot-value {
-    display: block;
-    color: #ded4ad;
-    font: 9px/1.35 monospace;
-  }
-
-  .enhancement-slot-entry {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-  }
-
-  .enhancement-slot-icon,
-  .enhancement-icon {
-    width: 20px;
-    height: 20px;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    flex: 0 0 auto;
-  }
-
-  .enhancement-card-top {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    margin-bottom: 5px;
-  }
-
-  .enhancement-card-copy {
-    min-width: 0;
-  }
-
-  .talent-panel-note {
-    margin-top: 10px;
-    color: #bdb494;
-    font: 9px/1.45 monospace;
-  }
-
-  .enhancement-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .enhancement-card {
-    border: 2px solid #665d43;
-    background: #273027;
-    padding: 9px 8px;
-    box-sizing: border-box;
-  }
-
-  .enhancement-card.equipped {
-    border-color: #e1c86e;
-    background: #344132;
-    box-shadow: 0 0 0 1px #fff0ad inset;
-  }
-
-  .enhancement-name {
-    color: #fff2be;
-    font: 10px/1.15 monospace;
-    margin-bottom: 5px;
-  }
-
-  .enhancement-meta {
-    color: #d7c786;
-    font: 8px/1.15 monospace;
-    margin-bottom: 6px;
-  }
-
-  .enhancement-desc {
-    min-height: 28px;
-    color: #bdb494;
-    font: 9px/1.45 monospace;
-    margin-bottom: 8px;
-  }
-
-  .enhancement-actions {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .enhancement-button {
-    appearance: none;
-    min-height: 24px;
-    padding: 0 8px;
-    border: 2px solid #807149;
-    background: #354132;
-    color: #f4df8d;
-    font: 8px/1 monospace;
-    cursor: pointer;
-  }
-
-  .enhancement-button:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-
-  .enhancement-note {
-    color: #9fce86;
-    font: 8px/1.2 monospace;
-  }
-
-  .skill-enhancement-list {
-    display: grid;
-    gap: 6px;
-    margin: 8px 0 10px;
-  }
-
-  .skill-enhancement-title {
-    color: #d7c786;
-    font: 8px/1 monospace;
-    text-transform: uppercase;
-  }
-
-  .skill-enhancement-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    align-items: center;
-    padding: 7px 8px;
-    border: 1px solid #514a37;
-    background: #202720;
-  }
-
-  .skill-enhancement-row.enabled {
-    border-color: #807149;
-    background: #303a2e;
-  }
-
-  .skill-enhancement-copy {
-    min-width: 0;
-  }
-
-  .skill-enhancement-name {
-    color: #fff0b0;
-    font: 8px/1.15 monospace;
-    margin-bottom: 3px;
-  }
-
-  .skill-enhancement-desc {
-    color: #a9a184;
-    font: 7px/1.3 monospace;
-  }
-
-  .skill-enhancement-toggle {
-    appearance: none;
-    min-width: 38px;
-    min-height: 23px;
-    padding: 0 6px;
-    border: 2px solid #5d563e;
-    background: #272c27;
-    color: #a9a184;
-    font: 8px/1 monospace;
-    cursor: pointer;
-  }
-
-  .skill-enhancement-toggle.active {
-    border-color: #e1c86e;
-    background: #3b4733;
-    color: #fff2b5;
-  }
-
-  .skill-key-slot {
-    min-height: 72px;
-    padding: 7px 5px;
-    border: 2px solid #5d563e;
-    background: #273027;
-    text-align: center;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 4px;
-  }
-
-  .skill-key-icon {
-    width: 22px;
-    height: 22px;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    visibility: hidden;
-  }
-
-  .skill-key-name {
-    display: block;
-    color: #f0d77d;
-    font: 10px/1 monospace;
-    margin-bottom: 0;
-  }
-
-  .skill-key-skill {
-    display: block;
-    color: #ded4ad;
-    font: 8px/1.15 monospace;
-  }
-
-  .skill-section-gap {
-    margin-top: 18px;
-  }
-
-  .skill-category-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin: 10px 0 12px;
-  }
-
-  .skill-category-tab {
-    appearance: none;
-    min-height: 30px;
-    padding: 0 7px;
-    border: 2px solid #5d563e;
-    background: #273027;
-    color: #cfc39a;
-    font: 9px/1 monospace;
-    cursor: pointer;
-  }
-
-  .skill-category-tab:hover {
-    filter: brightness(1.12);
-  }
-
-  .skill-category-tab.active {
-    color: #fff2be;
-    border-color: #9b8650;
-    background: #354132;
-    box-shadow: 0 0 0 1px rgba(225, 200, 110, .16) inset;
-  }
-
-  .skill-category-tab.class-locked,
-  .skill-category-tab:disabled {
-    opacity: .38;
-    cursor: not-allowed;
-    filter: saturate(.45);
-  }
-
-  #skillsPage.class-unselected > :not(#classSelectionGate) {
-    display: none !important;
-  }
-
-  #skillsPage.class-selected .skill-category-tabs {
-    display: none !important;
-  }
-
-  .class-selection-gate {
-    display: none;
-    padding: 6px 2px 2px;
-  }
-
-  #skillsPage.class-unselected .class-selection-gate {
-    display: block;
-  }
-
-  .class-selection-title {
-    margin-bottom: 7px;
-    color: #fff0b7;
-    font: 12px/1.15 monospace;
-    text-transform: uppercase;
-  }
-
-  .class-selection-copy {
-    max-width: 520px;
-    margin-bottom: 12px;
-    color: #c9c09f;
-    font: 9px/1.45 monospace;
-  }
-
-  .class-selection-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .class-selection-button {
-    appearance: none;
-    min-height: 64px;
-    padding: 9px 10px;
-    border: 2px solid #5d563e;
-    background: #273027;
-    color: #ded4ad;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .class-selection-button:hover {
-    border-color: #9b8650;
-    background: #354132;
-  }
-
-  .class-selection-button:disabled {
-    cursor: not-allowed;
-    opacity: .48;
-    filter: saturate(.55);
-  }
-
-  .class-selection-button:disabled:hover {
-    border-color: #5d563e;
-    background: #273027;
-  }
-
-  .class-selection-status {
-    margin-top: 6px;
-    color: #e4cf83 !important;
-    font: 8px/1.2 monospace !important;
-    text-transform: uppercase;
-  }
-
-  .class-selection-button.class-coming-soon .class-selection-status {
-    color: #aaa38f !important;
-  }
-
-  .class-selection-button strong {
-    display: block;
-    margin-bottom: 5px;
-    color: #fff0b7;
-    font: 10px/1 monospace;
-  }
-
-  .class-selection-button span {
-    display: block;
-    color: #bdb493;
-    font: 9px/1.45 monospace;
-  }
-
-  .skill-category-panel {
-    display: none;
-  }
-
-  .skill-category-panel.active {
-    display: block;
-  }
-
-  .skill-tree-branches.single-skill {
-    grid-template-columns: 1fr;
-    max-width: none;
-    margin: 0;
-  }
-
-  .skill-tree-branches.single-skill::before {
-    display: none;
-  }
-
-  .skill-category-empty {
-    min-height: 124px;
-    border: 2px dashed #4f4937;
-    background: #242a24;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 18px;
-    box-sizing: border-box;
-    color: #8f896f;
-    font: 9px/1.45 monospace;
-  }
-
-  .stats-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 2px 0 8px;
-  }
-
-  #skillPointText {
-    color: #f0d77d;
-    font: 10px/1 monospace;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
-  }
-
-  .stat-row {
-    min-height: 31px;
-    display: grid;
-    grid-template-columns: 1fr 24px 24px;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 5px 4px 8px;
-    box-sizing: border-box;
-    border: 2px solid #5d563e;
-    background: #273027;
-    color: #ded4ad;
-    font: 10px/1 monospace;
-  }
-
-  .stat-value {
-    text-align: center;
-    color: #fff3bd;
-  }
-
-  .stat-plus {
-    appearance: none;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 2px solid #807149;
-    background: #354132;
-    color: #f4df8d;
-    font: 14px/16px monospace;
-    cursor: pointer;
-  }
-
-  .stat-plus:hover:not(:disabled) {
-    filter: brightness(1.18);
-  }
-
-  .stat-plus:disabled {
-    opacity: 0.32;
-    cursor: default;
-  }
-
-  #inventoryFooter {
+#inventoryFooter {
     padding: 0 14px 12px;
     color: #8f896d;
     font: 9px/1 monospace;
     text-align: right;
   }
-  .pvp-panel-card {
-    border: 2px solid #544c38;
-    background: #181713;
-    padding: 14px;
-    max-width: 360px;
-    margin: 8px auto 0;
-    box-shadow: inset 0 0 0 1px #292619;
-  }
+  
 
-  .pvp-panel-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: #f1e7bf;
-    font: bold 13px/1 monospace;
-    margin-bottom: 12px;
-  }
+  
 
-  .pvp-status-badge {
-    min-width: 42px;
-    padding: 4px 6px;
-    text-align: center;
-    border: 1px solid #675f48;
-    color: #bdb49a;
-    background: #242119;
-    font: bold 10px/1 monospace;
-  }
+  
 
-  .pvp-status-badge.on {
-    color: #ff8a78;
-    border-color: #a34b3d;
-    background: #301b18;
-  }
+  
 
-  .pvp-status-text {
-    color: #d8cfaa;
-    font: bold 11px/1.3 monospace;
-    margin-bottom: 8px;
-  }
+  
 
-  .pvp-description,
-  .pvp-lock-text {
-    color: #9e967c;
-    font: 9px/1.45 monospace;
-  }
+  
 
-  .pvp-toggle-button {
-    width: 100%;
-    margin: 14px 0 10px;
-    padding: 10px 8px;
-    border: 2px solid #766c4e;
-    background: #2a261b;
-    color: #f3e7b7;
-    font: bold 11px/1 monospace;
-    cursor: pointer;
-  }
+  
 
-  .pvp-toggle-button.on {
-    border-color: #a34b3d;
-    background: #3a1f1b;
-    color: #ffad9f;
-  }
+  
 
-  .pvp-toggle-button:disabled {
-    opacity: .5;
-    cursor: default;
-  }
+  
 
 
   #respawnButton {
@@ -3179,13 +1919,7 @@
       max-height: min(600px, calc(100vh - 36px));
     }
 
-    .inventory-tab,
-    .inventory-action-button {
-      padding: 9px 8px;
-      font-size: 11px;
-    }
-
-    .inventory-grid {
+.inventory-grid {
       grid-template-columns: repeat(3, minmax(62px, 1fr));
     }
 
@@ -3193,736 +1927,212 @@
       grid-template-columns: 90px 1fr;
     }
 
-    .gear-subtabs {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .skill-tree-branches {
-      grid-template-columns: 1fr;
-    }
-
-    .skill-tree-branches::before,
-    .skill-node::before,
-    .skill-tree-root::after {
-      display: none;
-    }
-
-    .skill-key-strip {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .enhancement-slots,
-    .enhancement-list {
-      grid-template-columns: 1fr;
-    }
-  }
-
-
-  /* v204: compact, scrollable skill-tree presentation + clean stat sheet. */
-  .combat-stats-grid,
-  .core-stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
-  }
-
-  .stat-readonly {
-    grid-template-columns: 1fr 44px 0;
-  }
-
-  .stat-mastery-wide {
-    grid-column: 1 / -1;
-    max-width: calc(50% - 4px);
-  }
-
-  .stat-placeholder {
-    opacity: .65;
-  }
-
-  .stats-divider {
-    height: 18px;
-    margin: 8px 0 10px;
-    border-bottom: 2px solid #4f4937;
-  }
-
-  #skillsPage.class-selected {
-    position: relative;
-  }
-
-  #skillsPage.class-selected .skill-bind-label,
-  #skillsPage.class-selected .skill-bind-row,
-  #skillsPage.class-selected .skill-node > .skill-description,
-  #skillsPage.class-selected .skill-node > .skill-progression,
-  #skillsPage.class-selected .skill-node > .skill-level-row,
-  #skillsPage.class-selected .skill-node > .skill-enhancement-list,
-  #skillsPage.class-selected .skill-node > .enhancement-note,
-  #skillsPage.class-selected .skill-node > .skill-requirement {
-    display: none !important;
-  }
-
-  .skill-tree-shell {
-    position: relative;
-    margin: 2px 0 9px;
-  }
-
-  #skillsPage.class-selected .skill-tree {
-    position: relative;
-    min-height: 222px;
-    height: 222px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 0;
-    border: 2px solid #4f4937;
-    background:
-      linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
-      #1f271f;
-    background-size: 16px 16px;
-    box-sizing: border-box;
-    scrollbar-width: none;
-  }
-
-  #skillsPage.class-selected .skill-tree::-webkit-scrollbar {
-    display: none;
-  }
-
-  #skillsPage.class-selected .skill-tree-root {
-    position: sticky;
-    left: 10px;
-    top: 8px;
-    z-index: 5;
-    width: max-content;
-    min-width: 88px;
-    margin: 8px 0 0 10px;
-    padding: 6px 8px;
-    border-width: 1px;
-    background: rgba(53,65,50,.94);
-    font-size: 9px;
-    pointer-events: none;
-  }
-
-  #skillsPage.class-selected .skill-tree-root::after {
-    display: none;
-  }
-
-  #skillsPage.class-selected .skill-tree-branches,
-  #skillsPage.class-selected .skill-tree-branches.single-skill {
-    display: block;
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 218px;
-    margin: 0;
-    max-width: none;
-  }
-
-  #skillsPage.class-selected .skill-tree-branches::before,
-  #skillsPage.class-selected .skill-tree-branches.single-skill::before {
-    display: none;
-  }
-
-  #skillsPage.class-selected .skill-node {
-    position: absolute;
-    width: 90px;
-    min-height: 68px;
-    padding: 6px;
-    border: 2px solid #5a513d;
-    background: #252d25;
-    box-sizing: border-box;
-    cursor: pointer;
-    z-index: 3;
-    transition: filter .08s linear, border-color .08s linear;
-  }
-
-  #skillsPage.class-selected .skill-node:hover {
-    filter: brightness(1.12);
-  }
-
-  #skillsPage.class-selected .skill-node.selected {
-    border-color: #e1c86e;
-    box-shadow: 0 0 0 1px rgba(255,240,173,.22) inset;
-  }
-
-  #skillsPage.class-selected .skill-node.bound {
-    border-color: #a7ca7f;
-  }
-
-  #skillsPage.class-selected .skill-node-top {
-    display: block;
-    margin: 0;
-    text-align: center;
-  }
-
-  #skillsPage.class-selected .skill-node-title {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  #skillsPage.class-selected .skill-node-icon {
-    width: 30px;
-    height: 30px;
-    cursor: grab;
-  }
-
-  #skillsPage.class-selected .skill-node-icon:active {
-    cursor: grabbing;
-  }
-
-  #skillsPage.class-selected .skill-node-name {
-    width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 8px;
-  }
-
-  #skillsPage.class-selected .skill-status {
-    display: block;
-    margin-top: 4px;
-    font-size: 7px;
-    text-align: center;
-  }
-
-  .skill-tree-link-layer {
-    position: absolute;
-    left: 0;
-    top: 0;
-    pointer-events: none;
-    z-index: 1;
-    overflow: visible;
-  }
-
-  .skill-tree-link {
-    fill: none;
-    stroke: #766844;
-    stroke-width: 3;
-    shape-rendering: crispEdges;
-  }
-
-  .skill-tree-scroll-arrow {
-    appearance: none;
-    position: absolute;
-    top: 50%;
-    width: 28px;
-    height: 42px;
-    transform: translateY(-50%);
-    z-index: 8;
-    border: 2px solid #807149;
-    background: rgba(39,48,39,.94);
-    color: #f4df8d;
-    font: bold 17px/1 monospace;
-    cursor: pointer;
-  }
-
-  .skill-tree-scroll-arrow.left { left: 5px; }
-  .skill-tree-scroll-arrow.right { right: 5px; }
-  .skill-tree-scroll-arrow.hidden { display: none; }
-
-  .skill-detail-panel {
-    min-height: 112px;
-    padding: 9px 10px;
-    margin: 0 0 12px;
-    border: 2px solid #5d563e;
-    background: #242c24;
-    box-sizing: border-box;
-  }
-
-  .skill-detail-top {
-    display: grid;
-    grid-template-columns: 38px 1fr auto;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 7px;
-  }
-
-  .skill-detail-icon {
-    width: 34px;
-    height: 34px;
-    image-rendering: pixelated;
-  }
-
-  .skill-detail-name {
-    color: #fff1b6;
-    font: 11px/1 monospace;
-  }
-
-  .skill-detail-level {
-    margin-top: 4px;
-    color: #c7bd9a;
-    font: 8px/1 monospace;
-  }
-
-  .skill-detail-description,
-  .skill-detail-hint {
-    color: #bdb494;
-    font: 9px/1.45 monospace;
-  }
-
-  .skill-detail-hint {
-    margin-top: 7px;
-    color: #d7c786;
-  }
-
-  .skill-detail-progression {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 7px;
-  }
-
-  .skill-detail-step {
-    padding: 4px 5px;
-    border: 1px solid #4f4937;
-    background: #202720;
-    color: #bdb494;
-    font: 7px/1 monospace;
-  }
-
-  .skill-detail-step.reached {
-    border-color: #807149;
-    color: #fff2be;
-  }
-
-  .skill-detail-upgrade {
-    appearance: none;
-    min-width: 76px;
-    min-height: 26px;
-    border: 2px solid #807149;
-    background: #354132;
-    color: #f4df8d;
-    font: 8px/1 monospace;
-    cursor: pointer;
-  }
-
-  .skill-detail-upgrade:disabled {
-    opacity: .32;
-    cursor: default;
-  }
-
-  .skill-detail-enhancements {
-    margin-top: 7px;
-  }
-
-  .skill-key-strip {
-    margin: 6px 0 4px;
-  }
-
-  .skill-key-slot {
-    min-height: 66px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .skill-key-slot.drag-over,
-  .skill-key-slot.bind-target {
-    border-color: #e1c86e;
-    background: #3b4733;
-    box-shadow: 0 0 0 1px rgba(255,240,173,.18) inset;
-  }
-
-  .skill-key-slot.bound {
-    border-color: #7f9968;
-  }
-
-  .skill-key-dock-title {
-    margin-top: 4px;
-  }
-
-
-  /* v208: single-column skill list + centered hotkey dock. */
-  #skillsPage.class-selected .stats-header {
-    margin-bottom: 10px;
-    justify-content: center;
-  }
-
-  #skillsPage.class-selected #skillClassHeading {
-    width: 100%;
-    text-align: center;
-    letter-spacing: 1.6px;
-  }
-
-  #skillsPage.class-selected .skill-workspace {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-  }
-
-  #skillsPage.class-selected .skill-list-pane {
-    width: min(100%, 520px);
-    min-width: 0;
-  }
-
-  #skillsPage.class-selected .skill-category-panel {
-    margin: 0;
-  }
-
-  #skillsPage.class-selected .skill-tree {
-    position: static;
-    min-height: 0;
-    height: auto;
-    overflow: visible;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-
-  #skillsPage.class-selected .skill-tree-root,
-  #skillsPage.class-selected .skill-tree-link-layer,
-  #skillsPage.class-selected .skill-tree-scroll-arrow,
-  #skillsPage.class-selected .skill-detail-panel {
-    display: none !important;
-  }
-
-  #skillsPage.class-selected .skill-tree-branches,
-  #skillsPage.class-selected .skill-tree-branches.single-skill {
-    position: static;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    width: auto !important;
-    min-width: 0 !important;
-    height: auto;
-    margin: 0;
-  }
-
-  #skillsPage.class-selected .skill-tree-branches::before,
-  #skillsPage.class-selected .skill-tree-branches.single-skill::before,
-  #skillsPage.class-selected .skill-node::before {
-    display: none !important;
-  }
-
-  #skillsPage.class-selected .skill-node {
-    position: relative;
-    left: auto !important;
-    top: auto !important;
-    width: 100%;
-    min-height: 58px;
-    padding: 8px 10px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-    border: 2px solid #748356;
-    background: rgba(40, 52, 38, 0.75);
-    box-sizing: border-box;
-    cursor: default;
-    user-select: none;
-  }
-
-  #skillsPage.class-selected .skill-node.skill-draggable {
-    cursor: grab;
-  }
-
-  #skillsPage.class-selected .skill-node.skill-draggable:active,
-  #skillsPage.class-selected .skill-node.dragging {
-    cursor: grabbing;
-  }
-
-  #skillsPage.class-selected .skill-node.dragging {
-    opacity: .55;
-    border-color: #e1c86e;
-  }
-
-  #skillsPage.class-selected .skill-node:hover {
-    filter: brightness(1.08);
-    border-color: #d7c786;
-  }
-
-  #skillsPage.class-selected .skill-node.selected {
-    border-color: #e1c86e;
-    box-shadow: 0 0 0 1px rgba(255,240,173,.18) inset;
-  }
-
-  #skillsPage.class-selected .skill-node.bound {
-    border-color: #8ea66e;
-  }
-
-  #skillsPage.class-selected .skill-node-top {
-    display: block;
-    min-width: 0;
-    margin: 0;
-    text-align: left;
-  }
-
-  #skillsPage.class-selected .skill-node-title {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  #skillsPage.class-selected .skill-node-icon {
-    flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    padding: 3px;
-    border-radius: 6px;
-    background: #efefe6;
-    border: 1px solid #141814;
-    cursor: inherit;
-    pointer-events: none;
-    box-sizing: border-box;
-  }
-
-  #skillsPage.class-selected .skill-node-name {
-    min-width: 0;
-    width: auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #fff0b7;
-    font: 10px/1.1 monospace;
-    text-align: left;
-  }
-
-  #skillsPage.class-selected .skill-status {
-    display: none !important;
-  }
-
-  #skillsPage.class-selected .skill-node > .skill-description,
-  #skillsPage.class-selected .skill-node > .skill-progression,
-  #skillsPage.class-selected .skill-node > .skill-enhancement-list,
-  #skillsPage.class-selected .skill-node > .enhancement-note,
-  #skillsPage.class-selected .skill-node > .skill-requirement,
-  #skillsPage.class-selected .skill-bind-label,
-  #skillsPage.class-selected .skill-bind-row {
-    display: none !important;
-  }
-
-  #skillsPage.class-selected .skill-node > .skill-level-row {
-    display: flex !important;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-
-  #skillsPage.class-selected .skill-level-text {
-    min-width: 66px;
-    color: #d3c99f;
-    font: 8px/1 monospace;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  #skillsPage.class-selected .ability-upgrade-button {
-    width: 30px;
-    min-width: 30px;
-    height: 30px;
-    min-height: 30px;
-    padding: 0;
-    border: 2px solid #807149;
-    background: rgba(53, 65, 50, 0.95);
-    color: #f4df8d;
-    font: bold 12px/1 monospace;
-  }
-
-  #skillsPage.class-selected .ability-upgrade-button:disabled {
-    opacity: .5;
-  }
-
-  #skillsPage.class-selected .skill-key-dock-title {
-    margin: 0 0 10px;
-    color: #d7c786;
-    font: 10px/1 monospace;
-    text-transform: uppercase;
-    text-align: center;
-    letter-spacing: 1.2px;
-  }
-
-  #skillsPage.class-selected .skill-key-hint {
-    display: none;
-  }
-
-  #skillsPage.class-selected .skill-key-strip {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin: 0;
-    width: 100%;
-  }
-
-  #skillsPage.class-selected .skill-key-slot {
-    min-height: 58px;
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    align-items: center;
-    gap: 3px 9px;
-    padding: 8px 10px;
-    border: 2px solid #748356;
-    background: rgba(40, 52, 38, 0.75);
-    box-sizing: border-box;
-    cursor: pointer;
-  }
-
-  #skillsPage.class-selected .skill-key-icon {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-    width: 30px;
-    height: 30px;
-    padding: 3px;
-    border-radius: 6px;
-    background: #efefe6;
-    border: 1px solid #141814;
-    image-rendering: pixelated;
-    box-sizing: border-box;
-  }
-
-  #skillsPage.class-selected .skill-key-name {
-    grid-column: 2;
-    grid-row: 1;
-    color: #f2df9d;
-    font: bold 9px/1 monospace;
-  }
-
-  #skillsPage.class-selected .skill-key-skill {
-    grid-column: 2;
-    grid-row: 2;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #c9c09f;
-    font: 8px/1 monospace;
-  }
-
-  #skillsPage.class-selected .skill-key-slot.drag-over,
-  #skillsPage.class-selected .skill-key-slot.bind-target {
-    border-color: #e1c86e;
-    background: #3b4733;
-    box-shadow: 0 0 0 1px rgba(255,240,173,.18) inset;
-  }
-
-  #skillsPage.class-selected .skill-key-slot.bound {
-    border-color: #8ea66e;
-  }
-
-  #skillsPage.class-selected .skill-list-footer {
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid #4f4937;
-    color: #c7b8ff;
-    font: 10px/1 monospace;
-    text-align: center;
-  }
-
-  #skillsPage.class-selected #abilityPointText {
-    width: 100%;
-    text-align: center;
-  }
+}
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
 
   @media (max-width: 760px) {
-    #skillsPage.class-selected .skill-list-pane,
-    #skillsPage.class-selected .skill-key-pane {
-      width: 100%;
-    }
+    
 
-    #skillsPage.class-selected .skill-key-strip {
-      grid-template-columns: 1fr;
-    }
+    
   }
 
-  .skill-detail-tooltip {
-    position: fixed;
-    z-index: 125;
-    display: none;
-    width: 292px;
-    padding: 14px;
-    border: 2px solid #8b7b50;
-    background: rgba(27, 34, 27, .985);
-    box-shadow: 4px 4px 0 rgba(0,0,0,.38);
-    color: #eee4bf;
-    pointer-events: none;
-    box-sizing: border-box;
-    font: 9px/1.45 monospace;
-  }
+  
 
-  .skill-detail-tooltip.show {
-    display: block;
-  }
+  
 
-  .skill-tooltip-top {
-    display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #665d43;
-  }
+  
 
-  .skill-tooltip-image-wrap {
-    width: 72px;
-    height: 72px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #202820;
-    border: 1px solid #665d43;
-  }
+  
 
-  .skill-tooltip-image {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  
 
-  .skill-tooltip-name {
-    color: #fff2b5;
-    font: bold 13px/1.15 monospace;
-  }
+  
 
-  .skill-tooltip-meta {
-    margin-top: 5px;
-    color: #aaa17f;
-    font: 8px/1.25 monospace;
-  }
+  
 
-  .skill-tooltip-description {
-    padding: 8px 0;
-    color: #cfc5a3;
-    border-bottom: 1px solid #4f4937;
-  }
+  
 
-  .skill-tooltip-level-block {
-    padding-top: 7px;
-  }
+  
 
-  .skill-tooltip-level-title {
-    margin-bottom: 4px;
-    color: #f0d98e;
-    font: bold 9px/1 monospace;
-    text-transform: uppercase;
-  }
+  
 
-  .skill-tooltip-level-copy {
-    color: #bdb494;
-  }
+  
 
   @media (max-width: 560px) {
-    #skillsPage.class-selected .skill-workspace {
-      grid-template-columns: minmax(0, 1fr) 132px;
-      gap: 8px;
-    }
+    
 
-    #skillsPage.class-selected .skill-node {
-      padding-left: 6px;
-      padding-right: 6px;
-    }
+    
 
-    #skillsPage.class-selected .skill-node-icon {
-      width: 30px;
-      height: 30px;
-    }
+    
   }
 
 
@@ -3939,13 +2149,7 @@
     max-height: min(780px, calc(100vh - 48px));
   }
 
-  .inventory-tab,
-  .inventory-action-button {
-    padding: 12px 15px;
-    font-size: 14px;
-  }
-
-  #inventoryClose {
+#inventoryClose {
     width: 44px;
     font-size: 18px;
   }
@@ -3969,15 +2173,13 @@
     margin-bottom: 18px;
   }
 
-  .menu-item,
-  .equip-choice {
+  .menu-item {
     min-height: 92px;
     gap: 7px;
     font-size: 12px;
   }
 
-  .menu-item img,
-  .equip-choice img {
+  .menu-item img {
     width: 40px;
     height: 40px;
   }
@@ -4012,100 +2214,11 @@
     height: 50px;
   }
 
-  .equipped-slot-label,
-  .gear-subtab {
-    font-size: 11px;
-  }
-
-  .gear-subtab {
+  .equipped-slot-label {
     min-height: 36px;
   }
 
-  .equip-options {
-    grid-template-columns: repeat(3, minmax(88px, 1fr));
-    gap: 10px;
-  }
-
-  .stats-header {
-    margin-bottom: 12px;
-  }
-
-  #skillPointText,
-  #abilityPointText {
-    font-size: 12px;
-  }
-
-  .combat-stats-grid,
-  .core-stats-grid {
-    gap: 9px;
-  }
-
-  .stat-row {
-    min-height: 40px;
-    grid-template-columns: 1fr 32px 30px;
-    gap: 7px;
-    padding: 6px 7px 6px 10px;
-    font-size: 12px;
-  }
-
-  .stat-plus {
-    width: 28px;
-    height: 28px;
-    font: 17px/20px monospace;
-  }
-
-  #statsPage #skillPointText {
-    width: max-content;
-    margin: 12px auto 0;
-    padding: 7px 13px;
-    border: 1px solid #665d43;
-    background: #273027;
-    text-align: center;
-  }
-
-  #skillsPage.class-selected .skill-list-pane {
-    width: min(100%, 740px);
-  }
-
-  #skillsPage.class-selected .skill-tree-branches,
-  #skillsPage.class-selected .skill-tree-branches.single-skill {
-    gap: 10px;
-  }
-
-  #skillsPage.class-selected .skill-node {
-    min-height: 72px;
-    padding: 10px 13px;
-    gap: 12px;
-  }
-
-  #skillsPage.class-selected .skill-node-title {
-    gap: 12px;
-  }
-
-  #skillsPage.class-selected .skill-node-icon {
-    width: 42px;
-    height: 42px;
-    padding: 4px;
-  }
-
-  #skillsPage.class-selected .skill-node-name {
-    font-size: 12px;
-  }
-
-  #skillsPage.class-selected .skill-level-text {
-    min-width: 78px;
-    font-size: 10px;
-  }
-
-  #skillsPage.class-selected .ability-upgrade-button {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    min-height: 36px;
-    font-size: 14px;
-  }
-
-  .menu-hotkey-rail {
+.menu-hotkey-rail {
     width: min(164px, 100%);
     padding: 11px;
   }
@@ -4115,37 +2228,15 @@
     font-size: 11px;
   }
 
-  .menu-hotkey-stack,
-  #menuSkillHotkeyRail .skill-key-strip {
-    gap: 9px;
-  }
+  
 
-  .menu-item-hotkey-slot,
-  #menuSkillHotkeyRail .skill-key-slot {
-    min-height: 68px;
-    padding: 8px 6px 8px 36px;
-  }
+  
 
-  .menu-item-hotkey-slot .menu-hotkey-key,
-  #menuSkillHotkeyRail .skill-key-name {
-    left: 6px;
-    top: 6px;
-    width: 23px;
-    height: 23px;
-    font-size: 10px;
-  }
+  
 
-  .menu-item-hotkey-slot img,
-  #menuSkillHotkeyRail .skill-key-icon {
-    width: 35px;
-    height: 35px;
-    margin-bottom: 4px;
-  }
+  
 
-  .menu-item-hotkey-slot .menu-hotkey-item-name,
-  #menuSkillHotkeyRail .skill-key-skill {
-    font-size: 8px;
-  }
+  
 
   .menu-hotkey-rail-help {
     margin-top: 10px;
@@ -4153,17 +2244,9 @@
     line-height: 1.3;
   }
 
-  .menu-item-hotkey-slot[draggable="true"],
-  #menuSkillHotkeyRail .skill-key-slot[draggable="true"] {
-    cursor: grab;
-  }
+  
 
-  .menu-item-hotkey-slot.dragging,
-  #menuSkillHotkeyRail .skill-key-slot.dragging {
-    cursor: grabbing;
-    opacity: .58;
-    border-color: #e1c86e;
-  }
+  
 
   @media (max-width: 980px) {
     #inventoryOverlay {
@@ -4182,66 +2265,31 @@
       padding: 5px;
     }
 
-    .menu-hotkey-rail-title,
-    .menu-hotkey-rail-help,
-    .menu-item-hotkey-slot .menu-hotkey-item-name,
-    #menuSkillHotkeyRail .skill-key-skill {
-      display: none;
-    }
+    
 
-    .menu-item-hotkey-slot,
-    #menuSkillHotkeyRail .skill-key-slot {
-      min-height: 50px;
-      padding: 5px 4px 4px 27px;
-    }
+    
 
-    .menu-item-hotkey-slot img,
-    #menuSkillHotkeyRail .skill-key-icon {
-      width: 26px;
-      height: 26px;
-      margin-top: 7px;
-    }
+    
 
-    .menu-item-hotkey-slot .menu-hotkey-key,
-    #menuSkillHotkeyRail .skill-key-name {
-      left: 3px;
-      top: 3px;
-      width: 19px;
-      height: 19px;
-      font-size: 8px;
-    }
+    
 
-    .inventory-tab,
-    .inventory-action-button {
-      padding: 9px 8px;
-      font-size: 11px;
-    }
-
-    .inventory-grid {
+.inventory-grid {
       grid-template-columns: repeat(4, minmax(68px, 1fr));
     }
 
-    .menu-item,
-    .equip-choice {
+    .menu-item {
       min-height: 76px;
       font-size: 10px;
     }
 
-    .menu-item img,
-    .equip-choice img {
+    .menu-item img {
       width: 34px;
       height: 34px;
     }
 
-    #skillsPage.class-selected .skill-node {
-      min-height: 62px;
-      padding: 8px 10px;
-    }
+    
 
-    #skillsPage.class-selected .skill-node-icon {
-      width: 36px;
-      height: 36px;
-    }
+    
   }
 
 
@@ -4256,9 +2304,7 @@
     z-index: 270;
   }
 
-  .skill-detail-tooltip {
-    z-index: 275;
-  }
+  
 
   #menuFeedbackToast {
     z-index: 280;
@@ -4276,13 +2322,7 @@
       max-height: min(920px, calc(100vh - 28px));
     }
 
-    .inventory-tab,
-    .inventory-action-button {
-      padding: 15px 18px;
-      font-size: 16px;
-    }
-
-    #inventoryClose {
+#inventoryClose {
       width: 52px;
       font-size: 22px;
     }
@@ -4311,15 +2351,13 @@
       margin-bottom: 22px;
     }
 
-    .menu-item,
-    .equip-choice {
+    .menu-item {
       min-height: 116px;
       gap: 10px;
       font-size: 14px;
     }
 
-    .menu-item img,
-    .equip-choice img {
+    .menu-item img {
       width: 54px;
       height: 54px;
     }
@@ -4355,36 +2393,11 @@
       height: 60px;
     }
 
-    .equipped-slot-label,
-    .gear-subtab {
-      font-size: 13px;
-    }
-
-    .gear-subtab {
+    .equipped-slot-label {
       min-height: 42px;
     }
 
-    .equip-options {
-      grid-template-columns: repeat(3, minmax(104px, 1fr));
-      gap: 13px;
-    }
-
-    #skillsPage.class-selected .skill-node {
-      min-height: 92px;
-      padding: 13px 16px;
-      gap: 14px;
-    }
-
-    #skillsPage.class-selected .skill-node-icon {
-      width: 52px;
-      height: 52px;
-    }
-
-    #skillsPage.class-selected .skill-node-name {
-      font-size: 14px;
-    }
-
-    .menu-hotkey-rail {
+.menu-hotkey-rail {
       width: min(190px, 100%);
       padding: 14px;
     }
@@ -4394,37 +2407,15 @@
       font-size: 13px;
     }
 
-    .menu-hotkey-stack,
-    #menuSkillHotkeyRail .skill-key-strip {
-      gap: 11px;
-    }
+    
 
-    .menu-item-hotkey-slot,
-    #menuSkillHotkeyRail .skill-key-slot {
-      min-height: 80px;
-      padding: 10px 8px 10px 42px;
-    }
+    
 
-    .menu-item-hotkey-slot .menu-hotkey-key,
-    #menuSkillHotkeyRail .skill-key-name {
-      left: 8px;
-      top: 8px;
-      width: 27px;
-      height: 27px;
-      font-size: 12px;
-    }
+    
 
-    .menu-item-hotkey-slot img,
-    #menuSkillHotkeyRail .skill-key-icon {
-      width: 42px;
-      height: 42px;
-      margin-bottom: 6px;
-    }
+    
 
-    .menu-item-hotkey-slot .menu-hotkey-item-name,
-    #menuSkillHotkeyRail .skill-key-skill {
-      font-size: 10px;
-    }
+    
 
     .menu-hotkey-rail-help {
       margin-top: 12px;
@@ -4470,51 +2461,23 @@
       padding-top: 14px;
     }
 
-    .skill-detail-tooltip {
-      width: 460px;
-      padding: 20px;
-      border-width: 3px;
-      font: 13px/1.5 monospace;
-      box-shadow: 6px 6px 0 rgba(0,0,0,.42);
-    }
+    
 
-    .skill-tooltip-top {
-      grid-template-columns: 104px minmax(0, 1fr);
-      gap: 18px;
-      padding-bottom: 14px;
-    }
+    
 
-    .skill-tooltip-image-wrap {
-      width: 104px;
-      height: 104px;
-    }
+    
 
-    .skill-tooltip-image {
-      width: 76px;
-      height: 76px;
-    }
+    
 
-    .skill-tooltip-name {
-      font-size: 19px;
-    }
+    
 
-    .skill-tooltip-meta {
-      margin-top: 8px;
-      font-size: 12px;
-    }
+    
 
-    .skill-tooltip-description {
-      padding: 13px 0;
-    }
+    
 
-    .skill-tooltip-level-block {
-      padding-top: 11px;
-    }
+    
 
-    .skill-tooltip-level-title {
-      margin-bottom: 6px;
-      font-size: 12px;
-    }
+    
   }
 
   /* Mobile prototype overrides intentionally live last so the desktop
@@ -4531,13 +2494,7 @@
       z-index: 260;
     }
 
-    body:has(#inventoryOverlay.open) #onlineStatus,
-    body:has(#shopOverlay.open) #onlineStatus,
-    body:has(#craftOverlay.open) #onlineStatus,
-    body:has(#beachQuestOverlay.open) #onlineStatus,
-    body:has(#classResetConfirmOverlay.open) #onlineStatus {
-      display: block;
-    }
+    
 
     #bottomUi {
       top: 5px !important;
@@ -4557,33 +2514,15 @@
       width: 320px !important;
     }
 
-    #abilityBar {
-      right: 3px !important;
-      top: 4px !important;
-      transform: none !important;
-      grid-template-columns: 38px !important;
-      grid-template-rows: repeat(4, 38px) !important;
-      gap: 4px !important;
-    }
+    
 
-    .ability-slot {
-      width: 38px !important;
-      height: 38px !important;
-    }
+    
 
-    .ability-slot img {
-      width: 29px !important;
-      height: 29px !important;
-    }
+    
 
-    #bottomUi .hotbar-label,
-    #abilityBar .hotbar-label {
-      display: none !important;
-    }
+    
 
-    .ability-slot .ability-cooldown-text {
-      font-size: 8px !important;
-    }
+    
 
     #mobileMovePad {
       left: 4px;
@@ -4639,7 +2578,7 @@
     #mobileBuildNudgeRight { grid-column: 3; grid-row: 2; }
     #mobileBuildNudgeDown { grid-column: 2; grid-row: 3; }
 
-    body.mobile-build-cursor-mode #mobileAutoAttackButton {
+    body.mobile-build-selected-mode #mobileAutoAttackButton {
       display: none;
     }
 
@@ -4696,14 +2635,7 @@
         3px 3px 0 rgba(0,0,0,.35) !important;
     }
 
-    #mobileAttackButton.point-target-armed,
-    .ability-slot.point-target-armed {
-      border-color: #ffe078 !important;
-      box-shadow:
-        0 0 0 2px rgba(255, 224, 120, .42),
-        3px 3px 0 rgba(0,0,0,.35) !important;
-      filter: brightness(1.16);
-    }
+    
 
     /* Mobile menus use the dynamic viewport and compact controls so their
        close buttons and tabs remain reachable even with browser chrome/safe areas. */
@@ -4871,56 +2803,22 @@
       box-sizing: border-box;
     }
 
-    #inventoryOverlay .menu-hotkey-rail:not(.context-hidden) {
+    #inventoryOverlay .menu-hotkey-rail {
       display: block !important;
       width: 100%;
       padding: 4px;
       align-self: end;
     }
 
-    #inventoryOverlay .menu-hotkey-rail-title,
-    #inventoryOverlay .menu-hotkey-rail-help,
-    #inventoryOverlay .menu-hotkey-item-name,
-    #inventoryOverlay #menuSkillHotkeyRail .skill-key-skill {
-      display: none;
-    }
+    
 
-    #inventoryOverlay .menu-hotkey-stack,
-    #inventoryOverlay #menuSkillHotkeyRail .skill-key-strip {
-      flex-direction: row;
-      gap: 4px;
-    }
+    
 
-    #inventoryOverlay .menu-item-hotkey-slot,
-    #inventoryOverlay #menuSkillHotkeyRail .skill-key-slot {
-      flex: 1 1 0;
-      min-width: 0;
-      min-height: 42px;
-      padding: 4px 3px 3px 22px;
-      border-width: 1px;
-    }
+    
 
-    #inventoryOverlay .menu-item-hotkey-slot img,
-    #inventoryOverlay #menuSkillHotkeyRail .skill-key-icon {
-      width: 24px;
-      height: 24px;
-      margin: 5px auto 0;
-    }
+    
 
-    #inventoryOverlay .menu-item-hotkey-slot .menu-hotkey-key,
-    #inventoryOverlay #menuSkillHotkeyRail .skill-key-name {
-      left: 3px;
-      top: 3px;
-      width: 17px;
-      height: 17px;
-      font-size: 7px;
-    }
-
-    #menuUtilityHotkeyRail {
-      grid-column: 1 / 4 !important;
-      grid-row: 2 !important;
-      margin-right: 2px;
-    }
+    
 
     #menuItemHotkeyRail {
       grid-column: 4 / 9 !important;
@@ -4928,10 +2826,7 @@
       margin-left: 2px;
     }
 
-    #menuSkillHotkeyRail {
-      grid-column: 1 / 9 !important;
-      grid-row: 2 !important;
-    }
+    
 
     #inventoryPanel {
       grid-column: 1 / 9 !important;
@@ -4943,21 +2838,7 @@
       box-sizing: border-box;
     }
 
-    #inventoryTop {
-      flex: 0 0 auto;
-      overflow-x: auto;
-      overscroll-behavior-x: contain;
-    }
-
-    .inventory-tab,
-    .inventory-action-button {
-      flex: 0 0 auto;
-      min-height: 36px;
-      padding: 7px 8px;
-      font-size: 9px;
-    }
-
-    #inventoryClose {
+#inventoryClose {
       position: sticky;
       right: 0;
       flex: 0 0 44px;
@@ -4988,33 +2869,22 @@
       margin-bottom: 11px;
     }
 
-    .menu-item,
-    .equip-choice {
+    .menu-item {
       min-height: 62px;
       gap: 3px;
       font-size: 8px;
     }
 
-    .menu-item img,
-    .equip-choice img {
+    .menu-item img {
       width: 29px;
       height: 29px;
     }
 
-    #skillsPage.class-selected .skill-node {
-      min-height: 0;
-      padding: 7px 8px;
-    }
+    
 
-    #skillsPage.class-selected .skill-node-icon {
-      width: 32px;
-      height: 32px;
-    }
+    
 
-    .skill-bind-button,
-    .ability-upgrade-button {
-      min-height: 30px;
-    }
+    
 
     #beachQuestOverlay {
       padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
@@ -5064,9 +2934,6 @@
     }
   }
 
-
-  /* v377 world-grid pivot: legacy class/skill/talent controls are intentionally retired. */
-  .retired-system { display: none !important; }
 
   /* v401: minimap and world clock share one upper-right HUD stack. */
   #worldMiniMapStack {
@@ -5345,9 +3212,7 @@
   #inventoryOverlay.open { display: grid; }
 
   #inventoryPanel { display: contents; }
-  #menuItemHotkeyRail,
-  #menuUtilityHotkeyRail,
-  #menuSkillHotkeyRail { display: none !important; }
+  
 
   .overlay-panel-kicker {
     color: #d7c786;
@@ -5614,20 +3479,12 @@
     white-space: nowrap;
   }
 
-  #equipmentPage .gear-panel { display: none !important; }
-
-  #hotbar .hotbar-slot.drag-over {
+#hotbar .hotbar-slot.drag-over {
     border-color: #ffe078 !important;
     box-shadow: 0 0 0 2px rgba(255,224,120,.28), 3px 3px 0 rgba(0,0,0,.35) !important;
   }
 
-  /* The deprecated Stats/PvP pages and old page tabs remain non-rendered only
-     as compatibility anchors for old save/UI helpers. */
-  #statsPage,
-  #pvpPage,
-  #skillsPage,
-  #talentsPage,
-  .inventory-tab { display: none !important; }
+  
 
   @media (max-width: 820px) {
     #menuHudButton { display: none; }
@@ -5957,7 +3814,7 @@
 
     #inventoryDetailPanel { display: none !important; }
     #inventoryPanel { display: contents !important; }
-    #menuItemHotkeyRail, #menuUtilityHotkeyRail, #menuSkillHotkeyRail { display: none !important; }
+    
 
     #inventoryPage {
       grid-column: 1 !important;
@@ -6082,11 +3939,9 @@
        underneath it on wider landscape phones. */
     #menuHudButton { display: none !important; }
 
-    /* The old menu-assignment rails are desktop compatibility anchors only.
-       The real HUD 1–0 hotbar remains the mobile assignment target. */
-    #inventoryOverlay > #menuItemHotkeyRail,
-    #inventoryOverlay > #menuUtilityHotkeyRail,
-    #inventoryOverlay > #menuSkillHotkeyRail {
+    /* The desktop assignment rail is not part of the mobile menu. The live
+       1–0 HUD above the game remains the mobile assignment target. */
+    #inventoryOverlay > #menuItemHotkeyRail {
       display: none !important;
       visibility: hidden !important;
       width: 0 !important;
@@ -6285,6 +4140,29 @@
     }
   }
 
+
+  /* v430 — mobile placeable targeting polish.
+     Holding a placeable keeps the normal mobile HUD clean; the precision nudge
+     pad appears only after the first intentional world tap creates a preview. */
+  /* v429 — mobile HUD tap-target polish.
+     Keep the v428 layout, but align the left Craft lane with the dedicated
+     mobile Menu button and give the live 1–0 hotbar a little more breathing
+     room for touch input. */
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    #craftHudButton {
+      left: 2px !important;
+      top: 44px !important;
+    }
+
+    #bottomUi {
+      transform: translateX(-50%) scale(.72) !important;
+    }
+
+    #hotbar {
+      gap: 7px !important;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -6408,36 +4286,6 @@
   <div id="worldClockHud" role="status" aria-label="World time">08:00 · DAY</div>
 </div>
 
-<div id="abilityBar" class="retired-system" aria-hidden="true">
-      <div class="ability-slot empty" id="abilitySlotShift">
-        <img class="ability-slot-img" alt="" />
-        <div class="ability-cooldown-mask"></div>
-        <div class="ability-cooldown-text"></div>
-        <div class="ability-charge"></div>
-        <div class="hotbar-label">Shift</div>
-      </div>
-      <div class="ability-slot empty" id="abilitySlotSpace">
-        <img class="ability-slot-img" alt="" />
-        <div class="ability-cooldown-mask"></div>
-        <div class="ability-cooldown-text"></div>
-        <div class="ability-charge"></div>
-        <div class="hotbar-label">Space</div>
-      </div>
-      <div class="ability-slot empty" id="abilitySlotE">
-        <img class="ability-slot-img" alt="" />
-        <div class="ability-cooldown-mask"></div>
-        <div class="ability-cooldown-text"></div>
-        <div class="ability-charge"></div>
-        <div class="hotbar-label">E</div>
-      </div>
-      <div class="ability-slot empty" id="abilitySlotR">
-        <img class="ability-slot-img" alt="" />
-        <div class="ability-cooldown-mask"></div>
-        <div class="ability-cooldown-text"></div>
-        <div class="ability-charge"></div>
-        <div class="hotbar-label">R</div>
-      </div>
-</div>
 
 <div id="bottomUi">
     <div id="hotbar" aria-label="Weapons and tools 1 through 0">
@@ -6517,31 +4365,6 @@
     <div id="inventoryDetailHint">Click an item to inspect it.</div>
     <button id="inventoryDetailAction" type="button" hidden>USE</button>
   </aside>
-  <div id="menuItemHotkeyRail" class="menu-hotkey-rail" aria-label="Weapon and tool hotkeys">
-    <div class="menu-hotkey-rail-title">Weapons &amp; Tools</div>
-    <div class="menu-hotkey-stack">
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="0" tabindex="0"><span class="menu-hotkey-key">1</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="1" tabindex="0"><span class="menu-hotkey-key">2</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="2" tabindex="0"><span class="menu-hotkey-key">3</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="3" tabindex="0"><span class="menu-hotkey-key">4</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="4" tabindex="0"><span class="menu-hotkey-key">5</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="5" tabindex="0"><span class="menu-hotkey-key">6</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="6" tabindex="0"><span class="menu-hotkey-key">7</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="7" tabindex="0"><span class="menu-hotkey-key">8</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="8" tabindex="0"><span class="menu-hotkey-key">9</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-hotbar-slot="9" tabindex="0"><span class="menu-hotkey-key">0</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-    </div>
-    <div class="menu-hotkey-rail-help">Drag, or tap a weapon/tool then a slot · right-click to clear</div>
-  </div>
-  <div id="menuUtilityHotkeyRail" class="menu-hotkey-rail context-hidden retired-system" aria-label="Retired item hotkeys" aria-hidden="true">
-    <div class="menu-hotkey-rail-title">Items</div>
-    <div class="menu-hotkey-stack">
-      <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="0" tabindex="0"><span class="menu-hotkey-key">1</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="1" tabindex="0"><span class="menu-hotkey-key">2</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-      <div class="menu-item-hotkey-slot empty" data-menu-utility-slot="2" tabindex="0"><span class="menu-hotkey-key">3</span><img alt="" /><span class="menu-hotkey-item-name">Empty</span></div>
-    </div>
-    <div class="menu-hotkey-rail-help">Drag, or tap an item then a slot · right-click to clear</div>
-  </div>
   <div id="inventoryPanel">
     <div id="inventoryPage" class="inventory-page active">
       <button id="inventoryClose" aria-label="Close inventory">×</button>
@@ -6573,7 +4396,7 @@
           <span class="resource-menu-count" id="inventoryGoldSlimeBubbleCount">0</span>
         </div>
         <div class="menu-item resource-menu-item" data-resource-key="greenJellyCubes" title="Green Jelly Cube">
-          <img id="inventoryGreenJellyCubeImg" src="assets/green_jelly_cube.png?v=428" alt="Green Jelly Cube" />
+          <img id="inventoryGreenJellyCubeImg" src="assets/green_jelly_cube.png?v=431" alt="Green Jelly Cube" />
           <span class="resource-menu-count" id="inventoryGreenJellyCubeCount">0</span>
         </div>
       </div>
@@ -6602,12 +4425,12 @@
 
       <div class="menu-section-title">Building</div>
       <div id="inventoryBuildingGrid" class="inventory-grid">
-        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–0 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=428" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–0 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=428" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–0 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=428" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–0 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=428" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=428" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
-        <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–0 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=428" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–0 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=431" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–0 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=431" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–0 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=431" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–0 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=431" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=431" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–0 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=431" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="craftingTables" data-build-item="craftingTable" data-hotbar-assignable="true" data-owned-item="craftingTable" title="Crafting Table · place it to unlock advanced recipes nearby"><img id="inventoryCraftingTableImg" src="assets/wood_bench_v2.png" alt="Crafting Table" /><span class="resource-menu-count" id="inventoryCraftingTableCount">0</span></div>
       </div>
       <div id="inventoryBuildingEmpty" class="inventory-empty">No building pieces</div>
@@ -6676,568 +4499,41 @@
       <div id="equipmentDockTitle" class="overlay-panel-kicker">Equipment</div>
       <div class="equipment-layout">
         <div class="equipped-column">
-          <button type="button" class="equipped-box active" data-gear-panel="gearHeadPanel" data-equipment-slot="head">
+          <button type="button" class="equipped-box" data-equipment-slot="head">
             <div class="equipped-slot-label">Head</div>
             <img id="equippedHatImg" alt="Equipped headwear" />
             <span id="equippedHatName">Hat</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearShirtPanel" data-equipment-slot="shirt">
+          <button type="button" class="equipped-box" data-equipment-slot="shirt">
             <div class="equipped-slot-label">Shirt</div>
             <img id="equippedShirtImg" alt="Equipped shirt" />
             <span id="equippedShirtName">Traveler</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearPantsPanel" data-equipment-slot="pants">
+          <button type="button" class="equipped-box" data-equipment-slot="pants">
             <div class="equipped-slot-label">Pants</div>
             <img id="equippedPantsImg" alt="Equipped pants" />
             <span id="equippedPantsName">Traveler</span>
           </button>
-          <button type="button" class="equipped-box" data-gear-panel="gearCharmPanel" data-equipment-slot="charm">
+          <button type="button" class="equipped-box" data-equipment-slot="charm">
             <div class="equipped-slot-label">Charms</div>
             <img id="equippedCharmImg" alt="Equipped charm" />
             <span id="equippedCharmName">Empty</span>
           </button>
         </div>
 
-        <div>
-          <div id="gearHeadPanel" class="gear-panel active">
-            <div class="menu-section-title">Headwear</div>
-            <div class="equip-options">
-              <button class="equip-choice hat-choice" data-hat-index="-1">
-                <img id="equipBaseHatImg" alt="No headgear" /><span>Unequip</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="0" data-owned-item="hat_original">
-                <img id="equipHatImg" alt="Hat" /><span>Hat</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="1" data-owned-item="hat_blueCap">
-                <img id="equipCapImg" alt="Blue Cap" /><span>Blue Cap</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="2" data-owned-item="hat_wizard">
-                <img id="equipWizardHatImg" alt="Wizard Hat" /><span>Wizard Hat</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="3" data-owned-item="hat_jester">
-                <img id="equipJesterHatImg" alt="Jester Hat" /><span>Jester Hat</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="4" data-owned-item="hat_ninja">
-                <img id="equipNinjaHatImg" alt="Ninja Hat" /><span>Ninja Hat</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="5" data-owned-item="hat_knight">
-                <img id="equipKnightHatImg" alt="Knight Helm" /><span>Knight Helm</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="6" data-owned-item="hat_bandana">
-                <img id="equipBandanaHatImg" alt="Bandana" /><span>Bandana</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="7" data-owned-item="hat_ranger">
-                <img id="equipRangerHatImg" alt="Ranger Hat" /><span>Ranger Hat</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="8" data-owned-item="hat_wood">
-                <img id="equipWoodHatImg" alt="Wood Helm" /><span>Wood Helm</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="9" data-owned-item="hat_arcanist">
-                <img id="equipArcanistHatImg" alt="Arcanist Hat" /><span>Arcanist Hat</span>
-              </button>
-              <button class="equip-choice hat-choice" data-hat-index="10" data-owned-item="hat_greencap">
-                <img id="equipGreencapHatImg" alt="Greencap Cap" /><span>Greencap Cap</span>
-              </button>
-            </div>
-          </div>
 
-          <div id="gearShirtPanel" class="gear-panel">
-            <div class="menu-section-title">Shirt</div>
-            <div class="equip-options">
-              <button class="equip-choice shirt-choice" data-shirt-index="-1">
-                <img id="equipBaseShirtImg" alt="No shirt armor" /><span>Unequip</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="0" data-owned-item="shirt_traveler">
-                <img id="equipTravelerShirtImg" alt="Traveler Shirt" /><span>Traveler</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="1" data-owned-item="shirt_jester">
-                <img id="equipJesterShirtImg" alt="Jester Shirt" /><span>Jester</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="2" data-owned-item="shirt_ninja">
-                <img id="equipNinjaShirtImg" alt="Ninja Shirt" /><span>Ninja</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="3" data-owned-item="shirt_knight">
-                <img id="equipKnightShirtImg" alt="Knight Shirt" /><span>Knight</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="4" data-owned-item="shirt_ranger">
-                <img id="equipRangerShirtImg" alt="Ranger Shirt" /><span>Ranger</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="5" data-owned-item="shirt_wood">
-                <img id="equipWoodShirtImg" alt="Wood Chest" /><span>Wood</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="6" data-owned-item="shirt_arcanist">
-                <img id="equipArcanistShirtImg" alt="Arcanist Robe" /><span>Arcanist</span>
-              </button>
-              <button class="equip-choice shirt-choice" data-shirt-index="7" data-owned-item="shirt_greencap">
-                <img id="equipGreencapShirtImg" alt="Greencap Tunic" /><span>Greencap</span>
-              </button>
-            </div>
-          </div>
-
-          <div id="gearPantsPanel" class="gear-panel">
-            <div class="menu-section-title">Pants</div>
-            <div class="equip-options">
-              <button class="equip-choice pants-choice" data-pants-index="-1">
-                <img id="equipBasePantsImg" alt="No pants armor" /><span>Unequip</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="0" data-owned-item="pants_traveler">
-                <img id="equipTravelerPantsImg" alt="Traveler Pants" /><span>Traveler</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="1" data-owned-item="pants_jester">
-                <img id="equipJesterPantsImg" alt="Jester Pants" /><span>Jester</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="2" data-owned-item="pants_ninja">
-                <img id="equipNinjaPantsImg" alt="Ninja Pants" /><span>Ninja</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="3" data-owned-item="pants_knight">
-                <img id="equipKnightPantsImg" alt="Knight Pants" /><span>Knight</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="4" data-owned-item="pants_ranger">
-                <img id="equipRangerPantsImg" alt="Ranger Pants" /><span>Ranger</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="5" data-owned-item="pants_wood">
-                <img id="equipWoodPantsImg" alt="Wood Greaves" /><span>Wood</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="6" data-owned-item="pants_arcanist">
-                <img id="equipArcanistPantsImg" alt="Arcanist Skirt" /><span>Arcanist</span>
-              </button>
-              <button class="equip-choice pants-choice" data-pants-index="7" data-owned-item="pants_greencap">
-                <img id="equipGreencapPantsImg" alt="Greencap Pants" /><span>Greencap</span>
-              </button>
-            </div>
-          </div>
-
-          <div id="gearCharmPanel" class="gear-panel">
-            <div class="menu-section-title">Charms</div>
-            <div class="equip-options">
-              <button class="equip-choice charm-choice" data-charm-index="-1">
-                <img id="equipBaseCharmImg" alt="No charm" /><span>Unequip</span>
-              </button>
-              <button class="equip-choice charm-choice" data-charm-index="0" data-owned-item="charm_woodRing">
-                <img id="equipWoodRingImg" alt="Wood Ring" /><span>Wood Ring</span>
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
-    <div id="skillsPage" class="inventory-page retired-system" aria-hidden="true">
-      <div id="classSelectionGate" class="class-selection-gate">
-        <div class="class-selection-title">Choose Your Class</div>
-        <div class="class-selection-copy">
-          Classes unlock at Level 10. Magus and Ranger are currently available; Bruiser and Rogue are coming soon. Your choice locks this character to one skill tree.
-        </div>
-        <div class="class-selection-grid">
-          <button type="button" class="class-selection-button" data-class-choice="might">
-            <strong>Bruiser</strong>
-            <span>Close-range physical techniques and force.</span>
-          </button>
-          <button type="button" class="class-selection-button" data-class-choice="arcana">
-            <strong>Magus</strong>
-            <span>Spellshred, Mirage, Ignite, and Rainbloom.</span>
-          </button>
-          <button type="button" class="class-selection-button" data-class-choice="precision">
-            <strong>Ranger</strong>
-            <span>Bow control, camouflage, traps, and focused attacks.</span>
-          </button>
-          <button type="button" class="class-selection-button" data-class-choice="guile">
-            <strong>Rogue</strong>
-            <span>Stealth and opportunistic attacks.</span>
-          </button>
-        </div>
-      </div>
-      <div class="stats-header">
-        <div class="menu-section-title" style="margin:0;">Skill Arts</div>
-        <div id="abilityPointText">Ability Points 0</div>
-      </div>
-
-      <div class="skill-category-tabs" role="tablist" aria-label="Skill categories">
-        <button type="button" class="skill-category-tab active" data-skill-category="might">Bruiser</button>
-        <button type="button" class="skill-category-tab" data-skill-category="arcana">Magus</button>
-        <button type="button" class="skill-category-tab" data-skill-category="precision">Ranger</button>
-        <button type="button" class="skill-category-tab" data-skill-category="guile">Rogue</button>
-      </div>
-
-      <div class="skill-category-panel active" data-skill-category-panel="might">
-        <div class="skill-tree">
-          <div class="skill-tree-root">Bruiser Arts</div>
-          <div class="skill-tree-branches single-skill">
-<div class="skill-node">
-            <div class="skill-node-top">
-              <div class="skill-node-title">
-                <img class="skill-node-icon" src="assets/tiger_paw_v1.png?v=428" alt="Tiger Paw" />
-                <span class="skill-node-name">Hurl moved to Tiger Paw</span>
-              </div>
-            </div>
-            <div class="skill-description">
-              Equip Tiger Paw and use primary attack to grab a nearby hurlable mob. Primary attack again to throw it. Rocks are no longer valid Hurl targets.
-            </div>
-          </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="skill-category-panel" data-skill-category-panel="arcana">
-        <div class="skill-tree">
-          <div class="skill-tree-root">Magus Arts</div>
-          <div class="skill-tree-branches">
-<div class="skill-node locked" data-skill-node="wandMastery">
-            <div class="skill-node-top">
-              <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="wandMastery" alt="Spellshred" />
-                <span class="skill-node-name">Spellshred</span>
-              </div>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Requires a wand-type weapon. Empower your basic wand strikes with tearing magic. Spellshred scales with Magic Power, gains enhanced reach, and can cleave through additional foes as it levels.
-            </div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 20</span>
-              <button class="ability-upgrade-button" data-ability-id="wandMastery">Unlock</button>
-            </div>
-          </div>
-<div class="skill-node locked" data-skill-node="fireball">
-            <div class="skill-node-top">
-              <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="fireball" alt="Ignite" />
-                <span class="skill-node-name">Ignite</span>
-              </div>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Hurl concentrated Fire-element energy at a target point. The primary target takes the full impact and On-Fire. Up to 4 additional enemies near the impact receive On-Fire only. On-Fire lasts 3 seconds and deals 20 Power per second at two ticks per second.
-            </div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 20</span>
-              <button class="ability-upgrade-button" data-ability-id="fireball">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="fireball" data-skill-key="">Clear</button>
-            </div>
-          </div>
-<div class="skill-node locked" data-skill-node="rainCloud">
-            <div class="skill-node-top">
-              <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="rainCloud" alt="Rainbloom" />
-                <span class="skill-node-name">Rainbloom</span>
-              </div>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Requires a wand-type weapon. Commit to a bloom point under your cursor when casting begins. You cannot move, attack, swap weapons, or use other abilities during the summon. Rainbloom then drifts on its own, grows slowing flammable magic grass, makes living enemies Wet, hurts ghosts, and puts out fire. Skill levels shorten the cast from 2.0s to 0.5s, strengthen the Magic Grass slow, and reduce the cooldown after the cloud expires. Casting a new Rainbloom replaces your previous Magic Grass field.
-            </div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 20</span>
-              <button class="ability-upgrade-button" data-ability-id="rainCloud">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="rainCloud" data-skill-key="">Clear</button>
-            </div>
-          </div>
-<div class="skill-node locked" data-skill-node="jesterBlink">
-            <div class="skill-node-top">
-              <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="jesterBlink" alt="Mirage" />
-                <span class="skill-node-name">Mirage</span>
-              </div>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Blink toward the cursor and leave a Mirage behind. Nearby enemies already targeting you are redirected to the illusion once; passive enemies and enemies targeting someone else are unaffected. After 0.35 seconds, press the skill again to blink back to the Mirage and consume it. Each redirected monster is released once it reaches the clone. Skill levels increase blink distance and the return window while reducing a cooldown that begins immediately on the first cast. While the clone is active, the hotbar counts down the return window; once it is consumed or expires, the hotbar reveals the already-running cooldown.
-            </div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 20</span>
-              <button class="ability-upgrade-button" data-ability-id="jesterBlink">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="jesterBlink" data-skill-key="">Clear</button>
-            </div>
-          </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="skill-category-panel" data-skill-category-panel="precision">
-        <div class="skill-tree">
-          <div class="skill-tree-root">Ranger Arts</div>
-          <div class="skill-tree-branches">
-            <div class="skill-node locked" data-skill-node="strafe">
-              <div class="skill-node-top">
-                <div class="skill-node-title">
-                  <img class="skill-node-icon" data-skill-icon="strafe" alt="Strafe" />
-                  <span class="skill-node-name">Strafe</span>
-                </div>
-                <span class="skill-status">Locked</span>
-              </div>
-              <div class="skill-description">
-                Move while drawing a bow. Without Strafe, drawing a bow roots you in place.
-              </div>
-              <div class="skill-level-row">
-                <span class="skill-level-text">LV 0 / 5</span>
-                <button class="ability-upgrade-button" data-ability-id="strafe">Unlock</button>
-              </div>
-              <div class="enhancement-note">Passive · movement speed increases with each level</div>
-            </div>
-            <div class="skill-node locked" data-skill-node="camouflage">
-              <div class="skill-node-top">
-                <div class="skill-node-title">
-                  <img class="skill-node-icon" data-skill-icon="camouflage" alt="Camouflage" />
-                  <span class="skill-node-name">Camouflage</span>
-                </div>
-                <span class="skill-status">Locked</span>
-              </div>
-              <div class="skill-description">
-                Stand still beneath a tree canopy or inside tall grass for 1 second to become camouflaged. Your first attack breaks Camouflage. If that opening attack hits, the target is briefly confused before normal aggro begins.
-              </div>
-              <div class="skill-level-row">
-                <span class="skill-level-text">LV 0 / 1</span>
-                <button class="ability-upgrade-button" data-ability-id="camouflage">Unlock</button>
-              </div>
-              <div class="enhancement-note">Passive · cover hides you from enemy sight · 0.5s grace after leaving cover</div>
-            </div>
-            <div class="skill-node locked" data-skill-node="focusFire">
-              <div class="skill-node-top">
-                <div class="skill-node-title">
-                  <img class="skill-node-icon" data-skill-icon="focusFire" alt="Focus Fire" />
-                  <span class="skill-node-name">Focus Fire</span>
-                </div>
-                <span class="skill-status">Locked</span>
-              </div>
-              <div class="skill-description">
-                Hold to pulse a targeting ring, then release an arcing marker arrow. Land it on a monster to unleash a 5-second rapid-fire barrage. Early hits are weak; the last consecutive hits carry most of the damage, rewarding an uninterrupted lock while burning arrows quickly.
-              </div>
-              <div class="skill-level-row">
-                <span class="skill-level-text">LV 0 / 1</span>
-                <button class="ability-upgrade-button" data-ability-id="focusFire">Unlock</button>
-              </div>
-              <div class="skill-bind-label">Bind key</div>
-              <div class="skill-bind-row">
-                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="shift">Shift</button>
-                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="space">Space</button>
-                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="e">E</button>
-                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="r">R</button>
-                <button class="skill-bind-button" data-skill-id="focusFire" data-skill-key="">Clear</button>
-              </div>
-              <div class="enhancement-note">Active · Bow required · damage interrupts the channel</div>
-            </div>
-            <div class="skill-node locked" data-skill-node="huntersSnare">
-              <div class="skill-node-top">
-                <div class="skill-node-title">
-                  <img class="skill-node-icon" data-skill-icon="huntersSnare" alt="Hunter's Snare" />
-                  <span class="skill-node-name">Hunter's Snare</span>
-                </div>
-                <span class="skill-status">Locked</span>
-              </div>
-              <div class="skill-description">
-                Store up to 3 trap charges. A trap placed on the field keeps its charge slot occupied until it springs; freed charges recover every 15 seconds. The first ground monster to step on it is briefly rooted, then heavily slowed.
-              </div>
-              <div class="skill-level-row">
-                <span class="skill-level-text">LV 0 / 1</span>
-                <button class="ability-upgrade-button" data-ability-id="huntersSnare">Unlock</button>
-              </div>
-              <div class="skill-bind-label">Bind key</div>
-              <div class="skill-bind-row">
-                <button class="skill-bind-button" data-skill-id="huntersSnare" data-skill-key="shift">Shift</button>
-                <button class="skill-bind-button" data-skill-id="huntersSnare" data-skill-key="space">Space</button>
-                <button class="skill-bind-button" data-skill-id="huntersSnare" data-skill-key="e">E</button>
-                <button class="skill-bind-button" data-skill-id="huntersSnare" data-skill-key="r">R</button>
-                <button class="skill-bind-button" data-skill-id="huntersSnare" data-skill-key="">Clear</button>
-              </div>
-              <div class="enhancement-note">Active · <span id="hunterSnareChargeText">3 / 3 charges</span> · 1.25s setup · up to 3 traps</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="skill-category-panel" data-skill-category-panel="guile">
-        <div class="skill-tree">
-          <div class="skill-tree-root">Rogue Arts</div>
-          <div class="skill-tree-branches">
-<div class="skill-node locked" data-skill-node="shadowHide">
-            <div class="skill-node-top">
-              <div class="skill-node-title">
-                <img class="skill-node-icon" data-skill-icon="shadowHide" alt="Shadow Hide" />
-                <span class="skill-node-name">Shadow Hide</span>
-              </div>
-              <span class="skill-status">Locked</span>
-            </div>
-            <div class="skill-description">
-              Vanish in smoke and avoid enemy aggro/contact. Your first melee hit from hiding is critical.
-            </div>
-            <div class="skill-level-row">
-              <span class="skill-level-text">LV 0 / 5</span>
-              <button class="ability-upgrade-button" data-ability-id="shadowHide">Unlock</button>
-            </div>
-            <div class="skill-bind-label">Bind key</div>
-            <div class="skill-bind-row">
-              <button class="skill-bind-button" data-skill-id="shadowHide" data-skill-key="shift">Shift</button>
-              <button class="skill-bind-button" data-skill-id="shadowHide" data-skill-key="space">Space</button>
-              <button class="skill-bind-button" data-skill-id="shadowHide" data-skill-key="e">E</button>
-              <button class="skill-bind-button" data-skill-id="shadowHide" data-skill-key="r">R</button>
-              <button class="skill-bind-button" data-skill-id="shadowHide" data-skill-key="">Clear</button>
-            </div>
-          </div>
-
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div id="talentsPage" class="inventory-page retired-system" aria-hidden="true">
-      <div class="stats-header">
-        <div class="menu-section-title" style="margin:0;">Talents</div>
-        <div style="color:#d7c786;font:8px/1 monospace;">Gathering & utility growth</div>
-      </div>
-
-      <div class="menu-section-title">Gathering</div>
-      <div class="skill-card">
-        <div class="skill-card-top">
-          <span>Woodcutting</span>
-          <span id="woodcuttingLevelText">LV 1</span>
-        </div>
-        <div class="skill-bar">
-          <div class="skill-fill" id="woodcuttingFill"></div>
-          <div class="skill-bar-text" id="woodcuttingBarText">0 / 5 EXP</div>
-        </div>
-      </div>
-
-      <div class="skill-card" style="margin-top:10px;">
-        <div class="skill-card-top">
-          <span>Mining</span>
-          <span id="miningLevelText">LV 1</span>
-        </div>
-        <div class="skill-bar">
-          <div class="skill-fill" id="miningFill"></div>
-          <div class="skill-bar-text" id="miningBarText">0 / 5 EXP</div>
-        </div>
-      </div>
-
-      <div class="skill-card" style="margin-top:10px;">
-        <div class="skill-card-top">
-          <span>Flower Harvesting</span>
-          <span id="flowerHarvestingLevelText">LV 1</span>
-        </div>
-        <div class="skill-bar">
-          <div class="skill-fill" id="flowerHarvestingFill"></div>
-          <div class="skill-bar-text" id="flowerHarvestingBarText">0 / 5 EXP</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="statsPage" class="inventory-page">
-      <div class="stats-header">
-        <div class="menu-section-title" style="margin:0;">Stats</div>
-      </div>
-
-      <div class="combat-stats-grid">
-        <div class="stat-row stat-readonly" title="Your current weapon's Attack Power plus its STR/DEX/LUCK/INT scaling.">
-          <span>Attack Power</span><span class="stat-value" id="statAttackPower">0</span><span></span>
-        </div>
-        <div class="stat-row stat-readonly" title="Your current wand's Magic Power plus INT and smaller contributions from your other stats.">
-          <span>Magic Power</span><span class="stat-value" id="statMagicPower">0</span><span></span>
-        </div>
-        <div class="stat-row stat-readonly" title="Armor reduces incoming physical damage.">
-          <span>Armor</span><span class="stat-value" id="statArmor">0</span><span></span>
-        </div>
-        <div class="stat-row stat-readonly" title="Resist reduces incoming magical damage.">
-          <span>Resist</span><span class="stat-value" id="statResist">0</span><span></span>
-        </div>
-        <div class="stat-row stat-readonly" title="Your normal movement speed before temporary slows or skill-specific movement modifiers.">
-          <span>Move Speed</span><span class="stat-value" id="statMoveSpeed">72</span><span></span>
-        </div>
-        <div class="stat-row stat-readonly" title="Accuracy is reserved for the future hit-check system.">
-          <span>Accuracy</span><span class="stat-value stat-placeholder" id="statAccuracy">—</span><span></span>
-        </div>
-        <div class="stat-row stat-readonly stat-mastery-wide" title="The minimum percentage of your calculated maximum damage. Higher Mastery makes damage more consistent without raising its maximum.">
-          <span id="statMasteryLabel">Mastery</span><span class="stat-value" id="statMastery">15%</span><span></span>
-        </div>
-      </div>
-
-      <div class="stats-divider"></div>
-
-      <div class="core-stats-grid">
-        <div class="stat-row">
-          <span>STR</span><span class="stat-value" id="statStrength">0</span><button class="stat-plus" data-stat="strength">+</button>
-        </div>
-        <div class="stat-row">
-          <span>DEX</span><span class="stat-value" id="statDex">0</span><button class="stat-plus" data-stat="dex">+</button>
-        </div>
-        <div class="stat-row">
-          <span>LUK</span><span class="stat-value" id="statLuck">0</span><button class="stat-plus" data-stat="luck">+</button>
-        </div>
-        <div class="stat-row">
-          <span>INT</span><span class="stat-value" id="statInt">0</span><button class="stat-plus" data-stat="int">+</button>
-        </div>
-      </div>
-      <div id="skillPointText">Stat Points 0</div>
-    </div>
-
-    <div id="pvpPage" class="inventory-page">
-      <div class="pvp-panel-card">
-        <div class="pvp-panel-heading">
-          <div>Player vs Player</div>
-          <div id="pvpStatusBadge" class="pvp-status-badge">OFF</div>
-        </div>
-        <div id="pvpStatusText" class="pvp-status-text">PvP is disabled.</div>
-        <div class="pvp-description">
-          You can only damage players who also have PvP enabled. Physical weapons deal reduced damage against players.
-        </div>
-        <button id="pvpToggleButton" type="button" class="pvp-toggle-button">Enable PvP</button>
-        <div id="pvpLockText" class="pvp-lock-text">Sword, Axe, Katana and Bow attacks are enabled for this first test.</div>
-      </div>
-    </div>
-
+    
+    
+    
+    
     <div id="inventoryFooter">Esc to close</div>
   </div>
 
-  <div id="menuSkillHotkeyRail" class="menu-hotkey-rail context-hidden retired-system" aria-label="Retired skill hotkeys" aria-hidden="true">
-    <div class="menu-hotkey-rail-title">Skills</div>
-    <div class="skill-key-strip">
-      <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotShiftIcon" alt="" /><span class="skill-key-name">Shift</span><span class="skill-key-skill" id="skillSlotShift">Empty</span></div>
-      <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotSpaceIcon" alt="" /><span class="skill-key-name">Space</span><span class="skill-key-skill" id="skillSlotSpace">Empty</span></div>
-      <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotEIcon" alt="" /><span class="skill-key-name">E</span><span class="skill-key-skill" id="skillSlotE">Empty</span></div>
-      <div class="skill-key-slot"><img class="skill-key-icon" id="skillSlotRIcon" alt="" /><span class="skill-key-name">R</span><span class="skill-key-skill" id="skillSlotR">Empty</span></div>
-    </div>
-    <div class="menu-hotkey-rail-help">Drag, or tap an active skill then a slot · right-click to clear</div>
   </div>
-</div>
 
-<div id="skillDetailTooltip" class="skill-detail-tooltip" aria-hidden="true">
-  <div class="skill-tooltip-top">
-    <div class="skill-tooltip-image-wrap"><img id="skillTooltipImage" class="skill-tooltip-image" alt="" /></div>
-    <div>
-      <div id="skillTooltipName" class="skill-tooltip-name"></div>
-      <div id="skillTooltipMeta" class="skill-tooltip-meta"></div>
-    </div>
-  </div>
-  <div id="skillTooltipDescription" class="skill-tooltip-description"></div>
-  <div class="skill-tooltip-level-block">
-    <div class="skill-tooltip-level-title">Current Level</div>
-    <div id="skillTooltipCurrent" class="skill-tooltip-level-copy"></div>
-  </div>
-  <div class="skill-tooltip-level-block">
-    <div class="skill-tooltip-level-title">Next Level</div>
-    <div id="skillTooltipNext" class="skill-tooltip-level-copy"></div>
-  </div>
-</div>
 
 <div id="itemDetailTooltip" class="item-detail-tooltip" aria-hidden="true">
   <div class="item-detail-top">
@@ -7259,14 +4555,12 @@
     </div>
     <div id="shopTabs" role="tablist" aria-label="Shop categories">
       <button type="button" class="shop-tab active" data-shop-filter="all">All</button>
-      <button type="button" class="shop-tab" data-shop-filter="common">Common</button>
-      <button type="button" class="shop-tab" data-shop-filter="might">Bruiser</button>
-      <button type="button" class="shop-tab" data-shop-filter="arcana">Magus</button>
-      <button type="button" class="shop-tab" data-shop-filter="precision">Ranger</button>
-      <button type="button" class="shop-tab" data-shop-filter="guile">Rogue</button>
+      <button type="button" class="shop-tab" data-shop-filter="weapons">Weapons</button>
+      <button type="button" class="shop-tab" data-shop-filter="armor">Armor</button>
+      <button type="button" class="shop-tab" data-shop-filter="consumables">Consumables</button>
     </div>
     <div id="shopGrid"></div>
-    <div id="shopFooter">Prices vary by item · Level/class requirements apply · Esc to close</div>
+    <div id="shopFooter">Prices vary by item · Level requirements apply · Esc to close</div>
   </div>
 </div>
 
@@ -7295,11 +4589,11 @@
     </div>
     <div id="craftGrid" role="list" aria-label="Available crafting recipes">
       <button class="craft-recipe" type="button" data-craft-recipe="craftingTable"><img src="assets/wood_bench_v2.png" alt="Wood Crafting Table" /><span class="craft-recipe-name">Wood Crafting Table</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=428" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=428" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=428" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=428" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=428" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=428" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=431" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=431" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=431" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=431" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=431" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=431" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="testWoodSupply"><img alt="Wood" /><span class="craft-recipe-name">Test Wood +100</span><span class="craft-recipe-cost">FREE · TEST SUPPLY</span><span class="craft-recipe-status">TAKE</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="arrows"><img id="craftArrowsImg" alt="Arrows" /><span class="craft-recipe-name">Arrows ×50</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftArrowWoodIcon" alt="Wood" /><span class="craft-cost-value">5</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftArrowStoneIcon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -7307,11 +4601,11 @@
       <button class="craft-recipe" type="button" data-craft-recipe="attackPotion"><img id="craftAttackPotionImg" alt="Attack Potion" /><span class="craft-recipe-name">Attack Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="whiteFlowers"><img class="craft-ingredient-icon" id="craftAttackWhiteIcon" alt="White Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="magicPotion"><img id="craftMagicPotionImg" alt="Magic Potion" /><span class="craft-recipe-name">Magic Potion</span><span class="craft-recipe-cost"><span data-craft-ingredient="blueFlowers"><img class="craft-ingredient-icon" id="craftMagicBlueIcon" alt="Blue Flower" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
 
-      <button class="craft-recipe" type="button" data-craft-recipe="recoveryPickaxe"><img id="craftRecoveryPickaxeImg" src="assets/pickaxe_v6.png?v=428" alt="Recovery Pickaxe" /><span class="craft-recipe-name">Recovery Pickaxe</span><span class="craft-recipe-cost">FREE · ONLY IF MISSING</span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="recoveryPickaxe"><img id="craftRecoveryPickaxeImg" src="assets/pickaxe_v6.png?v=431" alt="Recovery Pickaxe" /><span class="craft-recipe-name">Recovery Pickaxe</span><span class="craft-recipe-cost">FREE · ONLY IF MISSING</span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodSword"><img id="craftWoodSwordImg" alt="Wood Sword" /><span class="craft-recipe-name">Wood Sword</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftSwordWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodBow"><img id="craftWoodBowImg" alt="Wood Bow" /><span class="craft-recipe-name">Wood Bow</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftBowWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="shepherdStaff"><img id="craftShepherdStaffImg" alt="Shepherd Staff" /><span class="craft-recipe-name">Shepherd Staff</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftStaffWoodIcon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
-      <button class="craft-recipe" type="button" data-craft-recipe="tigerPaw"><img id="craftTigerPawImg" src="assets/tiger_paw_v1.png?v=428" alt="Tiger Paw" /><span class="craft-recipe-name">Tiger Paw</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTigerPawWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftTigerPawStoneIcon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="tigerPaw"><img id="craftTigerPawImg" src="assets/tiger_paw_v1.png?v=431" alt="Tiger Paw" /><span class="craft-recipe-name">Tiger Paw</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTigerPawWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" id="craftTigerPawStoneIcon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
 
       <button class="craft-recipe" type="button" data-craft-recipe="woodHelm"><img id="craftWoodHelmImg" alt="Wood Helm" /><span class="craft-recipe-name">Wood Helm</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftHelmWoodIcon" alt="Wood" /><span class="craft-cost-value">8</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodChest"><img id="craftWoodChestImg" alt="Wood Chest" /><span class="craft-recipe-name">Wood Chest</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftChestWoodIcon" alt="Wood" /><span class="craft-cost-value">12</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
@@ -7334,22 +4628,11 @@
   </div>
 </div>
 
-<div id="classResetConfirmOverlay" aria-hidden="true">
-  <div id="classResetConfirmPanel" role="dialog" aria-modal="true" aria-labelledby="classResetConfirmTitle" aria-describedby="classResetConfirmQuestion">
-    <img id="classResetConfirmIcon" src="assets/class_reset_crystal.png" alt="" />
-    <div id="classResetConfirmTitle">Reset Crystal</div>
-    <div id="classResetConfirmQuestion">Reset class and skill points?</div>
-    <div id="classResetConfirmButtons">
-      <button id="classResetYes" type="button">Yes</button>
-      <button id="classResetNo" type="button">No</button>
-    </div>
-  </div>
-</div>
 
 <div id="beachQuestOverlay" aria-hidden="true">
   <div id="beachQuestPanel" role="dialog" aria-modal="true" aria-labelledby="beachQuestTitle">
     <div id="beachQuestTop">
-      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=428" alt="Beach girl" />
+      <img id="beachQuestNpc" src="assets/beach_girl_npc.png?v=431" alt="Beach girl" />
       <div id="beachQuestTitle">Crab Beach</div>
       <button id="beachQuestClose" type="button" aria-label="Close conversation">×</button>
     </div>
@@ -7371,36 +4654,35 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=428"></script>
-<script src="/shared/terrain-rules.js?v=428"></script>
-<script src="/shared/terrain-presentation.js?v=428"></script>
-<script src="/shared/combat-balance.js?v=428"></script>
-<script src="/shared/ability-scaling.js?v=428"></script>
-<script src="/shared/rain-field.js?v=428"></script>
-<script src="/shared/weather-rules.js?v=428"></script>
-<script src="/shared/camouflage-rules.js?v=428"></script>
-<script src="/shared/enemy-net-protocol.js?v=428"></script>
-<script src="/shared/structure-geometry.js?v=428"></script>
-<script src="/shared/structure-topology.js?v=428"></script>
-<script src="/shared/player-net-protocol.js?v=428"></script>
-<script src="/client-config.js?v=428"></script>
-<script src="/client-utils.js?v=428"></script>
-<script src="/client-world.js?v=428"></script>
-<script src="/client-maps.js?v=428"></script>
-<script src="/client-enemies.js?v=428"></script>
-<script src="/client-enemy-runtime.js?v=428"></script>
-<script src="/client-enemy-rendering.js?v=428"></script>
-<script src="/client-combat.js?v=428"></script>
-<script src="/client-abilities.js?v=428"></script>
-<script src="/client-magus-abilities.js?v=428"></script>
-<script src="/client-class-abilities.js?v=428"></script>
-<script src="/client-status.js?v=428"></script>
-<script src="/client-fire-environment.js?v=428"></script>
-<script src="/client-network.js?v=428"></script>
-<script src="/client-simulation-foundation.js?v=428"></script>
-<script src="/game.js?v=428"></script>
-<script src="/client-terrain.js?v=428"></script>
-<script src="/client-input.js?v=428"></script>
-<script src="/client-app.js?v=428"></script>
+<script src="/shared/world-content-runtime.js?v=431e"></script>
+<script src="/shared/terrain-rules.js?v=431e"></script>
+<script src="/shared/terrain-presentation.js?v=431e"></script>
+<script src="/shared/combat-balance.js?v=431e"></script>
+<script src="/shared/action-balance.js?v=431e"></script>
+<script src="/shared/rain-field.js?v=431e"></script>
+<script src="/shared/weather-rules.js?v=431e"></script>
+<script src="/shared/enemy-net-protocol.js?v=431e"></script>
+<script src="/shared/structure-geometry.js?v=431e"></script>
+<script src="/shared/structure-topology.js?v=431e"></script>
+<script src="/shared/player-net-protocol.js?v=431e"></script>
+<script src="/client-config.js?v=431e"></script>
+<script src="/client-utils.js?v=431e"></script>
+<script src="/client-world.js?v=431e"></script>
+<script src="/client-maps.js?v=431e"></script>
+<script src="/client-enemies.js?v=431e"></script>
+<script src="/client-enemy-runtime.js?v=431e"></script>
+<script src="/client-enemy-rendering.js?v=431e"></script>
+<script src="/client-combat.js?v=431e"></script>
+<script src="/client-actions.js?v=431e"></script>
+<script src="/client-wand-actions.js?v=431e"></script>
+<script src="/client-tiger-paw-actions.js?v=431e"></script>
+<script src="/client-status.js?v=431e"></script>
+<script src="/client-fire-environment.js?v=431e"></script>
+<script src="/client-network.js?v=431e"></script>
+<script src="/client-simulation-foundation.js?v=431e"></script>
+<script src="/game.js?v=431e"></script>
+<script src="/client-terrain.js?v=431e"></script>
+<script src="/client-input.js?v=431e"></script>
+<script src="/client-app.js?v=431e"></script>
 </body>
 </html>

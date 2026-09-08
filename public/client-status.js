@@ -95,25 +95,11 @@ function igniteEnemyFromSpread(
 
   if (!ignited) return;
 
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected
-  ) {
-    sendEnemyAction(
-      enemy,
-      "ignite"
-    );
-  }
 }
 
 function extinguishEnemy(enemy) {
   if (!enemy) return;
   clearLocalBurnStatus(enemy);
-
-  sendEnemyAction(
-    enemy,
-    "extinguish"
-  );
 }
 
 function updatePlayerBurnStatus(dt) {
@@ -143,7 +129,7 @@ function updatePlayerBurnStatus(dt) {
     player.burnTime > 0
   ) {
     // v253: Burn damage is fully server-clocked. The client keeps only this
-    // presentation timer; there is deliberately no 2 Hz playerDamageRequest.
+    // Presentation timer only; burn damage remains server-authoritative.
     player.burnTickTimer +=
       player.burnTickInterval;
   }

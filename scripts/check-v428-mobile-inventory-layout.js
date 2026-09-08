@@ -9,19 +9,19 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('?v=428'));
+assert.strictEqual(pkg.version, "0.6.11.431");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('?v=431e'));
 
 const start = html.indexOf('/* v428 — mobile inventory layout rebuild.');
 assert(start >= 0, "v428 mobile layout block missing");
 const css = html.slice(start, html.indexOf('</style>', start));
 
-// iOS must not render the retired assignment rail or duplicate desktop MENU button.
+// The retired duplicate assignment rail is gone entirely; mobile keeps its own MENU control.
 assert(css.includes('#menuHudButton { display: none !important; }'));
-assert(css.includes('#inventoryOverlay > #menuItemHotkeyRail'));
-assert(css.includes('visibility: hidden !important;'));
+assert(!html.includes('id="menuItemHotkeyRail"'));
+assert(!html.includes('data-menu-hotbar-slot='));
 
 // Mobile must use a concrete panel container rather than Safari-sensitive display:contents.
 assert(css.includes('#inventoryPanel {'));

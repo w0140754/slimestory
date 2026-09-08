@@ -266,7 +266,7 @@
   // stop at the first void boundary. Water/stone remain legitimate terrain:
   // this helper is specifically about the edge of the authored map.
   //
-  // It is intentionally shared by client + server so targeted abilities can
+  // It is intentionally shared by client + server so targeted actions can
   // preview the same point the authoritative simulation will accept.
   function clampSegmentToNonVoid(
     mapDefinition,
@@ -300,7 +300,7 @@
     }
 
     // A one-pixel sample keeps the resolved point visually tight to an 8px
-    // terrain edge while remaining tiny work for an occasional ability cast.
+    // terrain edge while remaining tiny work for an occasional targeted action.
     const steps = Math.max(1, Math.ceil(distance));
     let lastX = sx;
     let lastY = sy;

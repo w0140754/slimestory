@@ -10,18 +10,16 @@ const game = read("public", "game.js");
 const config = read("public", "client-config.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.428");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert.strictEqual(pkg.version, "0.6.11.431");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
 assert.strictEqual(world.version, 414);
 
-assert(server.includes("function floorAcrossBuildEdge(mapId, floorX, floorY, edge)"));
 assert(!server.includes('reason = "interiorEdge"'), "walls/doors should be allowed between neighboring floor tiles");
 assert(server.includes("function doorHasFlankingWalls(mapId, wall)"));
 assert(server.includes('structure?.kind === "woodWall"'));
 assert(server.includes('reason = "doorNeedsWalls"'));
 
-assert(game.includes("function floorExistsAcrossBuildEdge(floorX, floorY, edge)"));
 assert(game.includes("function doorCandidateHasFlankingWalls(candidate)"));
 assert(!game.includes("if (floorExistsAcrossBuildEdge(candidate.floorX, candidate.floorY, candidate.edge)) return null;"), "client preview must allow floor-to-floor boundaries");
 assert(game.includes('if (kind === "woodDoor" && !doorCandidateHasFlankingWalls(candidate)) return null;'));

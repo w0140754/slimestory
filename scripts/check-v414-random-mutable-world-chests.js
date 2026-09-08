@@ -15,12 +15,12 @@ const input = read("public", "client-input.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.431");
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.schemaVersion, 2);
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/game.js?v=428'));
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('/game.js?v=431'));
 
 function dims(file) {
   const b = fs.readFileSync(file);
@@ -28,8 +28,8 @@ function dims(file) {
 }
 assert.deepStrictEqual(dims(path.join(root, "public/assets/building/chest_closed_v414.png")), [16, 16]);
 assert.deepStrictEqual(dims(path.join(root, "public/assets/building/chest_open_v414.png")), [16, 16]);
-assert(game.includes('chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=428")'));
-assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=428")'));
+assert(game.includes('chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=431")'));
+assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=431")'));
 assert(game.includes("function drawChestStructure("));
 assert(html.includes('data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true"'));
 assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'));
@@ -88,7 +88,8 @@ assert(server.includes('structure.kind === "chest" && chestLockOwner(structure.i
 assert(server.includes('structure.kind === "chest" && chestHasLoot(structure)'), "all non-empty chests remain protected from reclaim");
 assert(server.includes('message?.kind === "chest" ? "chest" : message?.kind === "craftingTable" ? "craftingTable" : null'));
 assert(server.includes('kind === "chest" ? "chests" : kind === "craftingTable" ? "craftingTables" : "torches"'));
-assert(server.includes("function handleChestToggle("));
+assert(!server.includes("handleChestToggle("), "retired chestToggle compatibility handler must stay removed");
+assert(!server.includes('case "chestToggle"'), "retired chestToggle packet route must stay removed");
 assert(network.includes("requestChestContextOpen(chestId)"));
 
 console.log("v414 random/mutable world + chest check passed: seeded variation, real generated structures, map-local mutation deltas, authored chest sprites, harvest/re-place lifecycle, and no idle mutation traffic.");

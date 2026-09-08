@@ -44,7 +44,7 @@ async function connect() {
   });
   await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
   const welcome = await waitForMessage(socket, "welcome");
-  if (welcome.buildVersion !== "6-11-428") throw new Error(`unexpected build ${welcome.buildVersion}`);
+  if (welcome.buildVersion !== "6-11-431") throw new Error(`unexpected build ${welcome.buildVersion}`);
   return socket;
 }
 
@@ -57,24 +57,19 @@ async function run() {
     owner.send(JSON.stringify({ type: "playerStatePatch", player: { mapId: MAP_ID, x: GRASS_X - 16, y: GRASS_Y + 3, weaponIndex: 0, attackAimAngle: 0 } }));
     await new Promise(resolve => setTimeout(resolve, 80));
 
-    owner.send(JSON.stringify({ type: "environmentCatalog", mapId: MAP_ID, entities: [{ id: GRASS_ID, kind: "grass", x: GRASS_X, y: GRASS_Y, width: GRASS_WIDTH }] }));
-    await new Promise(resolve => setTimeout(resolve, 100));
-
     const cutPatch = waitForMessage(owner, "environmentPatch", m => m.mapId === MAP_ID && Array.isArray(m.entities) && m.entities.some(e => e.id === GRASS_ID && e.cut === true));
     owner.send(JSON.stringify({ type: "environmentAction", action: "cutGrass", entityId: GRASS_ID }));
     await cutPatch;
 
-    // Re-registering the default catalog must not resurrect authoritative cut state.
-    owner.send(JSON.stringify({ type: "environmentCatalog", mapId: MAP_ID, entities: [{ id: GRASS_ID, kind: "grass", x: GRASS_X, y: GRASS_Y, width: GRASS_WIDTH }] }));
-    await new Promise(resolve => setTimeout(resolve, 80));
-
+    // A reconnect receives only the authoritative mutation snapshot; there is
+    // no client-uploaded environment catalog to overwrite server state.
     const observer = await connect();
     const sparse = await waitForMessage(observer, "environmentSnapshot", m => m.mapId === MAP_ID && Array.isArray(m.entities) && m.entities.some(e => e.id === GRASS_ID));
     const grass = sparse.entities.find(e => e.id === GRASS_ID);
     if (!grass?.cut) throw new Error("cut grass resurrected for reconnecting player");
 
     owner.close(); observer.close();
-    console.log("v382 permanent-grass WebSocket smoke passed: cut state survives catalog re-registration and reconnect snapshot.");
+    console.log("v382 permanent-grass WebSocket smoke passed: server-owned cut state survives reconnect without a client catalog.");
   } finally {
     server.kill("SIGTERM");
     await new Promise(resolve => server.once("exit", resolve)).catch(() => {});

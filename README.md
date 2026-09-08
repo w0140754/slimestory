@@ -1,3 +1,87 @@
+# v6-11-431 Checkpoint 2E — Retired Weapons & Tools Rail Removal
+
+The old inventory-side **Weapons & Tools** assignment rail has been removed. The live 1–0 HUD at the top of the game is now the single assignment surface on both desktop and mobile. Inventory items can still be selected and assigned by clicking a live hotbar slot, or dragged directly onto the live hotbar while Inventory is open.
+
+This checkpoint also removes the retired rail renderer and its drag/click/context-menu event listeners. Runtime scripts use cache token `?v=431e`.
+
+Verification: 32 runtime syntax targets pass and all 92 non-WebSocket static checks pass. The 29 WebSocket smoke tests still require the local `ws` dependency.
+
+---
+
+# v6-11-431 CHECKPOINT 2D — Render/Rain cleanup regression fix
+
+- Removed the final renderer call to the retired loose-rock carry helper (`rockCarrier`).
+- Restored the constants/sequence state required by the current compact Rain Field system.
+- Browser runtime cache token advanced to `431d`.
+- Added v431 regression guards for both mistakes.
+
+# v6-11-431 CHECKPOINT 2C — Startup Runtime Regression Fix
+
+This checkpoint corrects two cleanup regressions found during real browser testing:
+
+- Restores the current compact Rain Field client registry (`temporaryRainGrassFields`). The retired per-cell Rain compatibility packets remain deleted; the registry is still required by the current server-authoritative Rain Cloud field system.
+- Makes Tiger Paw local carry/action helpers null-safe during the brief startup window before `onlineClient` is constructed. This prevents an early input from dereferencing `localPlayerId` or `connected` on `null`.
+- Client script cache token advances from `431b` to `431c` so browsers fetch the corrected runtime.
+- Adds regression assertions for both conditions.
+
+Verification: all static/runtime syntax checks reached by the regression runner pass. The WebSocket smoke portion still cannot execute in this workspace because the local `ws` dependency is not installed.
+
+---
+
+# v6-11-431 CHECKPOINT 2B — Pond Crash Cache-Bust Fix
+
+- Keeps the CHECKPOINT 2A removal of the retired mutable `pond` startup path.
+- Changes only the JavaScript `<script>` cache-buster from `?v=431` to `?v=431b`, forcing Firefox to load the corrected v431 client instead of a cached CHECKPOINT 2 copy.
+- No gameplay changes.
+
+
+### v6-11-431 checkpoint 2A startup hotfix
+- Fixed a cleanup regression where `activateMap()` still copied `state.pond` into the already-removed legacy `pond` global, causing `ReferenceError: pond is not defined` on startup.
+- Removed the obsolete dummy `pond` field from coordinate-world map state; water remains entirely terrain-defined through `WORLD_CONTENT`.
+- Added a v431 regression guard so the deleted mutable pond path cannot be reintroduced accidentally.
+
+## v6-11-431 — Legacy Systems Cleanup
+
+- Starts from **v6-11-430 Mobile Placeable Targeting & Night-Light Polish** and intentionally changes architecture rather than adding new gameplay.
+- Removed the retired learned-skill/class/stat runtime: Focus Fire, Wand Mastery, Hunter's Snare, Camouflage, Shadow Hide, Hallucination/Jester Blink, skill bindings, ability/stat points, class reset state/UI, old skill replication, obsolete enemy redirect/snare logic, and the unused skill icon/preload assets.
+- Renamed the surviving current action modules around what they actually do: `client-actions.js`, `client-wand-actions.js`, and `client-tiger-paw-actions.js`. Fireball, Rain Cloud, and Tiger Paw Hurl remain because they are **equipped-item actions**, not learned skills.
+- Replaced the old shared ability-scaling/camouflage helpers with a small `action-balance.js` for current item-action cooldown/cast constants.
+- Simplified outgoing damage to **equipment/action power → target defense/resistance/element → level gap → crit/variance**. Player STR/DEX/INT/LUK, class, mastery, and learned-skill inputs are no longer part of the formula. Combat-balance version is now **32**.
+- Equipment requirements are now **level-only**. Old class/stat requirement maps are gone, and the last misleading `equipmentAttributeRequirements()` compatibility wrapper was removed so shop/equip checks read the level requirement directly.
+- Removed the remaining map-editor files, routes, headers, helpers, and editor-era runtime hooks. Current coordinate-world content and authoritative mutations remain.
+- Removed dead gathering/talent progression state for Woodcutting, Mining, and Flower Harvesting, including no-op EXP awards, save fields, and stale HUD updates. Rock/tree/flower harvesting itself is unchanged.
+- Removed the obsolete three-slot consumable hotbar/assignment/save machinery. Potions remain Inventory consumables, while the real **1–0** belt remains the only assignment hotbar.
+- Fully retired the unreachable **PvP runtime**, not just its old tab: toggle/attack packets, combat-lock state, PvP hit calculations, PvP burn paths, marker/state replication, and related client/server bookkeeping are gone. Rain Cloud and player-owned environmental fire can still affect their owner, but not other players.
+- Removed the old client-sent player-heal RPC and stale inbound compatibility aliases such as `enemyHeal`, `enemyHitPlayer`, and `treasureResult`. Current authoritative damage/chest flows remain.
+- Removed the old client-uploaded `environmentCatalog` connection payload. The server now initializes mutable trees/grass/rocks/flowers directly from authoritative `WORLD_CONTENT` at startup and sends only sparse mutation state to players.
+- Removed the stale per-frame retired-skill HUD refresh that was repeatedly touching old icon state. Current Fire/Rain action cooldown overlays update directly on the real hotbar without rewriting image sources.
+- Removed the old Inventory tab-switching code/CSS left behind after the live combined overlay rebuild. Inventory and Equipment are now treated directly as the current simultaneous workspace instead of pretending an obsolete tab system still exists.
+- Removed the hidden pre-v422 equipment chooser: dozens of invisible Head/Shirt/Pants/Charm choice buttons, their duplicated image initialization, active-panel switching, and chooser-only CSS/listeners are gone. The current inventory → compact equipment dock drag/click/double-click flow is the only armor equip UI.
+- Removed confirmed orphan assets left behind by earlier revisions, including the duplicate `grassyrock.png`, retired fire-resistant canopy revision, and obsolete `ui/wood_roof.png`; the current referenced art remains.
+- Removed the unused class-reset crystal and old skill-art directory. Current armor themes such as Jester/Ninja/Ranger/Arcanist remain ordinary equipment art/names with no class lock.
+- Runtime JS/HTML reduction versus v430 is now about **27.8%**: **61,998 → 44,771 lines**. Major-file reductions are `server.js` **-4,021**, `index.html` **-2,725**, `game.js` **-3,944**, `client-network.js` **-1,121**, and `client-combat.js` **-599** lines.
+- Verification at this checkpoint: **32 JavaScript syntax targets + all 91 static regression checks pass with 0 failures**. The 29 WebSocket smoke scripts are retained but are not runnable in this workspace because local `node_modules/ws` is unavailable; `ws` remains declared and locked in `package.json` / `package-lock.json`.
+- World content remains **414**. Package/build version is **6-11-431** / `0.6.11.431`.
+
+## v6-11-430 — Mobile Placeable Targeting & Night-Light Polish
+
+- Starts from the user-tested **v6-11-429 Mobile HUD Tap-Target Polish** build.
+- On mobile, selecting/holding a placeable (Floor, Wall, Door, Torch, Chest, or Crafting Table) no longer creates an automatic placement cursor in front of the player.
+- The translucent placement ghost and **↑ ↓ ← →** precision nudge pad now stay hidden until the player deliberately taps a world position.
+- After the first world tap, the existing preview → nudge → **PLACE** flow is unchanged. After a successful placement, the cursor/nudge pad stays active so repeated placement remains fast.
+- This specifically lets a Torch be held for night visibility without a distracting ghost Torch bouncing around the world or persistent placement arrows.
+- Reduced Torch light radii slightly: placed Torches **82 → 74**, held Torches (local and remote) **74 → 68**.
+- Reduced the local player's natural night-sight radius **28 → 18**, leaving essentially a small self-reveal rather than a broad free visibility bubble.
+- World content remains **414** and combat balance remains **30**.
+
+## v6-11-429 — Mobile HUD Tap-Target Polish
+
+- Starts from the user-tested **v6-11-428 Mobile Inventory Layout Rebuild** with no gameplay changes.
+- Aligns the mobile **CRAFT** button directly under the dedicated **MENU** button instead of leaving it horizontally indented.
+- Aligns the open Craft/Chest context panel with that same left-side mobile lane while preserving the existing desktop inset.
+- Makes the live mobile **1–0 hotbar** slightly larger and increases the spacing between slots to reduce accidental taps without changing assignments or hotbar behavior.
+- World content remains **414** and combat balance remains **30**.
+
 ## v6-11-428 — Mobile Inventory Layout Rebuild
 
 - Starts from the completed **v6-11-427 Chest & Mobile Interaction Polish** build. Desktop Inventory/Equipment/Craft/Chest presentation and all gameplay systems are preserved unchanged.

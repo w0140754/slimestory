@@ -21,8 +21,8 @@ function buildClientEnemyFoundation() {
   arrowResourceImage.src = "./assets/arrow_resource.png";
 
   const goldSlimeBubbleLootImage = loadImage("assets/big_gold_slime_bubble_loot_v1.png");
-  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=428");
-  const torchLootImage = loadImage("assets/torch_v1.png?v=428");
+  const greenJellyCubeLootImage = loadImage("assets/green_jelly_cube.png?v=431");
+  const torchLootImage = loadImage("assets/torch_v1.png?v=431");
 
   const woodImage = new Image();
   woodImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAe0lEQVQ4T2NkoBAwwllkgkFmgJI4y3+42/CAey//wF0OZ4A0ZwZqMZy99pRBSpQHJowVbDjyFG4ImIBpfv76I4OkKD+cxgVA8jBD4AYE2EgzPHv9BWw7SDMvDxdMPQb4/OUbw/T111ANoMgFIEBRGMAARbFALhg1gIEBAEAwSRFp34JXAAAAEGRlQkc1OERFQTUyNzFDOURCMUM4CKL2nwAAAABJRU5ErkJgggAA";
@@ -56,19 +56,6 @@ function buildClientEnemyFoundation() {
   flowerImage.src = makeFlowerIcon("white");
   const blueFlowerImage = new Image();
   blueFlowerImage.src = makeFlowerIcon("blue");
-
-  function makePotionIcon(color) {
-    const c = document.createElement("canvas");
-    c.width = 16; c.height = 16;
-    const pctx = c.getContext("2d");
-    pctx.imageSmoothingEnabled = false;
-    pctx.fillStyle = "#d8cba0"; pctx.fillRect(6, 1, 4, 3);
-    pctx.fillStyle = "#765d48"; pctx.fillRect(5, 4, 6, 2);
-    pctx.fillStyle = "#e8e1cf"; pctx.fillRect(4, 6, 8, 8);
-    pctx.fillStyle = color; pctx.fillRect(5, 9, 6, 4);
-    pctx.fillStyle = "#ffffff"; pctx.fillRect(5, 7, 2, 2);
-    return c.toDataURL("image/png");
-  }
   const healingPotionImage = loadImage("assets/healing_potion_v2.png");
   const attackPotionImage = new Image(); attackPotionImage.src = "assets/attack_potion_v2.png?v=347";
   const magicPotionImage = new Image(); magicPotionImage.src = "assets/magic_potion_v2.png?v=347";
@@ -170,40 +157,6 @@ function buildClientEnemyFoundation() {
   document.getElementById("inventoryGreencapShirtImg").src = shirtImageForIndex(7).src;
   document.getElementById("inventoryGreencapPantsImg").src = pantsImageForIndex(7).src;
 
-  document.getElementById("equipBaseHatImg").src = sprite.baseHat.src;
-  document.getElementById("equipHatImg").src = sprite.hat.src;
-  document.getElementById("equipCapImg").src = sprite.blueCap.src;
-  document.getElementById("equipWizardHatImg").src = sprite.wizardHat.src;
-  document.getElementById("equipJesterHatImg").src = sprite.jesterHat.src;
-  document.getElementById("equipNinjaHatImg").src = sprite.ninjaHat.src;
-  document.getElementById("equipKnightHatImg").src = sprite.knightHat.src;
-  document.getElementById("equipBandanaHatImg").src = sprite.bandanaHat.src;
-  document.getElementById("equipRangerHatImg").src = sprite.rangerHat.src;
-  document.getElementById("equipWoodHatImg").src = sprite.woodHat.src;
-  document.getElementById("equipArcanistHatImg").src = sprite.arcanistHat.src;
-  document.getElementById("equipGreencapHatImg").src = sprite.greencapHat.src;
-  document.getElementById("equipBaseShirtImg").src = shirtImageForIndex(-1).src;
-  document.getElementById("equipTravelerShirtImg").src = shirtImageForIndex(0).src;
-  document.getElementById("equipJesterShirtImg").src = shirtImageForIndex(1).src;
-  document.getElementById("equipNinjaShirtImg").src = shirtImageForIndex(2).src;
-  document.getElementById("equipKnightShirtImg").src = shirtImageForIndex(3).src;
-  document.getElementById("equipRangerShirtImg").src = shirtImageForIndex(4).src;
-  document.getElementById("equipWoodShirtImg").src = shirtImageForIndex(5).src;
-  document.getElementById("equipArcanistShirtImg").src = shirtImageForIndex(6).src;
-  document.getElementById("equipGreencapShirtImg").src = shirtImageForIndex(7).src;
-  document.getElementById("equipBasePantsImg").src = pantsImageForIndex(-1).src;
-  document.getElementById("equipTravelerPantsImg").src = pantsImageForIndex(0).src;
-  document.getElementById("equipJesterPantsImg").src = pantsImageForIndex(1).src;
-  document.getElementById("equipNinjaPantsImg").src = pantsImageForIndex(2).src;
-  document.getElementById("equipKnightPantsImg").src = pantsImageForIndex(3).src;
-  document.getElementById("equipRangerPantsImg").src = pantsImageForIndex(4).src;
-  document.getElementById("equipWoodPantsImg").src = pantsImageForIndex(5).src;
-  document.getElementById("equipArcanistPantsImg").src = pantsImageForIndex(6).src;
-  document.getElementById("equipGreencapPantsImg").src = pantsImageForIndex(7).src;
-  const equipBaseCharmImg = document.getElementById("equipBaseCharmImg");
-  if (equipBaseCharmImg) equipBaseCharmImg.src = emptyCharmImage.src;
-  const equipWoodRingImg = document.getElementById("equipWoodRingImg");
-  if (equipWoodRingImg) equipWoodRingImg.src = woodRingImage.src;
   const inventoryWoodRingImg = document.getElementById("inventoryWoodRingImg");
   if (inventoryWoodRingImg) inventoryWoodRingImg.src = woodRingImage.src;
 
@@ -270,28 +223,10 @@ function buildClientEnemyFoundation() {
 
   // Natural meadow slimes: one original stray, the original south-west trio,
   // two additional roaming patches of three, plus two extra strays.
-  const slimes = [
-    makeSlime(world.width / 2 - 55, world.height / 2 + 28, 0.0),
-    makeSlime(82,  292, 0.9, 18, 13),
-    makeSlime(112, 318, 2.2, 18, 13),
-    makeSlime(143, 291, 4.1, 18, 13),
-
-    // West-meadow patch.
-    makeSlime(172, 124, 0.5, 20, 14),
-    makeSlime(205, 138, 1.7, 20, 14),
-    makeSlime(232, 121, 3.0, 20, 14),
-
-    // East-meadow patch.
-    makeSlime(444, 211, 0.8, 20, 14),
-    makeSlime(474, 228, 2.4, 20, 14),
-    makeSlime(506, 207, 4.0, 20, 14),
-
-    // A couple of loners to make the map feel less arranged.
-    makeSlime(330, 172, 1.3, 24, 17),
-    makeSlime(455, 330, 3.6, 24, 17)
-  ];
+  const slimes = [];
 
   // -----------------------------------------------------------------------------
+  // SLEEPING MUSHROOM  // -----------------------------------------------------------------------------
   // SLEEPING MUSHROOM
   // -----------------------------------------------------------------------------
   // First mushroom-family enemy. It stays still/asleep while passive, wakes
@@ -404,12 +339,12 @@ function buildClientEnemyFoundation() {
   const bigGoldSlimeImage = loadImage("assets/big_gold_slime_v1.png");
   const bigGoldSlimeBubbleImage = loadImage("assets/big_gold_slime_bubble_v1.png");
   const icedCoffeeLootImage = loadImage("assets/iced_coffee.png?v=372");
-  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=428");
-  const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=428");
-  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=428");
-  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=428");
-  const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=428");
-  const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=428");
+  const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=431");
+  const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=431");
+  const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=431");
+  const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=431");
+  const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=431");
+  const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=431");
   const bigGoldSlimeFlashImage = new Image();
 
   // Generic special loot visuals. Wood and flowers keep their older dedicated
@@ -682,8 +617,6 @@ function buildClientEnemyFoundation() {
       speed: 11,
       chaseSpeed: 28,
       detectionRadius: 96,
-        confusionTime: 0,
-      confusionTargetId: null,
 
       maxHp: 420,
       hp: 420,
@@ -818,13 +751,10 @@ function buildClientEnemyFoundation() {
   }
 
   const REPLICATED_ENEMY_COUNTDOWN_FIELDS = Object.freeze([
-    "confusionTime",
     "burnTime",
     "respawnTime",
     "pickupTime",
     "hurlTime",
-    "snareRootTime",
-    "snareSlowTime",
     "wetTime"
   ]);
 
@@ -1189,14 +1119,10 @@ function buildClientEnemyFoundation() {
     };
   }
 
-  // A few scattered goblins so they feel like a new enemy type, not a swarm.
-  const goblins = [
-    makeGoblin(190, 110, 0.4),
-    makeGoblin(455, 205, 2.0),
-    makeGoblin(340, 350, 4.1)
-  ];
+  const goblins = [];
 
   // -----------------------------------------------------------------------------
+  // SPOOKY GHOST  // -----------------------------------------------------------------------------
   // SPOOKY GHOST
   // -----------------------------------------------------------------------------
   // Player-drawn 16x24 ghost. Its world position is still its feet/base, so

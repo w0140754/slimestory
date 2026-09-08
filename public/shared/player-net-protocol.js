@@ -13,12 +13,9 @@
     ATTACK: 1,
     BOW_DRAW: 2,
     BOW_RELEASE: 3,
-    FOCUS_FIRE: 4,
-    FIREBALL_AIM: 5,
-    RAIN_CAST: 6,
-    SHADOW_HIDE: 7,
-    SHADOW_REVEAL: 8,
-    HURL_REACH: 9
+    FIREBALL_AIM: 4,
+    RAIN_CAST: 5,
+    HURL_REACH: 6
   });
 
   const DIRECTION = Object.freeze({
@@ -53,7 +50,7 @@
   }
 
   return Object.freeze({
-    VERSION: 1,
+    VERSION: 2,
     ACTION,
     DIRECTION,
     AIM_STEPS,

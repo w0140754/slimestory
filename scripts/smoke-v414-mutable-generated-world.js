@@ -37,8 +37,8 @@ async function moveToMap(socket, mapId, x, y, weaponIndex = -1) {
     await delay(500);
     const actor = await connect();
     const observer = await connect();
-    if (actor.welcome.buildVersion !== "6-11-428" || actor.welcome.worldSeed !== 0) throw new Error("unexpected actor welcome");
-    if (observer.welcome.buildVersion !== "6-11-428") throw new Error("unexpected observer welcome");
+    if (actor.welcome.buildVersion !== "6-11-431" || actor.welcome.worldSeed !== 0) throw new Error("unexpected actor welcome");
+    if (observer.welcome.buildVersion !== "6-11-431") throw new Error("unexpected observer welcome");
 
     const houseEntry = Object.entries(WORLD_CONTENT.maps).find(([, map]) => (map.structures || []).some(s => s.kind === "chest" && s.treasure));
     if (!houseEntry) throw new Error("seed-0 fixture missing generated treasure house");

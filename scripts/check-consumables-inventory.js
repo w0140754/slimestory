@@ -44,7 +44,7 @@ if (!app.includes('drawTerrainWaterSurfaceOverlay(currentMapId, camX, camY)')) {
 if (!world.includes('terrainWaterReflectionInfo(player.x, player.y, currentMapId, 16)')) {
   throw new Error("Local player authored-water reflection is not wired");
 }
-if (!game.includes('terrainWaterReflectionInfo(remote.x, remote.y, currentMapId, 16)')) {
+if (!/terrainWaterReflectionInfo\(\s*remote\.x,\s*remote\.y,\s*currentMapId,\s*16\s*\)/s.test(game)) {
   throw new Error("Remote player authored-water reflection is not wired");
 }
 

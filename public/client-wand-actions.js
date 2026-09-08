@@ -1,7 +1,5 @@
-// Slime Story client Magus/Jester ability implementations.
-// Extracted from game.js in v6-11-235 with function bodies preserved verbatim.
-// Classic-script semantics are intentional: these functions resolve shared runtime
-// bindings from game.js at invocation time, after initialization has completed.
+// Slime Story Wand item actions.
+// Fireball and Rain Cloud are equipment-driven weapon actions.
 
 function spawnFireballImpactBurst(x, y) {
   // Keep the AoE readable without making the impact look larger than the
@@ -93,12 +91,6 @@ function castFireballToPoint(targetX, targetY) {
     onlineClient.sendVisualEffect(
       "fireball",
       {
-        x: fireball.x,
-        y: fireball.y,
-        vx: fireball.vx,
-        vy: fireball.vy,
-        life: fireball.life,
-        airborne: true,
         startX,
         startY,
         targetX,
@@ -180,7 +172,6 @@ function fireballLandingPoint(pointTarget = null) {
 function clearFireballChargeState() {
   player.fireballAiming = false;
   player.fireballAimTime = 0;
-  player.fireballBoundKey = null;
   player.fireballAimMapId = null;
   player.fireballTargetX = null;
   player.fireballTargetY = null;
@@ -199,26 +190,22 @@ function cancelFireballAim() {
   return true;
 }
 
-function beginFireballAim(boundKey = null, pointTarget = null) {
-  if (!isAbilityUnlocked("fireball")) return false;
+function beginFireballAim(pointTarget = null) {
+  if (equippedWeapon() !== "wand") return false;
 
   if (!isWandTypeWeapon()) {
     showWandRequiredMessage();
     return true;
   }
 
-  if (skillIsOnCooldown("fireball")) {
-    showSkillCooldownMessage("fireball");
+  if (actionIsOnCooldown("fireball")) {
+    showActionCooldownMessage("fireball");
     return true;
   }
 
   if (player.fireballAiming) return true;
-  if (focusFireIsCasting()) return true;
-
-  breakShadowHide();
-  player.fireballAiming = true;
+    player.fireballAiming = true;
   player.fireballAimTime = 0;
-  player.fireballBoundKey = boundKey;
   player.fireballAimMapId = currentMapId;
   player.fireballTargetX = null;
   player.fireballTargetY = null;
@@ -251,7 +238,7 @@ function releaseFireballAim(pointTarget = null) {
   player.attackCooldown = Math.max(player.attackCooldown, 0.20);
 
   castFireballToPoint(landing.x, landing.y);
-  startSkillCooldown("fireball");
+  startActionCooldown("fireball");
 
   if (typeof onlineClient !== "undefined") {
     onlineClient.sendLocalState(true);
@@ -413,7 +400,7 @@ function endLocalRainCloud({ startCooldown = true, cooldownStartedAtMs = Date.no
   }
 
   if (removedCloud && startCooldown) {
-    startSkillCooldown("rainCloud", null, resolvedCooldownStartMs);
+    startActionCooldown("rainCloud", null, resolvedCooldownStartMs);
   }
 
   return removedCloud;
@@ -439,15 +426,15 @@ function cancelRainCloudCast() {
 }
 
 function beginRainCloudCast(pointTarget = null) {
-  if (!isAbilityUnlocked("rainCloud")) return false;
+  if (equippedWeapon() !== "rainWand") return false;
 
   if (!isWandTypeWeapon()) {
     showWandRequiredMessage();
     return true;
   }
 
-  if (skillIsOnCooldown("rainCloud")) {
-    showSkillCooldownMessage("rainCloud");
+  if (actionIsOnCooldown("rainCloud")) {
+    showActionCooldownMessage("rainCloud");
     return true;
   }
 
@@ -463,16 +450,14 @@ function beginRainCloudCast(pointTarget = null) {
   }
 
   if (player.rainCloudCasting) return true;
-  if (focusFireIsCasting() || fireballIsAiming()) return true;
-
-  breakShadowHide();
+  if (fireballIsAiming()) return true;
 
   const mouseTarget = pointTarget || getCurrentWorldMouseTarget();
   const target = resolveRainCloudCastTarget(mouseTarget.x, mouseTarget.y);
 
   player.rainCloudCasting = true;
   player.rainCloudCastTime = 0;
-  player.rainCloudCastDuration = rainCloudCastTimeAtLevel();
+  player.rainCloudCastDuration = rainCloudCastTime();
   player.rainCloudCastMapId = currentMapId;
   player.rainCloudCastTargetX = target.x;
   player.rainCloudCastTargetY = target.y;
@@ -613,8 +598,6 @@ function spawnRainCloud(
     // Rain also affects creatures on a slower, readable tick:
     // Rain Cloud only affects creatures offensively now: living enemies are
     // unaffected, while ghosts are harmed.
-    creatureTimer: 0,
-    creatureInterval: 0.48,
 
     // Rain steadily builds a dense patch of temporary, flammable grass.
     // The first tuft waits a moment so the cloud visually settles before the
@@ -624,21 +607,6 @@ function spawnRainCloud(
 
     radius: 24
   });
-}
-
-function removeRemoteJesterForOwner(ownerId) {
-  for (
-    let i = remoteJesterClones.length - 1;
-    i >= 0;
-    i--
-  ) {
-    if (
-      remoteJesterClones[i].ownerId ===
-      ownerId
-    ) {
-      remoteJesterClones.splice(i, 1);
-    }
-  }
 }
 
 function removeRemoteRainForOwner(ownerId) {
@@ -794,7 +762,6 @@ function applyRainCloud(cloud) {
     return;
   }
 
-  growTemporaryRainGrass(cloud);
 
   // Rain-grown grass is client-temporary, so the server cannot extinguish it.
   // Handle it locally on every rain pulse so magic grass obeys the same fire
@@ -857,9 +824,6 @@ function applyRainCloud(cloud) {
   }
   }
 
-  const creatureTick = cloud.creatureTimer <= 0;
-  let affectedCreatureThisTick = false;
-
   for (
     const { enemy, profile }
     of activeEnemyRecords({ aliveOnly: true })
@@ -879,44 +843,19 @@ function applyRainCloud(cloud) {
       isNearBurningTemporaryRainGrass(body.x, body.y, 14);
 
     if (profile.rainEffect === "damage") {
-      // Spectral creatures remain the exception: rain damages them rather than
-      // applying Wet. Ordinary rain still extinguishes their burn.
+      // Online ghost rain damage is server-authoritative. In the disconnected
+      // visual fallback, Rain still extinguishes ghost Burn.
       if (enemy.burnTime > 0 && !standingInBurningRainGrass) {
         extinguishEnemy(enemy);
       }
-
-      if (!creatureTick) continue;
-
-      sendEnemyAction(
-        enemy,
-        "rainDamage",
-        { power: GAME_CONFIG.rainCloud.ghostDamage }
-      );
-
-      affectedCreatureThisTick = true;
       continue;
     }
 
-    // Living enemies now share the same Wet status rule as the player. Wet
-    // extinguishes Burn, prevents ordinary re-ignition, and slows movement.
+    // Disconnected fallback keeps the local Wet presentation only.
     applyLocalWetStatus(
       enemy,
       GAME_CONFIG.status.enemyWetDuration
     );
-
-    if (creatureTick) {
-      sendEnemyAction(
-        enemy,
-        "wet",
-        { duration: GAME_CONFIG.status.enemyWetDuration }
-      );
-      affectedCreatureThisTick = true;
-    }
-
-  }
-
-  if (creatureTick && affectedCreatureThisTick) {
-    cloud.creatureTimer = cloud.creatureInterval;
   }
 
   const pdx = player.x - cloud.x;
@@ -1127,7 +1066,6 @@ function updateRainMagic(dt) {
         cloud.life -= dt;
       }
       cloud.pulseTimer -= dt;
-      cloud.creatureTimer -= dt;
       cloud.grassGrowTimer = Math.max(
         0,
         (Number(cloud.grassGrowTimer) || 0) - dt
@@ -1148,7 +1086,7 @@ function updateRainMagic(dt) {
 
         if (!cloud.visualOnly && !cloud.cooldownStarted) {
           cloud.cooldownStarted = true;
-          startSkillCooldown(
+          startActionCooldown(
             "rainCloud",
             null,
             Number(cloud.expiresAtMs) || Date.now()
@@ -1252,144 +1190,6 @@ function drawFireball(fireball, camX, camY) {
 
   ctx.fillStyle = "#ffe47a";
   ctx.fillRect(x, y - 1, 1, 1);
-}
-
-function spawnJesterConfettiBurst(x, y, count = 16) {
-  const colors = ["#ff5da2", "#59d7ff", "#ffd95a", "#a8ff69", "#e9b0ff"];
-
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 12 + Math.random() * 26;
-
-    jesterConfetti.push({
-      x,
-      y: y - 10 + Math.random() * 5,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 6,
-      life: 0.45 + Math.random() * 0.45,
-      maxLife: 0.45 + Math.random() * 0.45,
-      color: colors[(Math.random() * colors.length) | 0],
-      size: Math.random() < 0.35 ? 2 : 1
-    });
-  }
-}
-
-function updateJesterConfetti(dt) {
-  for (let i = jesterConfetti.length - 1; i >= 0; i--) {
-    const p = jesterConfetti[i];
-    p.life -= dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.vy += 18 * dt;
-    p.vx *= 0.98;
-
-    if (p.life <= 0) {
-      jesterConfetti.splice(i, 1);
-    }
-  }
-}
-
-function drawJesterConfetti(camX, camY) {
-  for (const p of jesterConfetti) {
-    const alpha = Math.max(0, Math.min(1, p.life / p.maxLife));
-    const x = Math.round(p.x - camX);
-    const y = Math.round(p.y - camY);
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(x, y, p.size, p.size);
-    ctx.restore();
-  }
-}
-
-function spawnJesterAfterimageTrail(
-  startX,
-  startY,
-  endX,
-  endY,
-  appearance = null
-) {
-  const steps = 4;
-
-  const hatIndex =
-    appearance?.hatIndex ??
-    player.hatIndex;
-
-  const shirtIndex =
-    appearance?.shirtIndex ??
-    player.shirtIndex;
-
-  const pantsIndex =
-    appearance?.pantsIndex ??
-    player.pantsIndex;
-
-  for (let i = 0; i < steps; i++) {
-    const t =
-      steps <= 1
-        ? 1
-        : i / (steps - 1);
-
-    jesterAfterimages.push({
-      x:
-        startX +
-        (endX - startX) * t,
-
-      y:
-        startY +
-        (endY - startY) * t,
-
-      life: 0.18 + t * 0.10,
-      duration: 0.18 + t * 0.10,
-
-      hatIndex,
-      shirtIndex,
-      pantsIndex
-    });
-  }
-}
-
-function updateJesterAfterimages(dt) {
-  for (let i = jesterAfterimages.length - 1; i >= 0; i--) {
-    const item = jesterAfterimages[i];
-    item.life -= dt;
-
-    if (item.life <= 0) {
-      jesterAfterimages.splice(i, 1);
-    }
-  }
-}
-
-function drawJesterAfterimages(camX, camY) {
-  for (const item of jesterAfterimages) {
-    const appearance = playerAppearanceForIndices(
-      item.hatIndex,
-      item.shirtIndex,
-      item.pantsIndex
-    );
-
-    const alpha = Math.max(0, Math.min(1, item.life / item.duration)) * 0.28;
-    const screenX = Math.round(item.x - camX);
-    const screenY = Math.round(item.y - camY);
-    const baseX = screenX - 8;
-    const baseY = screenY - 15;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    ctx.fillStyle = "rgba(240, 180, 255, 0.25)";
-    ctx.fillRect(screenX - 4, screenY, 8, 2);
-
-    ctx.drawImage(appearance.leftLeg, baseX, baseY);
-    ctx.drawImage(appearance.rightLeg, baseX, baseY);
-    ctx.drawImage(appearance.torso, baseX, baseY);
-    ctx.drawImage(appearance.leftArm, baseX, baseY);
-    ctx.drawImage(appearance.rightArm, baseX, baseY);
-    ctx.drawImage(sprite.face, baseX, baseY);
-    ctx.drawImage(appearance.hat, baseX, baseY);
-
-    ctx.restore();
-  }
 }
 
 function drawRainCloudGround(cloud, camX, camY) {
@@ -1577,218 +1377,44 @@ function drawRainCloud(cloud, camX, camY) {
   ctx.restore();
 }
 
-function rainCloudCooldownAtLevel(level = abilityLevel("rainCloud")) {
-  return typeof ABILITY_SCALING !== "undefined"
-    ? ABILITY_SCALING.rainCloudCooldownAtLevel(level)
+function rainCloudCooldown() {
+  return typeof ACTION_BALANCE !== "undefined"
+    ? ACTION_BALANCE.rainCloud.cooldown
     : 30.0;
 }
 
-function rainCloudGrassSlowPercentAtLevel(level = abilityLevel("rainCloud")) {
-  return typeof ABILITY_SCALING !== "undefined"
-    ? ABILITY_SCALING.rainCloudGrassSlowPercentAtLevel(level)
-    : 10;
+function rainCloudCastTime() {
+  return typeof ACTION_BALANCE !== "undefined"
+    ? ACTION_BALANCE.rainCloud.castTime
+    : 2.0;
 }
 
-function rainCloudCastTimeAtLevel(level = abilityLevel("rainCloud")) {
-  return typeof ABILITY_SCALING !== "undefined" &&
-    typeof ABILITY_SCALING.rainCloudCastTimeAtLevel === "function"
-    ? ABILITY_SCALING.rainCloudCastTimeAtLevel(level)
-    : 0.50;
+function fireballCooldown() {
+  return typeof ACTION_BALANCE !== "undefined"
+    ? ACTION_BALANCE.fireball.cooldown
+    : 7.0;
 }
 
-function hallucinationBlinkRangeAtLevel(level = abilityLevel("jesterBlink")) {
-  return typeof ABILITY_SCALING !== "undefined"
-    ? ABILITY_SCALING.hallucinationBlinkRangeAtLevel(level)
-    : JESTER_BLINK_RANGE;
-}
-
-function hallucinationCooldownAtLevel(level = abilityLevel("jesterBlink")) {
-  return typeof ABILITY_SCALING !== "undefined"
-    ? ABILITY_SCALING.hallucinationCooldownAtLevel(level)
-    : 20.0;
-}
-
-function hallucinationDecoyDurationAtLevel(level = abilityLevel("jesterBlink")) {
-  return typeof ABILITY_SCALING !== "undefined"
-    ? ABILITY_SCALING.hallucinationDecoyDurationAtLevel(level)
-    : JESTER_CLONE_DURATION;
-}
-
-function fireballCooldownAtLevel(level = abilityLevel("fireball")) {
-  const cleanLevel = Math.max(1, Math.min(20, Math.floor(Number(level) || 1)));
-  const t = (cleanLevel - 1) / 19;
-  return 7.0 + (3.5 - 7.0) * t;
-}
-
-function getActiveJesterClone() {
-  if (!jesterClone) return null;
-  if (Number.isFinite(Number(jesterClone.expiresAtMs))) {
-    jesterClone.life = Math.max(
-      0,
-      (Number(jesterClone.expiresAtMs) - Date.now()) / 1000
-    );
-  }
-  if (jesterClone.life <= 0) return null;
-  if (jesterClone.mapId !== currentMapId) return null;
-  return jesterClone;
-}
-
-function spawnJesterClone(x, y) {
-  const cloneId =
-    `hallucination:${currentMapId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
-
-  const startedAtMs = Date.now();
-  const decoyDuration = hallucinationDecoyDurationAtLevel();
-
-  jesterClone = {
-    cloneId,
-    x,
-    y,
-    life: decoyDuration,
-    startedAtMs,
-    returnReadyAtMs: startedAtMs + JESTER_RETURN_LOCKOUT_SECONDS * 1000,
-    expiresAtMs: startedAtMs + decoyDuration * 1000,
-    duration: decoyDuration,
-    phase: Math.random() * Math.PI * 2,
-    releasedEnemyIds: new Set(),
-    hatIndex: player.hatIndex,
-    shirtIndex: player.shirtIndex,
-    pantsIndex: player.pantsIndex,
-    mapId: currentMapId
-  };
-
-  spawnJesterConfettiBurst(x, y, 18);
-}
-
-function spawnRemoteJesterBlinkVisual(
-  ownerId,
-  payload
-) {
-  const startX =
-    Number(payload.startX) || 0;
-
-  const startY =
-    Number(payload.startY) || 0;
-
-  const endX =
-    Number(payload.endX) || 0;
-
-  const endY =
-    Number(payload.endY) || 0;
-
-  const appearance = {
-    hatIndex:
-      Number.isFinite(payload.hatIndex)
-        ? payload.hatIndex
-        : 0,
-
-    shirtIndex:
-      Number.isFinite(payload.shirtIndex)
-        ? payload.shirtIndex
-        : 0,
-
-    pantsIndex:
-      Number.isFinite(payload.pantsIndex)
-        ? payload.pantsIndex
-        : 0
-  };
-
-  const startedAtMs = Date.now();
-  const isSnapshot = Boolean(payload.snapshot);
-  const totalDuration = Math.max(
-    0.05,
-    Number(payload.duration) || JESTER_CLONE_DURATION
-  );
-  const remainingLife = isSnapshot
-    ? Math.max(0.05, Math.min(
-        totalDuration,
-        Number(payload.remainingLife) || totalDuration
-      ))
-    : totalDuration;
-
-  if (isSnapshot) {
-    removeRemoteJesterForOwner(ownerId);
-  }
-
-  remoteJesterClones.push({
-    ownerId,
-    cloneId: typeof payload.cloneId === "string" ? payload.cloneId : null,
-    x: startX,
-    y: startY,
-    life: remainingLife,
-    startedAtMs: startedAtMs - (totalDuration - remainingLife) * 1000,
-    expiresAtMs: startedAtMs + remainingLife * 1000,
-    duration: totalDuration,
-    phase: Math.random() * Math.PI * 2,
-
-    hatIndex: appearance.hatIndex,
-    shirtIndex: appearance.shirtIndex,
-    pantsIndex: appearance.pantsIndex,
-
-    mapId: currentMapId
-  });
-
-  if (!isSnapshot) {
-    spawnJesterConfettiBurst(
-      startX,
-      startY,
-      18
-    );
-
-    spawnJesterAfterimageTrail(
-      startX,
-      startY,
-      endX,
-      endY,
-      appearance
-    );
-  }
-
-}
-
-function applyTransientAbilitySnapshot(message) {
+function applyTransientActionSnapshot(message) {
   if (!message || message.mapId !== currentMapId) return;
 
   for (const cloud of Array.isArray(message.rainClouds) ? message.rainClouds : []) {
     if (!cloud?.ownerId) continue;
-    spawnRemoteRainCast(
-      String(cloud.ownerId),
-      {
-        snapshot: true,
-        x: cloud.x,
-        y: cloud.y,
-        targetX: cloud.orbitCenterX,
-        targetY: cloud.orbitCenterY,
-        orbitCenterX: cloud.orbitCenterX,
-        orbitCenterY: cloud.orbitCenterY,
-        orbitAngle: cloud.orbitAngle,
-        orbitElapsed: cloud.orbitElapsed,
-        orbitRadius: cloud.orbitRadius,
-        totalLife: cloud.totalLife,
-        remainingLife: cloud.remainingLife,
-        patchId: cloud.patchId
-      }
-    );
-  }
-
-  for (const clone of Array.isArray(message.hallucinations) ? message.hallucinations : []) {
-    if (!clone?.ownerId) continue;
-    spawnRemoteJesterBlinkVisual(
-      String(clone.ownerId),
-      {
-        snapshot: true,
-        startX: clone.x,
-        startY: clone.y,
-        endX: clone.x,
-        endY: clone.y,
-        cloneId: clone.cloneId,
-        remainingLife: clone.remainingLife,
-        duration: clone.duration,
-        hatIndex: clone.hatIndex,
-        shirtIndex: clone.shirtIndex,
-        pantsIndex: clone.pantsIndex
-      }
-    );
+    spawnRemoteRainCast(String(cloud.ownerId), {
+      snapshot: true,
+      x: cloud.x,
+      y: cloud.y,
+      targetX: cloud.orbitCenterX,
+      targetY: cloud.orbitCenterY,
+      orbitCenterX: cloud.orbitCenterX,
+      orbitCenterY: cloud.orbitCenterY,
+      orbitAngle: cloud.orbitAngle,
+      orbitElapsed: cloud.orbitElapsed,
+      orbitRadius: cloud.orbitRadius,
+      totalLife: cloud.totalLife,
+      remainingLife: cloud.remainingLife,
+      patchId: cloud.patchId
+    });
   }
 
   for (const field of Array.isArray(message.rainFields) ? message.rainFields : []) {
@@ -1807,171 +1433,6 @@ function applyTransientAbilitySnapshot(message) {
       }
     );
   }
-}
-
-function spawnRemoteJesterReturnVisual(ownerId, payload) {
-  const startX = Number(payload.startX) || 0;
-  const startY = Number(payload.startY) || 0;
-  const endX = Number(payload.endX) || 0;
-  const endY = Number(payload.endY) || 0;
-
-  removeRemoteJesterForOwner(ownerId);
-  spawnJesterAfterimageTrail(startX, startY, endX, endY);
-  spawnJesterConfettiBurst(endX, endY, 24);
-}
-
-function returnToJesterClone(clone) {
-  if (!clone || clone.mapId !== currentMapId) return false;
-
-  const nowMs = Date.now();
-  if (nowMs < (Number(clone.returnReadyAtMs) || 0)) {
-    return true;
-  }
-
-  if (!canOccupyPlayerPoint(clone.x, clone.y)) {
-    spawnFloatingText(player.x, player.y - 26, "Blocked", "#ffe38b", 0.7);
-    return true;
-  }
-
-  const startX = player.x;
-  const startY = player.y;
-  const endX = clone.x;
-  const endY = clone.y;
-  const cloneId = clone.cloneId || null;
-
-  spawnJesterAfterimageTrail(startX, startY, endX, endY);
-  spawnJesterConfettiBurst(endX, endY, 24);
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendVisualEffect(
-      "jesterReturn",
-      { startX, startY, endX, endY, cloneId }
-    );
-  }
-
-  player.x = endX;
-  player.y = endY;
-  player.knockbackX = 0;
-  player.knockbackY = 0;
-  player.contactCooldown = Math.max(player.contactCooldown, 0.20);
-  player.attackTime = 0;
-  player.slashTime = 0;
-  player.jesterBlinkFadeTime = player.jesterBlinkFadeDuration;
-
-  endLocalHallucination({ burst: false, startCooldown: false });
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendLocalState(true);
-  }
-
-  return true;
-}
-
-function tryCastJesterBlink() {
-  const activeClone = getActiveJesterClone();
-  if (activeClone) {
-    return returnToJesterClone(activeClone);
-  }
-
-  const cooldownRemaining = skillCooldownRemaining("jesterBlink");
-  if (cooldownRemaining > 0) {
-    // Read the wall-clock deadline directly instead of the mirrored frame value.
-    // The active clone branch above is intentionally exempt because returning to
-    // the decoy is the second half of the same cast, not a new Hallucination.
-    spawnFloatingText(
-      player.x,
-      player.y - 26,
-      `${cooldownRemaining.toFixed(1)}s`,
-      "#e7a2ff",
-      0.7
-    );
-    return true;
-  }
-
-  const startX = player.x;
-  const startY = player.y;
-
-  const targetWorldX =
-    Math.max(0, Math.min(world.width, currentCamX + mouseCanvasX));
-  const targetWorldY =
-    Math.max(0, Math.min(world.height, currentCamY + mouseCanvasY));
-
-  let dx = targetWorldX - startX;
-  let dy = targetWorldY - (startY - 8);
-
-  const distance = Math.hypot(dx, dy);
-
-  if (distance < 0.001) {
-    dx = Math.cos(player.attackAimAngle);
-    dy = Math.sin(player.attackAimAngle);
-  } else {
-    dx /= distance;
-    dy /= distance;
-  }
-
-  let destination = null;
-  const blinkRange = hallucinationBlinkRangeAtLevel();
-
-  for (let step = blinkRange; step >= 10; step -= 4) {
-    const testX = startX + dx * step;
-    const testY = startY + dy * step;
-
-    if (canOccupyPlayerPoint(testX, testY)) {
-      destination = { x: testX, y: testY };
-      break;
-    }
-  }
-
-  if (!destination) {
-    spawnFloatingText(player.x, player.y - 26, "Blocked", "#ffe38b", 0.7);
-    return true;
-  }
-
-  spawnJesterClone(startX, startY);
-  // Hallucination cooldown begins on the first successful cast. The decoy
-  // lifetime runs inside this timer; returning to or expiring the clone does
-  // not restart or extend the cooldown.
-  startHallucinationCooldown(Date.now());
-  // Make the cast-frame cooldown visible immediately; the per-frame HUD updater
-  // keeps the mask/text counting down from here.
-  if (typeof updateAbilityCooldownHud === "function") {
-    updateAbilityCooldownHud();
-  }
-
-  spawnJesterAfterimageTrail(
-    startX,
-    startY,
-    destination.x,
-    destination.y
-  );
-
-  if (typeof onlineClient !== "undefined") {
-    onlineClient.sendVisualEffect(
-      "jesterBlink",
-      {
-        startX,
-        startY,
-        endX: destination.x,
-        endY: destination.y,
-        cloneId: jesterClone?.cloneId || null,
-        hatIndex: player.hatIndex,
-        shirtIndex: player.shirtIndex,
-        pantsIndex: player.pantsIndex
-      }
-    );
-  }
-
-  player.x = destination.x;
-  player.y = destination.y;
-  player.knockbackX = 0;
-  player.knockbackY = 0;
-  player.contactCooldown = Math.max(player.contactCooldown, 0.20);
-  player.attackTime = 0;
-  player.slashTime = 0;
-  player.jesterBlinkFadeTime = player.jesterBlinkFadeDuration;
-
-
-  return true;
 }
 
 function getRainCloudLifetime() {
@@ -2003,192 +1464,3 @@ function drawRainCloudCastIndicator(camX, camY) {
   );
 }
 
-function startHallucinationCooldown(startedAtMs = Date.now()) {
-  const duration = hallucinationCooldownAtLevel();
-  const startMs = Number.isFinite(Number(startedAtMs))
-    ? Number(startedAtMs)
-    : Date.now();
-  const proposedEndAtMs = startMs + duration * 1000;
-
-  player.jesterBlinkCooldownEndAtMs = Math.max(
-    Number(player.jesterBlinkCooldownEndAtMs) || 0,
-    proposedEndAtMs
-  );
-  player.jesterBlinkCooldown = skillCooldownRemaining("jesterBlink");
-}
-
-function endLocalHallucination({ burst = false, startCooldown = false, cooldownStartedAtMs = Date.now() } = {}) {
-  if (!jesterClone) return false;
-
-  if (burst) {
-    spawnJesterConfettiBurst(
-      jesterClone.x,
-      jesterClone.y,
-      34
-    );
-  }
-
-  jesterClone = null;
-
-  if (startCooldown) {
-    startHallucinationCooldown(cooldownStartedAtMs);
-  }
-
-  return true;
-}
-
-function updateJesterRuntime(dt) {
-  player.jesterBlinkCooldown = skillCooldownRemaining("jesterBlink");
-
-  tickTimer(
-    player,
-    "jesterBlinkFadeTime",
-    dt
-  );
-
-  if (jesterClone) {
-    if (Number.isFinite(Number(jesterClone.expiresAtMs))) {
-      jesterClone.life = Math.max(
-        0,
-        (Number(jesterClone.expiresAtMs) - Date.now()) / 1000
-      );
-    } else {
-      jesterClone.life -= dt;
-    }
-    jesterClone.phase += dt * 7;
-    const releasedEnemyIds =
-      jesterClone.releasedEnemyIds ||
-      (jesterClone.releasedEnemyIds = new Set());
-
-    const enemyRecords =
-      activeEnemyRecords({ aliveOnly: true });
-
-    // Hallucination redirect is authoritative on the server. The local client
-    // only remembers which enemies have visually reached this clone; it no
-    // longer sends periodic taunt/clearTaunt enemyAction packets.
-    for (const { enemy } of enemyRecords) {
-      const enemyId = enemy?.entityId || null;
-      if (!enemyId || releasedEnemyIds.has(enemyId)) continue;
-
-      const body = enemyBodyPoint(enemy);
-      const contactDistance = Math.hypot(
-        body.x - jesterClone.x,
-        body.y - jesterClone.y
-      );
-
-      if (contactDistance <= JESTER_CLONE_CONTACT_RADIUS) {
-        releasedEnemyIds.add(enemyId);
-      }
-    }
-
-    if (jesterClone.life <= 0) {
-      endLocalHallucination({ burst: true, startCooldown: false });
-    } else if (
-      jesterClone.mapId !== currentMapId
-    ) {
-      endLocalHallucination({ burst: false, startCooldown: false });
-    }
-  }
-
-  for (
-    let i = remoteJesterClones.length - 1;
-    i >= 0;
-    i--
-  ) {
-    const clone =
-      remoteJesterClones[i];
-
-    if (Number.isFinite(Number(clone.expiresAtMs))) {
-      clone.life = Math.max(
-        0,
-        (Number(clone.expiresAtMs) - Date.now()) / 1000
-      );
-    } else {
-      clone.life -= dt;
-    }
-    clone.phase += dt * 7;
-
-    if (clone.life <= 0) {
-      spawnJesterConfettiBurst(
-        clone.x,
-        clone.y,
-        34
-      );
-
-      remoteJesterClones.splice(i, 1);
-      continue;
-    }
-
-    if (clone.mapId !== currentMapId) {
-      remoteJesterClones.splice(i, 1);
-    }
-  }
-}
-
-function drawJesterCloneEntity(
-  clone,
-  camX,
-  camY
-) {
-  if (!clone) return;
-
-  const screenX = Math.round(clone.x - camX);
-  const screenY = Math.round(clone.y - camY);
-  const bobY = Math.round(Math.sin(clone.phase) * 1);
-  const baseX = screenX - 8;
-  const baseY = screenY - 15 + bobY;
-  const appearance = playerAppearanceForIndices(
-    clone.hatIndex,
-    clone.shirtIndex,
-    clone.pantsIndex
-  );
-
-  const fade = Math.max(0, Math.min(1, clone.life / clone.duration));
-  const pulse = 0.5 + 0.5 * Math.sin(worldTime * 7 + clone.phase);
-
-  ctx.save();
-  ctx.globalAlpha = 0.18 * fade;
-  ctx.drawImage(appearance.leftLeg, baseX + 1, baseY);
-  ctx.drawImage(appearance.rightLeg, baseX + 1, baseY);
-  ctx.drawImage(appearance.torso, baseX + 1, baseY);
-  ctx.drawImage(appearance.leftArm, baseX + 1, baseY);
-  ctx.drawImage(appearance.rightArm, baseX + 1, baseY);
-  ctx.drawImage(sprite.face, baseX + 1, baseY);
-  ctx.drawImage(appearance.hat, baseX + 1, baseY);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = (0.58 + pulse * 0.10) * fade;
-  ctx.drawImage(appearance.leftLeg, baseX, baseY);
-  ctx.drawImage(appearance.rightLeg, baseX, baseY);
-  ctx.drawImage(appearance.torso, baseX, baseY);
-  ctx.drawImage(appearance.leftArm, baseX, baseY);
-  ctx.drawImage(appearance.rightArm, baseX, baseY);
-  ctx.drawImage(sprite.face, baseX, baseY);
-  ctx.drawImage(appearance.hat, baseX, baseY);
-  ctx.restore();
-
-  const sparkleY =
-    baseY - 3 + Math.round(Math.sin(worldTime * 9 + clone.phase) * 1);
-  ctx.fillStyle = "#f3c9ff";
-  ctx.fillRect(screenX - 3, sparkleY, 1, 1);
-  ctx.fillRect(screenX, sparkleY - 1, 1, 1);
-  ctx.fillRect(screenX + 3, sparkleY, 1, 1);
-
-  const confettiColors = ["#ff6dac", "#53d2ff", "#ffd95a", "#a8ff71"];
-  for (let i = 0; i < 4; i++) {
-    const angle = clone.phase * 0.7 + i * (Math.PI / 2);
-    const confX = Math.round(screenX + Math.cos(angle) * 7);
-    const confY = Math.round(screenY - 8 + Math.sin(angle) * 3);
-    ctx.fillStyle = confettiColors[i % confettiColors.length];
-    ctx.fillRect(confX, confY, 1, 1);
-  }
-}
-
-function drawJesterClone(camX, camY) {
-  drawJesterCloneEntity(
-    getActiveJesterClone(),
-    camX,
-    camY
-  );
-}

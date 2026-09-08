@@ -12,8 +12,8 @@ function assert(ok, message) {
   if (!ok) throw new Error(`v417/v418 regression: ${message}`);
 }
 
-assert(clientConfig.includes('CLIENT_BUILD_VERSION = "6-11-428"'), "client build version not bumped");
-assert(server.includes('BUILD_VERSION = "6-11-428"'), "server build version not bumped");
+assert(clientConfig.includes('CLIENT_BUILD_VERSION = "6-11-431"'), "client build version not bumped");
+assert(server.includes('BUILD_VERSION = "6-11-431"'), "server build version not bumped");
 assert(game.includes("function worldClockSunShadowFactor"), "day/night sunlight shadow factor missing");
 assert(game.includes("function drawCloudShadows"), "cloud-shadow renderer missing");
 assert(game.includes("function traceIrregularCloudBank"), "irregular cloud-bank renderer missing");
@@ -27,14 +27,12 @@ assert(!game.match(/cloudShadow[\s\S]{0,160}onlineClient/), "cloud-shadow atmosp
 assert(world.includes("0.16 * daylightShadowFactor"), "perimeter tree shadow does not fade out at night");
 assert(world.includes("shadowAlpha *= daylightShadowFactor"), "ordinary tree shadow does not fade out at night");
 const renderCalls = app.match(/drawCloudShadows\(renderCamera\.x, renderCamera\.y\);/g) || [];
-assert(renderCalls.length === 2, "cloud shadows must render in both terrain and normal-map branches");
-assert(
-  app.indexOf("drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);\n      drawCloudShadows") >= 0,
-  "cloud shadows should draw after roofs/world objects"
-);
-assert(
-  app.indexOf("drawCloudShadows(renderCamera.x, renderCamera.y);\n      drawForegroundLayer") >= 0,
-  "cloud shadows should draw before foreground text/effects"
-);
+assert(renderCalls.length === 1, "cloud shadows must render once in the coordinate-terrain pipeline");
+assert(!app.includes("normal-map branches"), "retired normal-map render branch should not remain");
+const roofsAt = app.indexOf("drawAutomaticStructureRoofs(renderCamera.x, renderCamera.y);");
+const cloudsAt = app.indexOf("drawCloudShadows(renderCamera.x, renderCamera.y);");
+const foregroundAt = app.indexOf("drawForegroundLayer(renderCamera.x, renderCamera.y);");
+assert(roofsAt >= 0 && cloudsAt > roofsAt, "cloud shadows should draw after roofs/world objects");
+assert(foregroundAt > cloudsAt, "cloud shadows should draw before foreground text/effects");
 
 console.log("v417/v418 passing cloud shadows + night tree-shadow regression checks passed, including irregular cloud banks.");

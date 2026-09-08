@@ -15,11 +15,11 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const game = read("public", "game.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.431");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
-assert(html.includes('/game.js?v=428'));
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
+assert(html.includes('/game.js?v=431'));
 
 // Regression geometry from the reported case: an outside floor is one half
 // tile south of the house's south wall. The flame is drawn nine world pixels

@@ -12,21 +12,21 @@ const config = read("public", "client-config.js");
 const clientMaps = read("public", "client-maps.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.428");
+assert.strictEqual(pkg.version, "0.6.11.431");
 assert(!pkg.scripts?.["adopt-map"] && !pkg.scripts?.["build-waterfall-grove"], "retired editor/map npm aliases survived");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'));
+assert(server.includes('const BUILD_VERSION = "6-11-431";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'));
 
 // v383 cleanup remains, while its temporary full-cell/autotile wall model is retired.
 assert(!server.includes('if (sameCell) return true;'), "v383 one-structure-per-cell wall rule survived");
 assert(!game.includes('function woodWallConnections(structure)'), "v383 wall autotiling survived");
 assert(game.includes('function wallPlacementCandidate(worldX, worldY, kind'), "floor-edge placement candidate missing");
 assert(game.includes('function wallCollisionRect(structure)'), "thin wall collision helper missing");
-assert(game.includes('const BUILD_WALL_EDGES = Object.freeze(["north", "east", "south", "west"]);'), "four floor edges missing");
+assert(['edge: "north"', 'edge: "east"', 'edge: "south"', 'edge: "west"'].every(token => game.includes(token)), "four floor edges missing");
 
 // Mouse-wheel/build selection fixes.
 assert(!game.includes('if (inventoryOpen) setInventoryOpen(false);'), "v422 live inventory should stay open during build selection");
-assert(game.includes('selectedBuildPiece ? itemId === selectedBuildPiece : itemId === equippedItemId'), "menu hotbar single-active selection rule missing");
+assert(!game.includes('updateMenuItemHotkeyRail'), "retired duplicate menu hotbar renderer survived");
 assert(game.includes('selectedBuildPiece ? selectedBuildPiece === itemId : equippedItemId === itemId'), "HUD hotbar single-active selection rule missing");
 assert(game.includes('window.addEventListener("wheel"') && game.includes('cycleHotbarSelection(direction)'), "mouse wheel hotbar cycling missing");
 

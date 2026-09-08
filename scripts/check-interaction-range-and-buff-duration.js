@@ -12,11 +12,9 @@ const checks = [
   [game.includes('Math.min(POTION_BUFF_MS, clampLocalSaveInteger(save.buffs?.attackRemainingMs, 0, POTION_BUFF_MS, 0))') && server.includes('Math.min(POTION_BUFF_MS, clampInteger(buffs.attackRemainingMs, 0, POTION_BUFF_MS, 0))'), "5-minute duration survives save/load"],
   [html.includes('+15% physical damage for 5 min') && html.includes('+15% magic damage for 5 min'), "inventory potion descriptions"],
   [server.includes('function playerNearAuthorizedCraftingTable(playerState)') && server.includes('structure?.kind === "craftingTable"') && server.includes('const validBench = recipe.station === "hand" || playerNearAuthorizedCraftingTable(playerState);'), "portable crafting-table server authorization"],
-  [server.includes('playerNearPlacedInteraction(playerState, "shopkeeper", 48, 16)'), "editor shopkeeper server authorization"],
-  [game.includes('const bubbleWidth = 18;') && game.includes('const bubbleHeight = 18;') && game.includes('rgba(248, 244, 221, 0.78)') && game.includes('drawIcon(left + 1, anchorY + 1);'), "compact translucent native-icon bubbles"],
-  [html.includes('/game.js?v=428') && html.includes('/client-config.js?v=428'), "326 cache keys"]
+  [html.includes('/game.js?v=431') && html.includes('/client-config.js?v=431'), "431 cache keys"]
 ];
 for (const [ok, label] of checks) {
   if (!ok) throw new Error(`Interaction/buff regression: ${label}`);
 }
-console.log("Interaction range, potion duration, and bubble tuning checks passed.");
+console.log("Interaction range and potion duration checks passed.");

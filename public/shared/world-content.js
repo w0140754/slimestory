@@ -5,8 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  // v384: the retired visual-map-editor world and its authored override store
-  // have been removed. The coordinate grid below is the single canonical world.
+  // The coordinate grid below is the single canonical world.
   const WORLD_GRID_RADIUS = 1;
   const WORLD_GRID_MAP_WIDTH = 400;
   const WORLD_GRID_MAP_HEIGHT = 400;

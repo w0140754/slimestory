@@ -15,12 +15,12 @@ const html = read('public', 'index.html');
 const pkg = JSON.parse(read('package.json'));
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), 'server build must be 6-11-406');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'), 'client build must be 6-11-406');
-assert(pkg.version === '0.6.11.428', 'package version must be 0.6.11.428');
-assert(html.includes('/shared/combat-balance.js?v=428') && html.includes('/client-combat.js?v=428') && html.includes('/game.js?v=428'), 'v333 combat cache keys missing');
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), 'server build must be 6-11-406');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'), 'client build must be 6-11-406');
+assert(pkg.version === '0.6.11.431', 'package version must be 0.6.11.431');
+assert(html.includes('/shared/combat-balance.js?v=431') && html.includes('/client-combat.js?v=431') && html.includes('/game.js?v=431'), 'v333 combat cache keys missing');
 
-assert(balance.version === 30, 'combat balance version must be 30');
+assert(balance.version === 32, 'combat balance version must be 32');
 assert(balance.attackSpeedTiers?.slow?.cooldown === 0.83, 'Slow tier must remain 0.83s');
 assert(balance.attackSpeedTiers?.normal?.cooldown === 0.75, 'Normal tier must remain 0.75s');
 assert(balance.attackSpeedTiers?.quick?.cooldown === 0.65, 'Quick tier must remain 0.65s');
@@ -51,7 +51,7 @@ assert(game.includes('if (!isBowWeapon)'), 'weapon detail UI must exclude bows f
 
 assert(server.includes('function weaponAttackRateLimitMs(weaponIndex)'), 'server universal weapon rate limiter missing');
 assert(server.includes('COMBAT_BALANCE.weaponAttackCooldown(weaponIndex)'), 'server rate limiter must read shared weapon cooldown');
-assert(server.includes('minimumMs = weaponAttackRateLimitMs(attacker.weaponIndex);'), 'PvP melee must enforce universal weapon cadence');
+assert(!server.includes('pvpPlayersCanHarm') && !server.includes('case \"pvpAttack\"'), 'retired PvP runtime must stay removed');
 assert(server.includes('minimumMs = weaponAttackRateLimitMs(playerState.weaponIndex);'), 'enemy melee/basic attacks must enforce universal weapon cadence');
 
 assert(readme.includes('## v6-11-333 — Universal attack-speed tiers'), 'README historical v333 changelog missing');

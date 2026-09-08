@@ -11,12 +11,13 @@ const requiredCss = [
   ["arrow HUD sits opposite potion buffs beside HP", /#arrowHud\s*\{[\s\S]*?left:\s*calc\(100% \+ 12px\);[\s\S]*?top:\s*0;/],
   ["potion buffs sit left of HP", /#hudBuffs\s*\{[\s\S]*?right:\s*calc\(100% \+ 12px\);[\s\S]*?top:\s*0;/],
   ["nine weapon/tool slots", /id="slot1"[\s\S]*id="slot9"/],
-  ["retired skill bar hidden", /id="abilityBar"[^>]*class="[^"]*retired-system[^"]*"[^>]*aria-hidden="true"/],
+  ["retired skill bar removed", html => !html.includes('id="abilityBar"')],
   ["world minimap inside viewport", /id="worldMiniMap"/]
 ];
 
 for (const [label, pattern] of requiredCss) {
-  if (!pattern.test(html)) throw new Error(`HUD anchoring regression: ${label}`);
+  const ok = typeof pattern === "function" ? pattern(html) : pattern.test(html);
+  if (!ok) throw new Error(`HUD anchoring regression: ${label}`);
 }
 
 for (const id of ["hpBarWrap", "bottomUi"]) {

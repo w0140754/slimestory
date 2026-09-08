@@ -8,20 +8,21 @@ const assert = (value, message) => { if (!value) throw new Error(message); };
 const html = read("public", "index.html");
 const input = read("public", "client-input.js");
 const app = read("public", "client-app.js");
+const combat = read("public", "client-combat.js");
 const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build must be v350");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build must be v350");
-assert(pkg.version === "0.6.11.428", "package version must be v350");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build must be v350");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build must be v350");
+assert(pkg.version === "0.6.11.431", "package version must be v431");
 assert(html.includes('id="mobileMovePad"') && html.includes('id="mobileAttackButton"'), "mobile movement/attack controls missing");
 assert(html.includes('id="mobileInteractButton"') && html.includes('id="mobileRotatePrompt"'), "mobile interact/orientation UI missing");
 assert(html.includes('(hover: none) and (pointer: coarse) and (orientation: landscape)'), "coarse-pointer landscape gate missing");
 assert(html.includes('viewport-fit=cover') && html.includes('env(safe-area-inset-right)'), "mobile safe-area support missing");
-assert(html.includes('/client-input.js?v=428') && html.includes('/client-app.js?v=428'), "v350 cache keys missing");
+assert(html.includes('/client-input.js?v=431') && html.includes('/client-app.js?v=431'), "v431 cache keys missing");
 assert(input.includes('setMobileMovement(dx, dy)') && input.includes('installMobileControls()'), "mobile input bridge missing");
-assert(input.includes('handlePrimaryAttack(mobilePointerEventForCanvas') && input.includes('releaseFireball'), "mobile attack/skill lifecycle missing");
+assert(input.includes('handlePrimaryAttack(mobilePointerEventForCanvas') && input.includes('handleBowVisualMouseUp(mobilePointerEventForCanvas') && combat.includes('releaseFireballAim({'), "mobile attack/item-action lifecycle missing");
 assert(app.includes('mobileInteractButton.classList.toggle("available"'), "contextual ACT state missing");
 
 console.log("Mobile controls prototype checks passed.");

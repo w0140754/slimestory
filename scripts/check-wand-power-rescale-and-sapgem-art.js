@@ -12,11 +12,11 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = require(path.join(root, "package.json"));
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build must be 6-11-406");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build must be 6-11-406");
-assert(pkg.version === "0.6.11.428", "package version must be 0.6.11.428");
-assert(html.includes('/shared/combat-balance.js?v=428') && html.includes('/game.js?v=428'), "v336 cache keys missing");
-assert(balanceText.includes('const VERSION = 30;'), "combat balance version must be 30");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build must be 6-11-406");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build must be 6-11-406");
+assert(pkg.version === "0.6.11.431", "package version must be 0.6.11.431");
+assert(html.includes('/shared/combat-balance.js?v=431') && html.includes('/game.js?v=431'), "v336 cache keys missing");
+assert(balanceText.includes('const VERSION = 32;'), "combat balance version must be 32");
 assert(fs.existsSync(path.join(root, "public", "assets", "sapgem_wand_v4.png")), "current redrawn Sapgem sprite missing");
 assert(game.includes('sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372")'), "current redrawn Sapgem sprite not wired");
 
@@ -35,7 +35,7 @@ for (const [id, magic, speed] of expected) {
 const shopBlock = game.match(/const SHOP_ITEMS = \[([\s\S]*?)\n\];/);
 assert(shopBlock && !shopBlock[1].includes('weapon_wand') && !shopBlock[1].includes('weapon_rainWand'), "retired Fire/Rain Wands must stay out of client shop");
 assert(server.includes('const SHOP_VENDOR_CATALOGS = Object.freeze({'), "server vendor catalogs missing");
-const vendorCatalogBlock = server.match(/const SHOP_VENDOR_CATALOGS = Object\.freeze\(\{([\s\S]*?)\n\}\);\n\nconst SHOP_ITEM_IDS/);
+const vendorCatalogBlock = server.match(/const SHOP_VENDOR_CATALOGS = Object\.freeze\(\{([\s\S]*?)\n\}\);\n\n\/\/ Equipment tokens allowed/);
 assert(vendorCatalogBlock && !vendorCatalogBlock[1].includes('weapon_wand') && !vendorCatalogBlock[1].includes('weapon_rainWand'), "retired Fire/Rain Wands must stay out of current vendor stock");
 assert(readme.includes('## v6-11-336 — Sapgem rotation fix'), "README historical v336 changelog missing");
 console.log("Wand power rescale + Sapgem redraw regression checks passed.");

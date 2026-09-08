@@ -12,9 +12,9 @@ const game = read("public", "game.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.428", "package version must be v378");
-assert(server.includes('const BUILD_VERSION = "6-11-428";'), "server build marker must be v378");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-428";'), "client build marker must be v378");
+assert.strictEqual(pkg.version, "0.6.11.431", "package version must be current cleanup build");
+assert(server.includes('const BUILD_VERSION = "6-11-431";'), "server build marker must be current cleanup build");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-431";'), "client build marker must be current cleanup build");
 
 assert(html.includes('id="worldMiniMap"'), "fixed local minimap DOM is missing");
 assert(html.includes("--mini-cell: 26px"), "desktop minimap must use enlarged cells");
@@ -43,7 +43,7 @@ assert(server.includes("function gridEnemyMapTier(mapId"), "grid enemy lifecycle
 assert(server.includes('return "warm";') && server.includes('return "cold";'), "warm/cold enemy map lifecycle is missing");
 assert(server.includes("gridMapCardinalDistance(mapId, activeMapId) === 1"), "only cardinal neighbours should retain warm mob snapshots");
 assert(server.includes("function enemyMapSimulationActive(mapId)"), "enemy simulation activity gate is missing");
-assert(server.includes("return !worldGridMetaForMap(mapId) || mapHasNetworkRecipients(mapId);"), "grid enemies must simulate only where a player socket is present");
+assert(server.includes("return Boolean(worldGridMetaForMap(mapId) && mapHasNetworkRecipients(mapId));"), "grid enemies must simulate only where a player socket is present");
 assert(server.includes("if (!mapHasNetworkRecipients(mapId)) {\n      pendingPassiveEnemyIntents.delete(mapId);\n      continue;"), "empty maps must skip enemy delta construction/serialization");
 assert(server.includes('if (nextTier === "cold" && previousTier && previousTier !== "cold")'), "far grid maps must reset only when they transition cold");
 

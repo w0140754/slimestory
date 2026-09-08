@@ -27,7 +27,7 @@ for (const rel of [
   assert.deepStrictEqual(pngSize(rel), { width: 16, height: 16 }, `${rel} must stay native 16x16`);
 }
 assert.deepStrictEqual(
-  pngSize("public/assets/grassyrock.png"),
+  pngSize("public/assets/scenery_grassy_rock_v2.png"),
   { width: 16, height: 18 },
   "scenery rock must be the updated 16x18 sprite"
 );
@@ -43,10 +43,10 @@ const html = read("public/index.html");
 assert.match(server, /action === "hitRock"/);
 assert.match(server, /damageServerRock\(entity, 1, playerId, "mining"\)/);
 assert.match(server, /spawnSharedResource\([\s\S]*?"stone"/);
-assert.match(server, /damageServerRock\(rock, 1, attackerId, "hurl"\)/);
+assert.doesNotMatch(server, /handleRockHurlAction|tickServerRockHurl|rockMotion|rockState/, "retired throwable-rock Hurl runtime must stay removed");
 assert.match(server, /ROCK_REGROW_MIN_MS/);
-assert.match(game, /PICKAXE RECEIVED!/);
-assert.match(game, /grantInventoryItem\("weapon_pickaxe", 1\)/);
+assert.match(game, /weapon_pickaxe: 1/);
+assert.match(game, /for \(const starterItemId of \["weapon_sword", "weapon_pickaxe", "weapon_axe"\]\)/);
 assert.match(game, /function tryHitRock\(/);
 assert.match(combat, /weapon === "pickaxe"/);
 assert.match(balance, /id: "weapon_pickaxe"/);
@@ -55,11 +55,11 @@ assert.match(world, /rockCrackTwoImage/);
 assert.match(network, /message\.totalStone/);
 assert.match(html, /inventoryStoneCount/);
 assert.match(html, /inventoryPickaxeImg/);
-assert.match(html, /miningLevelText/);
+assert.doesNotMatch(html, /miningLevelText/, "retired mining progression HUD must stay removed");
 
 
 assert.match(server, /const RESOURCE_REGROW_CLEAR_RADIUS = 96;/);
 assert.match(server, /function livingPlayerNearRockHome\(entity, radius = RESOURCE_REGROW_CLEAR_RADIUS\)/);
 assert.match(server, /if \(!livingPlayerNearRockHome\(entity\)\) \{\s*resetRockToFresh\(entity\);/);
-console.log("Rock mining OK: 3-hit cracks, Stone loot, Hurl wear, respawn, Pickaxe, and 18px scenery rock are wired.");
+console.log("Rock harvesting OK: 3-hit cracks, Stone loot, respawn, starter Pickaxe, and 18px scenery rock are wired as mining-only rocks without retired Hurl/mining progression.");
 

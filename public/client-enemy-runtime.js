@@ -186,8 +186,8 @@ function installClientEnemyRuntime(OnlineClientClass) {
     const flat = Array.isArray(message.r) ? message.r : [];
 
     // Flat stride-2 health stream: [networkId, hp, networkId, hp, ...].
-    // Direct enemyDamage/enemyHeal packets already update HP themselves, so
-    // this channel is reserved for authoritative HP mutations without a combat
+    // Direct enemyDamage packets already update HP themselves, so this channel
+    // is reserved for authoritative HP mutations without a combat
     // event (most notably batched Burn ticks and respawn correction).
     for (let index = 0; index + 1 < flat.length; index += 2) {
       const enemy = this.findSharedEnemyByNetworkId(flat[index], mapId);
@@ -283,14 +283,10 @@ function installClientEnemyRuntime(OnlineClientClass) {
         enemy.hp = respawnHp;
         enemy.alive = true;
         enemy.aggroTargetId = null;
-        enemy.confusionTargetId = null;
-        setReplicatedEnemyCountdown(enemy, "confusionTime", 0);
         setReplicatedEnemyCountdown(enemy, "burnTime", 0);
         setReplicatedEnemyCountdown(enemy, "respawnTime", 0);
         setReplicatedEnemyCountdown(enemy, "pickupTime", 0);
         setReplicatedEnemyCountdown(enemy, "hurlTime", 0);
-        setReplicatedEnemyCountdown(enemy, "snareRootTime", 0);
-        setReplicatedEnemyCountdown(enemy, "snareSlowTime", 0);
         enemy.wetTime = 0;
         enemy.carriedBy = null;
         enemy.lungeTime = 0;
@@ -475,14 +471,6 @@ function installClientEnemyRuntime(OnlineClientClass) {
         typeof state.aggroTargetId === "string"
           ? state.aggroTargetId
           : null;
-      enemy.confusionTime = Math.max(
-        0,
-        Number(state.confusionTime) || 0
-      );
-      enemy.confusionTargetId =
-        typeof state.confusionTargetId === "string"
-          ? state.confusionTargetId
-          : null;
       enemy.burnTime = Math.max(
         0,
         Number(state.burnTime) || 0
@@ -511,21 +499,6 @@ function installClientEnemyRuntime(OnlineClientClass) {
       enemy.pickupDirY = Number(state.pickupDirY) || 0;
       enemy.hurlTime = Math.max(0, Number(state.hurlTime) || 0);
       enemy.hurlDuration = Math.max(0.01, Number(state.hurlDuration) || 0.58);
-      enemy.snareRootTime = Math.max(
-        0,
-        Number(state.snareRootTime) || 0
-      );
-      enemy.snareSlowTime = Math.max(
-        0,
-        Number(state.snareSlowTime) || 0
-      );
-      enemy.snareSlowMultiplier = Math.max(
-        0.1,
-        Math.min(
-          1,
-          Number(state.snareSlowMultiplier) || 0.45
-        )
-      );
 
       enemy.respawnTime = Math.max(
         0,
@@ -549,76 +522,6 @@ function installClientEnemyRuntime(OnlineClientClass) {
         );
       }
     }
-  },
-
-  handleEnemyConfused(message) {
-    const enemy =
-      findClientWorldEnemy(
-        message.enemyId,
-        message.enemyType,
-        message.mapId
-      );
-
-    if (!enemy || currentMapId !== message.mapId) return;
-
-    setReplicatedEnemyCountdown(
-      enemy,
-      "confusionTime",
-      Math.max(
-        enemy.confusionTime || 0,
-        Number(message.duration) || CAMOUFLAGE_CONFUSION_DURATION
-      )
-    );
-    enemy.confusionTargetId =
-      typeof message.attackerId === "string"
-        ? message.attackerId
-        : enemy.confusionTargetId;
-
-    const profile =
-      enemyProfile(enemy);
-
-    // Keep the confusion punctuation around the target's head/body instead of
-    // on the damage-number lane so the ambush hesitation reads clearly.
-    const confusionY =
-      enemy.y +
-      (profile?.damageTextOffsetY ?? -31) +
-      18;
-
-    const confusionDuration =
-      Math.max(
-        0.7,
-        Number(message.duration) || CAMOUFLAGE_CONFUSION_DURATION
-      );
-
-    spawnFloatingText(
-      enemy.x - 11,
-      confusionY + 2,
-      "?",
-      "#f1e6a8",
-      confusionDuration,
-      1,
-      -0.75
-    );
-
-    spawnFloatingText(
-      enemy.x,
-      confusionY - 2,
-      "?",
-      "#fff2ad",
-      confusionDuration,
-      2,
-      0
-    );
-
-    spawnFloatingText(
-      enemy.x + 11,
-      confusionY + 2,
-      "?",
-      "#f1e6a8",
-      confusionDuration,
-      1,
-      0.75
-    );
   },
 
   handleSharedEnemyDamage(message) {
@@ -650,25 +553,6 @@ function installClientEnemyRuntime(OnlineClientClass) {
 
     const profile = enemyProfile(enemy);
 
-    // Wand Mastery hit marks now come from the same authoritative event that
-    // confirms damage. This prevents a predicted client-side claw mark from
-    // appearing on a target the server ultimately rejected because its precise
-    // position differed slightly from the locally reconstructed passive path.
-    if (message.source === "wandMasteryMelee") {
-      const body = enemyBodyPoint(enemy);
-      const aimAngle = Number(message.aimAngle);
-      const resolvedAngle = Number.isFinite(aimAngle)
-        ? aimAngle
-        : Math.atan2(body.y - (player.y - 8), body.x - player.x);
-      spawnWandMasteryHitParticles(
-        body.x,
-        body.y,
-        resolvedAngle,
-        0,
-        Math.cos(resolvedAngle) < 0
-      );
-    }
-
     spawnDamageNumber(
       enemy.x,
       enemy.y +
@@ -677,40 +561,6 @@ function installClientEnemyRuntime(OnlineClientClass) {
       message.critical
         ? { critical: true, duration: 0.84 }
         : undefined
-    );
-  },
-
-  handleSharedEnemyHeal(message) {
-    const enemy = this.findSharedEnemy(
-      message.enemyType,
-      message.enemyId,
-      message.mapId
-    );
-
-    if (!enemy) return;
-
-    if (Number.isFinite(message.hp)) {
-      enemy.hp = message.hp;
-    }
-
-    if (currentMapId !== message.mapId) return;
-
-    const amount = Math.max(
-      0,
-      Number(message.amount) || 0
-    );
-
-    if (amount <= 0) return;
-
-    const profile = enemyProfile(enemy);
-
-    spawnFloatingText(
-      enemy.x,
-      enemy.y +
-        (profile?.damageTextOffsetY ?? -31) - 1,
-      `+${amount}`,
-      "#89d9b8",
-      0.85
     );
   },
 
