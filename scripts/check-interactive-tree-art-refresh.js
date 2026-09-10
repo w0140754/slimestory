@@ -9,7 +9,7 @@ const exists = (...parts) => fs.existsSync(path.join(root, ...parts));
 const pkg = JSON.parse(read("package.json"));
 const world = read("public", "client-world.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432", "package version must be 0.6.11.431");
+assert.strictEqual(pkg.version, "0.6.11.468", "package version must be 0.6.11.431");
 assert(world.includes('assets/interactive_tree_canopy_v376.png?v=431'), 'interactive tree canopy cache key missing');
 assert(world.includes('assets/interactive_tree_canopy_v376_flip.png?v=431'), 'interactive tree flipped canopy cache key missing');
 assert(world.includes('assets/interactive_tree_trunk_v376.png?v=431'), 'interactive tree trunk cache key missing');

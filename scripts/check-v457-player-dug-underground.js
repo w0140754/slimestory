@@ -1,0 +1,62 @@
+"use strict";
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const root = path.join(__dirname, "..");
+const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
+const pkg = require(path.join(root, "package.json"));
+const terrain = require(path.join(root, "public", "shared", "terrain-rules.js"));
+const topology = require(path.join(root, "public", "shared", "structure-topology.js"));
+const world = require(path.join(root, "public", "shared", "world-content.js"));
+const game = read("public", "game.js");
+const combat = read("public", "client-combat.js");
+const server = read("server.js");
+const config = read("public", "client-config.js");
+const html = read("public", "index.html");
+
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert(html.includes('/game.js?v=431e-468'));
+
+const surface = world.maps.world_m1_p0;
+const underground = world.maps.world_m1_p0_u1;
+assert(surface && underground, "west surface + aligned underground maps must both exist");
+assert.strictEqual(surface.undergroundMapId, "world_m1_p0_u1");
+assert.strictEqual(underground.surfaceMapId, "world_m1_p0");
+assert.strictEqual(underground.subterranean, true);
+assert.strictEqual(underground.grid.layerDepth, 1);
+assert.strictEqual(underground.terrain.defaultType, "void");
+assert((underground.terrain.regions || []).some(region => terrain.circleCanOccupy(underground, region.x + 8, region.y + 8, 4, { allowWater: false })), "generated cavern must contain open terrain");
+assert(underground.structures.filter(s => s.kind === "stoneWall").length >= 60, "underground open cells need a real light/collision-blocking Stone Wall shell");
+assert.strictEqual(topology.automaticRoofRegions(underground.structures, 16).length, 0, "underground prototype must not use automatic roof artwork");
+assert(!underground.structures.some(s => /stair/i.test(String(s.kind))), "prototype must not use designated stair structures");
+
+assert(server.includes('action === "digGround"'));
+assert(server.includes('kind: breakthrough ? "dugPit" : "dugDirt"'));
+assert(server.includes('kind: "shaftOpening"'));
+assert(server.includes('surfaceDefinition?.undergroundMapId'));
+assert(server.includes('TERRAIN_RULES.circleCanOccupy(\n    undergroundDefinition'));
+assert(server.includes('["stoneCube", "dugPit"].includes(structure.kind)'), "enemy navigation must treat pits as obstacles");
+assert(server.includes('["woodWall", "stoneWall", "stoneCube", "dugPit", "woodDoor", "chest", "craftingTable"]'), "server player movement must route around dug pits");
+assert(server.includes('previousDefinition.undergroundMapId === requestedMapId'), "vertical map links must be server-authorized");
+assert(server.includes('if (WORLD_CONTENT?.maps?.[mapId]?.subterranean) return 0;'), "underground server weather must not rain");
+
+assert(combat.includes('groundDigTarget: weapon === "pickaxe" && !lockedStructure'));
+assert(combat.includes('tryDigSurfaceGround(lockedGroundDigTarget)'));
+assert(game.includes('function tryDigSurfaceGround(target = null) {'));
+assert(game.includes('sendEnvironmentAction("digGround", null, { x, y })'));
+assert(game.includes('function drawDugPit(structure, camX, camY, alpha = 1) {'));
+assert(game.includes('function drawShaftOpening(structure, camX, camY, alpha = 1) {'));
+assert(game.includes('function updateRopeShaftTraversal('));
+assert(!game.includes('"F DESCEND"'));
+assert(!game.includes('"F CLIMB"'));
+assert(game.includes('preserveCoordinates: true'));
+assert(game.includes('undergroundConnections?.[exitSide]'), "only generated underground edge links may cardinal-transition");
+assert(game.includes('const subterraneanAlpha = currentMapIsSubterranean() ? 0.90 : 0;'));
+assert(game.includes('function carveUndergroundShaftDaylight(bufferCtx) {'));
+assert(game.includes('torchLightVisibilityPolygon(worldX, worldY, radius + 6'), "shaft daylight must reuse wall-clipped visibility geometry");
+assert(game.includes('if (currentMapIsSubterranean()) return 0;'), "client rain intensity must be zero underground");
+
+assert(world.maps.world_p1_p1?.name !== "Great Cavern", "retired Great Cavern surface reservation must stay removed");
+console.log("v457 compatibility passed under v466: aligned digging/shafts, dark underground terrain, daylight apertures, and generated underground links are wired without stair tiles.");

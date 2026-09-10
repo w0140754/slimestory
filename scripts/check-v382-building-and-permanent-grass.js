@@ -13,9 +13,9 @@ const network = read("public", "client-network.js");
 const world = read("public", "client-world.js");
 const fire = read("public", "client-fire-environment.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 
 assert(!game.includes("selectedBuildOrientation"));
 assert(!game.includes("rotateSelectedBuildPiece"));
@@ -30,7 +30,7 @@ assert(server.includes('entity.cut = true;\n    entity.burnTime = 0;\n    entity
 assert(!server.includes("scheduleGrassRegrow"), "normal grass must not schedule server regrowth");
 assert(!server.includes("resetGrassToFresh"), "normal grass must not reset to fresh");
 assert(!server.includes("GRASS_REGROW_MIN_MS") && !server.includes("GRASS_REGROW_MAX_MS"), "normal grass regrow timers must be retired");
-assert(world.includes('if (clump.cut && !magicGrass) return;'), "cleared normal grass should draw nothing");
+assert(world.includes('if (clump.cut) return;'), "cleared normal grass should draw nothing");
 assert(world.includes('clump.cut = true;\n      clump.regrowAt = 0;'), "offline sword-cut grass must remain cleared");
 assert(fire.includes('clump.cut = true;\n          clump.burnt = true;\n          clump.regrowAt = 0;'), "offline burned normal grass must remain cleared");
 assert(!game.includes("scheduleLocalGrassRegrow"), "offline normal grass regrowth helper must be retired");

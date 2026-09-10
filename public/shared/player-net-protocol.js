@@ -13,8 +13,6 @@
     ATTACK: 1,
     BOW_DRAW: 2,
     BOW_RELEASE: 3,
-    FIREBALL_AIM: 4,
-    RAIN_CAST: 5,
     HURL_REACH: 6
   });
 

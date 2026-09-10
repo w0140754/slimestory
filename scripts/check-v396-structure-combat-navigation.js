@@ -6,17 +6,16 @@ const root = path.join(__dirname, "..");
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 const game = read("public", "game.js");
 const combat = read("public", "client-combat.js");
-const fire = read("public", "client-fire-environment.js");
 const server = read("server.js");
 const html = read("public", "index.html");
 const enemies = read("public", "client-enemies.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 const pkg = JSON.parse(read("package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 
 // Authored structure UI icons are now the live menu/loot assets.
 for (const name of ["wood_floor.png", "wood_wall.png", "wood_door.png"]) {
@@ -40,13 +39,11 @@ assert(!game.includes('roofTileVariant'), 'v396 must not introduce alternating/v
 
 // Client presentation: weapon/projectile art cannot pass through walls or closed doors.
 assert(game.includes('function structureWallImpactPoint('));
-assert(game.includes('const blocks = structure?.kind === "woodWall" ||'));
+assert(game.includes('const blocks = BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||'));
 assert(game.includes('structure?.kind === "woodDoor" && !doorVisuallyOpen(structure)'));
 assert(game.includes('function applyHeldItemStructureVisibilityClip(camX, camY)'));
 assert(combat.includes('structureWallImpactPoint(') && combat.includes('previousX') && combat.includes('projectile.y'));
 assert(combat.includes('structureLineOfEffectClear('));
-assert(fire.includes('const wallImpact = typeof structureWallImpactPoint === "function"'));
-assert(fire.includes('fireball.targetX = wallImpact.x'));
 
 // Server authority: Wood Walls and closed Wood Doors block damage.
 assert(server.includes('function serverWoodWallImpact('));
@@ -56,7 +53,6 @@ assert(server.includes('function serverLineOfEffectClear('));
 assert(server.includes('validateSharedEnemyMeleeHit('));
 assert(!server.includes("validateSharedEnemyBowMeleeHit"));
 assert(server.includes('validateSharedEnemyMeleeHit(') && server.includes('serverLineOfEffectClear('));
-assert(server.includes('splashStartX') && server.includes('FIREBALL_SPLASH_BURN_RADIUS'));
 
 // Living enemies keep cached 16px routes that PLAN through doors while movement respects closed doors.
 assert(server.includes('navigationPlanning = false'));
@@ -69,10 +65,4 @@ assert(server.includes('expiresAt: now + 750'));
 assert((server.match(/enemyStructureChaseVector\(/g) || []).length >= 7, 'current living chase/exit paths should use structure navigation');
 assert(server.includes('goblin.attackCooldown <= 0 &&') && server.includes('serverLineOfEffectClear(\n          goblin.mapId'), 'goblin lunge must require clear wall line-of-effect');
 
-// Rain Cloud is an intentional wall exception: its authoritative field tick has no wall LoE gate.
-const rainStart = server.indexOf('function applyServerRainCloudToLiving(');
-const rainEnd = server.indexOf('function tickServerRainClouds(', rainStart);
-assert(rainStart >= 0 && rainEnd > rainStart);
-assert(!server.slice(rainStart, rainEnd).includes('serverLineOfEffectClear'), 'Rain Cloud must remain wall-agnostic');
-
-console.log('v396 structure combat/navigation regression OK: uniform roof-edge polish, refreshed icons, wall-blocked combat, door-aware cached navigation, and Rain exception.');
+console.log('v396 structure combat/navigation regression OK: uniform roof-edge polish, refreshed icons, wall-blocked current combat, and door-aware cached navigation.');

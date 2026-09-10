@@ -13,16 +13,17 @@ const app = read("public", "client-app.js");
 const network = read("public", "client-network.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert.strictEqual(world.version, 414);
-assert.strictEqual(Object.keys(world.maps).length, 9, "v390 must preserve the active coordinate world");
+assert.strictEqual(Object.values(world.maps).filter(map => Number(map?.grid?.layerDepth || 0) === 0).length, 9, "v390 must preserve the active coordinate world");
 
 assert(game.includes("const HOUSE_FOREGROUND_ALPHA = 0.34;"), "foreground wall fade alpha missing");
 assert(topology.includes("foregroundBoundaryKeys: foregroundBoundaries"), "roof regions must classify foreground/south boundaries");
 assert(game.includes("function structureIsForegroundRoofBoundary("), "foreground wall classification helper missing");
-assert(game.includes("? alpha * (structure?.kind === \"woodDoor\" ? HOUSE_FOREGROUND_DOOR_ALPHA : HOUSE_FOREGROUND_ALPHA)"), "only the foreground boundary should fade while inside, with a more visible door");
+assert(game.includes("const roomAlpha = alpha * ([\"woodDoor\", \"caveDoor\"].includes(structure?.kind) ? HOUSE_FOREGROUND_DOOR_ALPHA : HOUSE_FOREGROUND_ALPHA);"), "foreground room-wall softening must remain available inside completed rooms");
+assert(game.includes("resolvedAlpha = Math.min(resolvedAlpha, roomAlpha);"), "universal overlap fade must be allowed to become stronger than the room foreground baseline");
 assert(game.includes("if (inside) continue;"), "roof must be fully invisible while the player is inside");
 assert(!game.includes("HOUSE_FACADE_ALPHA"), "old whole-facade fade constant should be retired");
 

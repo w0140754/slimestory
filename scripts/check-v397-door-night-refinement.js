@@ -11,10 +11,10 @@ const html = read("public", "index.html");
 const enemyRuntime = read("public", "client-enemy-runtime.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 
 // Door placement accepts a 90-degree wall at either endpoint, client + server.
 assert(game.includes("function doorCandidateHasFlankingWalls(candidate)"));
@@ -34,7 +34,7 @@ assert(game.includes('structure?.kind === "woodDoor" && !doorVisuallyOpen(struct
 
 // Visibility/presentation polish.
 assert(game.includes("const HOUSE_FOREGROUND_DOOR_ALPHA = 0.52;"));
-assert(game.includes("const STRUCTURE_COVER_DOOR_ALPHA = 0.72;"));
+assert(game.includes("const LOCAL_FOREGROUND_OCCLUDER_ALPHA = 0.24;"), "doors should now share the universal local foreground-occlusion alpha");
 assert(game.includes("drawHeldArmWithStructureClip"), "weapon hand/arm should share the wall clip");
 assert(game.includes('"build-hotbar-upright"'));
 assert(html.includes(".hotbar-slot img.build-hotbar-upright"));

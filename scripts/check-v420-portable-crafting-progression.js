@@ -16,9 +16,9 @@ const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 
 const spawn = world.maps?.world_p0_p0;
 assert(spawn, "coordinate spawn missing");
@@ -34,7 +34,7 @@ assert(html.includes('data-craft-recipe="craftingTable"'), "Wood Crafting Table 
 assert(html.includes('data-resource-key="craftingTables"') && html.includes('data-build-item="craftingTable"'), "portable Crafting Table inventory/build item missing");
 
 assert(game.includes('craftingTable: Object.freeze({') && game.includes('station: "hand"') && game.includes('ingredients: Object.freeze({ wood: 10 })'), "client hand-crafted 10 Wood table recipe missing");
-assert(server.includes('craftingTable: Object.freeze({ repeatable: true, resourceKey: "craftingTables", outputCount: 1, station: "hand", ingredients: Object.freeze({ wood: 10 }) })'), "server hand-crafted 10 Wood table recipe missing");
+assert(server.includes('craftingTable: Object.freeze({ resourceKey: "craftingTables", outputCount: 1, station: "hand", ingredients: Object.freeze({ wood: 10 }) })'), "server hand-crafted 10 Wood table recipe missing");
 assert(server.includes('const validBench = recipe.station === "hand" || playerNearAuthorizedCraftingTable(playerState);'), "server must gate advanced recipes by portable table proximity");
 assert(server.includes('structure?.kind === "craftingTable"') && server.includes('<= 40'), "server portable table range check missing");
 assert(game.includes('function playerNearCraftingTable(range = 40)') && game.includes('function craftRecipeCurrentlyAvailable(recipe)'), "client recipe proximity/material filtering missing");
@@ -44,7 +44,7 @@ assert(app.includes('craftingOpen && typeof updateCraftingUi === "function"') &&
 
 assert(game.includes('function drawCraftingTableStructure('), "portable table renderer missing");
 assert(game.includes('selectedBuildPiece === "craftingTable"'), "portable table placement path missing");
-assert(game.includes('["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]'), "portable table must join build/reclaim inventory kinds");
+assert(game.includes('["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"]'), "portable table must join build/reclaim inventory kinds");
 assert(server.includes('message?.kind === "craftingTable" ? "craftingTable" : null'), "server table placement kind missing");
 assert(server.includes('} else if (resource.kind === "craftingTable") {') && server.includes('playerState.craftingTables += 1;'), "table reclaim pickup restoration missing");
 assert(enemies.includes('craftingTable: Object.freeze({') && enemies.includes('craftingTableLootImage'), "table ground-loot visual missing");

@@ -12,10 +12,10 @@ const config = read("public", "client-config.js");
 const clientMaps = read("public", "client-maps.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert(!pkg.scripts?.["adopt-map"] && !pkg.scripts?.["build-waterfall-grove"], "retired editor/map npm aliases survived");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 
 // v383 cleanup remains, while its temporary full-cell/autotile wall model is retired.
 assert(!server.includes('if (sameCell) return true;'), "v383 one-structure-per-cell wall rule survived");
@@ -38,7 +38,7 @@ for (const parts of [
 ]) assert(!exists(...parts), `retired file still exists: ${parts.join("/")}`);
 assert(!server.includes('/dev/map-editor/adopt'), "retired editor HTTP route survived");
 assert(!server.includes('/shared/adopted-map-overrides.js'), "retired override HTTP route survived");
-assert.strictEqual(Object.keys(world.maps).length, 9, "only the active 3x3 coordinate world should remain");
+assert.strictEqual(Object.values(world.maps).filter(map => Number(map?.grid?.layerDepth || 0) === 0).length, 9, "only the active 3x3 coordinate world should remain");
 assert(Object.values(world.maps).every(map => map?.grid), "legacy non-grid maps survived in canonical world data");
 assert.strictEqual(world.defaultPlayerLoad.mapId, "world_p0_p0");
 assert(!clientMaps.includes('prototypeIsland') && !clientMaps.includes('waterfallGrove') && !clientMaps.includes('goldSlimeDen'), "legacy client map registry data survived");

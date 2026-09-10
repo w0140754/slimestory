@@ -15,11 +15,11 @@ const input = read("public", "client-input.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.schemaVersion, 2);
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(html.includes('/game.js?v=431'));
 
 function dims(file) {
@@ -32,7 +32,7 @@ assert(game.includes('chestClosedStructureImage = loadImage("assets/building/che
 assert(game.includes('chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=431")'));
 assert(game.includes("function drawChestStructure("));
 assert(html.includes('data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true"'));
-assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'));
+assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"]);'));
 assert.strictEqual(topology.layerOf({ kind: "chest" }), topology.LAYERS.OBJECT);
 assert(input.includes('["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece)'));
 assert(enemies.includes('chest: Object.freeze({'));
@@ -66,7 +66,7 @@ assert(server.includes("function removeAnyStructure("));
 assert(server.includes("const structure = structureById(playerState.mapId, structureId);"));
 assert(!game.includes("if (structure.worldGenerated) continue;"), "Pickaxe targeting must not reject generated structures");
 assert(server.includes('spawnSharedResource(\n    removed.mapId,\n    removed.kind,'), "destroyed generated structure must drop the exact piece");
-assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"'), "all buildable/generated structure resources must be pickup-compatible");
+assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "chest"'), "all buildable/generated structure resources must be pickup-compatible");
 
 // Mutations stay map-local and change-only: map entry gets compact deltas, live edits broadcast to current map only.
 assert(server.includes("function worldStructureMutationSnapshot(mapId)"));

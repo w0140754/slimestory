@@ -9,12 +9,6 @@ function currentTerrainDefinition(mapId = currentMapId) {
   return TERRAIN_RULES.terrainDefinition(definition) ? definition : null;
 }
 
-function terrainAllowsMagicGrass(x, y, mapId = currentMapId) {
-  const definition = currentTerrainDefinition(mapId);
-  if (!definition) return true;
-  return TERRAIN_RULES.canGrowMagicGrassAt(definition, x, y) !== false;
-}
-
 function terrainWaterReflectionInfo(x, y, mapId = currentMapId, maxDistance = 16) {
   const definition = currentTerrainDefinition(mapId);
   if (!definition) return null;

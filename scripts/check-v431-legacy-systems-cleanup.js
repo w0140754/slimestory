@@ -11,7 +11,6 @@ const html = read("public", "index.html");
 const game = read("public", "game.js");
 const input = read("public", "client-input.js");
 const abilities = read("public", "client-actions.js");
-const itemActions = read("public", "client-wand-actions.js");
 const tigerPaw = read("public", "client-tiger-paw-actions.js");
 const combat = read("public", "client-combat.js");
 const network = read("public", "client-network.js");
@@ -21,17 +20,15 @@ const status = read("public", "client-status.js");
 const app = read("public", "client-app.js");
 const server = read("server.js");
 const balance = require(path.join(root, "public", "shared", "combat-balance.js"));
-const actionBalance = require(path.join(root, "public", "shared", "action-balance.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
-assert(html.includes('/shared/action-balance.js?v=431'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(!fs.existsSync(path.join(root, "public", "shared", "ability-scaling.js")));
 assert(!fs.existsSync(path.join(root, "public", "shared", "camouflage-rules.js")));
 assert(!fs.existsSync(path.join(root, "public", "assets", "skills")));
 
-const runtime = [html, game, input, abilities, itemActions, tigerPaw, combat, network, world, fire, status, app, server].join("\n");
+const runtime = [html, game, input, abilities, tigerPaw, combat, network, world, fire, status, app, server].join("\n");
 for (const retired of [
   "focusFire", "wandMastery", "hallucination", "jesterBlink", "shadowHide",
   "camouflage", "hunterSnare", "skillBindings", "abilityPoints", "skillPoints",
@@ -51,17 +48,17 @@ assert(!server.includes("X-Slime-Story-Editor"));
 
 
 // Retired high-traffic compatibility protocols and dead persistent-state
-// shims must stay gone. Current Rain Field uses compact rainFieldDelta state;
-// Tiger Paw Hurl is mob-only; current chests use chestContext* packets.
+// shims must stay gone. The later compact Rain Field backend is retired too;
+// Tiger Paw Hurl is mob-only and current chests use chestContext* packets.
 for (const retiredProtocol of [
   "rainGrassSpawn", "rainGrassState", "playerDamageRequest", "playerIgniteRequest",
   "rockMotion", "rockState", "handleRockHurlAction", "handleTreasureOpen",
   "handleChestToggle", "openedTreasureIds", "shopPurchases",
-  "SHOP_PURCHASE_HISTORY_ITEM_IDS"
+  "SHOP_PURCHASE_HISTORY_ITEM_IDS", "rainFieldDelta", "transientActionSnapshot",
+  "temporaryRainGrass", "startServerRainCloud"
 ]) {
   assert(!runtime.includes(retiredProtocol), `retired compatibility token survived: ${retiredProtocol}`);
 }
-assert(network.includes('\"rainFieldDelta\"') && server.includes('\"rainFieldDelta\"'), "current compact Rain Field delta protocol must remain");
 assert(server.includes("playerCarriesHurlEnemy("), "current mob-only Tiger Paw Hurl must remain");
 assert(server.includes('case "chestContextOpen"') && server.includes('case "chestContextClose"'), "current chest context protocol must remain");
 assert(server.includes("const TRANSFERABLE_EQUIPMENT_ITEM_IDS = new Set(["), "current transferable equipment token catalog must remain");
@@ -76,7 +73,6 @@ for (const retiredRuntime of [
 ]) {
   assert(!runtime.includes(retiredRuntime), `retired unreachable runtime token survived: ${retiredRuntime}`);
 }
-assert(server.includes("if (target.id !== ownerId)"), "Rain Cloud must only Wet its owning player");
 assert(!runtime.includes("environmentCatalog"), "client-uploaded environment catalog protocol must stay removed");
 assert(server.includes("function initializeSharedEnvironmentFromWorldContent()"), "server must initialize mutable environment from WORLD_CONTENT");
 for (const retiredInboundAlias of ["enemyHeal", "enemyHitPlayer", "treasureResult"]) {
@@ -99,19 +95,13 @@ assert(!game.includes("state.pond"), "legacy state.pond activation path must sta
 assert(!game.match(/\bpond\.(x|y|width|height)\s*=/), "legacy mutable pond box must stay removed");
 assert(!read("public", "client-maps.js").includes("pond:"), "map state must not carry the retired dummy pond rectangle");
 
-// Compact Rain Field is still a current item-action system. The legacy per-cell
-// packets are gone, but the local field registry itself must remain declared.
-assert(world.includes("const temporaryRainGrassFields = new Map();"), "current Rain Field registry must remain declared");
-for (const currentRainToken of [
-  "TEMP_RAIN_GRASS_BURN_DURATION",
-  "TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE",
-  "TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE",
-  "TEMP_RAIN_GRASS_CHAIN_RADIUS",
-  "TEMP_RAIN_GRASS_CHAIN_MAX_IGNITIONS",
-  "rainGrassPatchSequence"
-]) {
-  assert(world.includes(currentRainToken), `current Rain Field token must remain declared: ${currentRainToken}`);
-}
+// The compact Rain Field registry was itself retired in v442 once the final
+// Rain Cloud cast entry point disappeared. No shared module or runtime registry
+// should survive from that ability backend.
+assert(!fs.existsSync(path.join(root, "public", "shared", "rain-field.js")));
+assert(!world.includes("temporaryRainGrassFields"));
+assert(!network.includes("rainFieldDelta"));
+assert(!server.includes("activeServerRainFields"));
 
 // Loose rocks were removed from Tiger Paw carry/hurl in v415. The renderer must
 // not retain the deleted rockCarrier helper or other carry-only rock state.
@@ -122,11 +112,6 @@ assert(!app.includes("rockCarrier("), "renderer must not call retired rockCarrie
 // state rather than dereferencing localPlayerId/connected during early input.
 assert(tigerPaw.includes("!onlineClient?.localPlayerId"), "Tiger Paw local carry helpers must tolerate null onlineClient");
 assert(tigerPaw.includes("!onlineClient?.connected"), "Tiger Paw action helper must tolerate null onlineClient");
-
-// Current aimed Fireball is the only projectile form. The obsolete straight-
-// flying fallback path should not be resurrected.
-assert(!fire.includes("Legacy/non-aimed fallback"));
-assert(!fire.includes("fireball.x += fireball.vx * dt"));
 
 // Superseded sprite revisions that were kept only for cache/history baggage are
 // intentionally absent from the runtime package.
@@ -150,19 +135,16 @@ assert(game.includes("Prices vary by item · Level requirements apply · Esc to 
 // Outgoing damage is equipment/action power + enemy defenses/level, with no
 // player class/stat/mastery input.
 assert.strictEqual(balance.calculateAttackPower(0), 8);
-assert.strictEqual(balance.calculateMagicPower(2), 10);
+assert.strictEqual(balance.calculateMagicPower(12), 15);
 assert(!read("public", "shared", "combat-balance.js").match(/strength|dexterity|intelligence|\bLUK\b|wandMastery/i));
-assert.strictEqual(actionBalance.fireball.cooldown, 7);
-assert.strictEqual(actionBalance.rainCloud.cooldown, 30);
 
-// Current item actions survive the cleanup.
-assert(combat.includes('if (currentWeapon === "wand")') && combat.includes("beginFireballAim(target)"));
-assert(combat.includes('if (currentWeapon === "rainWand")') && combat.includes("beginRainCloudCast(target)"));
+// The retired Fire/Rain Wand item-action layer was removed later. Tiger Paw is
+// still the current mob-only item action and must remain intact.
+assert(!combat.includes('if (currentWeapon === "wand")'));
+assert(!combat.includes('if (currentWeapon === "rainWand")'));
 assert(combat.includes('if (currentWeapon === "tigerPaw")') && combat.includes("tryCastHurl();"));
-assert(itemActions.includes('startActionCooldown("fireball")'));
-assert(itemActions.includes('startActionCooldown("rainCloud"'));
 assert(tigerPaw.includes('if (equippedWeapon() !== "tigerPaw") return false;'));
-assert(app.includes("updateHotbarActionCooldownHud();"));
+assert(!app.includes("updateHotbarActionCooldownHud"));
 assert(!app.includes("updateAbilityCooldownHud"));
 
 // Retired gathering/talent progression was a no-op and should no longer be

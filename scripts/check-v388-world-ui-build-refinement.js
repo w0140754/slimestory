@@ -14,12 +14,12 @@ const html = read("public", "index.html");
 const server = read("server.js");
 const topology = read("public", "shared", "structure-topology.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert.strictEqual(world.version, 414);
 assert.strictEqual(world.worldGrid.radius, 1);
-assert.strictEqual(Object.keys(world.maps).length, 9, "v388 must not alter the active coordinate world");
+assert.strictEqual(Object.values(world.maps).filter(map => Number(map?.grid?.layerDepth || 0) === 0).length, 9, "v388 must not alter the active coordinate world");
 
 assert(!html.includes('id="worldGridStatus"'), "Spawn/Distance/Radius banner must be removed");
 assert(html.includes('id="worldMiniMap"'), "minimap must remain");
@@ -51,7 +51,7 @@ assert(server.includes("const playerDoorPassages = new Map();"), "server passage
 assert(server.includes("serverPlayerStepHitsStructureWall(id, mapId"), "authoritative movement is not using directional door collision");
 
 assert(game.includes("testWoodSupply: Object.freeze({"), "client Test Wood source missing");
-assert(server.includes('testWoodSupply: Object.freeze({ repeatable: true, resourceKey: "wood", outputCount: 100'), "server Test Wood source missing");
+assert(server.includes('testWoodSupply: Object.freeze({ resourceKey: "wood", outputCount: 100'), "server Test Wood source missing");
 assert(html.includes('data-craft-recipe="testWoodSupply"'), "Test Wood crafting-table button missing");
 assert(network.includes('wood: "totalWood"'), "Test Wood craft result must use server-authoritative total without double-granting");
 

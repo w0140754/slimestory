@@ -286,6 +286,7 @@ class OnlineClient {
         if (Number.isFinite(message.stone)) {
           player.stone = message.stone;
         }
+        if (Number.isFinite(message.dirt)) player.dirt = message.dirt;
 
         if (Number.isFinite(message.whiteFlowers)) player.whiteFlowers = message.whiteFlowers;
         if (Number.isFinite(message.blueFlowers)) player.blueFlowers = message.blueFlowers;
@@ -364,6 +365,7 @@ class OnlineClient {
       if (Number.isFinite(message.coins)) player.coins = Math.max(0, Math.floor(message.coins));
       if (Number.isFinite(message.wood)) player.wood = Math.max(0, Math.floor(message.wood));
       if (Number.isFinite(message.stone)) player.stone = Math.max(0, Math.floor(message.stone));
+      if (Number.isFinite(message.dirt)) player.dirt = Math.max(0, Math.floor(message.dirt));
       if (Number.isFinite(message.whiteFlowers)) player.whiteFlowers = Math.max(0, Math.floor(message.whiteFlowers));
       if (Number.isFinite(message.blueFlowers)) player.blueFlowers = Math.max(0, Math.floor(message.blueFlowers));
       if (Number.isFinite(message.healingPotions)) player.healingPotions = Math.max(0, Math.floor(message.healingPotions));
@@ -381,6 +383,10 @@ class OnlineClient {
       if (Number.isFinite(message.woodFloors)) player.woodFloors = Math.max(0, Math.floor(message.woodFloors));
       if (Number.isFinite(message.stoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.stoneFloors));
       if (Number.isFinite(message.woodWalls)) player.woodWalls = Math.max(0, Math.floor(message.woodWalls));
+      if (Number.isFinite(message.stoneWalls)) player.stoneWalls = Math.max(0, Math.floor(message.stoneWalls));
+      if (Number.isFinite(message.stoneCubes)) player.stoneCubes = Math.max(0, Math.floor(message.stoneCubes));
+      if (Number.isFinite(message.stoneArches)) player.stoneArches = Math.max(0, Math.floor(message.stoneArches));
+      if (Number.isFinite(message.ropes)) player.ropes = Math.max(0, Math.floor(message.ropes));
       if (Number.isFinite(message.woodDoors)) player.woodDoors = Math.max(0, Math.floor(message.woodDoors));
       if (Number.isFinite(message.greenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.greenJellyCubes));
       if (Number.isFinite(message.torches)) player.torches = Math.max(0, Math.floor(message.torches));
@@ -517,16 +523,6 @@ class OnlineClient {
       return;
     }
 
-    if (message.type === "transientActionSnapshot") {
-      applyTransientActionSnapshot(message);
-      return;
-    }
-
-    if (message.type === "rainFieldDelta") {
-      applyRainFieldDelta(message);
-      return;
-    }
-
     if (message.type === "environmentSnapshot") {
       this.applyEnvironmentSnapshot(
         message.entities,
@@ -567,7 +563,11 @@ class OnlineClient {
     }
 
     if (message.type === "structureDestroyResult") {
+      if (Number.isFinite(message.totalDirt)) player.dirt = Math.max(0, Math.floor(message.totalDirt));
+      if (Number.isFinite(message.totalRopes)) player.ropes = Math.max(0, Math.floor(message.totalRopes));
+      if (message.success) { updateInventoryUi(); updateHotbar(); saveLocalCharacterState(true); }
       if (!message.success) {
+        if (message.reason === "useDirt") return;
         const text = message.reason === "needPickaxe" ? "NEED PICKAXE" : message.reason === "wallAttached" ? "REMOVE WALL FIRST" : message.reason === "objectAttached" ? "REMOVE OBJECT FIRST" : message.reason === "inUse" ? "CHEST IN USE" : message.reason === "lootFirst" ? "LOOT CHEST FIRST" : "TOO FAR";
         spawnFloatingText(player.x, player.y - 30, text, "#ffe38b", 0.7);
       }
@@ -575,9 +575,14 @@ class OnlineClient {
     }
 
     if (message.type === "structurePlaceResult") {
+      if (Number.isFinite(message.totalDirt)) player.dirt = Math.max(0, Math.floor(message.totalDirt));
       if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalStoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.totalStoneFloors));
       if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
+      if (Number.isFinite(message.totalStoneWalls)) player.stoneWalls = Math.max(0, Math.floor(message.totalStoneWalls));
+    if (Number.isFinite(message.totalStoneCubes)) player.stoneCubes = Math.max(0, Math.floor(message.totalStoneCubes));
+    if (Number.isFinite(message.totalStoneArches)) player.stoneArches = Math.max(0, Math.floor(message.totalStoneArches));
+    if (Number.isFinite(message.totalRopes)) player.ropes = Math.max(0, Math.floor(message.totalRopes));
       if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
       if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
       if (Number.isFinite(message.totalChests)) player.chests = Math.max(0, Math.floor(message.totalChests));
@@ -1427,7 +1432,7 @@ class OnlineClient {
   requestStructurePlacement(kind, x, y, edge = null, supportId = null) {
     if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
     const payload = { type: "structurePlace", kind, x, y };
-    if (["woodWall", "woodDoor"].includes(kind) && ["north", "east", "south", "west"].includes(edge)) payload.edge = edge;
+    if (["woodWall", "stoneWall", "woodDoor", "caveDoor"].includes(kind) && ["north", "east", "south", "west"].includes(edge)) payload.edge = edge;
     if (kind === "torch" && typeof supportId === "string" && supportId) payload.supportId = supportId;
     this.socket.send(JSON.stringify(payload));
     return true;
@@ -1537,6 +1542,10 @@ class OnlineClient {
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalStoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.totalStoneFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
+    if (Number.isFinite(message.totalStoneWalls)) player.stoneWalls = Math.max(0, Math.floor(message.totalStoneWalls));
+    if (Number.isFinite(message.totalStoneCubes)) player.stoneCubes = Math.max(0, Math.floor(message.totalStoneCubes));
+    if (Number.isFinite(message.totalStoneArches)) player.stoneArches = Math.max(0, Math.floor(message.totalStoneArches));
+    if (Number.isFinite(message.totalRopes)) player.ropes = Math.max(0, Math.floor(message.totalRopes));
     if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
     if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
@@ -1558,6 +1567,10 @@ class OnlineClient {
           woodFloors: "totalWoodFloors",
           stoneFloors: "totalStoneFloors",
           woodWalls: "totalWoodWalls",
+          stoneWalls: "totalStoneWalls",
+          stoneCubes: "totalStoneCubes",
+          stoneArches: "totalStoneArches",
+          ropes: "totalRopes",
           woodDoors: "totalWoodDoors",
           greenJellyCubes: "totalGreenJellyCubes",
           torches: "totalTorches",
@@ -1570,8 +1583,6 @@ class OnlineClient {
             Math.max(1, Number(recipe.outputCount) || 1);
         }
       } else {
-        if (recipe.storyKey) player.story[recipe.storyKey] = true;
-
         grantInventoryItem(
           recipe.itemId,
           1
@@ -1588,15 +1599,6 @@ class OnlineClient {
       updateInventoryUi();
       updateHotbar();
       return;
-    }
-
-    // v427: all craft-result popups are silent. One-time recipe reconciliation
-    // still repairs local ownership if the authoritative server reports it.
-    if (message.reason === "alreadyCrafted") {
-      if (recipe.storyKey) player.story[recipe.storyKey] = true;
-      if (recipe.itemId && !playerOwnsItem(recipe.itemId)) grantInventoryItem(recipe.itemId, 1);
-      updateInventoryUi();
-      updateHotbar();
     }
 
     updateCraftingUi();
@@ -1647,6 +1649,16 @@ class OnlineClient {
 
     const beforeHotbarCounts = hotbarAssignableAcquisitionSnapshot();
 
+    if (message.resourceKind === "inventoryItem" && typeof message.itemToken === "string") {
+      const parts = inventoryTransferTokenParts(message.itemToken);
+      const amount = Math.max(1, Math.floor(Number(message.itemCount) || 1));
+      if (parts?.type === "resource" && Number.isFinite(message.playerCount)) {
+        player[parts.id] = Math.max(0, Math.floor(Number(message.playerCount)));
+      } else if (parts?.type === "item") {
+        applyInventoryTransferDelta(message.itemToken, amount, { autoAssign: true });
+      }
+    }
+
     if (Number.isFinite(message.totalWood)) {
       player.wood =
         message.totalWood;
@@ -1665,6 +1677,10 @@ class OnlineClient {
     if (Number.isFinite(message.totalWoodFloors)) player.woodFloors = Math.max(0, Math.floor(message.totalWoodFloors));
     if (Number.isFinite(message.totalStoneFloors)) player.stoneFloors = Math.max(0, Math.floor(message.totalStoneFloors));
     if (Number.isFinite(message.totalWoodWalls)) player.woodWalls = Math.max(0, Math.floor(message.totalWoodWalls));
+    if (Number.isFinite(message.totalStoneWalls)) player.stoneWalls = Math.max(0, Math.floor(message.totalStoneWalls));
+    if (Number.isFinite(message.totalStoneCubes)) player.stoneCubes = Math.max(0, Math.floor(message.totalStoneCubes));
+    if (Number.isFinite(message.totalStoneArches)) player.stoneArches = Math.max(0, Math.floor(message.totalStoneArches));
+    if (Number.isFinite(message.totalRopes)) player.ropes = Math.max(0, Math.floor(message.totalRopes));
     if (Number.isFinite(message.totalWoodDoors)) player.woodDoors = Math.max(0, Math.floor(message.totalWoodDoors));
     if (Number.isFinite(message.totalGreenJellyCubes)) player.greenJellyCubes = Math.max(0, Math.floor(message.totalGreenJellyCubes));
     if (Number.isFinite(message.totalTorches)) player.torches = Math.max(0, Math.floor(message.totalTorches));
@@ -2111,9 +2127,8 @@ class OnlineClient {
     }
 
     // Most effects are already rendered by their sender and should not echo
-    // back. Server-driven shared effects (currently Rain Cloud grass growth)
-    // opt into a self echo so the caster sees the exact same authoritative
-    // growth events as every other player.
+    // back. Server-driven shared effects may opt into a self echo when every
+    // observer must see the same authoritative presentation event.
     if (
       message.senderId === this.localPlayerId &&
       !message.serverEcho
@@ -2136,13 +2151,11 @@ class OnlineClient {
     if (message.effect === "basicProjectile") {
       basicProjectiles.push({
         type:
-          payload.projectileType === "rainWand"
-            ? "rainWand"
-            : payload.projectileType === "shepherdStaff"
-              ? "shepherdStaff"
-              : payload.projectileType === "arrow"
-                ? "arrow"
-                : "wand",
+          payload.projectileType === "shepherdStaff"
+            ? "shepherdStaff"
+            : payload.projectileType === "arrow"
+              ? "arrow"
+              : "wand",
 
         x: Number(payload.x) || 0,
         y: Number(payload.y) || 0,
@@ -2162,45 +2175,6 @@ class OnlineClient {
     }
 
 
-    if (message.effect === "fireball") {
-      const startX = Number(payload.startX) || 0;
-      const startY = Number(payload.startY) || 0;
-      const targetX = Number(payload.targetX) || startX;
-      const targetY = Number(payload.targetY) || startY;
-      const duration = Math.max(0.18, Number(payload.duration) || 0.4);
-      const angle = Math.atan2(targetY - startY, targetX - startX);
-
-      fireballs.push({
-        x: startX,
-        y: startY,
-        startX,
-        startY,
-        targetX,
-        targetY,
-        elapsed: 0,
-        duration,
-        arcHeight: Math.max(0, Number(payload.arcHeight) || 0),
-        airborne: true,
-        angle,
-        vx: Math.cos(angle) * 138,
-        vy: Math.sin(angle) * 138,
-        life: duration + 0.20,
-
-        trailTimer: 0,
-        visualOnly: true,
-        ownerId: message.senderId
-      });
-
-      return;
-    }
-
-    if (message.effect === "fireballImpact") {
-      spawnRemoteFireballImpact(
-        message.senderId,
-        payload
-      );
-      return;
-    }
 
     if (
       message.effect ===
@@ -2241,13 +2215,6 @@ class OnlineClient {
       return;
     }
 
-    if (message.effect === "rainCast") {
-      spawnRemoteRainCast(
-        message.senderId,
-        payload
-      );
-      return;
-    }
 
 }
 
@@ -2386,11 +2353,6 @@ class OnlineClient {
       bowDrawDuration: player.bowDrawDuration,
       bowReleaseTime: player.bowReleaseTime,
       bowReleaseDuration: player.bowReleaseDuration,
-      fireballAiming: player.fireballAiming,
-      fireballAimTime: player.fireballAimTime,
-      rainCloudCasting: player.rainCloudCasting,
-      rainCloudCastTime: player.rainCloudCastTime,
-      rainCloudCastDuration: player.rainCloudCastDuration,
 
       // Wet and Burn countdowns are server-owned. Their visuals are predicted
       // locally, but they are no longer uploaded in routine playerStatePatch.
@@ -2416,8 +2378,6 @@ class OnlineClient {
     const transientFields = new Set([
       "attackTime", "attackDuration", "attackDirection", "attackHand", "attackAimAngle",
       "bowDrawing", "bowDrawAmount", "bowDrawDuration", "bowReleaseTime", "bowReleaseDuration",
-      "fireballAiming", "fireballAimTime",
-      "rainCloudCasting", "rainCloudCastTime", "rainCloudCastDuration",
       "hurlReachTime", "hurlReachDuration", "hurlReachDirX", "hurlReachDirY"
     ]);
     for (const [key, value] of Object.entries(nextState)) {
@@ -2446,8 +2406,6 @@ class OnlineClient {
       attackTime: Math.max(0, Number(player.attackTime) || 0),
       bowDrawing: Boolean(player.bowDrawing),
       bowReleaseTime: Math.max(0, Number(player.bowReleaseTime) || 0),
-      fireballAiming: Boolean(player.fireballAiming),
-      rainCloudCasting: Boolean(player.rainCloudCasting),
       hurlReachTime: Math.max(0, Number(player.hurlReachTime) || 0)
     };
   }
@@ -2467,13 +2425,11 @@ class OnlineClient {
     if (rose("bowReleaseTime", 0.005)) {
       this.sendPlayerAction([A.BOW_RELEASE, Math.round(Math.max(0.03, Number(player.bowReleaseDuration) || 0.12) * 1000), Math.max(0, Math.min(255, Math.round((Number(player.bowDrawAmount) || 0) * 255))), PLAYER_NET_PROTOCOL.encodeAim(player.attackAimAngle)]);
     }
-    if (current.fireballAiming !== Boolean(previous.fireballAiming)) this.sendPlayerAction([A.FIREBALL_AIM, current.fireballAiming ? 1 : 0]);
-    if (current.rainCloudCasting !== Boolean(previous.rainCloudCasting)) this.sendPlayerAction([A.RAIN_CAST, current.rainCloudCasting ? 1 : 0, Math.round(Math.max(0.05, Number(player.rainCloudCastDuration) || 0.50) * 1000)]);
     if (rose("hurlReachTime", 0.005)) {
       this.sendPlayerAction([A.HURL_REACH, Math.round(Math.max(0.05, Number(player.hurlReachDuration) || 0.18) * 1000), Math.round(Math.max(-1, Math.min(1, Number(player.hurlReachDirX) || 0)) * 1000), Math.round(Math.max(-1, Math.min(1, Number(player.hurlReachDirY) || 0)) * 1000)]);
     }
 
-    const aiming = current.bowDrawing || current.fireballAiming || current.rainCloudCasting;
+    const aiming = current.bowDrawing;
     const now = performance.now();
     const aimQ = PLAYER_NET_PROTOCOL.encodeAim(player.attackAimAngle);
     const changed = this.lastAimQuantized === null || PLAYER_NET_PROTOCOL.circularStepDelta(aimQ, this.lastAimQuantized) >= PLAYER_NET_PROTOCOL.AIM_MIN_STEP_DELTA;
@@ -2517,9 +2473,7 @@ class OnlineClient {
       remote.bowReleaseTime = remote.bowReleaseDuration;
       remote.bowDrawAmount = Math.max(0, Math.min(1, (Number(data[2]) || 0) / 255));
       remote.attackAimAngle = PLAYER_NET_PROTOCOL.decodeAim(data[3]);
-    } else if (code === A.FIREBALL_AIM) { remote.fireballAiming = data[1] === 1; remote.fireballAimTime = 0; }
-    else if (code === A.RAIN_CAST) { remote.rainCloudCasting = data[1] === 1; remote.rainCloudCastDuration = Math.max(0.05, (Number(data[2]) || 500) / 1000); remote.rainCloudCastTime = 0; }
-    else if (code === A.HURL_REACH) { remote.hurlReachDuration = Math.max(0.05, (Number(data[1]) || 180) / 1000); remote.hurlReachTime = remote.hurlReachDuration; remote.hurlReachDirX = Math.max(-1, Math.min(1, (Number(data[2]) || 0) / 1000)); remote.hurlReachDirY = Math.max(-1, Math.min(1, (Number(data[3]) || 0) / 1000)); }
+    } else if (code === A.HURL_REACH) { remote.hurlReachDuration = Math.max(0.05, (Number(data[1]) || 180) / 1000); remote.hurlReachTime = remote.hurlReachDuration; remote.hurlReachDirX = Math.max(-1, Math.min(1, (Number(data[2]) || 0) / 1000)); remote.hurlReachDirY = Math.max(-1, Math.min(1, (Number(data[3]) || 0) / 1000)); }
   }
 
   sendLocalState(force = false) {
@@ -2605,10 +2559,6 @@ class OnlineClient {
         remote.bowReleaseTime = Math.max(0, remote.bowReleaseTime - dt);
         remote.bowDrawAmount = Math.max(0, (Number(remote.bowDrawAmount) || 0) - dt / 0.09);
       }
-      if (remote.fireballAiming) remote.fireballAimTime = Math.max(0, (Number(remote.fireballAimTime) || 0) + dt);
-      else remote.fireballAimTime = 0;
-      if (remote.rainCloudCasting) remote.rainCloudCastTime = Math.min(Math.max(0.05, Number(remote.rainCloudCastDuration) || 0.50), Math.max(0, Number(remote.rainCloudCastTime) || 0) + dt);
-      else remote.rainCloudCastTime = 0;
 
 
       remote.wetTime = Math.max(

@@ -13,7 +13,7 @@
   function () {
     "use strict";
 
-    const VERSION = 32;
+    const VERSION = 34;
     const MIN_DAMAGE = 1;
     const ELEMENT_TYPES = Object.freeze(["neutral", "fire", "water", "air", "earth"]);
     const LEVEL_GAP_DAMAGE_PENALTY_PER_LEVEL = 0.05;
@@ -46,38 +46,10 @@
         attackPower: 10,
         magicPower: 0,
       }),
-      Object.freeze({
-        id: "weapon_wand",
-        name: "Fire Wand",
-        damageType: "magic",
-        attackSpeed: "slow",
-        attackPower: 5,
-        magicPower: 10,
-      }),
-      Object.freeze({
-        id: "weapon_rainWand",
-        name: "Rain Wand",
-        damageType: "magic",
-        attackSpeed: "slow",
-        attackPower: 4,
-        magicPower: 8,
-      }),
-      Object.freeze({
-        id: "weapon_katana",
-        name: "Katana",
-        damageType: "physical",
-        attackSpeed: "quick",
-        attackPower: 12,
-        magicPower: 0,
-      }),
-      Object.freeze({
-        id: "weapon_oldSword",
-        name: "Sword",
-        damageType: "physical",
-        attackSpeed: "normal",
-        attackPower: 10,
-        magicPower: 0,
-      }),
+      null, // retired Fire Wand slot 2; preserve current network/combat indices
+      null, // retired Rain Wand slot 3; preserve current network/combat indices
+      null, // retired Katana slot 4; preserve current network/combat indices
+      null, // retired old-sword slot 5; preserve current network/combat indices
       Object.freeze({
         id: "weapon_bow",
         name: "Wood Bow",
@@ -155,12 +127,6 @@
         element: "fire",
         // Burn ticks twice per second; 10% Magic Power per tick = 20%/second.
         powerPercent: 10
-      }),
-      rain: Object.freeze({
-        name: "Rain Cloud",
-        damageType: "magic",
-        element: "neutral",
-        powerPercent: 35
       })
     });
 

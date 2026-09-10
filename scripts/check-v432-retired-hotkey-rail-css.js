@@ -24,8 +24,8 @@ for (const retiredSelector of [
 assert(!html.includes('id="menuItemHotkeyRail"'), "retired assignment rail DOM returned");
 assert(!game.includes("menuItemHotkeyRail"), "retired assignment rail runtime returned");
 assert(html.includes('id="hotbar"') && html.includes('id="slot10"'), "live 1-0 HUD missing");
-assert(html.includes('/game.js?v=431e-432'), "v432 cache token missing");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'), "server build version not advanced");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'), "client build version not advanced");
-assert.strictEqual(pkg.version, "0.6.11.432", "package version not advanced");
+assert(html.includes('/game.js?v=431e-468'), "retired-rail cache token not advanced");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'), "current server build marker missing");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "current client build marker missing");
+assert.strictEqual(pkg.version, "0.6.11.468", "current package version missing");
 console.log("v432 retired assignment-rail CSS purge regression check passed");

@@ -1,0 +1,18 @@
+"use strict";
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const root = path.join(__dirname, "..");
+const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
+const source = read("public", "shared", "world-content.js");
+const pkg = require(path.join(root, "package.json"));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(!source.includes("function addSpawnCave()"), "the old authored Spawn cave must stay retired");
+assert(source.includes("function addGeneratedCave(reservation, caveIndex = 1)"));
+assert(source.includes('pushBoundary(key === externalArchKey ? "caveDoor" : "stoneWall"'));
+assert(source.includes('if (neighbor.roomId !== structure.roomId) pushBoundary("caveDoor"'));
+assert(source.includes('simple: true'));
+assert(source.includes('roomCount: template.rooms.length'));
+assert(!source.includes('open: true, recessed: true'));
+assert(!source.includes('const vestibuleOffsets = ['));
+console.log("v447 supersession check passed: the old recessed Spawn-cave entrance stays retired and generated caves use compact Stone Arch-separated room topology.");

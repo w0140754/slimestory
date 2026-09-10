@@ -12,12 +12,12 @@
   "use strict";
 
   const TYPES = Object.freeze({
-    void: Object.freeze({ walkable: false, magicGrass: false }),
-    grass: Object.freeze({ walkable: true, magicGrass: true }),
-    dirt: Object.freeze({ walkable: true, magicGrass: true }),
-    sand: Object.freeze({ walkable: true, magicGrass: false }),
-    water: Object.freeze({ walkable: false, magicGrass: false }),
-    stone: Object.freeze({ walkable: true, magicGrass: false })
+    void: Object.freeze({ walkable: false }),
+    grass: Object.freeze({ walkable: true }),
+    dirt: Object.freeze({ walkable: true }),
+    sand: Object.freeze({ walkable: true }),
+    water: Object.freeze({ walkable: false }),
+    stone: Object.freeze({ walkable: true })
   });
 
   function normalizeType(type, fallback = "void") {
@@ -198,11 +198,6 @@
     return Boolean(typeRules(type).walkable);
   }
 
-  function canGrowMagicGrassAt(mapDefinition, x, y) {
-    const type = terrainTypeAt(mapDefinition, x, y);
-    if (type === null) return null;
-    return Boolean(typeRules(type).magicGrass);
-  }
 
   function sampleCircle(mapDefinition, x, y, radius, predicate) {
     const r = Math.max(0, Number(radius) || 0);
@@ -332,7 +327,6 @@
     invalidateTerrainLookup,
     typeRules,
     isWalkableAt,
-    canGrowMagicGrassAt,
     circleCanOccupy,
     circleTouchesType,
     clampSegmentToNonVoid

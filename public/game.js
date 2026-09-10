@@ -156,10 +156,6 @@ const playerGhostBodyImage = loadImage("assets/player_ghost_body_v1.png");
 const swordImage = new Image();
 swordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZklEQVQ4T2NkoBAwwllkgmFmwH9yvAVT/H9TnhKD36R7UC4GwGkoSOJ/d7gMmKMuzsYgJi4OlUIAi+rjcDYaYIS7ANkQQgBmCchgZKeBw4CAV9AB3AXIAGQQNnGsgGiFuMCoAQwMAJ4PEhAZoz7TAAAAEGRlQkdDNkU2MjVENTdFRjZBNzE0qzz/cwAAAABJRU5ErkJgggAA";
 
-// Restored original pre-Wood-Sword weapon art as its own weapon.
-const oldSwordImage = new Image();
-oldSwordImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdElEQVQ4T2NkoBAwwllkgmFmwH8kL4HYuACKt+EaumNMGUqXnAZz2tvbGSQkJKBSCPDixQuGyspKGBesF0T8L3BVZJAWF2F4+vINg35UHQMXOzuDnqEhTCEcXDp/nuHbz5/IBjFSxQUwQFEYkA1GDaBCGAAA194oEUjv6x0AAAAQZGVCRzRFQ0U0RDU3NEUxQzVDQjCb0v2LAAAAAElFTkSuQmCC";
-
 // Player-drawn 16x16 Wood Bow arch. The drawstring is procedural.
 const bowImage = new Image();
 const dreamcatcherBowImage = loadImage("assets/dreamcatcher_bow_v1.png");
@@ -200,18 +196,43 @@ const torchImage = loadImage("assets/torch_v1.png?v=431");
 const woodFloorStructureImage = loadImage("assets/building/wood_floor_v395.png?v=431");
 const stoneFloorStructureImage = loadImage("assets/building/stone_floor_v413.png?v=431");
 const woodWallStructureImage = loadImage("assets/building/wood_wall_v395.png?v=431");
+const stoneWallStructureImage = loadImage("assets/building/stone_wall_v443.png?v=444");
+const stoneWallStructureVariantImages = Object.freeze([
+  stoneWallStructureImage,
+  loadImage("assets/building/stone_wall_variant_2_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_variant_3_v444.png?v=444")
+]);
+const stoneWallCapLeftVariantImages = Object.freeze([
+  loadImage("assets/building/stone_wall_cap_left_variant_1_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_cap_left_variant_2_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_cap_left_variant_3_v444.png?v=444")
+]);
+const stoneWallCapRightVariantImages = Object.freeze([
+  loadImage("assets/building/stone_wall_cap_right_variant_1_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_cap_right_variant_2_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_cap_right_variant_3_v444.png?v=444")
+]);
+const stoneWallCapBothVariantImages = Object.freeze([
+  loadImage("assets/building/stone_wall_cap_both_variant_1_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_cap_both_variant_2_v444.png?v=444"),
+  loadImage("assets/building/stone_wall_cap_both_variant_3_v444.png?v=444")
+]);
+const stoneWallSideStructureImage = loadImage("assets/building/stone_wall_side_v443.png?v=444");
+const stoneWallSideCapTopStructureImage = loadImage("assets/building/stone_wall_side_cap_top_v444.png?v=444");
+const stoneWallSideCapBottomStructureImage = loadImage("assets/building/stone_wall_side_cap_bottom_v444.png?v=444");
+const stoneWallSideCapBothStructureImage = loadImage("assets/building/stone_wall_side_cap_both_v444.png?v=444");
 const woodDoorStructureImage = loadImage("assets/building/wood_door_v395.png?v=431");
+const caveDoorStructureImage = loadImage("assets/building/stone_cave_door_v451.png?v=451");
 const woodRoofStructureImage = loadImage("assets/building/roof_v395.png?v=431");
+const stoneRoofStructureImage = loadImage("assets/building/stone_roof_v445.png?v=445");
+const stoneCubeStructureImage = loadImage("assets/building/stone_cube_v448.png?v=449");
+const stoneCubeStructureVariantImages = Object.freeze([
+  stoneCubeStructureImage,
+  loadImage("assets/building/stone_cube_variant_2_v448.png?v=449"),
+  loadImage("assets/building/stone_cube_variant_3_v448.png?v=449")
+]);
 const chestClosedStructureImage = loadImage("assets/building/chest_closed_v414.png?v=431");
 const chestOpenStructureImage = loadImage("assets/building/chest_open_v414.png?v=431");
-
-// Player-drawn wand sprite.
-const wandImage = new Image();
-wandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdElEQVQ4T2NkoBAwwllkgmFmwH80L2HjwwBcHMb43x1jylC65DRMDIP/4msFg+h8GYZvly4x8M6aBROHSC4ucGOInbCLAR+tmiLDYF7+Emwb49atKAaAAMy5GDbD+PhcgA6w+R1sGFwESR6bASSBUQOoEAYAURM4EQAektkAAAAQZGVCRzE0MzA5RjU0RUUyNDU1MDgC5IE6AAAAAElFTkSuQmCC";
-
-// Player-drawn rain wand sprite.
-const rainWandImage = new Image();
-rainWandImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWUlEQVQ4T2NkoBAwwllkghFowH90b8M4IAl8AKTu/////xkYGcFa4IaAJU79/8zgUZjJsKN/Olb63YQlIN0Mh6Y/YLDLVEAxBGYSRS4gBeAMA7LBqAFUCAMAsI8iEUmLjfsAAAAQZGVCRzc0MDQ2MzU3QTg5QTY5QzRtyupvAAAAAElFTkSuQmCC";
 
 // User-drawn craftable Shepherd Staff. It uses the same hand pivot and
 // basic-projectile combat loop as the two existing wands.
@@ -223,12 +244,6 @@ const sapgemWandImage = loadImage("assets/sapgem_wand_v4.png?v=372");
 // treated like a hand weapon, so no separate held sprite is drawn.
 const tigerPawImage = loadImage("assets/tiger_paw_v1.png?v=431");
 
-const katanaImage = new Image();
-katanaImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAcUlEQVQ4T2NkoBAwwllkgqFnwH+426EA3QsgBchiKBr+/4dwnz9/DqalpKTgisEy3UX8DKV9H6FC2DWgA5AB/4NYWBieGBkxhNrcZDg+6SvD2t+/wZqwaEB3MX4XYNOADtAVoIcBQUCSYmxg1AAqhAEAg8MkDpP24bUAAAAQZGVCRzVCQ0I5NjRFNEVGNEFBNEROv4a/AAAAAElFTkSuQmCC";
-
-// Player-drawn rain cloud sprite.
-const rainCloudImage = new Image();
-rainCloudImage.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAQCAYAAAB3AH1ZAAAA/UlEQVRIS7WU0RGEIAxEtQlbcOzGKizKKuyBKmjBJrxZxmViLgTO0/chKBt2RaHv/ufIvSt97jk0iRyObdu6cRzzAzJNE5rq/FWBQ9EcxBi7eZ7RdT28QWtpqXfNSUuI0sCxrmu+IcuypLbFHIQQWFPyMQdMczIMQ2pbAgARglw85U1a8tLbYaJfzTXWJ2EnfVNQmxyT1DQeOgQuzeZPgACAIR4P4K0QzcGrAYA1160AsojjpbeUWiD1GhkAmCFQuO976nMHoJBaYOmx7bCVWaPRPyHJJx8NaE7EoZK3LKHxSdJY54k+mGQAyVexLjzRx3VtHFw0ukCiiz3tbT7D0JMRd29gRgAAABBkZUJHQUY2QjE1NjQ2MUI5M0I2MTWxkqMAAAAASUVORK5CYIIA";
 
 // Use a pivot near the handle end so it swings naturally in the hand.
 const WAND_PIVOT_X = 2;
@@ -252,14 +267,12 @@ const SWORD_PIVOT_Y = 7;
 // -----------------------------------------------------------------------------
 // MAGIC / FIRE
 // -----------------------------------------------------------------------------
-const fireballs = [];
 const fireParticles = [];
 const enemyDeathEffects = [];
 const ENEMY_SPAWN_ANIM_DURATION = 0.30;
 const ENEMY_DEATH_ANIM_DURATION = 0.36;
 const growthParticles = [];
 const basicProjectiles = [];
-const rainClouds = [];
 const levelUpParticles = [];
 let mouseCanvasX = VIEW_W / 2;
 let mouseCanvasY = VIEW_H / 2;
@@ -377,6 +390,29 @@ function spawnRockChipBurst(rock, broken = false) {
       maxLife: life,
       color: colors[(Math.random() * colors.length) | 0],
       size: broken && Math.random() < 0.35 ? 2 : 1
+    });
+  }
+}
+
+function spawnGroundDigBurst(x, y, openedHole = false) {
+  const colors = openedHole
+    ? ["#4b3323", "#65462f", "#855b3b", "#a4774c"]
+    : ["#65462f", "#785437", "#946a45"];
+  const count = openedHole ? 14 : 5;
+
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (openedHole ? 13 : 7) + Math.random() * (openedHole ? 24 : 13);
+    const life = 0.18 + Math.random() * (openedHole ? 0.34 : 0.18);
+    growthParticles.push({
+      x: Number(x) + (Math.random() - 0.5) * 9,
+      y: Number(y) - 2 + (Math.random() - 0.5) * 6,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - (openedHole ? 14 : 8),
+      life,
+      maxLife: life,
+      color: colors[(Math.random() * colors.length) | 0],
+      size: openedHole && Math.random() < 0.32 ? 2 : 1
     });
   }
 }
@@ -502,19 +538,7 @@ function removeClosestRemoteProjectile(
 
 
 
-const WAND_WEAPON_TYPES = Object.freeze(["wand", "rainWand", "shepherdStaff", "lostKeyWand", "sunflowerWand", "sapgemWand"]);
-
-
-
-
-
-
-
-
-const FIREBALL_AIM_MIN_RANGE = 26;
-const FIREBALL_AIM_MAX_RANGE = 150;
-const FIREBALL_AIM_PULSE_DURATION = 1.25;
-const FIREBALL_LANDING_RADIUS = 13;
+const WAND_WEAPON_TYPES = Object.freeze(["shepherdStaff", "lostKeyWand", "sunflowerWand", "sapgemWand"]);
 
 
 
@@ -567,9 +591,14 @@ const FIREBALL_LANDING_RADIUS = 13;
 
 
 
-const RAIN_CLOUD_ORBIT_MAX_RADIUS = 28;
-const RAIN_CLOUD_ORBIT_EXPAND_TIME = 7.0;
-const RAIN_CLOUD_ORBIT_ANGULAR_SPEED = 0.72;
+
+
+
+
+
+
+
+
 
 
 
@@ -595,11 +624,6 @@ function removeRemoteCasterEffectsForOwner(
 ) {
   if (!ownerId) return;
 
-  removeRemoteRainForOwner(
-    ownerId
-  );
-
-  clearTemporaryRainGrassForOwner(ownerId);
 
 
   for (let i = basicProjectiles.length - 1; i >= 0; i--) {
@@ -611,14 +635,6 @@ function removeRemoteCasterEffectsForOwner(
     }
   }
 
-  for (let i = fireballs.length - 1; i >= 0; i--) {
-    if (
-      fireballs[i].visualOnly &&
-      fireballs[i].ownerId === ownerId
-    ) {
-      fireballs.splice(i, 1);
-    }
-  }
 }
 
 
@@ -1175,8 +1191,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     lockRadiusY: 7,
     meleeBodyRadius: 5,
     horizontalMeleeBodyRadius: 6,
-    rainRadiusInset: 3,
-    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -7,
     burnGlowRadius: 9,
@@ -1238,8 +1252,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     lockRadiusY: 7,
     meleeBodyRadius: 5,
     horizontalMeleeBodyRadius: 6,
-    rainRadiusInset: 3,
-    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -8,
     burnGlowRadius: 9,
@@ -1278,8 +1290,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     lockRadiusY: 7,
     meleeBodyRadius: 7,
     horizontalMeleeBodyRadius: 12,
-    rainRadiusInset: 2,
-    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -7,
     burnGlowRadius: 11,
@@ -1310,8 +1320,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     lockRadiusY: 10,
     meleeBodyRadius: 6,
     horizontalMeleeBodyRadius: 7,
-    rainRadiusInset: 2,
-    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -12,
     burnGlowRadius: 10,
@@ -1351,8 +1359,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     lockRadiusY: 10,
     meleeBodyRadius: 7,
     horizontalMeleeBodyRadius: 8,
-    rainRadiusInset: 2,
-    rainEffect: "damage",
     burnSpreadChance: 0.38,
     burnGlowOffsetY: -12,
     burnGlowRadius: 11,
@@ -1379,8 +1385,6 @@ const CLIENT_ENEMY_RUNTIME_PROFILES = Object.freeze({
     lockRadiusY: 12,
     meleeBodyRadius: 10,
     horizontalMeleeBodyRadius: 11,
-    rainRadiusInset: 0,
-    rainEffect: "none",
     burnSpreadChance: 0.42,
     burnGlowOffsetY: -12,
     burnGlowRadius: 13,
@@ -1937,14 +1941,9 @@ function setRespawnButtonVisible(visible) {
 }
 
 function removeLocalCasterEffectsOnDeath() {
-  player.fireballAiming = false;
-  player.fireballAimTime = 0;
-  player.fireballAimMapId = null;
-
   // Local caster effects have no `visualOnly` flag. Preserve remote-player
   // effects while immediately deleting everything owned by the dead player.
   for (const collection of [
-    fireballs,
     basicProjectiles
   ]) {
     for (let i = collection.length - 1; i >= 0; i--) {
@@ -1954,9 +1953,6 @@ function removeLocalCasterEffectsOnDeath() {
     }
   }
 
-  endLocalRainCloud({ startCooldown: true });
-
-  clearTemporaryRainGrass();
   player.bowDrawing = false;
   player.bowDrawAmount = 0;
   player.bowReleaseTime = 0;
@@ -2048,16 +2044,9 @@ document.getElementById("respawnButton")?.addEventListener(
 );
 
 function clearTransientWorldEffects() {
-  cancelRainCloudCast();
-  fireballs.length = 0;
   fireParticles.length = 0;
   basicProjectiles.length = 0;
-  endLocalRainCloud({ startCooldown: true });
   // Remote copies are map-local visuals and can be dropped immediately.
-  for (let i = rainClouds.length - 1; i >= 0; i--) {
-    if (rainClouds[i]?.visualOnly) rainClouds.splice(i, 1);
-  }
-  clearTemporaryRainGrass();
   levelUpParticles.length = 0;
 
   // Pickups remain local to the place where they were dropped. For now,
@@ -2083,6 +2072,7 @@ let mapEnemySyncFallbackTimer = null;
 // viewport in the direction the player travelled. This avoids the old black
 // cover without pre-activating adjacent maps or their enemies.
 const MAP_TRANSITION_SLIDE_DURATION = 0.34;
+const MAP_TRANSITION_FADE_DURATION = 0.24;
 let mapTransitionPhase = "idle";
 let mapTransitionProgress = 0;
 let pendingMapTransition = null;
@@ -2090,6 +2080,7 @@ let mapTransitionOutgoingFrame = null;
 let mapTransitionIncomingFrame = null;
 let mapTransitionDirectionX = 0;
 let mapTransitionDirectionY = 0;
+let mapTransitionStyle = "slide";
 let mapTransitionOutgoingPlayerScreenX = VIEW_W / 2;
 let mapTransitionOutgoingPlayerScreenY = VIEW_H / 2;
 let mapTransitionIncomingPlayerScreenX = VIEW_W / 2;
@@ -2132,6 +2123,9 @@ function mapTransitionDirectionForTarget(mapId) {
   const sourceGrid = worldGridMapMeta(currentMapId);
   const targetGrid = worldGridMapMeta(mapId);
   if (!sourceGrid || !targetGrid) return { x: 0, y: 0 };
+  if (sourceGrid.x === targetGrid.x && sourceGrid.y === targetGrid.y && sourceGrid.layerDepth !== targetGrid.layerDepth) {
+    return { x: 0, y: targetGrid.layerDepth > sourceGrid.layerDepth ? 1 : -1 };
+  }
   return {
     x: Math.sign(targetGrid.x - sourceGrid.x),
     y: Math.sign(targetGrid.y - sourceGrid.y)
@@ -2142,7 +2136,7 @@ function beginMapTransitionSlide() {
   const camera = getCameraPosition();
   mapTransitionIncomingPlayerScreenX = player.x - camera.x;
   mapTransitionIncomingPlayerScreenY = player.y - camera.y;
-  mapTransitionPhase = "sliding";
+  mapTransitionPhase = mapTransitionStyle === "fade" ? "fading" : "sliding";
   mapTransitionProgress = 0;
 }
 
@@ -2153,6 +2147,7 @@ function finishMapTransitionPresentation() {
   mapTransitionIncomingFrame = null;
   mapTransitionDirectionX = 0;
   mapTransitionDirectionY = 0;
+  mapTransitionStyle = "slide";
   setMapTransitionNpcLayerHidden(false);
 }
 
@@ -2254,7 +2249,10 @@ function worldGridMapMeta(mapId = currentMapId) {
     y: Number(grid.y),
     distance: Math.max(0, Number(grid.distance) || 0),
     biome: String(grid.biome || "plains"),
-    seed: Number(grid.seed) || 0
+    seed: Number(grid.seed) || 0,
+    layerDepth: Math.max(0, Math.floor(Number(grid.layerDepth) || 0)),
+    surfaceMapId: typeof WORLD_CONTENT?.maps?.[mapId]?.surfaceMapId === "string" ? WORLD_CONTENT.maps[mapId].surfaceMapId : null,
+    undergroundMapId: typeof WORLD_CONTENT?.maps?.[mapId]?.undergroundMapId === "string" ? WORLD_CONTENT.maps[mapId].undergroundMapId : null
   };
 }
 
@@ -2329,7 +2327,7 @@ function updateWorldMiniMap() {
   if (!miniMap) return;
 
   const current = worldGridMapMeta();
-  if (!current) {
+  if (!current || current.layerDepth > 0) {
     miniMap.style.display = "none";
     return;
   }
@@ -2398,7 +2396,7 @@ function updateWorldMiniMap() {
   }
 }
 
-function requestMapTransition(mapId, entrySide) {
+function requestMapTransition(mapId, entrySide, options = {}) {
   if (!mapStates[mapId]) return false;
   if (mapTransitionPhase !== "idle") return false;
 
@@ -2412,6 +2410,7 @@ function requestMapTransition(mapId, entrySide) {
   const direction = mapTransitionDirectionForTarget(mapId);
   mapTransitionDirectionX = direction.x;
   mapTransitionDirectionY = direction.y;
+  mapTransitionStyle = options?.transitionStyle === "fade" ? "fade" : "slide";
 
   const outgoingCamera = getCameraPosition();
   mapTransitionOutgoingPlayerScreenX = player.x - outgoingCamera.x;
@@ -2433,7 +2432,10 @@ function requestMapTransition(mapId, entrySide) {
     entrySide,
     sourceX: player.x,
     sourceY: player.y,
-    sourceMapId: currentMapId
+    destinationX: Number.isFinite(Number(options?.destinationX)) ? Number(options.destinationX) : player.x,
+    destinationY: Number.isFinite(Number(options?.destinationY)) ? Number(options.destinationY) : player.y,
+    sourceMapId: currentMapId,
+    preserveCoordinates: Boolean(options?.preserveCoordinates)
   };
   mapTransitionPhase = "starting";
   mapTransitionProgress = 0;
@@ -2470,10 +2472,13 @@ function updateMapTransition(dt) {
     return true;
   }
 
-  if (mapTransitionPhase === "sliding") {
+  if (mapTransitionPhase === "sliding" || mapTransitionPhase === "fading") {
+    const duration = mapTransitionPhase === "fading"
+      ? MAP_TRANSITION_FADE_DURATION
+      : MAP_TRANSITION_SLIDE_DURATION;
     mapTransitionProgress = Math.min(
       1,
-      mapTransitionProgress + dt / MAP_TRANSITION_SLIDE_DURATION
+      mapTransitionProgress + dt / duration
     );
 
     if (mapTransitionProgress >= 1) {
@@ -2488,12 +2493,20 @@ function updateMapTransition(dt) {
 
 // Draw the live player over the directional transition composite while the
 // outgoing frame remains stationary during server sync.
-function drawMapTransitionLivePlayer(screenX, screenY) {
+function drawMapTransitionLivePlayer(screenX, screenY, alpha = 1) {
   // Transition snapshots live in physical backing pixels on mobile, while the
   // player renderer works in logical game pixels. Restore the normal game
   // transform before drawing the one live player sprite over the composite.
   ctx.save();
   ctx.setTransform(GAME_RENDER_SCALE, 0, 0, GAME_RENDER_SCALE, 0, 0);
+  ctx.globalAlpha = Math.max(0, Math.min(1, Number(alpha) || 0));
+  // This sprite is painted after the captured scene's lighting pass. Match it
+  // to ambient darkness so map transitions never flash a fully lit player.
+  const transitionDarkness = Math.max(
+    worldClockLightingAlpha(currentWorldClockMinutes()),
+    currentMapIsSubterranean() ? 0.90 : 0
+  );
+  ctx.filter = `brightness(${Math.max(0.10, 1 - transitionDarkness).toFixed(3)})`;
   const camX = player.x - screenX;
   const camY = player.y - screenY;
   drawPlayer(camX, camY);
@@ -2527,6 +2540,36 @@ function drawMapTransitionCover() {
 
   const rawProgress = Math.max(0, Math.min(1, mapTransitionProgress));
   const progress = rawProgress * rawProgress * (3 - 2 * rawProgress);
+
+  if (mapTransitionPhase === "fading") {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (progress < 0.5) {
+      const outgoingAlpha = 1 - progress * 2;
+      ctx.globalAlpha = outgoingAlpha;
+      ctx.drawImage(mapTransitionOutgoingFrame, 0, 0);
+      ctx.globalAlpha = 1;
+      drawMapTransitionLivePlayer(
+        mapTransitionOutgoingPlayerScreenX,
+        mapTransitionOutgoingPlayerScreenY,
+        outgoingAlpha
+      );
+    } else {
+      const incomingAlpha = (progress - 0.5) * 2;
+      ctx.globalAlpha = incomingAlpha;
+      ctx.drawImage(incomingFrame, 0, 0);
+      ctx.globalAlpha = 1;
+      drawMapTransitionLivePlayer(
+        mapTransitionIncomingPlayerScreenX,
+        mapTransitionIncomingPlayerScreenY,
+        incomingAlpha
+      );
+    }
+    ctx.restore();
+    return;
+  }
+
   const outX = Math.round(-mapTransitionDirectionX * progress * canvas.width);
   const outY = Math.round(-mapTransitionDirectionY * progress * canvas.height);
   const inX = Math.round(mapTransitionDirectionX * (1 - progress) * canvas.width);
@@ -2591,7 +2634,10 @@ function activateMap(mapId, entrySide, transitionContext = null) {
     transitionContext.sourceMapId === previousMapId
   );
 
-  if (gridTravel) {
+  if (transitionContext?.preserveCoordinates) {
+    player.x = clampToWorld(Number(transitionContext.destinationX ?? transitionContext.sourceX), 8, world.width - 8);
+    player.y = clampToWorld(Number(transitionContext.destinationY ?? transitionContext.sourceY), 15, world.height - 1);
+  } else if (gridTravel) {
     const dx = Math.sign(targetGrid.x - previousGrid.x);
     const dy = Math.sign(targetGrid.y - previousGrid.y);
     if (dx !== 0) {
@@ -2648,8 +2694,18 @@ function updateWorldGridMapConnection() {
     return true;
   }
 
-  const targetMapId = worldGridMapIdAt(targetX, targetY);
+  const targetSurfaceMapId = worldGridMapIdAt(targetX, targetY);
+  const targetMapId = grid.layerDepth > 0
+    ? WORLD_CONTENT?.maps?.[targetSurfaceMapId]?.undergroundMapId
+    : targetSurfaceMapId;
   if (!targetMapId || !targetSpawnId) return true;
+
+  if (grid.layerDepth > 0) {
+    const exitSide = targetSpawnId === "east" ? "west"
+      : targetSpawnId === "west" ? "east"
+        : targetSpawnId === "south" ? "north" : "south";
+    if (!WORLD_CONTENT?.maps?.[currentMapId]?.undergroundConnections?.[exitSide]) return true;
+  }
 
   requestMapTransition(targetMapId, targetSpawnId);
   return true;
@@ -3359,7 +3415,7 @@ function tryHitRock() {
     }
   }
 
-  if (!bestRock) return;
+  if (!bestRock) return false;
 
   if (
     typeof onlineClient !== "undefined" &&
@@ -3368,7 +3424,7 @@ function tryHitRock() {
       bestRock
     )
   ) {
-    return;
+    return true;
   }
 
   // Offline fallback mirrors the three-hit visual progression. Multiplayer is
@@ -3383,9 +3439,33 @@ function tryHitRock() {
     player.stone += 2;
     updateInventoryUi();
   }
+  return true;
 }
 
-
+function tryDigSurfaceGround(target = null) {
+  const definition = WORLD_CONTENT?.maps?.[currentMapId] || null;
+  if (!definition?.undergroundMapId || !target || equippedWeapon() !== "pickaxe") return false;
+  const worldX = Number(target.x);
+  const worldY = Number(target.y);
+  if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) return false;
+  const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  // v460: reject the player's occupied ground cell locally before sending the
+  // authoritative dig request. The server repeats the same collision rule.
+  if (circleRectCollision(player.x, player.y, 4, x - 8, y - 8, 16, 16)) return false;
+  if (Math.hypot(x - player.x, y - (player.y - 8)) > currentMeleeReach() + 14) return false;
+  if (currentMapStructures().some(structure =>
+    ["dugPit", "dugDirt"].includes(structure?.kind) &&
+    Math.abs(Number(structure.x) - x) < 1 &&
+    Math.abs(Number(structure.y) - y) < 1
+  )) return false;
+  const requested = Boolean(
+    typeof onlineClient !== "undefined" &&
+    onlineClient?.sendEnvironmentAction("digGround", null, { x, y })
+  );
+  if (requested) spawnGroundDigBurst(x, y, false);
+  return requested;
+}
 
 
 // -----------------------------------------------------------------------------
@@ -3409,7 +3489,7 @@ const player = {
 
   // Equipped tool / attack state. New v420 characters start with the Wood Sword
   // selected; browser saves still overwrite this during restore.
-  weaponIndex: 0, // -1 empty, 0 Wood Sword, 1 Axe, 2 Fire Wand, 3 Rain Wand, 4 Katana, 5 Sword, 6 Wood Bow, 7 Dreamcatcher, 8 Shepherd Staff, 9 Tournesol, 10 Tabatha's Key, 11 Pickaxe, 12 Sapgem Wand, 13 Tiger Paw
+  weaponIndex: 0, // -1 empty; slot 5 is retired/reserved so current weapon protocol indices 6–13 stay stable
 
   // Bow draw/release state, including close-range bow melee fallback.
   bowDrawing: false,
@@ -3422,34 +3502,6 @@ const player = {
 
 
 
-
-  // Fireball uses an expanding targeting pulse before release.
-  fireballAiming: false,
-  fireballAimTime: 0,
-  fireballAimMapId: null,
-  fireballTargetX: null,
-  fireballTargetY: null,
-  fireballTargetAngle: null,
-
-  // Item-action cooldowns are tracked locally. Rain Cloud begins its cooldown
-  // only after the summoned cloud expires; Fireball begins on successful release.
-  actionCooldowns: {
-    fireball: 0,
-    rainCloud: 0
-  },
-  // Cooldowns use wall-clock deadlines so background-tab throttling cannot pause them.
-  actionCooldownEndTimes: {
-    fireball: 0,
-    rainCloud: 0
-  },
-
-  // Rain Cloud is a committed item action. Its destination is snapshotted when the cast begins.
-  rainCloudCasting: false,
-  rainCloudCastTime: 0,
-  rainCloudCastDuration: 2.00,
-  rainCloudCastMapId: null,
-  rainCloudCastTargetX: null,
-  rainCloudCastTargetY: null,
 
 
   attackTime: 0,
@@ -3477,13 +3529,13 @@ const player = {
   isDead: false,
 
   // Fire debuff state. Player fire lasts longer than monster fire so
-  // catching flame feels more consequential and gives the rain spell value.
+  // catching flame feels more consequential while still allowing Wet to counter it.
   burnTime: 0,
   burnDuration: 6.0,
   burnTickTimer: 0,
   burnTickInterval: 0.5,
 
-  // Wet status from standing under a rain cloud.
+  // Wet status from weather and water exposure.
   wetTime: 0,
   wetDuration: 3.0,
 
@@ -3500,6 +3552,7 @@ const player = {
   coins: 0,
   wood: 0,
   stone: 0,
+  dirt: 0,
   whiteFlowers: 0,
   blueFlowers: 0,
   healingPotions: 0,
@@ -3516,6 +3569,10 @@ const player = {
   woodFloors: 0,
   stoneFloors: 0,
   woodWalls: 0,
+  stoneWalls: 0,
+  stoneCubes: 0,
+  stoneArches: 0,
+  ropes: 3,
   woodDoors: 0,
   torches: 0,
   chests: 0,
@@ -3537,16 +3594,6 @@ const player = {
     "weapon_sword", "weapon_pickaxe", "weapon_axe", null, null, null, null, null, null, null
   ],
 
-  // Crafting-history flags used by recipe recovery/persistence.
-  story: {
-    woodSwordCrafted: false,
-    woodBowCrafted: false,
-    shepherdStaffCrafted: false,
-    woodHelmCrafted: false,
-    woodChestCrafted: false,
-    woodGreavesCrafted: false,
-    woodRingCrafted: false
-  },
 
   beachQuest: {
     stage: "none",
@@ -3570,11 +3617,16 @@ const player = {
 
 const HOTBAR_SLOT_COUNT = 10;
 const CONSUMABLE_ITEM_IDS = Object.freeze(["healingPotion", "attackPotion", "magicPotion"]);
-const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);
+const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"]);
 const HOTBAR_RESOURCE_ITEM_BY_KEY = Object.freeze({
   woodFloors: "woodFloor",
   stoneFloors: "stoneFloor",
   woodWalls: "woodWall",
+  stoneWalls: "stoneWall",
+  stoneCubes: "stoneCube",
+  stoneArches: "caveDoor",
+  ropes: "rope",
+  dirt: "dirt",
   woodDoors: "woodDoor",
   torches: "torch",
   chests: "chest",
@@ -3584,7 +3636,7 @@ const HOTBAR_RESOURCE_ITEM_BY_KEY = Object.freeze({
 function hotbarKeyLabel(slotIndex) {
   return slotIndex === 9 ? "0" : String(slotIndex + 1);
 }
-const WEAPON_STYLES = ["sword", "axe", "wand", "rainWand", "katana", "oldSword", "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand", "tigerPaw"];
+const WEAPON_STYLES = ["sword", "axe", null, null, null, null, "bow", "bow", "shepherdStaff", "lostKeyWand", "sunflowerWand", "pickaxe", "sapgemWand", "tigerPaw"];
 const HAT_STYLES = ["original", "blueCap", "wizardHat", "jesterHat", "ninjaHat", "knightHat", "bandanaHat", "rangerHat", "woodHat", "arcanistHat", "greencapHat"];
 const SHIRT_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
 const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood", "arcanist", "greencap"];
@@ -3592,10 +3644,10 @@ const PANTS_STYLES = ["traveler", "jester", "ninja", "knight", "ranger", "wood",
 const WEAPON_ITEM_IDS = [
   "weapon_sword",
   "weapon_axe",
-  "weapon_wand",
-  "weapon_rainWand",
-  "weapon_katana",
-  "weapon_oldSword",
+  null, // retired Fire Wand slot 2; preserve current protocol indices
+  null, // retired Rain Wand slot 3; preserve current protocol indices
+  null, // retired Katana slot 4; preserve current protocol indices
+  null, // retired old-sword slot 5; preserve current protocol indices
   "weapon_bow",
   "weapon_dreamcatcher",
   "weapon_shepherdStaff",
@@ -3647,7 +3699,7 @@ const CHARM_ITEM_IDS = [
 ];
 
 const ALL_EQUIPMENT_ITEM_IDS = new Set([
-  ...WEAPON_ITEM_IDS,
+  ...WEAPON_ITEM_IDS.filter(Boolean),
   ...HAT_ITEM_IDS,
   ...SHIRT_ITEM_IDS,
   ...PANTS_ITEM_IDS,
@@ -3657,7 +3709,7 @@ const ALL_EQUIPMENT_ITEM_IDS = new Set([
 const CRAFT_RECIPES = Object.freeze({
   recoveryPickaxe: Object.freeze({
     name: "Recovery Pickaxe", itemId: "weapon_pickaxe", equipType: "weapon", equipIndex: 11,
-    category: "weapons", station: "hand", ingredients: Object.freeze({}), repeatable: true, recoveryOnly: true
+    category: "weapons", station: "hand", ingredients: Object.freeze({}), recoveryOnly: true
   }),
   craftingTable: Object.freeze({
     name: "Wood Crafting Table",
@@ -3665,8 +3717,15 @@ const CRAFT_RECIPES = Object.freeze({
     outputCount: 1,
     category: "building",
     station: "hand",
-    ingredients: Object.freeze({ wood: 10 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 10 })
+  }),
+  rope: Object.freeze({
+    name: "Rope",
+    resourceKey: "ropes",
+    outputCount: 1,
+    category: "building",
+    station: "hand",
+    ingredients: Object.freeze({})
   }),
   woodSword: Object.freeze({
     name: "Wood Sword",
@@ -3674,9 +3733,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "weapon",
     equipIndex: 0,
     category: "weapons",
-    ingredients: Object.freeze({ wood: 8 }),
-    storyKey: "woodSwordCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 8 })
   }),
   woodBow: Object.freeze({
     name: "Wood Bow",
@@ -3684,9 +3741,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "weapon",
     equipIndex: 6,
     category: "weapons",
-    ingredients: Object.freeze({ wood: 8 }),
-    storyKey: "woodBowCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 8 })
   }),
   shepherdStaff: Object.freeze({
     name: "Shepherd Staff",
@@ -3694,9 +3749,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "weapon",
     equipIndex: 8,
     category: "weapons",
-    ingredients: Object.freeze({ wood: 10 }),
-    storyKey: "shepherdStaffCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 10 })
   }),
   tigerPaw: Object.freeze({
     name: "Tiger Paw",
@@ -3704,8 +3757,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "weapon",
     equipIndex: 13,
     category: "weapons",
-    ingredients: Object.freeze({ wood: 8, stone: 2 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 8, stone: 2 })
   }),
   woodHelm: Object.freeze({
     name: "Wood Helm",
@@ -3713,9 +3765,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "hat",
     equipIndex: 8,
     category: "armor",
-    ingredients: Object.freeze({ wood: 8, stone: 2 }),
-    storyKey: "woodHelmCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 8, stone: 2 })
   }),
   woodChest: Object.freeze({
     name: "Wood Chest",
@@ -3723,9 +3773,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "shirt",
     equipIndex: 5,
     category: "armor",
-    ingredients: Object.freeze({ wood: 12, stone: 3 }),
-    storyKey: "woodChestCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 12, stone: 3 })
   }),
   woodGreaves: Object.freeze({
     name: "Wood Greaves",
@@ -3733,9 +3781,7 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "pants",
     equipIndex: 5,
     category: "armor",
-    ingredients: Object.freeze({ wood: 10, stone: 2 }),
-    storyKey: "woodGreavesCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 10, stone: 2 })
   }),
   woodRing: Object.freeze({
     name: "Wood Ring",
@@ -3743,49 +3789,56 @@ const CRAFT_RECIPES = Object.freeze({
     equipType: "charm",
     equipIndex: 0,
     category: "armor",
-    ingredients: Object.freeze({ wood: 5 }),
-    storyKey: "woodRingCrafted",
-    repeatable: true
+    ingredients: Object.freeze({ wood: 5 })
   }),
   woodFloor: Object.freeze({
     name: "Wood Floor ×4",
     resourceKey: "woodFloors",
     outputCount: 4,
     category: "building",
-    ingredients: Object.freeze({ wood: 2 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 2 })
   }),
   stoneFloor: Object.freeze({
     name: "Stone Floor ×4",
     resourceKey: "stoneFloors",
     outputCount: 4,
     category: "building",
-    ingredients: Object.freeze({ stone: 2 }),
-    repeatable: true
+    ingredients: Object.freeze({ stone: 2 })
   }),
   woodWall: Object.freeze({
     name: "Wood Wall ×2",
     resourceKey: "woodWalls",
     outputCount: 2,
     category: "building",
-    ingredients: Object.freeze({ wood: 3 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 3 })
+  }),
+  stoneWall: Object.freeze({
+    name: "Stone Wall",
+    resourceKey: "stoneWalls",
+    outputCount: 1,
+    category: "building",
+    ingredients: Object.freeze({ stone: 1 })
+  }),
+  stoneCube: Object.freeze({
+    name: "Stone Cube",
+    resourceKey: "stoneCubes",
+    outputCount: 1,
+    category: "building",
+    ingredients: Object.freeze({ stone: 1 })
   }),
   woodDoor: Object.freeze({
     name: "Wood Door",
     resourceKey: "woodDoors",
     outputCount: 1,
     category: "building",
-    ingredients: Object.freeze({ wood: 4 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 4 })
   }),
   torch: Object.freeze({
     name: "Torch",
     resourceKey: "torches",
     outputCount: 1,
     category: "building",
-    ingredients: Object.freeze({ wood: 1, greenJellyCubes: 1 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 1, greenJellyCubes: 1 })
   }),
   testWoodSupply: Object.freeze({
     name: "Test Wood +100",
@@ -3793,7 +3846,6 @@ const CRAFT_RECIPES = Object.freeze({
     outputCount: 100,
     category: "building",
     ingredients: Object.freeze({}),
-    repeatable: true,
     testSupply: true
   }),
   arrows: Object.freeze({
@@ -3801,32 +3853,28 @@ const CRAFT_RECIPES = Object.freeze({
     resourceKey: "arrows",
     outputCount: 50,
     category: "consumables",
-    ingredients: Object.freeze({ wood: 5, stone: 1 }),
-    repeatable: true
+    ingredients: Object.freeze({ wood: 5, stone: 1 })
   }),
   healingPotion: Object.freeze({
     name: "Healing Potion",
     resourceKey: "healingPotions",
     outputCount: 1,
     category: "consumables",
-    ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 }),
-    repeatable: true
+    ingredients: Object.freeze({ whiteFlowers: 1, blueFlowers: 1 })
   }),
   attackPotion: Object.freeze({
     name: "Attack Potion",
     resourceKey: "attackPotions",
     outputCount: 1,
     category: "consumables",
-    ingredients: Object.freeze({ whiteFlowers: 2 }),
-    repeatable: true
+    ingredients: Object.freeze({ whiteFlowers: 2 })
   }),
   magicPotion: Object.freeze({
     name: "Magic Potion",
     resourceKey: "magicPotions",
     outputCount: 1,
     category: "consumables",
-    ingredients: Object.freeze({ blueFlowers: 2 }),
-    repeatable: true
+    ingredients: Object.freeze({ blueFlowers: 2 })
   })
 });
 
@@ -3909,8 +3957,13 @@ function shopImageForItemId(itemId) {
   if (itemId === "chest") return document.getElementById("inventoryChestImg");
   if (itemId === "craftingTable") return document.getElementById("inventoryCraftingTableImg") || woodBenchImage;
   if (itemId === "woodWall") return document.getElementById("inventoryWoodWallImg");
+  if (itemId === "stoneWall") return document.getElementById("inventoryStoneWallImg");
+  if (itemId === "stoneCube") return document.getElementById("inventoryStoneCubeImg");
+  if (itemId === "caveDoor") return document.getElementById("inventoryStoneArchImg") || caveDoorStructureImage;
   if (itemId === "woodDoor") return document.getElementById("inventoryWoodDoorImg");
   if (itemId === "torch") return torchImage;
+  if (itemId === "rope") return document.getElementById("inventoryRopeImg");
+  if (itemId === "dirt") return document.getElementById("inventoryDirtImg");
   if (itemId === "arrows") return arrowResourceImage;
 
   const weaponIndex =
@@ -3975,11 +4028,10 @@ function playerOwnsItem(itemId) {
 }
 
 function playerOwnsWeaponIndex(index) {
-  return (
-    index >= 0 &&
-    index < WEAPON_ITEM_IDS.length &&
-    playerOwnsItem(WEAPON_ITEM_IDS[index])
-  );
+  const itemId = index >= 0 && index < WEAPON_ITEM_IDS.length
+    ? WEAPON_ITEM_IDS[index]
+    : null;
+  return Boolean(itemId) && playerOwnsItem(itemId);
 }
 
 function playerOwnsHatIndex(index) {
@@ -4047,6 +4099,11 @@ function hotbarItemInventoryCount(itemId) {
   if (itemId === "woodFloor") return Math.max(0, Math.floor(Number(player.woodFloors) || 0));
   if (itemId === "stoneFloor") return Math.max(0, Math.floor(Number(player.stoneFloors) || 0));
   if (itemId === "woodWall") return Math.max(0, Math.floor(Number(player.woodWalls) || 0));
+  if (itemId === "stoneWall") return Math.max(0, Math.floor(Number(player.stoneWalls) || 0));
+  if (itemId === "stoneCube") return Math.max(0, Math.floor(Number(player.stoneCubes) || 0));
+  if (itemId === "caveDoor") return Math.max(0, Math.floor(Number(player.stoneArches) || 0));
+  if (itemId === "rope") return Math.max(0, Math.floor(Number(player.ropes) || 0));
+  if (itemId === "dirt") return Math.max(0, Math.floor(Number(player.dirt) || 0));
   if (itemId === "woodDoor") return Math.max(0, Math.floor(Number(player.woodDoors) || 0));
   if (itemId === "torch") return Math.max(0, Math.floor(Number(player.torches) || 0));
   if (itemId === "chest") return Math.max(0, Math.floor(Number(player.chests) || 0));
@@ -4070,8 +4127,13 @@ function hotbarItemDisplayName(itemId) {
   if (itemId === "woodFloor") return "Wood Floor";
   if (itemId === "stoneFloor") return "Stone Floor";
   if (itemId === "woodWall") return "Wood Wall";
+  if (itemId === "stoneWall") return "Stone Wall";
+  if (itemId === "stoneCube") return "Stone Cube";
+  if (itemId === "caveDoor") return "Stone Arch";
   if (itemId === "woodDoor") return "Wood Door";
   if (itemId === "torch") return "Torch";
+  if (itemId === "rope") return "Rope";
+  if (itemId === "dirt") return "Dirt";
   if (itemId === "chest") return "Chest";
   const weaponIndex = WEAPON_ITEM_IDS.indexOf(itemId);
   if (weaponIndex >= 0) return weaponDisplayName(weaponIndex);
@@ -4142,7 +4204,7 @@ function sanitizeHotbarAssignments() {
 }
 
 function unequipItemIfNoLongerAssigned(itemId) {
-  if (!itemId || fireballIsAiming() || player.rainCloudCasting) return false;
+  if (!itemId) return false;
 
   const equippedItemId =
     weaponItemIdForIndex(
@@ -4161,7 +4223,6 @@ function unequipItemIfNoLongerAssigned(itemId) {
 }
 
 function assignItemToHotbar(itemId, slotIndex) {
-  if (fireballIsAiming() || player.rainCloudCasting) return false;
 
   if (
     !isHotbarAssignableItem(itemId) ||
@@ -4213,7 +4274,6 @@ function assignItemToHotbar(itemId, slotIndex) {
 }
 
 function clearItemFromHotbar(itemId) {
-  if (fireballIsAiming() || player.rainCloudCasting) return false;
 
   let changed = false;
 
@@ -4261,7 +4321,7 @@ function autoAssignHotbarItem(itemId) {
 
 function hotbarAssignableAcquisitionSnapshot() {
   const snapshot = {};
-  for (const itemId of WEAPON_ITEM_IDS) {
+  for (const itemId of WEAPON_ITEM_IDS.filter(Boolean)) {
     snapshot[itemId] = hotbarItemInventoryCount(itemId);
   }
   for (const itemId of Object.values(HOTBAR_RESOURCE_ITEM_BY_KEY)) {
@@ -4273,7 +4333,7 @@ function hotbarAssignableAcquisitionSnapshot() {
 function autoAssignNewlyAcquiredHotbarItems(beforeCounts = {}) {
   sanitizeHotbarAssignments();
   let changed = false;
-  for (const itemId of [...WEAPON_ITEM_IDS, ...Object.values(HOTBAR_RESOURCE_ITEM_BY_KEY)]) {
+  for (const itemId of [...WEAPON_ITEM_IDS.filter(Boolean), ...Object.values(HOTBAR_RESOURCE_ITEM_BY_KEY)]) {
     const before = Math.max(0, Number(beforeCounts?.[itemId]) || 0);
     const after = hotbarItemInventoryCount(itemId);
     if (after > before && autoAssignHotbarItem(itemId)) changed = true;
@@ -4515,7 +4575,6 @@ function craftRecipeOffline(recipeId) {
       Math.max(0, Number(player[recipe.resourceKey]) || 0) +
       Math.max(1, Number(recipe.outputCount) || 1);
   } else {
-    if (recipe.storyKey) player.story[recipe.storyKey] = true;
     grantInventoryItem(recipe.itemId, 1);
     equipCraftedRecipe(recipe);
   }
@@ -4588,9 +4647,11 @@ function updateCraftingUi() {
           ? torchImage
           : recipe.resourceKey === "craftingTables"
             ? woodBenchImage
-            : recipe.resourceKey
-              ? potionImageForItem(recipeId)
-              : shopImageForItemId(recipe.itemId);
+            : recipe.resourceKey === "ropes"
+              ? document.getElementById("inventoryRopeImg")
+              : recipe.resourceKey
+                ? potionImageForItem(recipeId)
+                : shopImageForItemId(recipe.itemId);
 
     if (image && itemImage) image.src = itemImage.src;
 
@@ -5116,12 +5177,11 @@ function shopCategoryForItem(item) {
 
 function weaponTypeForShopItem(itemId) {
   if (["weapon_bow", "weapon_dreamcatcher"].includes(itemId)) return "Bow";
-  if (["weapon_wand", "weapon_rainWand", "weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand"].includes(itemId)) return "Wand";
+  if (["weapon_shepherdStaff", "weapon_lostKey", "weapon_hugeSunflower", "weapon_sapgemWand"].includes(itemId)) return "Wand";
   if (itemId === "weapon_axe") return "Axe";
   if (itemId === "weapon_pickaxe") return "Pickaxe";
-  if (itemId === "weapon_katana") return "Katana";
   if (itemId === "weapon_tigerPaw") return "Hurl";
-  if (["weapon_sword", "weapon_oldSword"].includes(itemId)) return "Sword";
+  if (itemId === "weapon_sword") return "Sword";
   return "Weapon";
 }
 
@@ -5523,7 +5583,6 @@ function currentPantsStyle() {
 
 
 function equipWeaponIndex(index) {
-  if (fireballIsAiming() || player.rainCloudCasting) return false;
   if (player.attackTime > 0) return false;
 
   if (
@@ -5613,51 +5672,6 @@ function cycleHotbarSelection(direction) {
   return true;
 }
 
-function hotbarActionIdForItemId(itemId) {
-  if (itemId === "weapon_wand") return "fireball";
-  if (itemId === "weapon_rainWand") return "rainCloud";
-  return null;
-}
-
-function updateHotbarActionCooldownSlot(slot, itemId, available) {
-  if (!slot) return;
-  const itemActionId = hotbarActionIdForItemId(itemId);
-  const cooldownRemaining = available && itemActionId
-    ? Math.max(0, actionCooldownRemaining(itemActionId))
-    : 0;
-  const cooldownDuration = itemActionId
-    ? Math.max(0.001, actionCooldownDuration(itemActionId))
-    : 1;
-  const cooldownMask = slot.querySelector(".utility-cooldown-mask");
-  const cooldownText = slot.querySelector(".utility-cooldown-text");
-
-  if (cooldownMask) {
-    cooldownMask.style.height = cooldownRemaining > 0
-      ? `${Math.min(100, cooldownRemaining / cooldownDuration * 100)}%`
-      : "0%";
-  }
-  if (cooldownText) {
-    cooldownText.textContent = cooldownRemaining > 0
-      ? cooldownRemaining.toFixed(1)
-      : "";
-  }
-  slot.classList.toggle("cooling-down", cooldownRemaining > 0);
-}
-
-function updateHotbarActionCooldownHud() {
-  for (let slotIndex = 0; slotIndex < HOTBAR_SLOT_COUNT; slotIndex++) {
-    const slot = document.getElementById(`slot${slotIndex + 1}`);
-    if (!slot) continue;
-    const itemId = player.hotbarAssignments?.[slotIndex] || null;
-    const available = Boolean(
-      itemId &&
-      hotbarAssignmentCanPersist(itemId) &&
-      hotbarItemInventoryCount(itemId) > 0
-    );
-    updateHotbarActionCooldownSlot(slot, itemId, available);
-  }
-}
-
 function updateHotbar() {
   sanitizeHotbarAssignments();
 
@@ -5701,7 +5715,6 @@ function updateHotbar() {
         ? String(hotbarItemInventoryCount(itemId))
         : "";
     }
-    updateHotbarActionCooldownSlot(slot, itemId, available);
     slot.style.opacity = assigned ? (available ? "1" : "0.5") : "0.48";
   }
 
@@ -5771,15 +5784,11 @@ function weaponDisplayName(style) {
   if (!style) return "Empty Hands";
   if (style === "axe") return "Axe";
   if (style === "pickaxe") return "Pickaxe";
-  if (style === "wand") return "Wand";
-  if (style === "rainWand") return "Rain Wand";
   if (style === "shepherdStaff") return "Shepherd Staff";
   if (style === "lostKeyWand") return "Tournesol";
   if (style === "sunflowerWand") return "Tabatha's Key";
   if (style === "sapgemWand") return "Sapgem Wand";
   if (style === "tigerPaw") return "Tiger Paw";
-  if (style === "katana") return "Katana";
-  if (style === "oldSword") return "Sword";
   if (style === "bow") return "Wood Bow";
   return "Wood Sword";
 }
@@ -5938,10 +5947,7 @@ function currentPlayerAppearance() {
 function weaponImageForIndex(index) {
   if (index < 0) return null;
   if (index === 1) return axeImage;
-  if (index === 2) return wandImage;
-  if (index === 3) return rainWandImage;
-  if (index === 4) return katanaImage;
-  if (index === 5) return oldSwordImage;
+  if (index >= 2 && index <= 5) return null;
   if (index === 6) return bowImage;
   if (index === 7) return dreamcatcherBowImage;
   if (index === 8) return shepherdStaffImage;
@@ -5962,6 +5968,7 @@ const INVENTORY_RESOURCE_META = Object.freeze({
   coins: Object.freeze({ name: "Coin", type: "Currency", hint: "Currency used by shops." }),
   wood: Object.freeze({ name: "Wood", type: "Resource", hint: "Harvested from trees and used in crafting." }),
   stone: Object.freeze({ name: "Stone", type: "Resource", hint: "Mined from rocks and used in crafting." }),
+  dirt: Object.freeze({ name: "Dirt", type: "Terrain", hint: "Recovered from a breakthrough hole. Assign it to the hotbar to fill an unroped excavation." }),
   whiteFlowers: Object.freeze({ name: "White Flower", type: "Resource", hint: "A crafting ingredient." }),
   blueFlowers: Object.freeze({ name: "Blue Flower", type: "Resource", hint: "A crafting ingredient." }),
   goldSlimeBubbles: Object.freeze({ name: "Gold Slime Bubble", type: "Loot", hint: "Rare slime loot." }),
@@ -5973,6 +5980,10 @@ const INVENTORY_RESOURCE_META = Object.freeze({
   woodFloors: Object.freeze({ name: "Wood Floor", type: "Building", hint: "Drag to the hotbar to place it." }),
   stoneFloors: Object.freeze({ name: "Stone Floor", type: "Building", hint: "Drag to the hotbar to place it." }),
   woodWalls: Object.freeze({ name: "Wood Wall", type: "Building", hint: "Drag to the hotbar to place it." }),
+  stoneWalls: Object.freeze({ name: "Stone Wall", type: "Building", hint: "Drag to the hotbar to place it." }),
+  stoneCubes: Object.freeze({ name: "Stone Cube", type: "Building", hint: "Drag to the hotbar to place it." }),
+  stoneArches: Object.freeze({ name: "Stone Arch", type: "Building / Passage", hint: "Salvaged from caves. Drag to the hotbar to place a walk-through roof boundary." }),
+  ropes: Object.freeze({ name: "Rope", type: "Traversal", hint: "Place on a breakthrough hole to connect the surface and underground." }),
   woodDoors: Object.freeze({ name: "Wood Door", type: "Building", hint: "Drag to the hotbar to place it." }),
   torches: Object.freeze({ name: "Torch", type: "Building / Light", hint: "Drag to the hotbar to hold or place it." }),
   chests: Object.freeze({ name: "Chest", type: "Building", hint: "Drag to the hotbar to place it." }),
@@ -5998,7 +6009,7 @@ function inventoryTransferImageForToken(token) {
   const cell = inventoryOverlayCellForToken(token); const image = cell?.querySelector("img"); if (image?.src) return image;
   const parts = inventoryTransferTokenParts(token); if (!parts) return null;
   if (parts.type === "item") return shopImageForItemId(parts.id);
-  if (parts.id === "coins") return coinImage; if (parts.id === "wood") return woodImage; if (parts.id === "stone") return typeof rockLootableImage !== "undefined" ? rockLootableImage : null;
+  if (parts.id === "coins") return coinImage; if (parts.id === "wood") return woodImage; if (parts.id === "stone") return typeof rockLootableImage !== "undefined" ? rockLootableImage : null; if (parts.id === "dirt") return document.getElementById("inventoryDirtImg");
   if (parts.id === "arrows") return arrowResourceImage; if (parts.id === "healingPotions") return healingPotionImage; if (parts.id === "attackPotions") return attackPotionImage; if (parts.id === "magicPotions") return magicPotionImage; return null;
 }
 function applyInventoryTransferDelta(token, delta, options = {}) {
@@ -6186,6 +6197,7 @@ function updateInventoryUi() {
   const coinCount = document.getElementById("inventoryCoinCount");
   const woodCount = document.getElementById("inventoryWoodCount");
   const stoneCount = document.getElementById("inventoryStoneCount");
+  const dirtCount = document.getElementById("inventoryDirtCount");
   const whiteFlowerCount = document.getElementById("inventoryWhiteFlowerCount");
   const blueFlowerCount = document.getElementById("inventoryBlueFlowerCount");
   const healingPotionCount = document.getElementById("inventoryHealingPotionCount");
@@ -6197,6 +6209,10 @@ function updateInventoryUi() {
   const woodFloorCount = document.getElementById("inventoryWoodFloorCount");
   const stoneFloorCount = document.getElementById("inventoryStoneFloorCount");
   const woodWallCount = document.getElementById("inventoryWoodWallCount");
+  const stoneWallCount = document.getElementById("inventoryStoneWallCount");
+  const stoneCubeCount = document.getElementById("inventoryStoneCubeCount");
+  const stoneArchCount = document.getElementById("inventoryStoneArchCount");
+  const ropeCount = document.getElementById("inventoryRopeCount");
   const woodDoorCount = document.getElementById("inventoryWoodDoorCount");
   const torchCount = document.getElementById("inventoryTorchCount");
   const chestCount = document.getElementById("inventoryChestCount");
@@ -6207,6 +6223,7 @@ function updateInventoryUi() {
   if (coinCount) coinCount.textContent = `${player.coins}`;
   if (woodCount) woodCount.textContent = `${player.wood}`;
   if (stoneCount) stoneCount.textContent = `${player.stone}`;
+  if (dirtCount) dirtCount.textContent = `${player.dirt}`;
   if (whiteFlowerCount) whiteFlowerCount.textContent = `${player.whiteFlowers}`;
   if (blueFlowerCount) blueFlowerCount.textContent = `${player.blueFlowers}`;
   if (healingPotionCount) healingPotionCount.textContent = `${player.healingPotions}`;
@@ -6218,6 +6235,10 @@ function updateInventoryUi() {
   if (woodFloorCount) woodFloorCount.textContent = `${player.woodFloors}`;
   if (stoneFloorCount) stoneFloorCount.textContent = `${player.stoneFloors}`;
   if (woodWallCount) woodWallCount.textContent = `${player.woodWalls}`;
+  if (stoneWallCount) stoneWallCount.textContent = `${player.stoneWalls}`;
+  if (stoneCubeCount) stoneCubeCount.textContent = `${player.stoneCubes}`;
+  if (stoneArchCount) stoneArchCount.textContent = `${player.stoneArches}`;
+  if (ropeCount) ropeCount.textContent = `${player.ropes}`;
   if (woodDoorCount) woodDoorCount.textContent = `${player.woodDoors}`;
   if (torchCount) torchCount.textContent = `${player.torches}`;
   if (chestCount) chestCount.textContent = `${player.chests}`;
@@ -6414,20 +6435,6 @@ function validSavedItemIds(items) {
 }
 
 function buildLocalCharacterSave() {
-  const story = {};
-  for (const key of [
-    "woodSwordCrafted",
-    "woodBowCrafted",
-    "shepherdStaffCrafted",
-    "woodHelmCrafted",
-    "woodChestCrafted",
-    "woodGreavesCrafted",
-    "woodRingCrafted"
-  ]) {
-    story[key] = Boolean(player.story?.[key]);
-  }
-
-
   return {
     version: LOCAL_CHARACTER_SAVE_VERSION,
     savedAt: Date.now(),
@@ -6441,6 +6448,7 @@ function buildLocalCharacterSave() {
       coins: Math.max(0, Math.floor(Number(player.coins) || 0)),
       wood: Math.max(0, Math.floor(Number(player.wood) || 0)),
       stone: Math.max(0, Math.floor(Number(player.stone) || 0)),
+      dirt: Math.max(0, Math.floor(Number(player.dirt) || 0)),
       whiteFlowers: Math.max(0, Math.floor(Number(player.whiteFlowers) || 0)),
       blueFlowers: Math.max(0, Math.floor(Number(player.blueFlowers) || 0)),
       healingPotions: Math.max(0, Math.floor(Number(player.healingPotions) || 0)),
@@ -6452,6 +6460,10 @@ function buildLocalCharacterSave() {
       woodFloors: Math.max(0, Math.floor(Number(player.woodFloors) || 0)),
       stoneFloors: Math.max(0, Math.floor(Number(player.stoneFloors) || 0)),
       woodWalls: Math.max(0, Math.floor(Number(player.woodWalls) || 0)),
+      stoneWalls: Math.max(0, Math.floor(Number(player.stoneWalls) || 0)),
+      stoneCubes: Math.max(0, Math.floor(Number(player.stoneCubes) || 0)),
+      stoneArches: Math.max(0, Math.floor(Number(player.stoneArches) || 0)),
+      ropes: Math.max(0, Math.floor(Number(player.ropes) || 0)),
       woodDoors: Math.max(0, Math.floor(Number(player.woodDoors) || 0)),
       torches: Math.max(0, Math.floor(Number(player.torches) || 0)),
       chests: Math.max(0, Math.floor(Number(player.chests) || 0)),
@@ -6479,7 +6491,6 @@ function buildLocalCharacterSave() {
       attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
       magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
     },
-    story,
     beachQuest: {
       stage: ["none", "firstActive", "firstComplete", "secondActive", "complete"].includes(player.beachQuest?.stage)
         ? player.beachQuest.stage
@@ -6517,6 +6528,7 @@ function applyLocalCharacterSave(save) {
   player.coins = clampLocalSaveInteger(save.resources?.coins, 0, 999999, 0);
   player.wood = clampLocalSaveInteger(save.resources?.wood, 0, 999999, 0);
   player.stone = clampLocalSaveInteger(save.resources?.stone, 0, 999999, 0);
+  player.dirt = clampLocalSaveInteger(save.resources?.dirt, 0, 999999, 0);
   player.whiteFlowers = clampLocalSaveInteger(save.resources?.whiteFlowers, 0, 999999, 0);
   player.blueFlowers = clampLocalSaveInteger(save.resources?.blueFlowers, 0, 999999, 0);
   player.healingPotions = clampLocalSaveInteger(save.resources?.healingPotions, 0, 999999, 0);
@@ -6539,22 +6551,15 @@ function applyLocalCharacterSave(save) {
   player.woodFloors = clampLocalSaveInteger(save.resources?.woodFloors, 0, 999999, 0);
   player.stoneFloors = clampLocalSaveInteger(save.resources?.stoneFloors, 0, 999999, 0);
   player.woodWalls = clampLocalSaveInteger(save.resources?.woodWalls, 0, 999999, 0);
+  player.stoneWalls = clampLocalSaveInteger(save.resources?.stoneWalls, 0, 999999, 0);
+  player.stoneCubes = clampLocalSaveInteger(save.resources?.stoneCubes ?? save.resources?.stoneShortWalls, 0, 999999, 0);
+  player.stoneArches = clampLocalSaveInteger(save.resources?.stoneArches, 0, 999999, 0);
+  player.ropes = clampLocalSaveInteger(save.resources?.ropes, 0, 999999, 3);
   player.woodDoors = clampLocalSaveInteger(save.resources?.woodDoors, 0, 999999, 0);
   player.torches = clampLocalSaveInteger(save.resources?.torches, 0, 999999, 0);
   player.chests = clampLocalSaveInteger(save.resources?.chests, 0, 999999, 0);
   player.craftingTables = clampLocalSaveInteger(save.resources?.craftingTables, 0, 999999, 0);
   player.items = validSavedItemIds(save.items);
-  // v431: old browser saves can no longer depend on retired tutorial handoffs.
-  // Bring every migrated character up to the current starter loadout.
-  for (const starterItemId of ["weapon_sword", "weapon_pickaxe", "weapon_axe"]) {
-    player.items[starterItemId] = Math.max(1, Number(player.items[starterItemId]) || 0);
-  }
-  for (const key of Object.keys(player.story)) {
-    if (Object.prototype.hasOwnProperty.call(save.story || {}, key)) {
-      player.story[key] = Boolean(save.story[key]);
-    }
-  }
-
   const savedBeachQuest = save.beachQuest && typeof save.beachQuest === "object"
     ? save.beachQuest
     : {};
@@ -6597,14 +6602,11 @@ function applyLocalCharacterSave(save) {
   const savedHotbarAssignments = Array.isArray(save.hotbarAssignments)
     ? save.hotbarAssignments
     : [];
-  const legacyFiveSlotHotbar = savedHotbarAssignments.length > 0 && savedHotbarAssignments.length <= 5;
   player.hotbarAssignments = Array.from(
     { length: HOTBAR_SLOT_COUNT },
     (_, index) => {
-      // v376 equipment lived on physical keys 4-8. Preserve those physical
-      // positions during the one-time migration into the unified number-key belt.
-      const sourceIndex = legacyFiveSlotHotbar ? index - 3 : index;
-      const itemId = sourceIndex >= 0 ? savedHotbarAssignments[sourceIndex] : null;
+      const savedItemId = savedHotbarAssignments[index] || null;
+      const itemId = savedItemId === "stoneShortWall" ? "stoneCube" : savedItemId;
       return itemId && hotbarAssignmentCanPersist(itemId)
         ? itemId
         : null;
@@ -6673,6 +6675,7 @@ function persistentServerBootstrapPayload() {
       coins: player.coins,
       wood: player.wood,
       stone: player.stone,
+      dirt: player.dirt,
       whiteFlowers: player.whiteFlowers,
       blueFlowers: player.blueFlowers,
       healingPotions: player.healingPotions,
@@ -6684,6 +6687,10 @@ function persistentServerBootstrapPayload() {
       woodFloors: player.woodFloors,
       stoneFloors: player.stoneFloors,
       woodWalls: player.woodWalls,
+      stoneWalls: player.stoneWalls,
+      stoneCubes: player.stoneCubes,
+      stoneArches: player.stoneArches,
+      ropes: player.ropes,
       woodDoors: player.woodDoors,
       torches: player.torches,
       chests: player.chests,
@@ -6695,15 +6702,6 @@ function persistentServerBootstrapPayload() {
       healingPotionCooldownRemainingMs: Math.max(0, (Number(player.healingPotionCooldownUntil) || 0) - Date.now()),
       attackPotionCooldownRemainingMs: Math.max(0, (Number(player.attackPotionCooldownUntil) || 0) - Date.now()),
       magicPotionCooldownRemainingMs: Math.max(0, (Number(player.magicPotionCooldownUntil) || 0) - Date.now())
-    },
-    story: {
-      woodSwordCrafted: Boolean(player.story.woodSwordCrafted),
-      woodBowCrafted: Boolean(player.story.woodBowCrafted),
-      shepherdStaffCrafted: Boolean(player.story.shepherdStaffCrafted),
-      woodHelmCrafted: Boolean(player.story.woodHelmCrafted),
-      woodChestCrafted: Boolean(player.story.woodChestCrafted),
-      woodGreavesCrafted: Boolean(player.story.woodGreavesCrafted),
-      woodRingCrafted: Boolean(player.story.woodRingCrafted)
     },
     beachQuest: {
       stage: player.beachQuest.stage,
@@ -6824,8 +6822,6 @@ function updateShopUi() {
 function setShopOpen(open) {
   shopOpen = Boolean(open && activeShopVendor);
   if (!shopOpen) hideItemDetailTooltip();
-
-  if (shopOpen && fireballIsAiming()) cancelFireballAim();
 
   const overlay = document.getElementById("shopOverlay");
   if (!overlay) return;
@@ -7384,13 +7380,14 @@ let placedStructureRevision = 0;
 const BUILD_GRID_SIZE = 16;
 const BUILD_PLACE_RANGE = 96;
 const BUILD_FLOOR_STRUCTURE_KINDS = Object.freeze(["woodFloor", "stoneFloor"]);
-const BUILD_EDGE_STRUCTURE_KINDS = Object.freeze(["woodWall", "woodDoor"]);
+const BUILD_WALL_STRUCTURE_KINDS = Object.freeze(["woodWall", "stoneWall"]);
+const BUILD_EDGE_STRUCTURE_KINDS = Object.freeze([...BUILD_WALL_STRUCTURE_KINDS, "woodDoor", "caveDoor"]);
 const DOOR_ADJACENT_DISTANCE = 10;
 const DOOR_PASSAGE_DISTANCE = 14;
 const DOOR_PASSAGE_MS = 420;
 const HOUSE_FOREGROUND_ALPHA = 0.34;
 const HOUSE_FOREGROUND_DOOR_ALPHA = 0.52;
-const STRUCTURE_COVER_DOOR_ALPHA = 0.72;
+const LOCAL_FOREGROUND_OCCLUDER_ALPHA = 0.24;
 const ROOF_PLAYER_COVER_ALPHA = 0.58;
 const ROOF_OVERHANG = 3;
 const STRUCTURE_EDGE_DARK = "#6b3b22";
@@ -7459,6 +7456,9 @@ function applyStructurePlaced(structure) {
   if (!list.some(item => item.id === structure.id)) {
     list.push({ ...structure });
     placedStructureRevision += 1;
+    if (structure.mapId === currentMapId && ["dugPit", "dugDirt"].includes(structure.kind)) {
+      spawnGroundDigBurst(structure.x, structure.y, structure.kind === "dugPit");
+    }
   }
   placedStructuresByMap.set(structure.mapId, list);
 }
@@ -7531,7 +7531,11 @@ function drawChestStructure(structure, camX, camY, alpha = 1) {
   const screenY = Math.round(Number(structure?.y) - camY);
   const image = structure?.opened ? chestOpenStructureImage : chestClosedStructureImage;
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = localForegroundOcclusionAlpha(
+    { x: Number(structure?.x) - 8, y: Number(structure?.y) - 16, width: 16, height: 16 },
+    Number(structure?.y),
+    alpha
+  );
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = "rgba(30, 24, 18, .28)";
   ctx.fillRect(screenX - 7, screenY, 14, 2);
@@ -7545,12 +7549,151 @@ function drawCraftingTableStructure(structure, camX, camY, alpha = 1) {
   const width = woodBenchImage.width || 18;
   const height = woodBenchImage.height || 18;
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = localForegroundOcclusionAlpha(
+    { x: Number(structure?.x) - width / 2, y: Number(structure?.y) - (height - 1), width, height },
+    Number(structure?.y),
+    alpha
+  );
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = "rgba(30, 24, 18, .28)";
   ctx.fillRect(screenX - 7, screenY, 14, 2);
   ctx.drawImage(woodBenchImage, screenX - Math.round(width / 2), screenY - (height - 1));
   ctx.restore();
+}
+
+function dugPitNeighborAt(x, y) {
+  return currentMapStructures().some(structure =>
+    structure?.kind === "dugPit" && structure?.breakthrough &&
+    Math.abs(Number(structure.x) - Number(x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(y)) < 1
+  );
+}
+
+function drawDugDirt(structure, camX, camY, alpha = 1) {
+  const x = Math.round(Number(structure?.x) - camX - 8);
+  const y = Math.round(Number(structure?.y) - camY - 8);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#6d5034";
+  ctx.fillRect(x, y, 16, 16);
+  ctx.fillStyle = "#77583a";
+  ctx.fillRect(x + 2, y + 3, 3, 2);
+  ctx.fillRect(x + 10, y + 9, 2, 2);
+  ctx.fillStyle = "#503b29";
+  ctx.fillRect(x + 7, y + 5, 2, 1);
+  ctx.fillRect(x + 3, y + 12, 4, 1);
+  ctx.restore();
+}
+
+function drawRopeAtOpening(worldX, worldY, camX, camY, underground = false, alpha = 1) {
+  const sx = Math.round(Number(worldX) - camX);
+  const sy = Math.round(Number(worldY) - camY);
+  const top = sy - 8;
+  // v461: the surface Rope fills its entire 16px opening cell. If the
+  // excavation continues directly south, it may hang through exactly one
+  // additional hole cell, with the lower run fading into the darkness. The
+  // underground view uses a 24px hanging Rope (twice the old 12px graphic)
+  // while keeping the same top anchor for predictable traversal placement.
+  const surfaceExtension = !underground && dugPitNeighborAt(Number(worldX), Number(worldY) + BUILD_GRID_SIZE);
+  const primaryHeight = underground ? 24 : 16;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#b88a4a";
+  ctx.fillRect(sx - 1, top, 2, primaryHeight);
+  ctx.fillStyle = "#6f4a2b";
+  ctx.fillRect(sx + 1, top + 1, 1, Math.max(1, primaryHeight - 2));
+  ctx.fillStyle = "#d6ad68";
+  ctx.fillRect(sx - 2, top, 4, 2);
+
+  if (surfaceExtension) {
+    // Overlap the join by one pixel so camera rounding cannot reveal a seam.
+    // Stop three pixels short of the next tile edge so the Rope remains
+    // visibly inside the excavation instead of spilling onto southern grass.
+    const extensionTop = top + 15;
+    const extensionHeight = 14;
+    ctx.globalAlpha = alpha * 0.58;
+    ctx.fillStyle = "#b88a4a";
+    ctx.fillRect(sx - 1, extensionTop, 2, extensionHeight);
+    ctx.fillStyle = "#6f4a2b";
+    ctx.fillRect(sx + 1, extensionTop + 1, 1, extensionHeight - 2);
+    ctx.globalAlpha = alpha * 0.28;
+    ctx.fillStyle = "#d6ad68";
+    ctx.fillRect(sx - 1, extensionTop + extensionHeight - 3, 2, 2);
+  }
+  ctx.restore();
+}
+
+function drawDugPit(structure, camX, camY, alpha = 1) {
+  if (!structure?.breakthrough) return drawDugDirt(structure, camX, camY, alpha);
+  const wx = Number(structure.x);
+  const wy = Number(structure.y);
+  const x = Math.round(wx - camX - 8);
+  const y = Math.round(wy - camY - 8);
+  const north = dugPitNeighborAt(wx, wy - BUILD_GRID_SIZE);
+  const south = dugPitNeighborAt(wx, wy + BUILD_GRID_SIZE);
+  const west = dugPitNeighborAt(wx - BUILD_GRID_SIZE, wy);
+  const east = dugPitNeighborAt(wx + BUILD_GRID_SIZE, wy);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+
+  // v459: connected breakthrough cells read as one excavation. The opening is
+  // black, while a north-exposed cell becomes the vertical cut-earth face of
+  // the surface above it. This gives large player-dug holes the same readable
+  // top-down depth cue as the user's mock-up without reviving underground
+  // terrain overhangs.
+  ctx.fillStyle = "#050608";
+  ctx.fillRect(x, y, 16, 16);
+
+  if (!north) {
+    // Where the pit continues south, the full top cell is the visible earth
+    // face. An isolated/single-row breakthrough keeps a black lower pocket so
+    // it still unmistakably reads as a hole rather than an ordinary dirt tile.
+    const faceDepth = south ? 16 : 10;
+    ctx.fillStyle = "#855b3b";
+    ctx.fillRect(x, y, 16, faceDepth);
+    ctx.fillStyle = "#725036";
+    ctx.fillRect(x, y + Math.min(4, faceDepth - 2), 16, 2);
+    ctx.fillStyle = "#543723";
+    ctx.fillRect(x, y + faceDepth - 2, 16, 2);
+    ctx.fillStyle = "#9a7048";
+    ctx.fillRect(x + 2, y + 1, 5, 1);
+    ctx.fillRect(x + 10, y + Math.min(7, faceDepth - 3), 3, 1);
+  }
+
+  // Side/bottom silhouette only appears at the outer boundary of the merged
+  // excavation. Internal tile seams are deliberately absent.
+  ctx.fillStyle = "#4b392c";
+  if (!west) ctx.fillRect(x, y, 1, 16);
+  if (!east) ctx.fillRect(x + 15, y, 1, 16);
+  if (!south) ctx.fillRect(x, y + 15, 16, 1);
+  ctx.restore();
+}
+
+function drawShaftOpening(structure, camX, camY, alpha = 1) {
+  // Underground openings intentionally have no marker tile. Installed Ropes
+  // are rendered in the separate opening-attachment pass after all floor cells.
+}
+
+function drawOpeningRopes(camX, camY) {
+  // Surface Ropes belong to the excavation/floor pass. Underground Ropes are
+  // Y-sorted separately with the player so they can naturally draw in front
+  // when the player is visually behind them and behind when the player moves
+  // below their hanging base.
+  for (const structure of currentMapStructures()) {
+    if (!structure?.ropePlaced) continue;
+    if (structure.kind === "dugPit" && structure.breakthrough) {
+      drawRopeAtOpening(structure.x, structure.y, camX, camY, false, 1);
+    }
+  }
+}
+
+function undergroundRopeDrawSortY(structure) {
+  return Number(structure?.y) + 16;
 }
 
 function torchDisplayWorldPosition(structure) {
@@ -7604,17 +7747,53 @@ function torchVisibilityWorldPosition(structure) {
   return { x: light.x, y: offset.y };
 }
 
+function placedTorchDrawSortY(structure) {
+  return structure?.mountType === "wall"
+    ? Number(structure.y) + ((structure.mountAxis || structure.axis) === "vertical" ? 8.25 : 0.25)
+    : Number(structure?.y);
+}
+
+function visibleWallAttachmentFaceSide(support) {
+  if (!support || remotePlayerDrawDepth > 0) return null;
+  const regions = automaticRoofRegions().filter(region => structureBelongsToRoofFacade(support, region));
+  if (!regions.length) return null;
+  const activeRegion = regions.find(region => playerInsideRoofRegion(region));
+  if (activeRegion) return structureInteriorBoundarySide(support, activeRegion);
+  if (regions.length === 1) {
+    const interiorSide = structureInteriorBoundarySide(support, regions[0]);
+    return interiorSide ? oppositeStructureBoundarySide(interiorSide) : null;
+  }
+  return null;
+}
+
+function placedTorchVisibilityAlpha(structure, alpha = 1) {
+  const display = torchDisplayWorldPosition(structure);
+  let resolvedAlpha = localForegroundOcclusionAlpha(
+    { x: display.x - 8, y: display.y - 15, width: 16, height: 16 },
+    placedTorchDrawSortY(structure),
+    alpha
+  );
+  if (structure?.mountType !== "wall" || !structure?.supportId) return resolvedAlpha;
+  const support = currentMapStructures().find(candidate => candidate?.id === structure.supportId) || null;
+  if (!support) return resolvedAlpha;
+  const visibleSide = visibleWallAttachmentFaceSide(support);
+  if (visibleSide && structure.mountSide && structure.mountSide !== visibleSide) return 0;
+  return resolvedAlpha;
+}
+
 function drawPlacedTorch(structure, camX, camY, alpha = 1) {
   const display = torchDisplayWorldPosition(structure);
   const x = Math.round(display.x - camX - 8);
   const y = Math.round(display.y - camY - 15);
   const flicker = Math.sin(worldTime * 13.7 + Number(structure.x) * 0.031 + Number(structure.y) * 0.017);
+  const visibilityAlpha = placedTorchVisibilityAlpha(structure, alpha);
+  if (visibilityAlpha <= 0.001) return;
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = visibilityAlpha;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(torchImage, x, y, 16, 16);
-  if (alpha > 0.5 && flicker > 0.35) {
-    ctx.globalAlpha = alpha * 0.72;
+  if (visibilityAlpha > 0.5 && flicker > 0.35) {
+    ctx.globalAlpha = visibilityAlpha * 0.72;
     ctx.fillStyle = "#d9ff9e";
     ctx.fillRect(x + (flicker > 0.75 ? 10 : 5), y + 2, 1, 1);
   }
@@ -7646,15 +7825,20 @@ function segmentRectIntersectionT(x1, y1, x2, y2, rect, padding = 0) {
 function structureWallImpactPoint(fromX, fromY, toX, toY, padding = 0) {
   let best = null;
   for (const structure of currentMapStructures()) {
-    const blocks = structure?.kind === "woodWall" ||
+    const isStoneCube = structure?.kind === "stoneCube";
+    const blocks = BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||
+      isStoneCube ||
       (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure));
     if (!blocks) continue;
+    const collisionRect = isStoneCube
+      ? STRUCTURE_GEOMETRY.stoneCubeFootprintRect(structure)
+      : wallCollisionRect(structure);
     const t = segmentRectIntersectionT(
       Number(fromX),
       Number(fromY),
       Number(toX),
       Number(toY),
-      wallCollisionRect(structure),
+      collisionRect,
       padding
     );
     if (t === null || t <= 0.001 || t >= 0.999) continue;
@@ -7708,18 +7892,44 @@ function verticalWallHasUpperHorizontalJoin(structure) {
   );
 }
 
-function structureVisuallyCoversLocalPlayer(structure) {
-  if (!structure || remotePlayerDrawDepth > 0) return false;
-  const sx = Number(structure.x);
-  const sy = Number(structure.y);
-  const px = Number(player.x);
-  const py = Number(player.y);
-  if (structure.axis === "vertical") {
-    const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
-    const top = sy - 23 - extension;
-    return Math.abs(px - sx) <= 7 && py >= top && py <= sy + 8;
-  }
-  return Math.abs(px - sx) <= 11 && py >= sy - 31 && py <= sy + 2;
+function localPlayerOcclusionWorldRect() {
+  const x = Number(player?.x);
+  const y = Number(player?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x: x - 7, y: y - 16, width: 14, height: 17 };
+}
+
+function worldRectsOverlap(a, b, padding = 0) {
+  if (!a || !b) return false;
+  const ax = Number(a.x) - padding;
+  const ay = Number(a.y) - padding;
+  const aw = Number(a.width) + padding * 2;
+  const ah = Number(a.height) + padding * 2;
+  const bx = Number(b.x);
+  const by = Number(b.y);
+  const bw = Number(b.width);
+  const bh = Number(b.height);
+  if (![ax, ay, aw, ah, bx, by, bw, bh].every(Number.isFinite)) return false;
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+function localForegroundOcclusionAlpha(worldRect, drawSortY, alpha = 1) {
+  const baseAlpha = Math.max(0, Math.min(1, Number(alpha) || 0));
+  if (baseAlpha <= 0 || remotePlayerDrawDepth > 0) return baseAlpha;
+  const playerRect = localPlayerOcclusionWorldRect();
+  if (!playerRect || !worldRect) return baseAlpha;
+  const sortY = Number(drawSortY);
+  const playerSortY = Number(player.y);
+  if (!Number.isFinite(sortY) || !Number.isFinite(playerSortY) || sortY <= playerSortY + 0.01) return baseAlpha;
+  if (!worldRectsOverlap(worldRect, playerRect, 2)) return baseAlpha;
+  return baseAlpha * LOCAL_FOREGROUND_OCCLUDER_ALPHA;
+}
+
+function structureVisualWorldRect(structure) {
+  if (!structure) return null;
+  return STRUCTURE_GEOMETRY.facadeRect(structure, {
+    upperJoin: structure?.axis === "vertical" && verticalWallHasUpperHorizontalJoin(structure)
+  });
 }
 
 function structureBelongsToRoofFacade(structure, region) {
@@ -7742,17 +7952,14 @@ function activeInteriorRoofRegion() {
 }
 
 function structureFadeAlpha(structure, alpha = 1) {
+  const visualRect = structureVisualWorldRect(structure);
+  let resolvedAlpha = localForegroundOcclusionAlpha(visualRect, wallDrawSortY(structure), alpha);
   const interiorRegion = activeInteriorRoofRegion();
-  if (interiorRegion && structureBelongsToRoofFacade(structure, interiorRegion)) {
-    // Inside a finished house the roof disappears completely and only the
-    // south/foreground wall is softened. Back and side walls stay fully solid
-    // so the interior keeps a stable room-like silhouette.
-    return structureIsForegroundRoofBoundary(structure, interiorRegion)
-      ? alpha * (structure?.kind === "woodDoor" ? HOUSE_FOREGROUND_DOOR_ALPHA : HOUSE_FOREGROUND_ALPHA)
-      : alpha;
+  if (interiorRegion && structureBelongsToRoofFacade(structure, interiorRegion) && structureIsForegroundRoofBoundary(structure, interiorRegion)) {
+    const roomAlpha = alpha * (["woodDoor", "caveDoor"].includes(structure?.kind) ? HOUSE_FOREGROUND_DOOR_ALPHA : HOUSE_FOREGROUND_ALPHA);
+    resolvedAlpha = Math.min(resolvedAlpha, roomAlpha);
   }
-  if (!structureVisuallyCoversLocalPlayer(structure)) return alpha;
-  return alpha * (structure?.kind === "woodDoor" ? STRUCTURE_COVER_DOOR_ALPHA : 0.58);
+  return resolvedAlpha;
 }
 
 function doorPerpendicularDistance(structure, x, y) {
@@ -7855,7 +8062,7 @@ function drawWoodWall(structure, camX, camY, alpha = 1) {
     if (!structureEdgeNeighbor(structure, 1)) ctx.fillRect(left + 15, top, 1, 32);
 
     ctx.fillStyle = STRUCTURE_EDGE_LIGHT;
-    ctx.globalAlpha *= 0.42;
+    ctx.globalAlpha *= 0.42 * hiddenRoofFacadeHighlightFactor(structure);
     ctx.fillRect(left + 1, top + 1, 14, 1);
   } else {
     const cornerExtension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
@@ -7877,6 +8084,84 @@ function drawWoodWall(structure, camX, camY, alpha = 1) {
     if (!structureEdgeNeighbor(structure, 1)) ctx.fillRect(left, top + height - 1, 4, 1);
   }
 
+  ctx.restore();
+}
+
+function stoneWallVariantIndex(structure) {
+  const x = Math.round(Number(structure?.x) || 0);
+  const y = Math.round(Number(structure?.y) || 0);
+  const axisSalt = structure?.axis === "vertical" ? 1 : 0;
+  const hash = (((x * 73856093) ^ (y * 19349663) ^ (axisSalt * 83492791)) >>> 0);
+  return hash % stoneWallStructureVariantImages.length;
+}
+
+function stoneWallHorizontalImage(structure, leftNeighbor, rightNeighbor) {
+  const variantIndex = stoneWallVariantIndex(structure);
+  if (!leftNeighbor && !rightNeighbor) return stoneWallCapBothVariantImages[variantIndex];
+  if (!leftNeighbor) return stoneWallCapLeftVariantImages[variantIndex];
+  if (!rightNeighbor) return stoneWallCapRightVariantImages[variantIndex];
+  return stoneWallStructureVariantImages[variantIndex];
+}
+
+function stoneWallSideImage(topNeighbor, bottomNeighbor, hasUpperJoin) {
+  const openTop = !topNeighbor && !hasUpperJoin;
+  const openBottom = !bottomNeighbor;
+  if (openTop && openBottom) return stoneWallSideCapBothStructureImage;
+  if (openTop) return stoneWallSideCapTopStructureImage;
+  if (openBottom) return stoneWallSideCapBottomStructureImage;
+  return stoneWallSideStructureImage;
+}
+
+function drawStoneWall(structure, camX, camY, alpha = 1) {
+  const sx = Math.round(Number(structure.x) - camX);
+  const sy = Math.round(Number(structure.y) - camY);
+  const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
+  const edgeDark = "#34383b";
+  const edgeLight = "#9ba1a3";
+
+  ctx.save();
+  ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+  ctx.imageSmoothingEnabled = false;
+
+  if (axis === "horizontal") {
+    const leftNeighbor = structureEdgeNeighbor(structure, -1);
+    const rightNeighbor = structureEdgeNeighbor(structure, 1);
+    const left = sx - 8;
+    const top = sy - 31;
+    const image = stoneWallHorizontalImage(structure, leftNeighbor, rightNeighbor);
+    const leftInset = leftNeighbor ? 0 : 5;
+    const rightInset = rightNeighbor ? 0 : 5;
+    const edgeWidth = Math.max(1, 16 - leftInset - rightInset);
+    ctx.drawImage(image, left, top, 16, 32);
+    ctx.fillStyle = edgeDark;
+    ctx.fillRect(left + leftInset, top, edgeWidth, 1);
+    ctx.fillRect(left + leftInset, sy, edgeWidth, 1);
+    if (leftNeighbor) ctx.fillRect(left, top, 1, 32);
+    if (rightNeighbor) ctx.fillRect(left + 15, top, 1, 32);
+    ctx.fillStyle = edgeLight;
+    ctx.globalAlpha *= 0.34 * hiddenRoofFacadeHighlightFactor(structure);
+    ctx.fillRect(left + leftInset + 1, top + 1, Math.max(1, edgeWidth - 2), 1);
+  } else {
+    const topNeighbor = structureEdgeNeighbor(structure, -1);
+    const bottomNeighbor = structureEdgeNeighbor(structure, 1);
+    const cornerExtension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const height = 32 + cornerExtension;
+    const left = sx - 2;
+    const top = sy + 9 - height;
+    const image = stoneWallSideImage(topNeighbor, bottomNeighbor, cornerExtension > 0);
+    if (cornerExtension) {
+      ctx.drawImage(image, 0, 0, 4, 16, left, top, 4, 16);
+      ctx.drawImage(image, 0, 0, 4, 32, left, top + 16, 4, 32);
+    } else {
+      ctx.drawImage(image, left, top, 4, 32);
+    }
+    ctx.fillStyle = edgeDark;
+    ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+    ctx.fillRect(left, top, 1, height);
+    ctx.fillRect(left + 3, top, 1, height);
+    if (topNeighbor || cornerExtension) ctx.fillRect(left, top, 4, 1);
+    if (bottomNeighbor) ctx.fillRect(left, top + height - 1, 4, 1);
+  }
   ctx.restore();
 }
 
@@ -7934,7 +8219,13 @@ function drawWoodDoor(structure, camX, camY, alpha = 1) {
 function drawPlayerStructureFloors(camX, camY) {
   for (const structure of currentMapStructures()) {
     if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure.kind)) drawStructureFloor(structure, camX, camY);
+    else if (structure.kind === "dugDirt") drawDugDirt(structure, camX, camY);
+    else if (structure.kind === "dugPit") drawDugPit(structure, camX, camY);
+    else if (structure.kind === "shaftOpening") drawShaftOpening(structure, camX, camY);
   }
+  // v462: draw installed Ropes only after every excavation/shaft floor cell so
+  // a neighboring hole can never paint over the Rope hanging into the pit.
+  drawOpeningRopes(camX, camY);
 }
 
 function structureCellKey(x, y) {
@@ -8037,6 +8328,181 @@ function appendRoofRegionSurfacePath(pathCtx, region, camX, camY) {
   return appended;
 }
 
+function stoneCubeVariantIndex(structure) {
+  const x = Math.round(Number(structure?.x) || 0);
+  const y = Math.round(Number(structure?.y) || 0);
+  const hash = (((x * 73856093) ^ (y * 19349663) ^ 0x5f3759df) >>> 0);
+  return hash % stoneCubeStructureVariantImages.length;
+}
+
+function drawStoneCube(structure, camX, camY, alpha = 1) {
+  const sx = Math.round(Number(structure?.x) - camX);
+  const sy = Math.round(Number(structure?.y) - camY);
+  // v450: the structure coordinate is the center of its 16x16 world cell.
+  // Draw the cube on that cell instead of hanging the whole sprite above it.
+  const left = sx - 8;
+  const top = sy - 8;
+  const image = stoneCubeStructureVariantImages[stoneCubeVariantIndex(structure)] || stoneCubeStructureImage;
+
+  ctx.save();
+  ctx.globalAlpha = localForegroundOcclusionAlpha(
+    { x: Number(structure?.x) - 8, y: Number(structure?.y) - 8, width: 16, height: 16 },
+    Number(structure?.y) + 8,
+    alpha
+  );
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(image, left, top, 16, 16);
+
+  ctx.fillStyle = "#34383b";
+  ctx.fillRect(left, top, 16, 1);
+  ctx.fillRect(left, top, 1, 16);
+  ctx.fillRect(left + 15, top, 1, 16);
+  ctx.fillRect(left, top + 15, 16, 1);
+  ctx.fillStyle = "#9ba1a3";
+  ctx.globalAlpha *= 0.28;
+  ctx.fillRect(left + 1, top + 1, 14, 1);
+  ctx.restore();
+}
+
+function roofRegionIsNaturalCave(region) {
+  return Boolean(region?.floors?.length) && region.floors.every(floor =>
+    floor?.kind === "caveFloor" || floor?.featureType === "cave"
+  );
+}
+
+function caveCeilingLiftForFloor(floor) {
+  const gx = Math.round(Number(floor?.x) / BUILD_GRID_SIZE);
+  const gy = Math.round(Number(floor?.y) / BUILD_GRID_SIZE);
+  const hash = (((gx * 73856093) ^ (gy * 19349663) ^ 0x45f3) >>> 0);
+  return [0, 3, 6][hash % 3];
+}
+
+function drawNaturalCaveCeilingRegion(region, camX, camY, alpha) {
+  const floorKeys = region.floorKeys || new Set(region.floors.map(floor => structureCellKey(floor.x, floor.y)));
+  const floorsByKey = new Map(region.floors.map(floor => [structureCellKey(floor.x, floor.y), floor]));
+  const sortedFloors = [...region.floors].sort((a, b) => Number(a.y) - Number(b.y) || Number(a.x) - Number(b.x));
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+
+  for (const floor of sortedFloors) {
+    const fx = Number(floor.x);
+    const fy = Number(floor.y);
+    const lift = caveCeilingLiftForFloor(floor);
+    const x = Math.round(fx - camX - 8);
+    const y = Math.round(fy - camY - 40 - lift);
+    const northKey = structureCellKey(fx, fy - BUILD_GRID_SIZE);
+    const eastKey = structureCellKey(fx + BUILD_GRID_SIZE, fy);
+    const southKey = structureCellKey(fx, fy + BUILD_GRID_SIZE);
+    const westKey = structureCellKey(fx - BUILD_GRID_SIZE, fy);
+    const north = !floorKeys.has(northKey);
+    const east = !floorKeys.has(eastKey);
+    const south = !floorKeys.has(southKey);
+    const west = !floorKeys.has(westKey);
+    const southFloor = floorsByKey.get(southKey);
+    const eastFloor = floorsByKey.get(eastKey);
+    const southLift = southFloor ? caveCeilingLiftForFloor(southFloor) : -6;
+    const eastLift = eastFloor ? caveCeilingLiftForFloor(eastFloor) : -4;
+
+    // The top plane still uses the same stone roof material, but each 16px
+    // chunk sits on one of three deterministic heights. That creates chunky
+    // rock terraces instead of one flat tiled carpet.
+    ctx.drawImage(stoneRoofStructureImage, x, y, 16, 16);
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#202426";
+    if (north) ctx.fillRect(x, y, 16, 2);
+    if (west) ctx.fillRect(x, y, 2, 16);
+
+    const southDrop = south ? 7 : Math.max(0, lift - southLift);
+    if (southDrop > 0) {
+      const depth = Math.min(10, Math.max(2, southDrop));
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(stoneWallStructureImage, 0, 18, 16, Math.min(12, depth), x, y + 16, 16, depth);
+      ctx.fillStyle = "rgba(23, 27, 29, 0.55)";
+      ctx.fillRect(x, y + 16, 16, depth);
+      ctx.fillStyle = "#1a1e20";
+      ctx.fillRect(x, y + 15 + depth, 16, 2);
+    }
+
+    const eastDrop = east ? 5 : Math.max(0, lift - eastLift);
+    if (eastDrop > 0) {
+      ctx.globalAlpha = alpha * 0.78;
+      ctx.fillStyle = "#24292b";
+      ctx.fillRect(x + 13, y + 2, 3, Math.min(18, 14 + eastDrop));
+      ctx.fillStyle = "#15191b";
+      ctx.fillRect(x + 15, y + 2, 1, Math.min(18, 14 + eastDrop));
+    }
+
+    // Small deterministic chips keep the stepped silhouette from becoming a
+    // perfect staircase while remaining crisp and grid-aligned.
+    if (((Math.round(fx) + Math.round(fy)) / BUILD_GRID_SIZE) % 3 === 0) {
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.fillStyle = "#777f82";
+      ctx.fillRect(x + 3, y + 3, 4, 1);
+      ctx.fillStyle = "#313638";
+      ctx.fillRect(x + 11, y + 10, 3, 2);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawNaturalCaveDoor(structure, camX, camY, alpha = 1) {
+  const sx = Math.round(Number(structure?.x) - camX);
+  const sy = Math.round(Number(structure?.y) - camY);
+  const axis = structure?.axis === "vertical" ? "vertical" : "horizontal";
+
+  ctx.save();
+  ctx.globalAlpha = structureFadeAlpha(structure, alpha);
+  ctx.imageSmoothingEnabled = false;
+
+  if (axis === "horizontal") {
+    const left = sx - 8;
+    const top = sy - 31;
+    ctx.drawImage(caveDoorStructureImage, left, top, 16, 32);
+    ctx.fillStyle = "#202527";
+    ctx.fillRect(left, top, 16, 1);
+    ctx.fillRect(left, sy, 16, 1);
+    ctx.fillRect(left, top, 1, 32);
+    ctx.fillRect(left + 15, top, 1, 32);
+  } else {
+    const extension = verticalWallHasUpperHorizontalJoin(structure) ? 16 : 0;
+    const height = 32 + extension;
+    const left = sx - 2;
+    const top = sy + 9 - height;
+    if (extension) {
+      ctx.drawImage(caveDoorStructureImage, 0, 0, 16, 16, left, top, 4, 16);
+      ctx.drawImage(caveDoorStructureImage, 0, 0, 16, 32, left, top + 16, 4, 32);
+      ctx.fillStyle = "#202527";
+      ctx.fillRect(left, top, 1, height);
+      ctx.fillRect(left + 3, top, 1, height);
+    } else {
+      ctx.drawImage(caveDoorStructureImage, left, top, 4, 32);
+      ctx.fillStyle = "#202527";
+      ctx.fillRect(left, top, 1, 32);
+      ctx.fillRect(left + 3, top, 1, 32);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawNaturalCaveMouth(structure, camX, camY, alpha = 1) {
+  drawNaturalCaveDoor(structure, camX, camY, alpha);
+}
+
+function roofMaterialForRegion(region) {
+  if (roofRegionIsNaturalCave(region)) return "cave";
+  const boundaryKinds = currentMapStructures()
+    .filter(structure => structureBelongsToRoofFacade(structure, region))
+    .map(structure => structure?.kind)
+    .filter(Boolean);
+  const solidWalls = boundaryKinds.filter(kind => BUILD_WALL_STRUCTURE_KINDS.includes(kind));
+  return solidWalls.length > 0 && solidWalls.every(kind => kind === "stoneWall") ? "stone" : "wood";
+}
+
 function drawAutomaticStructureRoofs(camX, camY) {
   for (const region of automaticRoofRegions()) {
     const inside = playerInsideRoofRegion(region);
@@ -8045,6 +8511,14 @@ function drawAutomaticStructureRoofs(camX, camY) {
       ? ROOF_PLAYER_COVER_ALPHA
       : 0.96;
     const floorKeys = region.floorKeys || new Set(region.floors.map(floor => structureCellKey(floor.x, floor.y)));
+    const roofMaterial = roofMaterialForRegion(region);
+    if (roofMaterial === "cave") {
+      drawNaturalCaveCeilingRegion(region, camX, camY, alpha);
+      continue;
+    }
+    const roofImage = roofMaterial === "stone" ? stoneRoofStructureImage : woodRoofStructureImage;
+    const roofEdgeDark = roofMaterial === "stone" ? "#2d3235" : ROOF_EDGE_DARK;
+    const roofEaveLight = roofMaterial === "stone" ? "#8d9497" : ROOF_EAVE_LIGHT;
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -8063,31 +8537,31 @@ function drawAutomaticStructureRoofs(camX, camY) {
       // Keep the authored roof tile completely uniform. v396 only gives the
       // *outer roof silhouette* dedicated edge/corner treatment.
       if (north) {
-        ctx.drawImage(woodRoofStructureImage, 0, 0, 16, 1, x, y - ROOF_OVERHANG, 16, ROOF_OVERHANG);
+        ctx.drawImage(roofImage, 0, 0, 16, 1, x, y - ROOF_OVERHANG, 16, ROOF_OVERHANG);
       }
       if (south) {
-        ctx.drawImage(woodRoofStructureImage, 0, 15, 16, 1, x, y + 16, 16, ROOF_OVERHANG);
+        ctx.drawImage(roofImage, 0, 15, 16, 1, x, y + 16, 16, ROOF_OVERHANG);
       }
       if (west) {
-        ctx.drawImage(woodRoofStructureImage, 0, 0, 1, 16, x - ROOF_OVERHANG, y, ROOF_OVERHANG, 16);
+        ctx.drawImage(roofImage, 0, 0, 1, 16, x - ROOF_OVERHANG, y, ROOF_OVERHANG, 16);
       }
       if (east) {
-        ctx.drawImage(woodRoofStructureImage, 15, 0, 1, 16, x + 16, y, ROOF_OVERHANG, 16);
+        ctx.drawImage(roofImage, 15, 0, 1, 16, x + 16, y, ROOF_OVERHANG, 16);
       }
       if (north && west) {
-        ctx.drawImage(woodRoofStructureImage, 0, 0, 1, 1, x - ROOF_OVERHANG, y - ROOF_OVERHANG, ROOF_OVERHANG, ROOF_OVERHANG);
+        ctx.drawImage(roofImage, 0, 0, 1, 1, x - ROOF_OVERHANG, y - ROOF_OVERHANG, ROOF_OVERHANG, ROOF_OVERHANG);
       }
       if (north && east) {
-        ctx.drawImage(woodRoofStructureImage, 15, 0, 1, 1, x + 16, y - ROOF_OVERHANG, ROOF_OVERHANG, ROOF_OVERHANG);
+        ctx.drawImage(roofImage, 15, 0, 1, 1, x + 16, y - ROOF_OVERHANG, ROOF_OVERHANG, ROOF_OVERHANG);
       }
       if (south && west) {
-        ctx.drawImage(woodRoofStructureImage, 0, 15, 1, 1, x - ROOF_OVERHANG, y + 16, ROOF_OVERHANG, ROOF_OVERHANG);
+        ctx.drawImage(roofImage, 0, 15, 1, 1, x - ROOF_OVERHANG, y + 16, ROOF_OVERHANG, ROOF_OVERHANG);
       }
       if (south && east) {
-        ctx.drawImage(woodRoofStructureImage, 15, 15, 1, 1, x + 16, y + 16, ROOF_OVERHANG, ROOF_OVERHANG);
+        ctx.drawImage(roofImage, 15, 15, 1, 1, x + 16, y + 16, ROOF_OVERHANG, ROOF_OVERHANG);
       }
 
-      ctx.drawImage(woodRoofStructureImage, x, y, 16, 16);
+      ctx.drawImage(roofImage, x, y, 16, 16);
 
       const edgeLeft = x - (west ? ROOF_OVERHANG : 0);
       const edgeRight = x + 16 + (east ? ROOF_OVERHANG : 0);
@@ -8095,7 +8569,7 @@ function drawAutomaticStructureRoofs(camX, camY) {
       const edgeBottom = y + 16 + (south ? ROOF_OVERHANG : 0);
 
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = ROOF_EDGE_DARK;
+      ctx.fillStyle = roofEdgeDark;
       if (north) ctx.fillRect(edgeLeft, edgeTop, edgeRight - edgeLeft, 1);
       if (west) ctx.fillRect(edgeLeft, edgeTop, 1, edgeBottom - edgeTop);
       if (east) ctx.fillRect(edgeRight - 1, edgeTop, 1, edgeBottom - edgeTop);
@@ -8103,10 +8577,10 @@ function drawAutomaticStructureRoofs(camX, camY) {
       if (south) {
         // A stronger eave is the main depth cue: a thin warm lip followed by
         // the dark lower edge keeps the roof distinct from the wall below.
-        ctx.fillStyle = ROOF_EAVE_LIGHT;
+        ctx.fillStyle = roofEaveLight;
         ctx.globalAlpha = alpha * 0.72;
         ctx.fillRect(edgeLeft + 1, edgeBottom - 3, Math.max(1, edgeRight - edgeLeft - 2), 1);
-        ctx.fillStyle = ROOF_EDGE_DARK;
+        ctx.fillStyle = roofEdgeDark;
         ctx.globalAlpha = alpha;
         ctx.fillRect(edgeLeft, edgeBottom - 2, edgeRight - edgeLeft, 2);
       }
@@ -8122,10 +8596,16 @@ function wallDrawSortY(structure) {
 
 function addPlayerStructureDrawables(drawables, camX, camY) {
   for (const structure of currentMapStructures()) {
+    if (structure.kind === "shaftOpening" && structure.ropePlaced) {
+      addDrawable(
+        drawables,
+        undergroundRopeDrawSortY(structure),
+        () => drawRopeAtOpening(structure.x, structure.y, camX, camY, true, 1)
+      );
+      continue;
+    }
     if (structure.kind === "torch") {
-      const sortY = structure.mountType === "wall"
-        ? Number(structure.y) + (structure.mountAxis === "vertical" ? 8.25 : 0.25)
-        : Number(structure.y);
+      const sortY = placedTorchDrawSortY(structure);
       addDrawable(drawables, sortY, () => drawPlacedTorch(structure, camX, camY));
       continue;
     }
@@ -8137,16 +8617,60 @@ function addPlayerStructureDrawables(drawables, camX, camY) {
       addDrawable(drawables, Number(structure.y), () => drawCraftingTableStructure(structure, camX, camY));
       continue;
     }
+    if (structure.kind === "caveDoor" || structure.kind === "caveMouth") {
+      addDrawable(drawables, wallDrawSortY(structure), () => drawNaturalCaveDoor(structure, camX, camY));
+      continue;
+    }
+    if (structure.kind === "stoneCube") {
+      // Sort at the cube's base (bottom of its 16x16 cell). A player whose
+      // feet are above this value is behind the cube; below it draws in front.
+      addDrawable(drawables, Number(structure.y) + 8, () => drawStoneCube(structure, camX, camY));
+      continue;
+    }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
     addDrawable(drawables, wallDrawSortY(structure), () => {
       if (structure.kind === "woodDoor") drawWoodDoor(structure, camX, camY);
+      else if (structure.kind === "stoneWall") drawStoneWall(structure, camX, camY);
       else drawWoodWall(structure, camX, camY);
     });
   }
 }
 
+function surfaceRopeAllowsPlayerStep(structure, fromX, fromY, toX, toY, playerRadius = 4) {
+  if (!structure?.ropePlaced || structure?.kind !== "dugPit" || !structure?.breakthrough) return false;
+  if (![fromX, fromY, toX, toY].every(value => Number.isFinite(Number(value)))) return false;
+
+  const left = Number(structure.x) - 8;
+  const top = Number(structure.y) - 8;
+  const wasInside = circleRectCollision(Number(fromX), Number(fromY), playerRadius, left, top, 16, 16);
+  if (wasInside) return true;
+
+  // v463: a surface Rope is entered from its top/north lip only. Side and
+  // south approaches still collide with the excavation, while a player who
+  // lines up above the Rope can move downward into the shaft normally.
+  const enteringFromNorth = Number(fromY) <= top - playerRadius + 1;
+  const movingDown = Number(toY) > Number(fromY) + 0.01;
+  const alignedToRope = Math.abs(Number(toX) - Number(structure.x)) <= 5.5;
+  return enteringFromNorth && movingDown && alignedToRope;
+}
+
 function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
   for (const structure of currentMapStructures()) {
+    if (structure.kind === "dugPit") {
+      const left = Number(structure.x) - 8;
+      const top = Number(structure.y) - 8;
+      if (!circleRectCollision(x, y, playerRadius, left, top, 16, 16)) continue;
+      if (
+        structure.ropePlaced &&
+        surfaceRopeAllowsPlayerStep(structure, options.fromX, options.fromY, x, y, playerRadius)
+      ) continue;
+      return true;
+    }
+    if (structure.kind === "stoneCube") {
+      const rect = STRUCTURE_GEOMETRY.stoneCubeFootprintRect(structure);
+      if (rect && circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) return true;
+      continue;
+    }
     if (structure.kind === "chest" || structure.kind === "craftingTable") {
       const left = Number(structure.x) - 7;
       const top = Number(structure.y) - 8;
@@ -8154,6 +8678,10 @@ function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
       continue;
     }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
+    // Stone Arches/cave passages participate in roof topology but are always
+    // walk-through openings; only solid walls and the automatic Wood Door can
+    // stop player movement.
+    if (structure.kind === "caveDoor" || structure.kind === "caveMouth") continue;
     const rect = wallCollisionRect(structure);
     if (!circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) continue;
     if (
@@ -8168,6 +8696,14 @@ function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
 }
 
 function pickaxeStructurePointerBounds(structure) {
+  if (["dugDirt", "dugPit"].includes(structure?.kind)) {
+    return {
+      left: Number(structure.x) - 8,
+      top: Number(structure.y) - 8,
+      right: Number(structure.x) + 8,
+      bottom: Number(structure.y) + 8
+    };
+  }
   if (structure?.kind === "torch") {
     const display = torchDisplayWorldPosition(structure);
     return {
@@ -8193,6 +8729,15 @@ function pickaxeStructurePointerBounds(structure) {
       top: Number(structure.y) - 18,
       right: Number(structure.x) + 9,
       bottom: Number(structure.y) + 1
+    };
+  }
+
+  if (structure?.kind === "stoneCube") {
+    return {
+      left: Number(structure.x) - 8,
+      top: Number(structure.y) - 8,
+      right: Number(structure.x) + 8,
+      bottom: Number(structure.y) + 8
     };
   }
 
@@ -8246,7 +8791,7 @@ function playerStructurePickaxeTarget() {
   let bestPriority = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(structure.kind)) continue;
+    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "chest", "craftingTable", "dugDirt", "dugPit"].includes(structure.kind)) continue;
 
     // Player position is only a reach gate. It must never decide which placed
     // piece wins when several structures are in range; the cursor does that.
@@ -8263,7 +8808,7 @@ function playerStructurePickaxeTarget() {
     // If the pointer overlaps a wall/door facade and the floor behind it,
     // prefer the visible edge structure. Otherwise choose whichever structure
     // is geometrically closest to the cursor, independent of player distance.
-    const priority = ["torch", "chest", "craftingTable"].includes(structure.kind)
+    const priority = ["torch", "chest", "craftingTable", "stoneCube"].includes(structure.kind)
       ? 0
       : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)
         ? 1
@@ -8293,7 +8838,7 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
   ctx.globalAlpha = 0.92;
   ctx.fillStyle = "#ffe38b";
 
-  if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure.kind)) {
+  if (BUILD_FLOOR_STRUCTURE_KINDS.includes(structure.kind) || ["dugDirt", "dugPit"].includes(structure.kind)) {
     const left = Math.round(Number(structure.x) - camX - 8);
     const top = Math.round(Number(structure.y) - camY - 8);
     ctx.fillRect(left, top, 16, 1);
@@ -8322,6 +8867,13 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
     ctx.fillRect(left, top + 17, 16, 1);
     ctx.fillRect(left, top, 1, 18);
     ctx.fillRect(left + 15, top, 1, 18);
+  } else if (structure.kind === "stoneCube") {
+    const left = Math.round(Number(structure.x) - camX - 9);
+    const top = Math.round(Number(structure.y) - camY - 9);
+    ctx.fillRect(left, top, 18, 1);
+    ctx.fillRect(left, top + 17, 18, 1);
+    ctx.fillRect(left, top, 1, 18);
+    ctx.fillRect(left + 17, top, 1, 18);
   } else if (structure.axis === "vertical") {
     const sx = Math.round(Number(structure.x) - camX);
     const sy = Math.round(Number(structure.y) - camY);
@@ -8363,6 +8915,11 @@ function buildPieceCount(kind) {
   if (kind === "woodFloor") return Math.max(0, Number(player.woodFloors) || 0);
   if (kind === "stoneFloor") return Math.max(0, Number(player.stoneFloors) || 0);
   if (kind === "woodWall") return Math.max(0, Number(player.woodWalls) || 0);
+  if (kind === "stoneWall") return Math.max(0, Number(player.stoneWalls) || 0);
+  if (kind === "stoneCube") return Math.max(0, Number(player.stoneCubes) || 0);
+  if (kind === "caveDoor") return Math.max(0, Number(player.stoneArches) || 0);
+  if (kind === "rope") return Math.max(0, Number(player.ropes) || 0);
+  if (kind === "dirt") return Math.max(0, Number(player.dirt) || 0);
   if (kind === "woodDoor") return Math.max(0, Number(player.woodDoors) || 0);
   if (kind === "torch") return Math.max(0, Number(player.torches) || 0);
   if (kind === "chest") return Math.max(0, Number(player.chests) || 0);
@@ -8371,7 +8928,7 @@ function buildPieceCount(kind) {
 }
 
 function beginBuildPlacement(kind) {
-  if (!["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(kind) || buildPieceCount(kind) <= 0) return false;
+  if (!["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"].includes(kind) || buildPieceCount(kind) <= 0) return false;
   selectedBuildPiece = kind;
   // v422: build selection is compatible with the live inventory overlay.
   if (
@@ -8432,7 +8989,7 @@ function doorCandidateHasFlankingWalls(candidate) {
       ];
 
   const endpointHasWallSupport = endpoint => structures.some(structure => {
-    if (structure?.kind !== "woodWall") return false;
+    if (!BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind)) return false;
     const axis = structure.axis === "vertical" ? "vertical" : "horizontal";
 
     if (axis === candidate.axis) {
@@ -8483,7 +9040,7 @@ function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
   // partitions, rooms, cave-like layouts, and later editing inside an already
   // completed roof without treating adjacent floor as an invalid placement.
   // A door is still a deliberate opening in an established wall run.
-  if (kind === "woodDoor" && !doorCandidateHasFlankingWalls(candidate)) return null;
+  if (["woodDoor", "caveDoor"].includes(kind) && !doorCandidateHasFlankingWalls(candidate)) return null;
   return candidate;
 }
 
@@ -8539,7 +9096,7 @@ function torchWallSupportAtWorldPoint(worldX, worldY) {
   let best = null;
   let bestDistance = Infinity;
   for (const structure of currentMapStructures()) {
-    if (structure?.kind !== "woodWall") continue;
+    if (!BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind)) continue;
     const distance = pointDistanceToRect(worldX, worldY, pickaxeStructurePointerBounds(structure));
     if (distance > 2.5 || distance >= bestDistance) continue;
     best = structure;
@@ -8565,6 +9122,17 @@ function chestPlacementCandidate(worldX, worldY) {
 }
 
 function craftingTablePlacementCandidate(worldX, worldY) {
+  const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
+  const occupied = currentMapStructures().some(structure =>
+    STRUCTURE_TOPOLOGY.layerOf(structure) === STRUCTURE_TOPOLOGY.LAYERS.OBJECT &&
+    Math.abs(Number(structure.x) - x) < 1 &&
+    Math.abs(Number(structure.y) - y) < 1
+  );
+  return { x, y, valid: !occupied };
+}
+
+function stoneCubePlacementCandidate(worldX, worldY) {
   const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const occupied = currentMapStructures().some(structure =>
@@ -8611,6 +9179,31 @@ function torchPlacementCandidate(worldX, worldY) {
   };
 }
 
+function ropePlacementCandidate(worldX, worldY) {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "dugPit" || !structure?.breakthrough || structure?.ropePlaced || !structure?.targetMapId) continue;
+    // Ropes attach only to the excavation's north/front exposed row, where
+    // the cut-earth face is actually visible for the Rope to hang over.
+    if (dugPitNeighborAt(Number(structure.x), Number(structure.y) - BUILD_GRID_SIZE)) continue;
+    const distance = Math.hypot(Number(structure.x) - worldX, Number(structure.y) - worldY);
+    if (distance < 12 && distance < bestDistance) { best = structure; bestDistance = distance; }
+  }
+  return best ? { x: Number(best.x), y: Number(best.y), valid: true, structure: best } : { x: Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE, y: Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE, valid: false, structure: null };
+}
+
+function dirtFillCandidate(worldX, worldY) {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const structure of currentMapStructures()) {
+    if (!structure?.id || !["dugPit", "dugDirt"].includes(structure.kind) || structure.ropePlaced) continue;
+    const distance = Math.hypot(Number(structure.x) - worldX, Number(structure.y) - worldY);
+    if (distance < 12 && distance < bestDistance) { best = structure; bestDistance = distance; }
+  }
+  return best ? { x: Number(best.x), y: Number(best.y), valid: true, structure: best } : { x: Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE, y: Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE, valid: false, structure: null };
+}
+
 function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
   if (!selectedBuildPiece) return false;
   if (buildPieceCount(selectedBuildPiece) <= 0) {
@@ -8618,11 +9211,38 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
     return true;
   }
 
-  if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
+  if (BUILD_WALL_STRUCTURE_KINDS.includes(selectedBuildPiece) || ["woodDoor", "caveDoor"].includes(selectedBuildPiece)) {
     const candidate = wallPlacementCandidate(worldX, worldY, selectedBuildPiece);
     if (!candidate || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
     if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
       onlineClient.requestStructurePlacement(selectedBuildPiece, candidate.floorX, candidate.floorY, candidate.edge);
+    }
+    return true;
+  }
+
+  if (selectedBuildPiece === "rope") {
+    const candidate = ropePlacementCandidate(worldX, worldY);
+    if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement("rope", candidate.x, candidate.y);
+    }
+    return true;
+  }
+
+  if (selectedBuildPiece === "dirt") {
+    const candidate = dirtFillCandidate(worldX, worldY);
+    if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement("dirt", candidate.x, candidate.y);
+    }
+    return true;
+  }
+
+  if (selectedBuildPiece === "stoneCube") {
+    const candidate = stoneCubePlacementCandidate(worldX, worldY);
+    if (!candidate.valid || !buildPlacementWithinRange(candidate.x, candidate.y)) return true;
+    if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
+      onlineClient.requestStructurePlacement("stoneCube", candidate.x, candidate.y);
     }
     return true;
   }
@@ -8689,7 +9309,7 @@ function drawBuildPlacementPreview(camX, camY) {
   const worldX = point.x;
   const worldY = point.y;
 
-  if (selectedBuildPiece === "woodWall" || selectedBuildPiece === "woodDoor") {
+  if (BUILD_WALL_STRUCTURE_KINDS.includes(selectedBuildPiece) || ["woodDoor", "caveDoor"].includes(selectedBuildPiece)) {
     const candidate = wallPlacementCandidate(worldX, worldY, selectedBuildPiece);
     if (!candidate) {
       const rawCandidate = rawWallPlacementCandidate(worldX, worldY);
@@ -8702,7 +9322,33 @@ function drawBuildPlacementPreview(camX, camY) {
     drawWallEdgeHighlight(candidate, camX, camY, inRange);
     const preview = { kind: selectedBuildPiece, x: candidate.x, y: candidate.y, axis: candidate.axis };
     if (selectedBuildPiece === "woodDoor") drawWoodDoor(preview, camX, camY, inRange ? 0.42 : 0.18);
+    else if (selectedBuildPiece === "caveDoor") drawNaturalCaveDoor(preview, camX, camY, inRange ? 0.42 : 0.18);
+    else if (selectedBuildPiece === "stoneWall") drawStoneWall(preview, camX, camY, inRange ? 0.42 : 0.18);
     else drawWoodWall(preview, camX, camY, inRange ? 0.42 : 0.18);
+    return;
+  }
+
+  if (selectedBuildPiece === "rope") {
+    const candidate = ropePlacementCandidate(worldX, worldY);
+    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
+    drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, valid);
+    if (candidate.valid) drawRopeAtOpening(candidate.x, candidate.y, camX, camY, false, valid ? 0.72 : 0.24);
+    return;
+  }
+
+  if (selectedBuildPiece === "dirt") {
+    const candidate = dirtFillCandidate(worldX, worldY);
+    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
+    drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, valid);
+    if (candidate.valid) drawDugDirt({ x: candidate.x, y: candidate.y }, camX, camY, valid ? 0.58 : 0.22);
+    return;
+  }
+
+  if (selectedBuildPiece === "stoneCube") {
+    const candidate = stoneCubePlacementCandidate(worldX, worldY);
+    const valid = candidate.valid && buildPlacementWithinRange(candidate.x, candidate.y);
+    drawStoneCube({ kind: "stoneCube", x: candidate.x, y: candidate.y }, camX, camY, valid ? 0.72 : 0.22);
+    if (!valid) drawBuildCursorMarker(candidate.x, candidate.y, camX, camY, false);
     return;
   }
 
@@ -8826,7 +9472,12 @@ function currentWorldClockMinutes() {
   return ((absoluteMinutes % WORLD_CLOCK_MINUTES_PER_DAY) + WORLD_CLOCK_MINUTES_PER_DAY) % WORLD_CLOCK_MINUTES_PER_DAY;
 }
 
+function currentMapIsSubterranean() {
+  return Boolean(WORLD_CONTENT?.maps?.[currentMapId]?.subterranean);
+}
+
 function currentMapRainIntensity() {
+  if (currentMapIsSubterranean()) return 0;
   if (typeof WEATHER_RULES === "undefined" || !WEATHER_RULES?.rainIntensity) return 0;
   return WEATHER_RULES.rainIntensity(
     Number(WORLD_CONTENT?.worldSeed) || 0,
@@ -8836,6 +9487,7 @@ function currentMapRainIntensity() {
 }
 
 function currentMapIsRaining() {
+  if (currentMapIsSubterranean()) return false;
   if (typeof WEATHER_RULES === "undefined") return false;
   if (typeof WEATHER_RULES.isRaining === "function") {
     return WEATHER_RULES.isRaining(
@@ -9184,7 +9836,7 @@ function torchLightBlockingSegments(sourceX, sourceY, radius) {
   const segments = [];
   const maxDistance = radius + 18;
   for (const structure of currentMapStructures()) {
-    const blocks = structure?.kind === "woodWall" ||
+    const blocks = BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||
       (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure));
     if (!blocks) continue;
 
@@ -9416,7 +10068,7 @@ function collectTorchLightSources() {
 
 function structureBlocksLight(structure) {
   return Boolean(
-    structure?.kind === "woodWall" ||
+    BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||
     (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure))
   );
 }
@@ -9577,15 +10229,43 @@ function carveOpenDoorDaylight(bufferCtx, region, outdoorAlpha) {
   bufferCtx.restore();
 }
 
+function roofRegionForStructureFacade(structure) {
+  if (!structure) return null;
+  return automaticRoofRegions().find(candidate =>
+    structureBelongsToRoofFacade(structure, candidate)
+  ) || null;
+}
+
+function roofRegionContainingWorldPoint(worldX, worldY) {
+  const x = Number(worldX);
+  const y = Number(worldY);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return automaticRoofRegions().find(region => pointInsideRoofRegion(region, x, y)) || null;
+}
+
+function hiddenRoofFacadeHighlightFactor(structure) {
+  const region = roofRegionForStructureFacade(structure);
+  if (!region) return 1;
+  return playerInsideRoofRegion(region) ? 1 : 0.12;
+}
+
+function sourceMayLightStructureFacade(source, structure, targetRegion = roofRegionForStructureFacade(structure)) {
+  const sourceRegion = roofRegionContainingWorldPoint(source?.visibilityX, source?.visibilityY);
+  if (!sourceRegion) return true;
+  // A light that originates inside a completed roofed room belongs only to the
+  // one revealed room the viewer is actually inside. This prevents hidden
+  // neighboring rooms from advertising their boundaries with bright seam lines.
+  if (!playerInsideRoofRegion(sourceRegion)) return false;
+  return targetRegion === sourceRegion;
+}
+
 function visibleStructureLightFaceSide(structure) {
   // v409: a stationary wall no longer asks which side the local player happens
   // to be standing on. For a completed roofed room, the roof reveal state tells
   // us whether the rendered facade represents the interior or exterior face.
   // Standalone/incomplete walls have no hidden opposite facade, so either side
   // may illuminate the one surface that is actually drawn.
-  const region = automaticRoofRegions().find(candidate =>
-    structureBelongsToRoofFacade(structure, candidate)
-  );
+  const region = roofRegionForStructureFacade(structure);
   if (!region) return null;
   const interiorSide = structureInteriorBoundarySide(structure, region);
   if (!interiorSide) return null;
@@ -9766,6 +10446,8 @@ function lightPathToStructureFaceClear(source, targetStructure, sourceSide) {
 
 function carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceSide = null) {
   if (!bufferCtx || !source || !structureBlocksLight(structure)) return;
+  const targetRegion = roofRegionForStructureFacade(structure);
+  if (!sourceMayLightStructureFacade(source, structure, targetRegion)) return;
   const closest = STRUCTURE_GEOMETRY.closestPointOnBoundary(
     structure,
     source.visibilityX,
@@ -9820,11 +10502,49 @@ function carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceS
   bufferCtx.restore();
 }
 
+function carveUndergroundShaftDaylight(bufferCtx) {
+  if (!bufferCtx || !currentMapIsSubterranean()) return;
+  const daylight = worldClockSunShadowFactor();
+  if (daylight <= 0.02) return;
+
+  for (const structure of currentMapStructures()) {
+    if (structure?.kind !== "shaftOpening") continue;
+    const worldX = Number(structure.x);
+    const worldY = Number(structure.y);
+    if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) continue;
+    const radius = 58;
+    const polygon = torchLightVisibilityPolygon(worldX, worldY, radius + 6, `shaft:${structure.id || `${worldX},${worldY}`}`);
+    if (!polygon.length) continue;
+    const screenX = worldX - currentCamX;
+    const screenY = worldY - currentCamY;
+    const gradient = bufferCtx.createRadialGradient(screenX, screenY, 0, screenX, screenY, radius);
+    const centerAlpha = Math.max(0, Math.min(0.98, 0.98 * daylight));
+    gradient.addColorStop(0, `rgba(0,0,0,${centerAlpha.toFixed(3)})`);
+    gradient.addColorStop(0.30, `rgba(0,0,0,${(0.78 * daylight).toFixed(3)})`);
+    gradient.addColorStop(0.70, `rgba(0,0,0,${(0.34 * daylight).toFixed(3)})`);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+    bufferCtx.save();
+    bufferCtx.beginPath();
+    bufferCtx.moveTo(polygon[0].x - currentCamX, polygon[0].y - currentCamY);
+    for (let index = 1; index < polygon.length; index += 1) {
+      bufferCtx.lineTo(polygon[index].x - currentCamX, polygon[index].y - currentCamY);
+    }
+    bufferCtx.closePath();
+    bufferCtx.clip();
+    bufferCtx.globalCompositeOperation = "destination-out";
+    bufferCtx.fillStyle = gradient;
+    bufferCtx.fillRect(screenX - radius, screenY - radius, radius * 2, radius * 2);
+    bufferCtx.restore();
+  }
+}
+
 function drawWorldLightingOverlay() {
   const minutes = currentWorldClockMinutes();
   const nightAlpha = worldClockLightingAlpha(minutes);
   const rainDimAlpha = currentMapRainIntensity() * 0.08;
-  const alpha = Math.max(nightAlpha, rainDimAlpha);
+  const subterraneanAlpha = currentMapIsSubterranean() ? 0.90 : 0;
+  const alpha = Math.max(nightAlpha, rainDimAlpha, subterraneanAlpha);
   const interiorRegion = activeInteriorRoofRegion();
   const interiorAlpha = interiorRegion ? activeInteriorAmbientAlpha(alpha) : 0;
   if (alpha <= 0.001 && !interiorRegion) return;
@@ -9862,6 +10582,11 @@ function drawWorldLightingOverlay() {
       source.visibilityY
     );
   }
+
+  // A player-created surface breakthrough becomes a skylight at the exact
+  // aligned underground coordinate. It uses the same wall visibility polygon
+  // as Torches, but its strength follows the surface daylight clock.
+  carveUndergroundShaftDaylight(bufferCtx);
 
   // The local player gets a tiny, faint night-vision pocket so pitch-black
   // exploration is still possible without a Torch. This is intentionally NOT
@@ -10429,11 +11154,6 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   let weaponArmX = 0;
   let weaponArmY = 0;
 
-  const circularWandCastPose =
-    (player.rainCloudCasting || player.fireballAiming) &&
-    (
-      isWandTypeWeapon(currentWeaponForPose)
-    );
 
   let bowDrawArmAngle = 0;
   let bowHoldArmAngle = 0;
@@ -10645,31 +11365,6 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
 
     leftArmOffsetY -= 1;
     rightArmOffsetY -= 1;
-  }
-
-  if (circularWandCastPose && attackFrame < 0) {
-    const castProgress = player.rainCloudCasting
-      ? Math.max(
-          0,
-          Math.min(
-            1,
-            Number(player.rainCloudCastTime) /
-              Math.max(0.05, Number(player.rainCloudCastDuration) || 0.50)
-          )
-        )
-      : (
-          (Math.max(0, Number(player.fireballAimTime) || 0) % FIREBALL_AIM_PULSE_DURATION) /
-          FIREBALL_AIM_PULSE_DURATION
-        );
-
-    // Rain Cloud and Fireball share the same little casting language: keep the
-    // wand upright while the hand traces a small pixel-circle. Fireball loops
-    // the motion for as long as the expanding aim is held.
-    const castCircleAngle =
-      -Math.PI / 2 + castProgress * Math.PI * 2;
-
-    weaponArmX += Math.round(Math.cos(castCircleAngle) * 1.5);
-    weaponArmY += -2 + Math.round(Math.sin(castCircleAngle) * 1.5);
   }
 
   if (attackFrame >= 0) {
@@ -10899,7 +11594,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
           baseY + rightArmOffsetY + supportLift
         );
       }
-    } else if (!currentWeaponForPose && !attacking && !circularWandCastPose) {
+    } else if (!currentWeaponForPose && !attacking) {
       // Truly unarmed: neither arm is reserved as a weapon arm. Both should
       // participate in the normal walk cycle. This also clears the stale pose
       // that could remain after removing the equipped weapon from the hotbar.
@@ -11056,9 +11751,7 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
   // aimed cardinal direction so the tiny single-frame sprite stays readable.
   let swordAngle = -Math.PI / 2;
 
-  if (circularWandCastPose) {
-    swordAngle = -Math.PI / 2;
-  } else if (attackFrame >= 0) {
+  if (attackFrame >= 0) {
     const UP = -Math.PI / 2;
     const RIGHT = 0;
     const DOWN = Math.PI / 2;
@@ -11410,23 +12103,15 @@ function drawPlayer(camX, camY, reflectionMode = false, carryingEnemyOverride = 
         ? axeImage
         : currentWeapon === "pickaxe"
           ? pickaxeImage
-        : currentWeapon === "wand"
-          ? wandImage
-          : currentWeapon === "rainWand"
-            ? rainWandImage
-            : currentWeapon === "shepherdStaff"
-              ? shepherdStaffImage
+        : currentWeapon === "shepherdStaff"
+          ? shepherdStaffImage
               : currentWeapon === "lostKeyWand"
                 ? lostKeyWandImage
                 : currentWeapon === "sunflowerWand"
                   ? hugeSunflowerWandImage
                   : currentWeapon === "sapgemWand"
                     ? sapgemWandImage
-                  : currentWeapon === "katana"
-                    ? katanaImage
-                    : currentWeapon === "oldSword"
-                      ? oldSwordImage
-                      : swordImage;
+                    : swordImage;
 
     const weaponPivotX =
       currentWeapon === "axe"
@@ -11589,7 +12274,19 @@ function drawHouse(house, camX, camY) {
   ctx.fillRect(screenX - 16, screenY + 1, 32, 1);
 
   const sprite = house.image || houseImage;
+  const houseAlpha = localForegroundOcclusionAlpha(
+    {
+      x: Number(house.x) - Number(house.width) / 2,
+      y: Number(house.y) - (Number(house.height) - 1),
+      width: Number(house.width),
+      height: Number(house.height)
+    },
+    Number(house.y),
+    1
+  );
 
+  ctx.save();
+  ctx.globalAlpha = houseAlpha;
   ctx.drawImage(
     sprite,
     screenX - Math.floor(house.width / 2),
@@ -11610,6 +12307,7 @@ function drawHouse(house, camX, camY) {
   ctx.fillRect(screenX - 22, screenY - 4, 1, 2);
   ctx.fillRect(screenX + 23, screenY - 6, 1, 3);
   ctx.fillRect(screenX + 25, screenY - 4, 1, 2);
+  ctx.restore();
 }
 
 function drawPlacedNpc(npc, camX, camY) {
@@ -11804,6 +12502,89 @@ function drawStaticPixelText(
   }
 }
 
+let ropeShaftTravelCooldownUntil = 0;
+const ROPE_TRAVEL_TOP_OFFSET_Y = -7;
+const ROPE_TRAVEL_UNDERGROUND_BASE_OFFSET_Y = 16;
+
+function ropeLandingBlockedOnMap(mapId, x, y, playerRadius = 4) {
+  const definition = WORLD_CONTENT?.maps?.[mapId] || null;
+  if (
+    definition &&
+    typeof TERRAIN_RULES !== "undefined" &&
+    TERRAIN_RULES.terrainDefinition(definition) &&
+    TERRAIN_RULES.circleCanOccupy(definition, x, y, playerRadius, { allowWater: true }) === false
+  ) return true;
+
+  const placed = placedStructuresByMap.get(mapId) || [];
+  const structures = worldGeneratedStructuresForMap(mapId).concat(placed);
+  for (const structure of structures) {
+    if (structure?.kind === "shaftOpening" || structure?.kind === "caveDoor" || structure?.kind === "caveMouth") continue;
+    if (!["woodWall", "stoneWall", "stoneCube", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure?.kind)) continue;
+    const rect = structure.kind === "stoneCube"
+      ? STRUCTURE_GEOMETRY.stoneCubeFootprintRect(structure)
+      : (structure.kind === "chest" || structure.kind === "craftingTable")
+        ? { x: Number(structure.x) - 7, y: Number(structure.y) - 8, width: 14, height: 8 }
+        : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)
+          ? STRUCTURE_GEOMETRY.collisionRect(structure, 2)
+          : { x: Number(structure.x) - 8, y: Number(structure.y) - 8, width: 16, height: 16 };
+    if (rect && circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) return true;
+  }
+  return false;
+}
+
+function safeUndergroundRopeLanding(mapId, ropeX, ropeY) {
+  const baseY = Number(ropeY) + ROPE_TRAVEL_UNDERGROUND_BASE_OFFSET_Y;
+  const candidates = [
+    [Number(ropeX), baseY],
+    [Number(ropeX), baseY + BUILD_GRID_SIZE],
+    [Number(ropeX) + BUILD_GRID_SIZE, baseY],
+    [Number(ropeX) - BUILD_GRID_SIZE, baseY],
+    [Number(ropeX), baseY - BUILD_GRID_SIZE]
+  ];
+  return candidates.find(([x, y]) => !ropeLandingBlockedOnMap(mapId, x, y)) || candidates[0];
+}
+
+function updateRopeShaftTraversal(movement = null) {
+  if (mapTransitionPhase !== "idle" || performance.now() < ropeShaftTravelCooldownUntil || player?.hp <= 0) return;
+  const intent = movement && Number.isFinite(Number(movement.dy))
+    ? movement
+    : inputController.getMovementVector();
+
+  for (const structure of currentMapStructures()) {
+    const surface = structure?.kind === "dugPit" && structure?.breakthrough && structure?.ropePlaced && structure?.targetMapId;
+    const underground = structure?.kind === "shaftOpening" && structure?.ropePlaced && structure?.targetMapId;
+    if (!surface && !underground) continue;
+
+    // v461: Rope travel is directional rather than contact-triggered. A player
+    // descends by moving DOWN along the surface Rope and climbs by moving UP
+    // along the underground Rope. Horizontal crossings never change maps.
+    if (surface && Number(intent.dy) <= 0.35) continue;
+    if (underground && Number(intent.dy) >= -0.35) continue;
+
+    const dx = Math.abs(Number(structure.x) - Number(player.x));
+    const dy = Number(player.y) - Number(structure.y);
+    const ropeBottom = underground ? 16 : (dugPitNeighborAt(Number(structure.x), Number(structure.y) + BUILD_GRID_SIZE) ? 21 : 8);
+    if (dx > 5.5 || dy < -10 || dy > ropeBottom) continue;
+    // Underground ascent begins only at the hanging base. The upper portion
+    // represents Rope receding toward the surface, not an exit trigger.
+    if (underground && dy < 9) continue;
+
+    const undergroundLanding = surface
+      ? safeUndergroundRopeLanding(structure.targetMapId, structure.x, structure.y)
+      : null;
+    ropeShaftTravelCooldownUntil = performance.now() + 650;
+    requestMapTransition(structure.targetMapId, "center", {
+      preserveCoordinates: true,
+      transitionStyle: "fade",
+      destinationX: undergroundLanding ? undergroundLanding[0] : Number(structure.x),
+      destinationY: undergroundLanding
+        ? undergroundLanding[1]
+        : Number(structure.y) + ROPE_TRAVEL_TOP_OFFSET_Y
+    });
+    return;
+  }
+}
+
 function drawInteractionPrompt(
   camX,
   camY
@@ -11825,8 +12606,9 @@ function drawInteractionPrompt(
       interaction.y - camY
     );
 
+  const prompt = "F TALK";
   drawStaticPixelText(
-    "F TALK",
+    prompt,
     screenX,
     screenY - 24,
     "#fff3b0",
@@ -11856,11 +12638,6 @@ const REMOTE_PLAYER_DRAW_FIELDS = [
   "bowDrawDuration",
   "bowReleaseTime",
   "bowReleaseDuration",
-  "fireballAiming",
-  "fireballAimTime",
-  "rainCloudCasting",
-  "rainCloudCastTime",
-  "rainCloudCastDuration",
   "wetTime",
   "wetDuration",
   "burnTime",
@@ -11903,7 +12680,7 @@ function drawRemotePlayer(
   player.weaponIndex = Number.isFinite(remote.weaponIndex)
     ? remote.weaponIndex
     : -1;
-  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"].includes(remote.heldBuildPiece)
+  player.heldBuildPiece = ["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"].includes(remote.heldBuildPiece)
     ? remote.heldBuildPiece
     : null;
 
@@ -11942,11 +12719,6 @@ function drawRemotePlayer(
     );
   player.bowReleaseDuration = Math.max(0.03, Number(remote.bowReleaseDuration) || 0.12);
 
-  player.fireballAiming = Boolean(remote.fireballAiming);
-  player.fireballAimTime = Math.max(0, Number(remote.fireballAimTime) || 0);
-  player.rainCloudCasting = Boolean(remote.rainCloudCasting);
-  player.rainCloudCastTime = Math.max(0, Number(remote.rainCloudCastTime) || 0);
-  player.rainCloudCastDuration = Math.max(0.05, Number(remote.rainCloudCastDuration) || 0.50);
 
   player.wetTime = Number(remote.wetTime) || 0;
   player.wetDuration = GAME_CONFIG.player.wetDuration;

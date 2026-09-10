@@ -282,8 +282,6 @@ function updateMobilePointBowShot() {
     shopOpen ||
     beachQuestOpen ||
     mobilePointTargetMode ||
-    player.rainCloudCasting ||
-    fireballIsAiming() ||
     getLocalCarriedHurlObject();
 
   if (
@@ -551,8 +549,6 @@ function updateMobileAutoAttack() {
     shopOpen ||
     beachQuestOpen ||
     mobilePointTargetMode ||
-    player.rainCloudCasting ||
-    fireballIsAiming() ||
     getLocalCarriedHurlObject()
   ) {
     return false;
@@ -561,9 +557,8 @@ function updateMobileAutoAttack() {
   const weapon = equippedWeapon();
   if (!weapon) return false;
 
-  // v377: Fire Wand and Rain Wand own aimed/channelled primary actions. AUTO
-  // intentionally stays off those actions so it cannot choose cast locations.
-  if (weapon === "wand" || weapon === "rainWand" || weapon === "tigerPaw") return false;
+  // Tiger Paw uses a manual target/throw action.
+  if (weapon === "tigerPaw") return false;
 
   const target = mobileEnemyTarget(
     weapon === "bow"
@@ -767,8 +762,7 @@ function installMobileControls() {
     if (
       equippedWeapon() === "bow" &&
       !getLocalCarriedHurlObject() &&
-      !player.rainCloudCasting &&
-      !fireballIsAiming()
+      true
     ) {
       if ((Number(player.arrows) || 0) <= 0) {
         spawnFloatingText(player.x, player.y - 27, "NO ARROWS", "#ffe38b", 0.72);
@@ -839,8 +833,8 @@ function installMobileControls() {
       spawnFloatingText(player.x, player.y - 27, "EQUIP A WEAPON", "#ffe38b", 0.72);
       return;
     }
-    if (!mobileAutoAttackEnabled && (weapon === "wand" || weapon === "rainWand" || weapon === "tigerPaw")) {
-      spawnFloatingText(player.x, player.y - 27, weapon === "tigerPaw" ? "MANUAL HURL" : "MANUAL CAST", "#ffe38b", 0.72);
+    if (!mobileAutoAttackEnabled && weapon === "tigerPaw") {
+      spawnFloatingText(player.x, player.y - 27, "MANUAL HURL", "#ffe38b", 0.72);
       return;
     }
     setMobileAutoAttackEnabled(!mobileAutoAttackEnabled);
@@ -909,12 +903,6 @@ function handleMenuKeyDown(key) {
     return false;
   }
 
-  // Rain Cloud is a committed summon. Do not allow the inventory/menu to open
-  // mid-channel, because that exposes equipment/hotbar mutations while the
-  // player is meant to be action-locked.
-  if (player.rainCloudCasting) {
-    return true;
-  }
 
   // v422: Escape toggles the regular Menu independently from Craft. Focused
   // contextual/modal screens still close first.
@@ -1026,9 +1014,6 @@ function resetInputAfterFocusLoss() {
     player.bowDrawAmount = 0;
   }
 
-  if (fireballIsAiming()) {
-    cancelFireballAim();
-  }
 
   if (
     typeof onlineClient !== "undefined" &&

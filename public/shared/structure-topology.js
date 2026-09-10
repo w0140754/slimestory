@@ -13,8 +13,8 @@
     BOUNDARY: "boundary",
     ATTACHMENT: "attachment"
   });
-  const SURFACE_KINDS = Object.freeze(new Set(["woodFloor", "stoneFloor"]));
-  const BOUNDARY_KINDS = Object.freeze(new Set(["woodWall", "woodDoor"]));
+  const SURFACE_KINDS = Object.freeze(new Set(["woodFloor", "stoneFloor", "caveFloor"]));
+  const BOUNDARY_KINDS = Object.freeze(new Set(["woodWall", "stoneWall", "woodDoor", "caveDoor", "caveMouth"]));
 
   // v411: occupancy is intentionally layered. A structure cell is not a single
   // slot: terrain/base, floor/surface, furniture/object, wall/boundary and

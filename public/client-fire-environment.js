@@ -1,7 +1,7 @@
 // Slime Story shared fire/environment runtime.
 // Extracted from game.js in v6-11-239 with function bodies preserved verbatim.
 // Classic-script semantics are intentional: these declarations resolve the existing
-// world, combat, status, action, and networking bindings at invocation time.
+// world, combat, status, and networking bindings at invocation time.
 
 function spawnFireParticle(x, y, vx = 0, vy = -8, life = 0.28) {
   fireParticles.push({
@@ -17,16 +17,9 @@ function spawnFireParticle(x, y, vx = 0, vy = -8, life = 0.28) {
 function igniteGrass(clump) {
   if (clump.cut || clump.burnTime > 0) return;
 
-  const burnDuration = isTemporaryRainGrass(clump)
-    ? TEMP_RAIN_GRASS_BURN_DURATION
-    : Math.max(0.1, Number(clump.burnDuration) || 1.05);
-
+  const burnDuration = Math.max(0.1, Number(clump.burnDuration) || 1.05);
   clump.burnDuration = burnDuration;
   clump.burnTime = burnDuration;
-  if (isTemporaryRainGrass(clump)) {
-    clump.burnExpiresAtMs = Date.now() + burnDuration * 1000;
-  }
-
 }
 
 function igniteHarvestFlower(flower) {
@@ -52,41 +45,8 @@ function igniteTreeCanopy(tree) {
 function igniteVegetationNear(
   x,
   y,
-  radius = 12,
-  options = {}
+  radius = 12
 ) {
-  const temporaryGrassChance = Math.max(
-    0,
-    Math.min(1, Number(options.temporaryGrassChance) || 1)
-  );
-  const temporaryGrassMaxIgnitions = Number.isFinite(options.temporaryGrassMaxIgnitions)
-    ? Math.max(1, Math.floor(options.temporaryGrassMaxIgnitions))
-    : Infinity;
-  let temporaryGrassIgnitions = 0;
-  const serverOwnsEnvironment =
-    typeof onlineClient !== "undefined" && Boolean(onlineClient?.connected);
-
-  // In v260 the server owns deterministic Rain Field cells. Online clients
-  // request one ignition near the impact and wait for a compact field delta.
-  // Offline mode still runs the complete local fallback.
-  if (!serverOwnsEnvironment) {
-    for (const clump of tallGrass) {
-      if (!isTemporaryRainGrass(clump) || !temporaryRainGrassCellIsAlive(clump)) continue;
-
-      const dx = clump.x - x;
-      const dy = (clump.y - 5) - y;
-
-      if (
-        dx * dx + dy * dy <= radius * radius &&
-        Math.random() <= temporaryGrassChance
-      ) {
-        igniteGrass(clump);
-        temporaryGrassIgnitions += 1;
-        if (temporaryGrassIgnitions >= temporaryGrassMaxIgnitions) break;
-      }
-    }
-  }
-
   if (
     typeof onlineClient !== "undefined" &&
     onlineClient.sendEnvironmentAction(
@@ -100,15 +60,12 @@ function igniteVegetationNear(
 
   // Offline fallback.
   for (const clump of tallGrass) {
-    if (clump.cut || isTemporaryRainGrass(clump)) continue;
+    if (clump.cut) continue;
 
     const dx = clump.x - x;
     const dy = (clump.y - 5) - y;
 
-    if (
-      dx * dx + dy * dy <=
-      radius * radius
-    ) {
+    if (dx * dx + dy * dy <= radius * radius) {
       igniteGrass(clump);
     }
   }
@@ -119,10 +76,7 @@ function igniteVegetationNear(
     const dx = flower.x - x;
     const dy = (flower.y - 8) - y;
 
-    if (
-      dx * dx + dy * dy <=
-      radius * radius
-    ) {
+    if (dx * dx + dy * dy <= radius * radius) {
       igniteHarvestFlower(flower);
     }
   }
@@ -188,64 +142,6 @@ function igniteLivingNear(x, y, radius = 14) {
 }
 
 
-function isNearBurningTemporaryRainGrass(x, y, radius = 13) {
-  for (const clump of tallGrass) {
-    if (
-      !isTemporaryRainGrass(clump) ||
-      !temporaryRainGrassCellIsAlive(clump) ||
-      (Number(clump.burnTime) || 0) <= 0
-    ) {
-      continue;
-    }
-
-    const dx = x - clump.x;
-    const dy = y - (clump.y - 5);
-
-    if (dx * dx + dy * dy <= radius * radius) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function spreadTemporaryRainGrassFireToLiving() {
-  const burningTemporaryGrass = tallGrass.filter(clump =>
-    isTemporaryRainGrass(clump) &&
-    !clump.cut &&
-    (Number(clump.burnTime) || 0) > 0
-  );
-
-  if (burningTemporaryGrass.length === 0) {
-    return;
-  }
-
-  // Directly standing in burning grass is deterministic. Randomness still
-  // governs fire jumping between nearby sources, but contact itself should
-  // never feel unreliable.
-  for (
-    const { enemy }
-    of activeEnemyRecords({ aliveOnly: true })
-  ) {
-    if ((Number(enemy.burnTime) || 0) > 0) continue;
-
-    const body = enemyBodyPoint(enemy);
-
-    for (const clump of burningTemporaryGrass) {
-      const dx = body.x - clump.x;
-      const dy = body.y - (clump.y - 5);
-      const radius = 14;
-
-      if (dx * dx + dy * dy <= radius * radius) {
-        igniteEnemyFromSpread(enemy);
-
-        break;
-      }
-    }
-  }
-
-}
-
 function spreadFireFromBurningSources() {
   // Snapshot the currently burning sources first. Anything ignited by this
   // pulse has to wait until a later pulse before it can spread again, which
@@ -254,13 +150,11 @@ function spreadFireFromBurningSources() {
 
   for (const clump of tallGrass) {
     if (clump.burnTime > 0 && !clump.cut) {
-      const magicGrassSource = isTemporaryRainGrass(clump);
       sources.push({
         x: clump.x,
         y: clump.y - 5,
-        radius: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_RADIUS : 17,
-        chance: magicGrassSource ? TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE : 0.58,
-        magicGrassSource
+        radius: 17,
+        chance: 0.58
       });
     }
   }
@@ -305,13 +199,7 @@ function spreadFireFromBurningSources() {
       igniteVegetationNear(
         source.x,
         source.y,
-        source.radius,
-        source.magicGrassSource
-          ? {
-              temporaryGrassChance: TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE,
-              temporaryGrassMaxIgnitions: TEMP_RAIN_GRASS_CHAIN_MAX_IGNITIONS
-            }
-          : {}
+        source.radius
       );
       igniteLivingNear(source.x, source.y, Math.max(11, source.radius - 1));
     }
@@ -333,58 +221,16 @@ function updateFire(dt) {
       !onlineClient.connected
     ) {
       // Offline mode still owns the complete local fire simulation.
-      spreadTemporaryRainGrassFireToLiving();
       spreadFireFromBurningSources();
     }
-    // Online mode has no client spread pass in v253. Persistent vegetation,
-    // magic grass, mobs and players are all evaluated by the server at 2 Hz.
-  }
-
-  // Temporary rain-cloud grass lingers long enough to set up fire combos,
-  // then quietly disappears. It never permanently regrows into the map.
-  for (let i = tallGrass.length - 1; i >= 0; i--) {
-    const clump = tallGrass[i];
-
-    if (!isTemporaryRainGrass(clump)) continue;
-
-    if (Number.isFinite(Number(clump.tempExpiresAtMs))) {
-      clump.tempLife = Math.max(
-        0,
-        (Number(clump.tempExpiresAtMs) - Date.now()) / 1000
-      );
-    } else {
-      clump.tempLife = Math.max(0, Number(clump.tempLife) - dt);
-    }
-
-    if (clump.tempLife <= 0) {
-      tallGrass.splice(i, 1);
-    }
-  }
-
-  const nowMs = Date.now();
-  if (typeof temporaryRainGrassFields !== "undefined") {
-    for (const [key, field] of temporaryRainGrassFields) {
-      if (Number(field?.expiresAtMs) > 0 && nowMs >= Number(field.expiresAtMs)) {
-        temporaryRainGrassFields.delete(key);
-      }
-    }
+    // Online mode has no client spread pass. Persistent vegetation, mobs and
+    // players are evaluated by the server at 2 Hz.
   }
 
   // Burn grass down into dark stubble.
   for (const clump of tallGrass) {
     if (clump.burnTime > 0) {
-      if (
-        isTemporaryRainGrass(clump) &&
-        Number.isFinite(Number(clump.burnExpiresAtMs)) &&
-        Number(clump.burnExpiresAtMs) > 0
-      ) {
-        clump.burnTime = Math.max(
-          0,
-          (Number(clump.burnExpiresAtMs) - Date.now()) / 1000
-        );
-      } else {
-        clump.burnTime -= dt;
-      }
+      clump.burnTime -= dt;
 
       if (Math.random() < dt * 8) {
         spawnFireParticle(
@@ -399,23 +245,7 @@ function updateFire(dt) {
       if (clump.burnTime <= 0) {
         clump.burnTime = 0;
 
-        if (isTemporaryRainGrass(clump) && clump.serverBurnWillConsume) {
-          clump.cut = true;
-          clump.burnt = true;
-          clump.serverBurnWillConsume = false;
-          clump.burnExpiresAtMs = 0;
-
-          if (clump.fieldControlled && typeof temporaryRainGrassFields !== "undefined") {
-            const field = temporaryRainGrassFields.get(
-              temporaryRainGrassFieldKey(temporaryRainGrassOwnerId(clump), clump.grassPatchId)
-            );
-            if (field) {
-              const bit = RAIN_FIELD.cellBit(Math.max(0, Number(clump.fieldCellIndex) || 0));
-              field.burningMask = ((Number(field.burningMask) >>> 0) & ~bit) >>> 0;
-              field.burntMask = ((Number(field.burntMask) >>> 0) | bit) >>> 0;
-            }
-          }
-        } else if (!clump.serverControlled) {
+        if (!clump.serverControlled) {
           clump.cut = true;
           clump.burnt = true;
           clump.regrowAt = 0;
@@ -488,124 +318,6 @@ function updateFire(dt) {
     }
   }
 
-  // Update projectiles.
-  for (let i = fireballs.length - 1; i >= 0; i--) {
-    const fireball = fireballs[i];
-
-    fireball.life -= dt;
-    fireball.trailTimer -= dt;
-
-    if (fireball.airborne) {
-      fireball.elapsed = Math.min(
-        Number(fireball.duration) || 0.4,
-        (Number(fireball.elapsed) || 0) + dt
-      );
-
-      const duration = Math.max(0.001, Number(fireball.duration) || 0.4);
-      let progress = Math.max(0, Math.min(1, fireball.elapsed / duration));
-      const previousX = fireball.x;
-      const previousY = fireball.y;
-      fireball.x = fireball.startX + (fireball.targetX - fireball.startX) * progress;
-      fireball.y = fireball.startY + (fireball.targetY - fireball.startY) * progress;
-
-      const wallImpact = typeof structureWallImpactPoint === "function"
-        ? structureWallImpactPoint(previousX, previousY, fireball.x, fireball.y, 1)
-        : null;
-      if (wallImpact) {
-        fireball.x = wallImpact.x;
-        fireball.y = wallImpact.y;
-        fireball.targetX = wallImpact.x;
-        fireball.targetY = wallImpact.y;
-        fireball.elapsed = duration;
-        progress = 1;
-      }
-
-      if (fireball.trailTimer <= 0) {
-        fireball.trailTimer = 0.035;
-        const visualY = fireballVisualY(fireball);
-        spawnFireParticle(
-          fireball.x + (Math.random() - 0.5) * 2,
-          visualY + (Math.random() - 0.5) * 2,
-          -Math.cos(fireball.angle || 0) * 5 + (Math.random() - 0.5) * 4,
-          -4 - Math.random() * 5,
-          0.18 + Math.random() * 0.10
-        );
-      }
-
-      if (fireball.visualOnly) {
-        if (progress >= 1 || fireball.life <= 0) {
-          fireballs.splice(i, 1);
-        }
-        continue;
-      }
-
-      if (progress < 1 && fireball.life > 0) {
-        continue;
-      }
-
-      // v396: aimed Fireballs still resolve at a landing point, but a solid
-      // player-built wall can shorten that flight and become the landing point.
-      igniteVegetationNear(fireball.targetX, fireball.targetY, 12);
-
-      let nearestEnemy = null;
-      let nearestDistanceSq = Infinity;
-
-      for (
-        const { enemy, profile }
-        of activeEnemyRecords({ aliveOnly: true })
-      ) {
-        const body = enemyBodyPoint(enemy);
-        const dx = fireball.targetX - body.x;
-        const dy = fireball.targetY - body.y;
-        const bodyPadding = Math.max(0, (profile.projectileHitRadius ?? 8) - 5);
-        const hitRadius = FIREBALL_LANDING_RADIUS + bodyPadding;
-        const distanceSq = dx * dx + dy * dy;
-
-        if (
-          distanceSq <= hitRadius * hitRadius &&
-          distanceSq < nearestDistanceSq &&
-          (typeof structureLineOfEffectClear !== "function" ||
-            structureLineOfEffectClear(
-              fireball.targetX + (body.x - fireball.targetX) * 0.08,
-              fireball.targetY + (body.y - fireball.targetY) * 0.08,
-              body.x,
-              body.y,
-              0.5
-            ))
-        ) {
-          nearestEnemy = enemy;
-          nearestDistanceSq = distanceSq;
-        }
-      }
-
-
-      if (nearestEnemy) {
-        damageEnemyWithProjectile(
-          nearestEnemy,
-          fireball,
-          "fireball"
-        );
-      }
-
-      spawnFireballImpactBurst(fireball.targetX, fireball.targetY);
-
-      if (typeof onlineClient !== "undefined") {
-        onlineClient.sendVisualEffect(
-          "fireballImpact",
-          {
-            x: fireball.targetX,
-            y: fireball.targetY,
-            primaryEnemyId: nearestEnemy?.entityId || null
-          }
-        );
-      }
-
-      fireballs.splice(i, 1);
-      continue;
-    }
-
-  }
-
   // Tiny trail / ember particles.
   for (let i = fireParticles.length - 1; i >= 0; i--) {
     const p = fireParticles[i];
@@ -636,18 +348,6 @@ function drawFireParticles(camX, camY) {
 }
 
 function drawFireLighting(camX, camY) {
-  // Fireballs: bright, compact moving lights.
-  for (let i = 0; i < fireballs.length; i++) {
-    const fireball = fireballs[i];
-    drawPixelGlow(
-      fireball.x - camX,
-      fireballVisualY(fireball) - camY,
-      11,
-      0.20,
-      i * 1.8
-    );
-  }
-
   // Burning grass: small pool of light near the ground.
   for (const clump of tallGrass) {
     if (clump.burnTime <= 0 || clump.cut) continue;

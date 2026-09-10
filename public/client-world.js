@@ -86,12 +86,18 @@ treeStumpImage.src = "assets/interactive_tree_stump_v376.png?v=431";
 
 const trees = [];
 
-function playerIsBehindTree(tree) {
-  return (
-    player.y <= tree.y - 2 &&
-    Math.abs(player.x - tree.x) < 17 &&
-    player.y > tree.y - 34
+function treeOcclusionAlpha(tree, alpha = 1) {
+  if (!tree) return alpha;
+  if (typeof localForegroundOcclusionAlpha !== "function") return alpha;
+  return localForegroundOcclusionAlpha(
+    { x: Number(tree.x) - 16, y: Number(tree.y) - 47, width: 32, height: 48 },
+    Number(tree.y),
+    alpha
   );
+}
+
+function playerIsBehindTree(tree) {
+  return treeOcclusionAlpha(tree, 1) < 0.999;
 }
 
 function drawPixelFlame(x, y, phase, scale = 1) {
@@ -125,7 +131,7 @@ function drawTree(tree, camX, camY) {
   const drawY = screenY - 47;
 
   if (tree.fireImmune && tree.nonInteractive) {
-    const fadedCanopy = playerIsBehindTree(tree);
+    const occlusionAlpha = treeOcclusionAlpha(tree, 1);
     const sway = Math.sin(worldTime * 1.7 + tree.phase);
     const canopyOffsetX = Math.round(sway * 1);
     const canopyOffsetY = Math.round(
@@ -155,6 +161,8 @@ function drawTree(tree, camX, camY) {
     const immuneTrunkTopSliceHeight = 26;
     const immuneTrunkBottomSliceStart = 24;
 
+    ctx.save();
+    ctx.globalAlpha = occlusionAlpha;
     ctx.drawImage(
       fireResistantTreeTrunkImage,
       0,
@@ -178,6 +186,7 @@ function drawTree(tree, camX, camY) {
       32,
       immuneTrunkTopSliceHeight
     );
+    ctx.restore();
 
     const immuneCanopyImage =
       ((tree.canopyVariant ?? 0) & 1) === 1
@@ -185,7 +194,7 @@ function drawTree(tree, camX, camY) {
         : fireResistantTreeCanopyImage;
 
     ctx.save();
-    if (fadedCanopy) ctx.globalAlpha = 0.62;
+    ctx.globalAlpha = occlusionAlpha;
     ctx.drawImage(
       immuneCanopyImage,
       drawX + canopyOffsetX,
@@ -205,7 +214,7 @@ function drawTree(tree, camX, camY) {
     return;
   }
 
-  const fadedCanopy = playerIsBehindTree(tree);
+  const occlusionAlpha = treeOcclusionAlpha(tree, 1);
   const sway = Math.sin(worldTime * 1.7 + tree.phase);
 
   const shakeX =
@@ -297,7 +306,7 @@ function drawTree(tree, camX, camY) {
     ctx.translate(pivotX, pivotY);
     ctx.rotate(angle);
     ctx.translate(-pivotX, -pivotY + dropY);
-    ctx.globalAlpha = Math.max(0, fade);
+    ctx.globalAlpha = Math.max(0, fade) * occlusionAlpha;
 
     ctx.drawImage(
       treeDamagedTrunkImage,
@@ -318,6 +327,8 @@ function drawTree(tree, camX, camY) {
     return;
   }
 
+  ctx.save();
+  ctx.globalAlpha = occlusionAlpha;
   ctx.drawImage(
     trunkImage,
     0, bottomSliceStart, 32, 48 - bottomSliceStart,
@@ -329,11 +340,12 @@ function drawTree(tree, camX, camY) {
     0, 0, 32, topSliceHeight,
     drawX + trunkTopOffsetX, drawY, 32, topSliceHeight
   );
+  ctx.restore();
 
   if (!tree.canopyBurned) {
     ctx.save();
 
-    let canopyAlpha = fadedCanopy ? 0.58 : 1;
+    let canopyAlpha = occlusionAlpha;
 
     if (tree.canopyBurnTime > 0) {
       const burnProgress =
@@ -432,322 +444,12 @@ function drawTree(tree, camX, camY) {
 // Visual-only grass clumps. They do not block movement.
 // Each clump has a slightly different phase so the field doesn't sway in sync.
 const tallGrass = [];
-// Server-authoritative Rain Cloud fields are reconstructed locally from compact field packets.
-// This registry is current runtime state, not the retired per-cell rain compatibility system.
-const temporaryRainGrassFields = new Map();
-// These constants belong to the current compact/server-authoritative Rain Field
-// simulation. They are shared by field reconstruction, burn propagation and
-// local cast prediction; they are not part of the retired per-cell packet layer.
-const TEMP_RAIN_GRASS_BURN_DURATION = RAIN_FIELD.BURN_DURATION;
-const TEMP_RAIN_GRASS_CHAIN_SOURCE_CHANCE = RAIN_FIELD.FIRE_CHAIN_CHANCE;
-const TEMP_RAIN_GRASS_CHAIN_TARGET_CHANCE = 1;
-const TEMP_RAIN_GRASS_CHAIN_RADIUS = RAIN_FIELD.FIRE_CHAIN_RADIUS;
-const TEMP_RAIN_GRASS_CHAIN_MAX_IGNITIONS = RAIN_FIELD.FIRE_CHAIN_MAX_IGNITIONS;
-let rainGrassPatchSequence = 0;
-
-function isTemporaryRainGrass(clump) {
-  return Boolean(clump?.temporaryRainGrass);
-}
-
-function localRainGrassOwnerId() {
-  if (
-    typeof onlineClient !== "undefined" &&
-    onlineClient?.connected &&
-    onlineClient.localPlayerId
-  ) {
-    return String(onlineClient.localPlayerId);
-  }
-
-  return "local";
-}
-
-function temporaryRainGrassOwnerId(clump) {
-  return String(clump?.grassOwnerId || "local");
-}
-
-function temporaryRainGrassFieldKey(ownerId, patchId) {
-  return `${String(ownerId || "local")}:${Math.max(0, Number(patchId) || 0)}`;
-}
-
-function temporaryRainGrassCellIsGrown(clump, nowMs = Date.now()) {
-  if (!isTemporaryRainGrass(clump)) return true;
-  if (!Number.isFinite(Number(clump.growAtMs))) return true;
-  return nowMs >= Number(clump.growAtMs);
-}
-
-function temporaryRainGrassCellIsAlive(clump, nowMs = Date.now()) {
-  if (!isTemporaryRainGrass(clump)) return !clump?.cut && !clump?.burnt;
-  if (!temporaryRainGrassCellIsGrown(clump, nowMs)) return false;
-  if (clump.cut || clump.burnt) return false;
-  if (
-    Number.isFinite(Number(clump.tempExpiresAtMs)) &&
-    nowMs >= Number(clump.tempExpiresAtMs)
-  ) {
-    return false;
-  }
-  return true;
-}
-
-function clearTemporaryRainGrass() {
-  temporaryRainGrassFields.clear();
-
-  for (let i = tallGrass.length - 1; i >= 0; i--) {
-    if (isTemporaryRainGrass(tallGrass[i])) {
-      tallGrass.splice(i, 1);
-    }
-  }
-}
-
-function clearTemporaryRainGrassForOwner(ownerId) {
-  if (!ownerId) return;
-  const normalizedOwnerId = String(ownerId);
-
-  for (const [key, field] of temporaryRainGrassFields) {
-    if (String(field.ownerId) === normalizedOwnerId) {
-      temporaryRainGrassFields.delete(key);
-    }
-  }
-
-  for (let i = tallGrass.length - 1; i >= 0; i--) {
-    const clump = tallGrass[i];
-    if (
-      isTemporaryRainGrass(clump) &&
-      temporaryRainGrassOwnerId(clump) === normalizedOwnerId
-    ) {
-      tallGrass.splice(i, 1);
-    }
-  }
-}
-
-function removeTemporaryRainGrassFieldsForOwner(ownerId) {
-  const normalizedOwnerId = String(ownerId || "local");
-
-  for (const [key, field] of temporaryRainGrassFields) {
-    if (String(field?.ownerId || "local") === normalizedOwnerId) {
-      temporaryRainGrassFields.delete(key);
-    }
-  }
-
-  for (let i = tallGrass.length - 1; i >= 0; i--) {
-    const clump = tallGrass[i];
-    if (!isTemporaryRainGrass(clump)) continue;
-    if (temporaryRainGrassOwnerId(clump) !== normalizedOwnerId) continue;
-    tallGrass.splice(i, 1);
-  }
-}
-
-// One Rain Cloud cast defines a deterministic field locally from its compact
-// field description. Individual grass cells are never replicated as packets.
-function spawnTemporaryRainGrassField(
-  centerX,
-  centerY,
-  patchId = 0,
-  options = {}
-) {
-  const ownerId = String(options.ownerId || localRainGrassOwnerId());
-  const normalizedPatchId = Math.max(0, Number(patchId) || 0);
-  if (!normalizedPatchId) return null;
-
-  const nowMs = Date.now();
-  const ageSeconds = Math.max(0, Number(options.ageSeconds) || 0);
-  const startedAtMs = Number.isFinite(Number(options.startedAtMs))
-    ? Number(options.startedAtMs)
-    : nowMs - ageSeconds * 1000;
-  const burningMask = Number(options.burningMask) >>> 0;
-  const burntMask = Number(options.burntMask) >>> 0;
-  const burnEnds = Array.isArray(options.burnEnds) ? options.burnEnds : [];
-  const burnEndByCell = new Map();
-
-  for (const item of burnEnds) {
-    const index = Math.max(0, Number(Array.isArray(item) ? item[0] : item?.index) || 0);
-    const remaining = Math.max(0, Number(Array.isArray(item) ? item[1] : item?.remaining) || 0);
-    if (index < RAIN_FIELD.CELL_COUNT && remaining > 0) {
-      burnEndByCell.set(index, nowMs + remaining * 1000);
-    }
-  }
-
-  removeTemporaryRainGrassFieldsForOwner(ownerId);
-
-  const cells = RAIN_FIELD.generateCells({
-    ownerId,
-    patchId: normalizedPatchId,
-    centerX: clampToWorld(centerX, 8, world.width - 8),
-    centerY: clampToWorld(centerY, 12, world.height - 4),
-    worldWidth: world.width,
-    worldHeight: world.height
-  });
-
-  const field = {
-    ownerId,
-    patchId: normalizedPatchId,
-    centerX: clampToWorld(centerX, 8, world.width - 8),
-    centerY: clampToWorld(centerY, 12, world.height - 4),
-    startedAtMs,
-    expiresAtMs: RAIN_FIELD.fieldExpiresAtMs(startedAtMs),
-    burningMask,
-    burntMask,
-    mapId: currentMapId,
-    cells
-  };
-
-  temporaryRainGrassFields.set(
-    temporaryRainGrassFieldKey(ownerId, normalizedPatchId),
-    field
-  );
-
-  for (const cell of cells) {
-    if (
-      typeof terrainAllowsMagicGrass === "function" &&
-      !terrainAllowsMagicGrass(cell.x, cell.y, currentMapId)
-    ) {
-      continue;
-    }
-
-    const bit = RAIN_FIELD.cellBit(cell.index);
-    const naturallyExpiredAtMs = startedAtMs + cell.expiresDelay * 1000;
-    if (nowMs >= naturallyExpiredAtMs) continue;
-
-    const burnt = Boolean(burntMask & bit);
-    const burning = Boolean(burningMask & bit) && !burnt;
-    const burnExpiresAtMs = burnEndByCell.get(cell.index) ||
-      (burning ? nowMs + TEMP_RAIN_GRASS_BURN_DURATION * 1000 : 0);
-
-    const clump = {
-      x: cell.x,
-      y: cell.y,
-      width: cell.width,
-      phase: cell.phase,
-      cut: burnt,
-      flowerType: null,
-      flowerPicked: true,
-      patchFlower: false,
-      burnt,
-      burnTime: burning
-        ? Math.max(0, (burnExpiresAtMs - nowMs) / 1000)
-        : 0,
-      burnDuration: TEMP_RAIN_GRASS_BURN_DURATION,
-      burnExpiresAtMs,
-      serverBurnWillConsume: burning,
-      regrowAnimTime: 0,
-      regrowAnimDuration: 0.22,
-      regrowAt: 0,
-      temporaryRainGrass: true,
-      tempLife: Math.max(0, (naturallyExpiredAtMs - nowMs) / 1000),
-      tempBornAtMs: startedAtMs,
-      tempExpiresAtMs: naturallyExpiredAtMs,
-      growAtMs: startedAtMs + cell.growDelay * 1000,
-      mapId: currentMapId,
-      grassPatchId: normalizedPatchId,
-      grassBornAt: worldTime,
-      grassOwnerId: ownerId,
-      grassSyncId: `${normalizedPatchId}:${cell.index}`,
-      fieldCellIndex: cell.index,
-      serverControlled: Boolean(options.serverControlled),
-      fieldControlled: true
-    };
-
-    tallGrass.push(clump);
-  }
-
-  return field;
-}
-
-function applyRainFieldDelta(message) {
-  const ownerId = String(message?.ownerId || "");
-  const patchId = Math.max(0, Number(message?.patchId) || 0);
-  if (!ownerId || !patchId) return;
-
-  const field = temporaryRainGrassFields.get(
-    temporaryRainGrassFieldKey(ownerId, patchId)
-  );
-  if (!field || field.mapId !== currentMapId) return;
-
-  const burningAddedMask = Number(message.burningAddedMask) >>> 0;
-  const extinguishedMask = Number(message.extinguishedMask) >>> 0;
-  const burnEnds = Array.isArray(message.burnEnds) ? message.burnEnds : [];
-  const nowMs = Date.now();
-  const burnEndByCell = new Map();
-
-  for (const item of burnEnds) {
-    const index = Math.max(0, Number(Array.isArray(item) ? item[0] : item?.index) || 0);
-    const remaining = Math.max(0, Number(Array.isArray(item) ? item[1] : item?.remaining) || 0);
-    if (index < RAIN_FIELD.CELL_COUNT && remaining > 0) {
-      burnEndByCell.set(index, nowMs + remaining * 1000);
-    }
-  }
-
-  field.burningMask = ((Number(field.burningMask) >>> 0) | burningAddedMask) >>> 0;
-  field.burningMask = (field.burningMask & ~extinguishedMask) >>> 0;
-  // A server extinguish means the cell survived; a new server ignition means
-  // any locally predicted burnt bit was stale. Server truth wins both cases.
-  field.burntMask = ((Number(field.burntMask) >>> 0) & ~extinguishedMask & ~burningAddedMask) >>> 0;
-
-  for (const clump of tallGrass) {
-    if (!isTemporaryRainGrass(clump) || !clump.fieldControlled) continue;
-    if (temporaryRainGrassOwnerId(clump) !== ownerId) continue;
-    if ((Number(clump.grassPatchId) || 0) !== patchId) continue;
-
-    const index = Math.max(0, Number(clump.fieldCellIndex) || 0);
-    const bit = RAIN_FIELD.cellBit(index);
-
-    if (extinguishedMask & bit) {
-      clump.burnTime = 0;
-      clump.burnExpiresAtMs = 0;
-      clump.serverBurnWillConsume = false;
-      clump.cut = false;
-      clump.burnt = false;
-    }
-
-    if (burningAddedMask & bit) {
-      const burnExpiresAtMs = burnEndByCell.get(index) ||
-        nowMs + TEMP_RAIN_GRASS_BURN_DURATION * 1000;
-      clump.cut = false;
-      clump.burnt = false;
-      clump.burnExpiresAtMs = burnExpiresAtMs;
-      clump.burnTime = Math.max(0, (burnExpiresAtMs - nowMs) / 1000);
-      clump.serverBurnWillConsume = true;
-    }
-  }
-}
 
 function drawTallGrass(clump, camX, camY) {
-  const nowMs = Date.now();
-  if (isTemporaryRainGrass(clump) && !temporaryRainGrassCellIsGrown(clump, nowMs)) {
-    return;
-  }
+  if (clump.cut) return;
 
   const screenX = Math.round(clump.x - camX);
   const screenY = Math.round(clump.y - camY);
-  const magicGrass = isTemporaryRainGrass(clump);
-
-  if (magicGrass && Number.isFinite(Number(clump.growAtMs))) {
-    const elapsed = Math.max(0, (nowMs - Number(clump.growAtMs)) / 1000);
-    clump.regrowAnimTime = Math.max(0, (clump.regrowAnimDuration || 0.22) - elapsed);
-  }
-
-  // Normal tall grass is permanently cleared once cut or burned. Temporary
-  // Rain Cloud grass keeps its own short-lived field lifecycle.
-  if (clump.cut && !magicGrass) return;
-
-  if (clump.cut) {
-    ctx.fillStyle = clump.burnt
-      ? "rgba(45, 35, 28, .30)"
-      : "rgba(40, 73, 38, .20)";
-
-    ctx.fillRect(
-      screenX - Math.floor(clump.width / 2),
-      screenY,
-      clump.width,
-      1
-    );
-
-    ctx.fillStyle = clump.burnt ? "#4b3a2b" : "#477b40";
-    ctx.fillRect(screenX - 5, screenY - 2, 1, 2);
-    ctx.fillRect(screenX - 2, screenY - 3, 1, 3);
-    ctx.fillRect(screenX + 1, screenY - 2, 1, 2);
-    ctx.fillRect(screenX + 4, screenY - 3, 1, 3);
-    return;
-  }
 
   ctx.save();
 
@@ -802,9 +504,7 @@ function drawTallGrass(clump, camX, camY) {
   // Tiny secondary motion helps keep the grass from looking mechanical.
   const flutter = Math.sin(worldTime * 3.1 + clump.phase * 1.7);
 
-  ctx.fillStyle = magicGrass
-    ? "rgba(47, 78, 50, .27)"
-    : "rgba(40, 73, 38, .28)";
+  ctx.fillStyle = "rgba(40, 73, 38, .28)";
   ctx.fillRect(
     screenX - Math.floor(clump.width / 2),
     screenY,
@@ -813,30 +513,22 @@ function drawTallGrass(clump, camX, camY) {
   );
 
   const bladeOffsets = [];
-  const bladeHalfSpan = magicGrass
-    ? Math.max(6, Math.floor((Number(clump.width) || 18) / 2) - 1)
-    : 6;
-
-  for (let offset = -bladeHalfSpan; offset <= bladeHalfSpan; offset += 2) {
+  for (let offset = -6; offset <= 6; offset += 2) {
     bladeOffsets.push(offset);
   }
 
   for (let i = 0; i < bladeOffsets.length; i++) {
     const bx = screenX + bladeOffsets[i];
 
-    const baseHeight =
+    const height =
       i % 4 === 0 ? 9 :
       i % 4 === 1 ? 11 :
       i % 4 === 2 ? 8 : 10;
 
-    const height = baseHeight + (magicGrass ? 1 : 0);
-
     const bladeTop = screenY - height;
 
     // Lower stalk stays planted.
-    ctx.fillStyle = magicGrass
-      ? (i % 2 === 0 ? "#477c49" : "#508850")
-      : (i % 2 === 0 ? "#3d743d" : "#467f43");
+    ctx.fillStyle = i % 2 === 0 ? "#3d743d" : "#467f43";
     ctx.fillRect(bx, bladeTop + 4, 1, height - 4);
 
     // Upper portion bends in the breeze.
@@ -844,9 +536,7 @@ function drawTallGrass(clump, camX, camY) {
       topShift +
       (i % 2 === 0 ? 0 : Math.round(flutter * 0.5));
 
-    ctx.fillStyle = magicGrass
-      ? (i % 2 === 0 ? "#70a86c" : "#7bb678")
-      : (i % 2 === 0 ? "#5b9850" : "#67a858");
+    ctx.fillStyle = i % 2 === 0 ? "#5b9850" : "#67a858";
 
     ctx.fillRect(bx + localShift, bladeTop, 1, 3);
     ctx.fillRect(
@@ -867,28 +557,11 @@ function drawTallGrass(clump, camX, camY) {
   }
 
   // Shorter blades fill in the foreground edge.
-  ctx.fillStyle = magicGrass ? "#61975f" : "#4f8947";
+  ctx.fillStyle = "#4f8947";
   ctx.fillRect(screenX - 5, screenY - 4, 1, 4);
   ctx.fillRect(screenX - 1, screenY - 5, 1, 5);
   ctx.fillRect(screenX + 3, screenY - 4, 1, 4);
   ctx.fillRect(screenX + 5, screenY - 3, 1, 3);
-
-  if (magicGrass && clump.burnTime <= 0) {
-    // A rare pale glint helps the rain-grown field read as magical without
-    // turning it into a glowing neon patch.
-    const shimmer = Math.sin(worldTime * 1.55 + clump.phase * 1.9);
-    if (shimmer > 0.97) {
-      const shimmerX = screenX + ((Math.floor(clump.phase * 7) % 9) - 4);
-      const shimmerY = screenY - 10 - (Math.floor(clump.phase * 3) % 3);
-      ctx.fillStyle = "#d4e8bd";
-      ctx.fillRect(shimmerX, shimmerY, 1, 1);
-      if (shimmer > 0.992) {
-        ctx.fillStyle = "#9fc59a";
-        ctx.fillRect(shimmerX - 1, shimmerY, 1, 1);
-        ctx.fillRect(shimmerX + 1, shimmerY, 1, 1);
-      }
-    }
-  }
 
   if (clump.burnTime > 0) {
     drawPixelFlame(screenX - 3, screenY - 4, clump.phase + 0.4);
@@ -908,7 +581,6 @@ function tryCutGrass() {
 
   for (const clump of tallGrass) {
     if (clump.cut) continue;
-    if (isTemporaryRainGrass(clump) && !temporaryRainGrassCellIsAlive(clump)) continue;
 
     const dx = clump.x - originX;
     const dy = (clump.y - 5) - originY;
@@ -972,11 +644,17 @@ function drawSceneryRock(rock, camX, camY) {
 
   // The updated scenery rock is 16x18 and remains bottom-centre anchored.
   // Its extra two pixels extend upward rather than shifting the ground contact.
+  const alpha = typeof localForegroundOcclusionAlpha === "function"
+    ? localForegroundOcclusionAlpha({ x: Number(rock.x) - 8, y: Number(rock.y) - 18, width: 16, height: 18 }, Number(rock.y) - 0.2, 1)
+    : 1;
+  ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.drawImage(
     grassyRockSceneryImage,
     screenX - 8,
     screenY - 18
   );
+  ctx.restore();
 }
 
 function makeMapRock(x, y, variant = "plain") {
@@ -1012,12 +690,18 @@ function drawRock(rock, camX, camY) {
   const screenY = Math.round(rock.y - camY);
   const image = rockImageForState(rock);
 
+  const alpha = typeof localForegroundOcclusionAlpha === "function"
+    ? localForegroundOcclusionAlpha({ x: Number(rock.x) - 8, y: Number(rock.y) - 12, width: 16, height: 12 }, Number(rock.y) - 0.15, 1)
+    : 1;
+  ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.fillStyle = "rgba(22, 28, 24, 0.22)";
   ctx.fillRect(screenX - 5, screenY - 1, 10, 2);
 
   if (image) {
     ctx.drawImage(image, screenX - 8, screenY - 12);
   }
+  ctx.restore();
 }
 
 // Keep vegetation from living right underneath tree trunks/canopies.

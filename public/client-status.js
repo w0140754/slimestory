@@ -1,7 +1,7 @@
 // Slime Story shared client Burn/Wet status foundation.
 // Extracted from game.js in v6-11-238 with function bodies preserved verbatim.
-// Environment mutation, temporary rain grass, fire spread, and Fireball simulation
-// deliberately remain in game.js for the next checkpoint.
+// Environment mutation, temporary rain grass, and fire spread remain in their
+// dedicated runtime modules.
 // Classic-script late binding is intentional.
 
 function ensureLocalStatusState(entity, wetDuration = GAME_CONFIG.status.enemyWetDuration) {

@@ -15,10 +15,10 @@ const game = read("public", "game.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(html.includes('/game.js?v=431'));
 assert(html.includes('/client-enemy-rendering.js?v=431'));
 assert(html.includes('/client-combat.js?v=431'));

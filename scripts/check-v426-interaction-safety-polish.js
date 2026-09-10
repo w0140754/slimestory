@@ -12,9 +12,9 @@ const enemies = read("public", "client-enemies.js");
 const worldContent = read("public", "shared", "world-content.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(html.includes('?v=431'));
 
 // Drop quantity selection + compact crisp world count.
@@ -58,6 +58,6 @@ assert(game.includes("Moving an already-assigned item onto an occupied slot swap
 // Repeatable Crafting Tables remain explicitly repeatable on both sides.
 assert(game.includes('craftingTable: Object.freeze({'));
 assert(game.includes('resourceKey: "craftingTables"'));
-assert(server.includes('craftingTable: Object.freeze({ repeatable: true, resourceKey: "craftingTables"'));
+assert(server.includes('craftingTable: Object.freeze({ resourceKey: "craftingTables"'));
 
 console.log("v426 interaction/safety static check passed: quantity picker, crisp counts, safe spawn, universal chest protection, gentler Wet, square meadows, quick armor equip, and live HUD hotbar swapping.");

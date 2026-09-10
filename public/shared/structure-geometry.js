@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const EDGE_KINDS = Object.freeze(new Set(["woodWall", "woodDoor"]));
+  const EDGE_KINDS = Object.freeze(new Set(["woodWall", "stoneWall", "woodDoor", "caveDoor", "caveMouth"]));
 
   function axisOf(structure) {
     return structure?.axis === "vertical" ? "vertical" : "horizontal";
@@ -56,6 +56,15 @@
       width: Math.abs(segment.x2 - segment.x1),
       height: t
     };
+  }
+
+  function stoneCubeFootprintRect(structure) {
+    const x = Number(structure?.x);
+    const y = Number(structure?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    // v450: Stone Cube uses its lower/base pixels as the physical footprint.
+    // The upper half is visual height so players can walk behind the cube.
+    return { x: x - 6, y: y + 2, width: 12, height: 6 };
   }
 
   function drawSortY(structure) {
@@ -179,6 +188,7 @@
     boundarySegment,
     lightBarrierSegment,
     collisionRect,
+    stoneCubeFootprintRect,
     drawSortY,
     sideOfBoundary,
     offsetPointToSide,

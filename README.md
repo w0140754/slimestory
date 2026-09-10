@@ -1,3 +1,493 @@
+# Slime Story v6-11-468 — Persistent Shallow Dirt
+
+- Hitting an existing shallow Dirt patch with the Pickaxe no longer removes it or turns it back into grass.
+- Restoring a shallow patch is now intentional: select Dirt and place it on the patch.
+- The v467 economy remains unchanged: shallow patches award no Dirt, while a genuine breakthrough drops exactly one Dirt block.
+
+Verification: **28/28 runtime JavaScript syntax targets + 129/129 retained static regression checks pass**, including a dedicated check that repeated Pickaxe hits neither remove shallow Dirt nor award resources.
+
+# Slime Story v6-11-467 — Safe Breakthroughs + One-for-One Dirt
+
+Refines v466's generated underground and Dirt restoration loop without changing unrelated systems.
+
+- A surface dig becomes a breakthrough only when the aligned underground Rope base and at least one exit step are open. Cavern-edge pockets can no longer create descents that strand the player in stone.
+- Every real breakthrough hole now drops exactly one physical, lootable Dirt block beside the digger.
+- Shallow Dirt patches do not drop Dirt. Pickaxing one restores the grass without awarding a resource, preventing repeatable Dirt farming.
+- The recovered Dirt can fill an unroped breakthrough; an installed Rope must still be pickaxed and recovered first.
+
+Verification: **28/28 runtime JavaScript syntax targets + 128/128 retained static regression checks pass**. A 50-seed generation sweep found usable safe-breakthrough positions on every underground map tested (minimum 58 per map; average 149.1).
+
+# Slime Story v6-11-466 — Living Underground + Dirt Restoration
+
+Continues directly from the confirmed-working v465 Rope-placement/safe-landing build and turns the underground prototype into a world-wide generated layer.
+
+- Fixed the bright player flash during map transitions at night and underground by applying the destination ambient darkness to the separately composited transition sprite.
+- Every one of the nine surface maps now has an aligned underground map and supports Pickaxe excavation.
+- Underground cavern networks generate deterministically from each world's random seed. Each map receives 3–5 scattered irregular rooms joined by narrow corridors instead of one huge central space.
+- Some cavern tunnels reach matching world edges and continue into the neighbouring underground map. Closed underground edges remain solid.
+- Retired the southeast **Great Cavern** stress-test reservation. The bottom-right surface map now uses normal biome, scenery, resource, and feature generation.
+- Added **Dirt** as a persistent inventory/hotbar resource with its own pixel icon.
+- Pickaxing a failed Dirt excavation restores the original ground and recovers one Dirt.
+- Selecting Dirt and clicking an unroped Dirt excavation or breakthrough fills it and restores the original surface. Filling a breakthrough also removes its aligned underground shaft.
+- A Rope must be pickaxed off a breakthrough before Dirt can fill it. Removing it returns the Rope to inventory and clears its underground counterpart.
+- Preserved v465 front-face Rope placement, safe descent, base-only ascent, digging particles, multiplayer authority, and unrelated systems.
+
+Verification: **28/28 runtime JavaScript syntax targets + 127/127 retained static regression checks pass**, including the dedicated v466 contract and reciprocal underground-edge checks across 100 world seeds. The WebSocket suite passes through v398 before reaching the same unrelated pre-existing portable-crafting-table failure in the v401 Torch lifecycle smoke test.
+
+# Slime Story v6-11-465 — Front-Face Rope Placement + Safe Landing
+
+Continues directly from the confirmed-working v464 Rope/base/dig-polish build and tightens Rope placement and descent safety.
+
+- New Ropes may only be installed on a breakthrough tile in the excavation's **north/front exposed row**. The tile must show the visible cut-earth face that the Rope hangs over; interior and rear hole cells are rejected.
+- The placement preview applies the rule immediately, and the server mirrors it authoritatively so invalid Rope placement cannot be forced by a modified client.
+- Surface-to-underground travel now checks the normal Rope-base destination before transitioning. If that spot is blocked, it selects a nearby open landing instead of placing the player inside solid terrain or a structure.
+- Server-side entry safety now recognizes both terrain and structures, so its authoritative correction agrees with the client and also protects reconnect/spawn discontinuities.
+- Existing Ropes remain intact; the new front-face rule applies only when installing another Rope.
+- Preserved v464 Rope geometry, base-only ascent, digging particles, surface top-entry behavior, fades, persistence, and unrelated systems.
+
+Verification: **29/29 runtime JavaScript syntax targets + 126/126 retained static regression checks pass**, including a dedicated v465 contract for mirrored front-face placement and terrain-aware safe Rope landings.
+
+# Slime Story v6-11-464 — Rope Seam, Base Climb + Dig Polish
+
+Continues directly from the confirmed-working v463 Rope depth/top-entry build and adds a focused presentation and traversal polish pass.
+
+- Removed the visible join between the primary and faded surface Rope segments by overlapping them by one pixel.
+- Shortened the faded lower Rope segment so it ends inside the excavation instead of bleeding onto the grass beyond the southern pit edge.
+- Underground ascent now requires the player to stand near the **hanging base** of the Rope and press up. Standing near its high/top portion no longer transfers maps.
+- Added small dirt chips when a valid ground dig is attempted and a stronger dirt/debris burst when the server confirms the new Dirt tile or breakthrough hole. Breakthrough holes receive the larger effect.
+- Preserved v463 surface top-entry gating, Rope/player depth sorting, directional arrivals, fade transition, multiplayer authority, and unrelated systems.
+
+Verification: **29 runtime JavaScript syntax targets + 125 retained static regression checks pass**, including a dedicated v464 contract for Rope seam/length geometry, base-only underground ascent, and tiered digging particles. The WebSocket suite also passed through the relevant excavation/structure systems before reaching the same unrelated portable-table placement smoke-test instability.
+
+# Slime Story v6-11-463 — Rope Depth Sorting + Top-Entry Gate
+
+Continues directly from the confirmed-working v462 Rope layering/landing/fade build and tightens only Rope depth presentation and surface access geometry.
+
+- Moved installed **underground Ropes into the normal Y-sorted world layer** instead of the floor pass. The hanging Rope sorts at its base (`y + 16`), so a player above/behind it draws underneath the Rope while a player below/in front draws over it naturally.
+- Surface installed Ropes remain in the excavation/floor pass so the v462 post-pit layering fix is preserved and connected hole cells cannot erase the Rope graphic.
+- A roped surface breakthrough is no longer freely enterable from any side. The player may enter the Rope opening **only from the north/top side while moving downward and aligned to the Rope**.
+- Left/right/south approaches remain blocked by the excavation. Once the player is already occupying the Rope opening, movement may continue so descent and stepping back out remain smooth.
+- The same top-entry rule is enforced independently on the **server**, preventing multiplayer/state updates from bypassing the client collision gate.
+- Preserved v462 directional Rope travel, base/top arrival positions, Rope-specific black fade, persistent Rope state, free Rope crafting, 3D excavation rendering, underground generation, Great Cavern, Spawn, and existing world/enemy systems.
+- Advanced package/client/server build to **6-11-463 / 0.6.11.463** and browser cache token to **?v=431e-463**.
+
+Verification: **29 runtime JavaScript syntax targets + 124 retained static regression checks pass**, including a dedicated v463 contract for underground Rope depth sorting and mirrored client/server top-entry gating. The full runner then reaches the same isolated-workspace WebSocket smoke dependency boundary as recent builds.
+
+---
+# Slime Story v6-11-462 — Rope Layering + Landing + Fade
+
+Continues directly from the confirmed-working v461 Rope-depth build and refines only installed Rope rendering and vertical-layer transition presentation.
+
+- Installed surface Ropes render in a **dedicated second pass after every excavation floor cell**, so a connected hole tile cannot paint over the Rope extension. v463 later moves only the underground Rope into the normal Y-sorted drawable layer for player/Rope depth ordering.
+- Preserved the v461 surface Rope geometry: one full 16×16 opening cell plus at most one faded 16px extension when the excavation continues directly south. Underground Rope remains 24px tall.
+- Split Rope arrival positions by travel direction. **Surface → underground** lands at the **base of the underground Rope** (`y + 16`). **Underground → surface** lands at the **top of the surface Rope** (`y - 7`).
+- Rope layer travel uses a **quick 0.24-second fade to black and back** instead of the vertical swipe transition.
+- The fade is Rope-specific. Ordinary cardinal surface-map transitions keep the existing directional slide presentation.
+
+---
+# Slime Story v6-11-461 — Rope Depth + Directional Traversal
+
+Continues directly from v460 and refines only Rope presentation and vertical-layer traversal.
+
+- Surface Ropes run from the **top to the bottom of the full 16×16 breakthrough tile**.
+- If the breakthrough tile directly south is also part of the excavation, the Rope may hang through **one additional 16×16 hole tile maximum**, with the second segment faded into depth.
+- Underground Ropes are **24 px tall**.
+- Rope traversal is directional: move **down** along a surface Rope to descend and **up** along an underground Rope to climb. Horizontal crossings do not transfer maps.
+- v462 later supersedes v461's shared Rope-top landing rule with direction-specific base/top arrivals while retaining the directional traversal model.
+
+---
+# Slime Story v6-11-460 — Free Rope + Safe Ground Digging
+
+Continues directly from v459 and makes two small quality-of-life changes to the player-dug underground prototype.
+
+- Added **Rope** as a permanently available **free hand-crafting recipe**. It costs no resources, requires no Crafting Table, produces one Rope per craft, and uses the existing Rope inventory/hotbar/placement lifecycle.
+- Prevented players from excavating the **16×16 ground cell they currently occupy**. The client rejects the target immediately and the server independently enforces the same occupied-cell collision rule before creating Dirt/Pit/Shaft world mutations.
+- This prevents a player from opening an unroped breakthrough directly underneath themselves and becoming trapped in the newly impassable hole.
+- No changes to hole visuals, Rope persistence, underground generation, traversal behavior, Stone Walls, Great Cavern, Spawn, enemies, combat, lighting, or networking cadence.
+- Advanced package/client/server build to **6-11-460 / 0.6.11.460** and cache token to **?v=431e-460**.
+
+Verification: **29 runtime JavaScript syntax targets + 121 retained static regression checks pass**, including a dedicated v460 contract covering free/no-table Rope crafting and client/server occupied-tile dig rejection. The full runner completes the static suite and then reaches the same isolated-workspace WebSocket smoke dependency boundary as recent builds.
+
+---
+# Slime Story v6-11-459 — 3D Excavation + Rope Persistence Fix
+
+Continues directly from the v458 Rope underground prototype and fixes the two issues found in live testing: flat-looking merged holes and installed Ropes disappearing on underground entry/browser refresh.
+
+- Reworked player-dug breakthrough rendering into a **3D cut-earth excavation**. Adjacent breakthrough cells still merge into one opening, but every north-exposed edge now renders as a brown vertical dirt face. When the excavation continues south, that face occupies the full exposed 16×16 row, matching the depth treatment in the user's comparison mock-up; isolated/single-row holes retain a black lower pocket so they still read as openings.
+- Internal hole seams remain suppressed. Thin side/bottom silhouette pixels appear only on the outside boundary of the merged excavation.
+- Fixed the Rope persistence bug at the authoritative map-scene serialization layer. Dynamic `dugPit` / `shaftOpening` snapshots now include `ropePlaced`, so a Rope installed on the surface arrives underground already installed and remains visible after browser refresh/reconnect while the shared world is running.
+- The existing server-side install remains authoritative and marks **both aligned openings**. Underground Rope rendering and walk-on return traversal now receive that restored state instead of seeing an unroped shaft.
+- Preserved v458 traversal semantics: failed digs become walkable Dirt, unroped breakthroughs remain impassable, roped breakthroughs are traversable, no F descend/climb prompt returns, and the deprecated subterranean brown terrain overhang remains disabled.
+- No changes to underground Stone Walls, cavern generation, Great Cavern, Spawn, enemies, combat, weather, or general lighting/roof systems.
+- Advanced package/client/server build to **6-11-459 / 0.6.11.459** and cache token to **?v=431e-459**.
+
+Verification: **29 runtime JavaScript syntax targets + 120 retained static regression checks pass**, including a dedicated v459 contract covering 3D north-edge excavation faces and `ropePlaced` map-scene/reconnect serialization. The full runner completes the static suite and then reaches the same isolated-workspace WebSocket smoke dependency boundary as recent builds.
+
+---
+
+# Slime Story v6-11-458 — Rope Underground Refinement
+
+Continues directly from v457 and refines the player-dug underground prototype around traversal and readability.
+
+- Surface Pickaxe digs that do **not** intersect open underground cavern space now create a **walkable Dirt tile** instead of an impassable pit.
+- True cavern breakthroughs remain holes, but adjacent holes now render as one **autotiled continuous excavation** rather than isolated 16x16 boxes.
+- Removed **F DESCEND / F CLIMB** shaft interaction.
+- Added a **Rope** traversal resource. New/legacy characters receive 3 prototype Ropes. Rope can be assigned to the 1-0 hotbar and placed only on an unroped breakthrough hole.
+- Installing Rope marks both the surface hole and aligned underground opening. Walking onto a roped opening automatically transitions between layers; unroped holes remain impassable.
+- Removed the old bright underground climb-marker graphic. Underground exits are represented only by the installed Rope.
+- Disabled the deprecated brown south-edge terrain overhang on subterranean maps.
+- Preserved underground darkness/daylight aperture behavior, Great Cavern, Spawn, normal cave generation, and the existing Stone Wall system.
+- Advanced package/client/server build to **6-11-458 / 0.6.11.458** and cache token to **?v=431e-458**.
+
+Verification: **29 runtime JavaScript syntax targets + 119 retained static regression checks pass**. The full runner completes the static suite and then reaches the same isolated-workspace WebSocket smoke boundary as recent builds.
+
+---
+
+# Slime Story v6-11-456 — Great Cavern Stress Map
+
+Continues from the confirmed-working v455 generated-cave/Stone Arch build and adds one deliberately oversized non-Spawn cave map for stress-testing the universal room/building system at dungeon scale.
+
+- Reserved the **southeast map (`world_p1_p1`)** as **Great Cavern**. Spawn remains cave-free, and the normal compact cave generator continues unchanged on its ordinary qualifying maps.
+- Great Cavern spans most of the 400×400 map with **189 Cave Floor cells**, arranged as **29 room/hall groups**: a large central room, large north/south/east/west rooms, corner chambers, looped connector halls, side passages, and small dead-end pockets.
+- Added **four exterior Stone Arch entrances** aligned with the map's north/east/south/west approaches, so normal cross-map entry points can reach the cavern from every direction.
+- Added **12 true four-wall single-tile columns** inside the larger rooms using the exact emergent construction technique discovered during v455 testing. Each column creates its own one-cell roof cap while the surrounding room remains separately roofed.
+- Great Cavern currently resolves to **41 roof regions** total (29 room/hall groups plus 12 column caps), exercising the existing roof topology at much higher structure density without introducing a special dungeon roof system.
+- Added **20 Stone Cubes** as break-up/detail around the structure and **4 normal treasure chests** in far dead-end chambers. Stone Arches remain salvageable/placeable via the v455 lifecycle.
+- Cleared ordinary trees/grass/rocks/flowers and unrelated generated scenic/house/compact-cave features from this one stress-test map so they do not spawn through the near-map-scale cavern. Other maps retain their existing generation rules.
+- Enemy positions are still **not authored** into the cave. Great Cavern keeps the map's current runtime enemy population/spawning rules.
+- No changes to combat, networking cadence, lighting/occlusion rules, structure placement semantics, Stone Arch behavior, or player-built structures.
+- Advanced package/client/server version to **6-11-456 / 0.6.11.456** and browser cache token to **?v=431e-456**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 117 retained static regression checks pass**, including a dedicated v456 stress-map contract covering the 189-floor footprint, four entrances, 29 authored room/hall groups, 12 isolated column roof caps, four treasure chests, runtime enemy-rule retention, Spawn cave removal, and continued compact cave generation elsewhere. The full regression runner still reaches the existing WebSocket smoke dependency boundary in this isolated workspace.
+
+---
+
+# Slime Story v6-11-455 — Generated Caves + Salvageable Stone Arch
+
+Continues directly from the confirmed-working v454 lighting build and retires the temporary authored Spawn cave now that the cave vocabulary has proven usable.
+
+- Removed the large fixed cave/maze from the **Spawn map**. Spawn no longer contains or reserves any cave feature.
+- Added **simple natural caves to ordinary world generation** on non-Spawn maps. A qualifying map gets at most one compact cave selected from three small templates, with deterministic 90° rotation from the world seed.
+- Generated caves use the existing universal structure vocabulary only: **Cave Floor, tall Stone Walls, Stone Cubes, and Stone Arches (`caveDoor`)**. Each cave contains 2–3 separately roofed rooms/chambers, so local wall destruction still affects local roof topology rather than a giant single maze.
+- Caves participate in the existing feature-reservation system before ordinary scenery is scattered, preventing trees/rocks/scenic features from spawning through their footprint. No preset enemy locations were added; enemy population remains governed by the current runtime enemy generation/spawning rules.
+- Simple generated caves have a small chance to contain one normal treasure chest in a side chamber; treasure still uses the existing authoritative chest/container system.
+- Converted the user-drawn **Stone Arch** into a real salvageable building item. Mining a generated/player-placed Stone Arch uses the normal structure-destroy path and spawns a shared `caveDoor` loot drop.
+- Picking up a Stone Arch increments the new **`stoneArches`** inventory resource. Stone Arches are saveable, droppable, chest-transferable, auto-hotbar assignable, and can be placed back on a floor edge.
+- Stone Arch placement reuses the established door-edge placement rules (floor edge + flanking solid walls) but remains **always walk-through and non-light-blocking**. It still participates in roof topology as a boundary, so it works as a room passage rather than a physical door.
+- Stone Arch has **no crafting recipe yet**; at this stage it is a found/salvaged cave-building piece.
+- Preserved v453/v454 universal foreground occlusion, mounted-Torch face visibility, and roofed-surface light occlusion unchanged.
+- Advanced package/client/server version to **6-11-455 / 0.6.11.455** and browser cache token to **?v=431e-455**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 116 retained static regression checks pass**, including a dedicated v455 contract covering Spawn cave removal, deterministic generated cave templates, independent roof rooms, Stone Arch topology/non-collision semantics, salvage/drop/pickup, inventory/save/chest/hotbar wiring, network totals, and placement. The full regression runner completes the static layer and then stops at the first WebSocket smoke because this isolated workspace does not have the local `ws` module installed; `ws` remains declared in the project dependencies.
+
+---
+
+# Slime Story v6-11-454 — Roofed Surface Light Occlusion
+
+Continues directly from the confirmed-working v453 universal foreground occlusion build and tightens how lighting/presentation behaves for **concealed roofed rooms** without adding any cave-only rules.
+
+- Added a **universal roof-region facade-light gate**. When a light source originates inside a roofed room, it can now illuminate wall/door facade surfaces **only for that same revealed room**. Hidden neighboring rooms no longer advertise themselves with lit boundary seams.
+- Added **concealed roof-facade highlight damping**. The decorative bright top-edge highlight on hidden roofed boundaries is now reduced heavily while the room remains concealed, so dark cave/building room grids stop reading like glowing outlines at night.
+- Preserved the existing v453 universal foreground/player overlap fade and wall-face-aware mounted Torch visibility.
+- Kept the rule **universal**: it keys only off roof-region membership/reveal state, so houses, caves, and future roofed structures all follow the same presentation logic.
+- No cave topology, room layout, collision, harvesting, enemy behavior, networking cadence, or special-case cave visibility rules were introduced in this build.
+- Advanced package/client/server version to **6-11-454 / 0.6.11.454** and browser cache token to **?v=431e-454**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 115 retained static regression checks pass**, including a dedicated v454 contract covering same-room roofed facade-light gating and concealed roof-boundary highlight damping. The full regression runner advances through the static suite and then stops at the existing smoke stage in this isolated workspace (`smoke-crafting-consumables.js`) because local `ws` is unavailable.
+
+---
+
+# Slime Story v6-11-453 — Universal Foreground Occlusion
+
+Continues from the confirmed-working v452 larger cave layout and improves player readability without adding any cave-specific visibility rules.
+
+- Replaced the old wall-only player-cover test with one **universal local foreground occlusion rule** based on two things only: whether a drawable sorts in front of the local player's feet, and whether its visible world-space rectangle overlaps the player's visible body.
+- The same generic fade rule now drives current tall/foreground scenery including **Wood/Stone Walls, Wood/Cave Doors, Stone Cubes, Trees, Rocks, Chests, Crafting Tables, legacy/world Houses, and placed Torches**. The helper itself contains no cave/material/object-type exceptions, so future tall scenery can reuse the same rule.
+- Foreground occluders that overlap the local player now drop to **24% opacity**. Objects return to full opacity as soon as the player moves in front of them or their visible bounds stop overlapping. Remote players continue to use normal world depth with no local-view fade.
+- Preserved the existing enclosed-room foreground-wall softening, while letting the universal overlap fade become stronger when a wall/door is actually covering the player.
+- Added **wall-face-aware Torch presentation**. For completed roofed rooms, a wall-mounted Torch now renders only when its `mountSide` matches the wall face currently visible to the viewer. An exterior-mounted Torch is therefore hidden while the player is inside that room, and an interior-mounted Torch is hidden while viewing the room from outside. Floor Torches and Torch light/occlusion rules are otherwise unchanged.
+- No cave layout, room topology, building placement, collision, lighting calculations, enemy behavior, combat, treasure, networking cadence, or world-generation rules changed in this build.
+- Advanced package/client/server version to **6-11-453 / 0.6.11.453** and browser cache token to **?v=431e-453**.
+
+Verification at this checkpoint: retained syntax/static regressions plus a dedicated v453 contract cover the generic overlap/depth rule, Stone Cube/tree/rock/structure adoption, absence of cave-specific branching, and hidden-face wall-mounted Torch presentation. WebSocket smokes remain subject to the same isolated-workspace `ws` availability limitation.
+
+---
+
+# Slime Story v6-11-450 — Stone Cube Object Anchoring
+
+Continues directly from the confirmed-working v449 cave/cube prototype and fixes the Stone Cube's spatial model so the 16×16 sprite behaves like a real top-down scenery object instead of a full-height wall-shaped collider.
+
+- Re-anchored the **Stone Cube sprite to its selected 16×16 world cell**. The structure coordinate is now treated as the center of the tile, so the visible cube spans `y - 8` through `y + 8` instead of hanging entirely above the placement point.
+- Replaced the old 14×14 full-sprite collision with a shared **12×6 lower/base footprint**. The upper portion is visual height only, allowing players/enemies to move behind it while the bottom still behaves as a solid object.
+- Added the Stone Cube footprint to shared structure geometry and use the same rectangle for client movement, server-authoritative movement/navigation, attack/projectile line-of-effect, spawn safety, and Pickaxe validation.
+- Changed Stone Cube draw sorting to its **bottom/base edge (`y + 8`)**. A player whose feet are above the cube draws behind it; a player below the cube draws in front, giving the object proper top-down depth.
+- Stone Cubes no longer use wall-facade cover fading. Their overlap is resolved naturally by world draw order.
+- Updated Pickaxe pointer/highlight bounds to the new cell-aligned visual position. Crafting, placement, inventory, save migration, cave topology, tall Stone Walls, cave ceiling/mouth, world generation, enemy behavior, weather, and networking semantics are otherwise unchanged.
+- Advanced package/client/server version to **6-11-450 / 0.6.11.450** and browser cache token to **?v=431e-450**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 111 retained static regression checks pass**, including a dedicated v450 Stone Cube object-anchoring contract covering the shared 12×6 footprint, cell-aligned sprite, base-edge depth sorting, matching Pickaxe bounds, and client/server geometry parity. The full regression runner then reaches the WebSocket smoke layer and stops at the same isolated-workspace limitation because the local `ws` module is not installed; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-449 — Stone Cube Mining + Tall Cave Mouth Fix
+
+Continues directly from the v448 Stone Cube cave model and fixes two issues found in live cave testing.
+
+- Fixed Stone Cubes always returning **“TOO FAR”** when mined. The cube was correctly treated as a solid line-of-effect blocker, but the server did not exclude the *target cube itself* from the Pickaxe validation ray, so the cube blocked the ray to its own target point. Targeted Stone Cubes are now ignored by that one trace while still blocking movement and attacks normally.
+- Increased the natural cave mouth presentation from the small one-tile opening to a true **16×32** facade-height opening. The mouth now uses the existing stone material as a chunky lintel/jamb frame and aligns visually with the tall Stone Walls around it.
+- `caveMouth` remains non-blocking and continues to serve only as the logical roof opening/boundary; cave topology, Stone Cube behavior, world generation, lighting, enemy spawning, combat, and player-built structures are otherwise unchanged.
+- Advanced package/client/server version to **6-11-449 / 0.6.11.449** and browser cache token to **?v=431e-449**.
+
+Verification at this checkpoint: retained syntax/static regressions plus a dedicated v449 guard cover Stone Cube self-occlusion during Pickaxe validation and the 16×32 cave-mouth render contract. WebSocket smokes remain subject to the same isolated-workspace `ws` availability limitation.
+
+---
+
+# Slime Story v6-11-448 — Stone Cube Cave Model
+
+Supersedes the v445–v447 Short Stone Wall cave experiment with the cleaner model requested during cave testing: **16×16 stone pieces are now true cubes/objects placed in front of structural tall walls, not lower roof-supporting walls.**
+
+- Replaced the buildable **Short Stone Wall** concept with **Stone Cube**. Stone Cube remains craftable at **1 Stone → 1 Stone Cube**, hotbar-assignable, saveable, droppable/chest-transferable, multiplayer-replicated, and Pickaxe-destructible.
+- Stone Cube is now an **OBJECT-layer structure**, not a boundary. It does **not** participate in automatic roof topology, wall joins, Wood Door support, wall-mounted Torch support, wall-surface lighting, or cave roof ownership.
+- Stone Cube is still physically solid: it blocks player/enemy movement and combat line-of-effect using a compact 14×14 collider, while deliberately staying out of the wall-lighting system.
+- Player placement snaps Stone Cubes to the ordinary 16px object grid and allows them to occupy a cell adjacent to/in front of a wall because object and boundary layers are independent.
+- Migrates v445–v447 browser saves forward: old `stoneShortWalls` counts become `stoneCubes`, and old `stoneShortWall` hotbar assignments become `stoneCube` in the same slot.
+- Rebuilt the Spawn cave prototype around **18 roofed natural floor cells enclosed by real tall Stone Walls** plus one non-blocking south `caveMouth`. The rejected v447 recessed/unroofed vestibule hack is removed.
+- Added **8 world-generated Stone Cubes** in front of the cave's structural wall plane as destructible foreground rock detail. Mining a cube changes only the silhouette/collision; mining the tall Stone Wall behind it is what actually changes the cave roof/topology.
+- Preserved the existing stepped cave ceiling renderer and the player-house geometric stone roof. No enemy spawn coordinates were added; current runtime enemy generation/spawning remains unchanged.
+- Removed the obsolete Short Stone Wall runtime art files after copying the retained 16×16 material into dedicated v448 Stone Cube assets.
+- Advanced package/client/server version to **6-11-448 / 0.6.11.448** and browser cache token to **?v=431e-448**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 109 retained static regression checks pass**, including a dedicated v448 Stone Cube/cave-model contract covering object-vs-boundary topology, collision/line-of-effect, 1-Stone crafting, placement, save migration, network totals, and the tall-wall + cube Spawn cave composition. The full runner then reaches the WebSocket smoke layer and stops at the same isolated-workspace limitation because the local `ws` module is not installed; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-447 — Cave Entrance Roof Boundary Refinement
+
+Continues directly from the v446 Spawn Natural Cave prototype and fixes the mismatch between the short front cave walls and the logical roof region.
+
+- The cave's front **five-cell dirt row is now a genuine outdoor vestibule**. Those cells remain visible dirt terrain but are no longer `caveFloor` roof surfaces, so rain/Wet shelter, interior darkness, roof reveal, and roof lighting do not begin at the outer opening.
+- Moved the single non-blocking **`caveMouth`** one tile deeper to an inner threshold between the vestibule and the roofed cave interior. The outside bottom-center edge is now physically and visually open instead of pretending to be the roof boundary.
+- Added a short-stone threshold on either side of the recessed mouth. The player walks through the exposed entrance apron first, then crosses the open center threshold into the covered cave.
+- Reduced the cave's logical roof footprint from **18 cells to 13 inner cells** while preserving the same overall dirt footprint and outer stone shell. The cave still resolves to one enclosed logical roof region.
+- The existing v446 stepped natural-cave ceiling renderer, current cave wall art, player-built Stone/Short Stone Wall behavior, player-house roofs, lighting architecture, world/enemy generation, weather, combat, inventory, and networking cadence are otherwise unchanged.
+- Advanced package/client/server version to **6-11-447 / 0.6.11.447** and browser cache token to **?v=431e-447**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 108 retained static regression checks pass**, including a dedicated v447 cave-entrance contract proving the full front dirt row remains unroofed, the recessed mouth sits exactly one tile deeper, the interior remains one enclosed roof region, and the outdoor dirt vestibule is preserved. The full WebSocket smoke layer remains unavailable in this isolated workspace because the local `ws` module is not installed; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-446 — Spawn Natural Cave Prototype
+
+Continues directly from the confirmed-working v445 stone-building prototype to test a **natural cave** as runtime-generated world content without changing the player-made stone-house roof.
+
+- Added one deterministic **natural cave prototype** to the Spawn map at runtime world-generation time. It is intentionally fixed for this test build so its visual language can be evaluated consistently before cave rarity/placement generation is designed.
+- The cave uses an irregular **18-cell hidden `caveFloor` footprint** over dirt terrain. `caveFloor` participates in the existing automatic-roof/interior-light topology but is not drawn as a player-built floor, so the revealed interior reads as natural ground rather than masonry flooring.
+- Added a topology-only **`caveMouth`** boundary at the south entrance. It closes the logical roof region while remaining non-blocking for player/enemy movement and line-of-effect, allowing a real open cave entrance without disguising it as a Wood Door.
+- Mixed existing **tall Stone Wall** and **Short Stone Wall** world-generated boundary pieces around the irregular footprint. Tall walls dominate the upper rock mass while short walls form the lower/front cave lip.
+- Added a cave-only ceiling presentation that reuses the v445 stone roof/wall material but draws roof cells at **three deterministic stepped heights** with dark south/east rock faces. This makes the exterior ceiling read as chunky geometric rock terraces instead of a flat tiled player-house roof.
+- The cave still uses the existing logical roof region for shelter, reveal, interior darkness, and lighting/occlusion bookkeeping. Entering the cave hides its ceiling using the same proven interior reveal behavior as buildings, avoiding a separate cave lighting architecture for this prototype.
+- Reserved the cave footprint before ordinary Spawn scenery placement and added two nearby mineable stones as natural framing. Enemy positions remain runtime-generated by the existing enemy population rules; no enemy spawn coordinates were authored for the cave.
+- Preserved player-made Wood/Stone house roofs, current building/crafting rules, current world generation outside this explicit Spawn cave feature, enemy behavior/population rules, weather/Wet, combat, inventory, and networking cadence.
+- Advanced package/client/server version to **6-11-446 / 0.6.11.446** and browser cache token to **?v=431e-446**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 107 retained static regression checks pass**, including a dedicated v446 cave contract verifying the Spawn feature, irregular cave topology, mixed tall/short stone boundaries, single non-blocking mouth, and cave-only stepped ceiling renderer. The full regression runner reaches its WebSocket smoke stage and is expected to stop in this isolated workspace because the local `ws` module is unavailable; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-445 — Short Stone Wall + Geometric Stone Roof
+
+Continues directly from the confirmed-working v444 Stone Wall Variation Prototype to test a second stone-wall height and a more cave-friendly roof treatment.
+
+- Added **Short Stone Wall** as a separate buildable **16×16** stone boundary piece. It is derived directly from the user's original 16×32 tile, uses the same 16px floor-edge placement/collision geometry as the tall Stone Wall, and can mix with tall Stone Walls and Wood Doors.
+- Short Stone Wall is hotbar-assignable, persistent, reclaimable with the Pickaxe, droppable/chest-transferable, multiplayer-replicated, and supports the same wall-mounted Torch and enclosed-roof topology paths as the other wall materials.
+- Added **Short Stone Wall** crafting at **1 Stone → 1 Short Stone Wall** for testing. Tall Stone Wall remains **1 Stone → 1 Stone Wall**.
+- Added deterministic texture/end-cap variants for the short wall using the same v444 organic-end treatment so isolated and ending pieces do not read as perfect hard rectangles.
+- Replaced the flat stone-roof fill with a new **16×16 geometric block tile** derived from the existing stone texture. Each roof tile is composed of smaller beveled stone blocks, keeping automatic roof shelter/reveal/lighting behavior unchanged while making the surface read more like stacked cave masonry.
+- Preserved the existing tall Stone Wall, player-house automatic roof behavior, all current world definitions/runtime generation, enemy spawning/behavior, weather/Wet, combat, inventory, and networking cadence. No natural caves generate automatically yet; this remains a visual/building prototype.
+- Advanced package/client/server version to **6-11-445 / 0.6.11.445** and browser cache token to **?v=431e-445**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 106 retained static regression checks pass**, including a dedicated v445 Short Stone Wall/roof contract covering 16×16/4×16 asset dimensions, shared boundary collision/topology, short façade geometry, 1-Stone crafting, hotbar/inventory/save/drop/network wiring, and the geometric stone-roof asset. The full regression runner reaches the WebSocket smoke stage and is expected to stop in this isolated workspace because the local `ws` module is unavailable; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-444 — Stone Wall Variation Prototype
+
+Continues directly from the confirmed-working v443 stone-wall content build and keeps the same gameplay/building behavior while improving the visual tiling test.
+
+- Preserved **Stone Wall** as a true Wood Wall peer: same placement geometry, collision, line-of-effect blocking, wall joins, Wood Door compatibility, wall-torch support, reclaim/drop behavior, hotbar assignment, inventory/save persistence, crafting cost (**1 Stone → 1 Stone Wall**), and multiplayer structure replication.
+- Kept the user's exact supplied **16×32 stone-wall sprite** byte-for-byte as the canonical base wall art.
+- Added deterministic **horizontal texture variation** by deriving two extra wrap-shifted wall-face variants from the authored sprite. Neighboring Stone Wall pieces now choose among these variants based on world position so long runs look less repetitive.
+- Added simple **organic end-cap variants** for horizontal Stone Walls and cap variants for the narrow vertical side strip. True wall ends now render with softened cut-in silhouettes instead of only hard rectangular terminations, without changing collision or topology.
+- Left the simple stone roof behavior intact so this build isolates the variation experiment to the wall visuals only.
+- Preserved existing world definitions, runtime generation, enemy spawning/behavior, weather/Wet, combat, and current content. No automatic stone caves are generated yet; this build is specifically for testing whether visual wall variation improves the cave/building feel.
+- Advanced package/client/server version to **6-11-444 / 0.6.11.444** and browser cache token to **?v=431e-444**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 105 retained static regression checks pass**, including the retained Stone Wall contract test and a new v444 Stone Wall variation check covering the derived variant assets and deterministic draw-path selection. The full regression runner then reaches its WebSocket smoke stage and stops because this isolated workspace does not have the local `ws` module installed; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-443 — Stone Wall Prototype
+
+Breaks briefly from the legacy purge on top of the confirmed-working v442 baseline to add a testable stone construction material for future cave content.
+
+- Added **Stone Wall** as a full buildable structure with the same placement geometry, collision, line-of-effect blocking, wall joins, Wood Door support, wall-torch support, reclaim/drop behavior, hotbar assignment, inventory/save persistence, and multiplayer structure replication as Wood Wall.
+- Uses the user's exact supplied **16×32 stone-wall sprite** for the horizontal wall face. Added only simple derived support art: a narrow darker vertical side strip and a darkened 16×16 roof tile, keeping the prototype visually tied to the authored texture.
+- Added a **Stone Wall** crafting recipe costing **1 Stone → 1 Stone Wall** for testing. It follows the same crafting-table availability rules as Wood Wall.
+- Fully enclosed structures whose solid perimeter walls are all Stone Wall now use the simple stone roof visual. Mixed Wood/Stone wall enclosures retain the existing wood roof. Wood Doors are compatible with either material.
+- Added Stone Wall ground-loot/reclaim rendering and authoritative resource totals through client/server save, craft, placement, pickup, and inventory-transfer paths.
+- Preserved existing world definitions, runtime generation, enemy spawning/behavior, weather/Wet, combat, and current content. No automatic stone caves are generated yet; this build is specifically for testing the wall material and tiling in player-built structures.
+- Advanced package/client/server version to **6-11-443 / 0.6.11.443** and browser cache token to **?v=431e-443**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 104 retained static regression checks pass**, including a dedicated v443 Stone Wall contract test covering authored-asset integrity, topology/geometry parity, recipe cost, build/hotbar/save/drop/network wiring, door/torch support, and automatic stone-roof selection. The full regression runner then reaches its WebSocket smoke stage and stops because this isolated workspace does not have the local `ws` module installed; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-442 — Retired Rain Cloud Field Backend Purge
+
+Continues the confirmed-working v441 cleanup by removing the unreachable Rain Cloud / magic-grass field backend that remained after the Fire/Rain Wand cast entry points were retired.
+
+- Proved that `startServerRainCloud()` had no remaining caller after v438, so neither `activeServerRainClouds` nor `activeServerRainFields` could ever be populated.
+- Deleted `public/shared/rain-field.js` and removed its browser/server imports.
+- Removed the dead server Rain Cloud movement/effect tick, deterministic magic-grass field registry, field fire/extinguish/slow logic, ghost Rain Cloud damage path, field snapshot/delta protocol, and rain-only enemy metadata.
+- Removed the client temporary Rain Grass registry/reconstruction/render/fire branches and the retired magic-grass terrain capability. Normal permanent tall grass keeps its existing appearance, cutting, and burning behavior.
+- Removed the now-empty `transientActionSnapshot` map-entry packet and its client ingress.
+- Removed the retired Rain Cloud combat action profile while leaving the separately orphaned Fireball backend for its own later audit.
+- Preserved deterministic world weather rain, water/weather Wet status, Wet movement behavior, environmental fire/spread, current basic Wand attacks, Tiger Paw, world definitions, runtime generation, and current enemy spawning/behavior.
+- Simplified rain/fire diagnostics so they no longer report counters for a field system that cannot exist.
+- Advanced package/client/server version to **6-11-442 / 0.6.11.442** and browser cache token to **?v=431e-442**.
+
+Verification at this checkpoint: **29 runtime JavaScript syntax targets + 103 retained static regression checks pass**. An explicit runtime audit finds zero surviving Rain Field/Magic Grass protocol or symbol references. The full regression runner then reaches its WebSocket smoke stage and stops because this isolated workspace does not have the local `ws` module installed; `ws` remains declared/locked as a project dependency.
+
+---
+
+# Slime Story v6-11-441 — Retired Wand Render Symbol Fix
+
+Hotfixes the remaining v438 cleanup regression discovered during real rendering: `drawPlayer()` still referenced the deleted `circularWandCastPose` local after the retired Fire/Rain Wand cast layer was removed.
+
+- Removed both stale `circularWandCastPose` render references.
+- Preserved the modern unarmed, melee, bow, and basic Wand attack pose paths.
+- Strengthened the v438 retirement guard and added a dedicated v441 render regression check.
+- Audited all declarations that disappeared in the 437→438 purge; `circularWandCastPose` was the only removed declaration still used as a bare runtime symbol after v440.
+- Advanced package/client/server version to **6-11-441 / 0.6.11.441** and browser cache token to **?v=431e-441**.
+
+---
+
+# Slime Story v6-11-440 — Retired Wand Hotbar Dangling-Reference Fix
+
+Hotfixes the second confirmed v438 cleanup regression discovered during real browser startup: `updateHotbar()` still called the deleted `updateHotbarActionCooldownSlot()` helper.
+
+- Removed the final runtime reference to `updateHotbarActionCooldownSlot()`. The helper only served Fireball/Rain Cloud action cooldown overlays; those actions and their cooldown UI were retired in v438.
+- Audited every function/helper declaration removed by v438 against the v440 runtime. This cooldown helper was the only removed declaration still referenced.
+- Preserved current hotbar assignment, inventory counts, active-slot highlighting, building selection, drag/drop behavior, and current weapon/tool rendering.
+- No world generation, enemy behavior/spawning, crafting, combat balance, weather, Wet/fire behavior, Rain Field protocol, mobile controls, or networking cadence were intentionally changed.
+- Advanced package/client/server version to **6-11-440 / 0.6.11.440** and browser cache token to **?v=431e-440**.
+
+---
+
+# Slime Story v6-11-440 — Retired Wand Map-Transition Fix
+
+Hotfixes the confirmed v438 regression where map activation still called two functions that had been deleted with `client-wand-actions.js`.
+
+- Removed the stale `cancelRainCloudCast()` and `endLocalRainCloud()` calls from `clearTransientWorldEffects()`.
+- These calls belonged exclusively to the retired Fire/Rain Wand cast layer; their backing functions and local `rainClouds` runtime no longer exist in v438.
+- Preserved current transient cleanup for basic projectiles, temporary Rain Field grass, drops, particles, damage numbers, and other live map-local effects.
+- Strengthened the v438 retirement guard so both deleted symbols are forbidden from surviving elsewhere.
+- Added a dedicated v439 regression guard for map-transition cleanup.
+- No world definitions, runtime generation, enemy spawning/behavior, combat balance, crafting, inventory, mobile controls, weather, Rain Field protocol, or network cadence were intentionally changed.
+- Advanced package/client/server version to **6-11-440 / 0.6.11.440** and browser cache token to **?v=431e-440**.
+
+---
+
+# Slime Story v6-11-438 — Retired Wand Action Layer Purge
+
+Continues the confirmed-working v437 legacy cleanup after the retired Fire Wand and Rain Wand equipment was removed.
+
+- Deleted the now-unreachable `client-wand-actions.js` cast layer and its standalone `shared/action-balance.js` constants module.
+- Removed obsolete Fireball/Rain Cloud aim, cast, cooldown, input-lock, animation/presentation, projectile-visual, and client replication state.
+- Retired player action codes **4 (Fireball Aim)** and **5 (Rain Cast)** without renumbering current action code **6 (Tiger Paw Hurl Reach)**.
+- Removed the retired `fireball`, `fireballImpact`, and `rainCast` visual-effect ingress/presentation paths plus the old `rainWand` basic-projectile compatibility alias.
+- Preserved all current magic-weapon basic attacks: Shepherd Staff, Tournesol, Tabatha's Key, and Sapgem Wand still use the existing generic basic-projectile path.
+- Preserved the compact server/client Rain Field registry, snapshot/delta protocol, environmental weather/Wet system, and environmental fire runtime for their own separate audit.
+- No world definitions, runtime world generation, enemy spawning/behavior, crafting, inventory, building, mobile controls, or network cadence were intentionally changed.
+- Advanced package/client/server version to **6-11-438 / 0.6.11.438** and browser runtime cache token to **?v=431e-438**.
+
+Verification at this checkpoint: **30 runtime JavaScript syntax targets + all 99 static regression checks pass**. The full regression runner reaches its WebSocket smoke stage and then stops because this isolated workspace does not have the local `ws` module installed; `ws` remains declared/locked as a project dependency. A fresh-ZIP verification repeats the syntax/static checks before handoff.
+
+---
+
+# Slime Story v6-11-437 — Retired Legacy Weapon Trio Purge
+
+Continues the confirmed-working v436 legacy cleanup by retiring three unreachable pre-current-game weapons together.
+
+- Removed the original Fire Wand (`weapon_wand`), Rain Wand (`weapon_rainWand`), and Katana (`weapon_katana`) as inventory/equipment items. None has a current starter, craft, shop, quest, loot, treasure, or world grant path.
+- Removed their inventory cards/image hookups, embedded held art, display/type branches, Katana melee/harvest special cases, and old primary-action wiring.
+- Preserved protocol stability by leaving weapon indices **2, 3, 4, and 5** inert/reserved. Current indices 6–13 remain unchanged.
+- Server state now sanitizes incoming retired indices 2–5 to empty hands, so stale clients/saves cannot resurrect the removed equipment.
+- Kept the underlying Fireball/Rain Cloud effect/runtime modules for a separate audit. They are no longer reachable through current equipment after this checkpoint, but shared rain/fire systems are intentionally untouched here.
+- Advanced shared combat-balance schema marker from 33 to 34 and added a dedicated v437 regression guard.
+
+Current world generation/enemy spawning, current weapons, crafting, shops, armor, building, inventory interactions, mobile controls, weather, and networking cadence are unchanged.
+
+---
+
+# Slime Story v6-11-436 — Retired Old Sword Item Purge
+
+Continues the confirmed-working v435 legacy cleanup without renumbering any current weapon/network indices.
+
+- Removed the unreachable pre-Wood-Sword `weapon_oldSword` item, its embedded sprite, inventory card/image hookup, display-name/style branches, melee routing, shared-container transfer token, and combat profile.
+- The retired item had no current shop, craft, loot, quest, starter, or world grant path; it only survived for characters carrying it from the previous game.
+- Preserved weapon protocol/index stability by leaving slot **5** inert/reserved. Current indices remain unchanged: Wood Bow 6, Dreamcatcher 7, Pickaxe 11, Sapgem Wand 12, Tiger Paw 13.
+- Browser saves containing the retired item now discard it through the current equipment whitelist; a saved/elected weapon index 5 resolves to empty hands. Server state also sanitizes incoming weapon index 5 to `-1`.
+- Current weapons, combat powers/speeds, inventory/hotbar behavior, world/enemy generation, crafting, building, mobile controls, and network cadence are unchanged.
+- Advanced shared combat-balance schema marker from 32 to 33 because slot 5 is now intentionally empty.
+- Added a dedicated v436 regression guard preventing the retired old-sword item/style/UI from returning while locking current post-slot-5 weapon indices.
+
+# v6-11-435 — Retired Starter-Kit Save Migration Purge
+
+Continues the confirmed-working v434 legacy cleanup without changing the current new-character starter loadout.
+
+- Removed the v431 browser-save compatibility shim that force-added Wood Sword, Pickaxe, and Axe every time a character save was restored. That shim existed only to migrate characters from the retired tutorial-handoff era.
+- Brand-new characters still independently begin with one Sword, Pickaxe, and Axe and have them assigned to hotbar slots 1–3.
+- Current saves now restore their actual item counts exactly. In particular, intentionally dropped starter tools are no longer silently recreated on the next reload.
+- Save schema/version remains unchanged; v434/current ten-slot saves continue to restore normally.
+- Advanced package/client/server build version to **6-11-435 / 0.6.11.435** and runtime cache token to **?v=431e-435**.
+- Added a dedicated v435 regression guard preventing the retired restore-time starter grant from returning while protecting the independent new-character starter contracts.
+
+World content, runtime generation/enemy spawning, combat, crafting, inventory interactions, mobile controls, networking cadence, and current hotbar behavior are unchanged.
+
+---
+
+# v6-11-434 — Retired Five-Slot Hotbar Migration Purge
+
+Continues the confirmed-working v433 legacy cleanup without changing the current 1–0 hotbar.
+
+- Removed the one-time browser-save remapper for the retired five-slot/equipment-era hotbar.
+- Current saves already persist ten ordered `hotbarAssignments`, so restore now reads slots 1–0 directly by index and still sanitizes missing/unowned assignments.
+- New characters still independently begin with Sword, Pickaxe, and Axe in slots 1–3; that starter path does not depend on the deleted migration.
+- Save schema/version stays unchanged. Modern v424+ ten-slot saves are unchanged; ancient five-slot saves are no longer specially remapped into physical keys 4–8.
+- Advanced package/client/server build version to **6-11-434 / 0.6.11.434** and runtime cache token to **?v=431e-434**.
+- Added a dedicated v434 regression guard preventing the retired five-slot remapper from returning while protecting the modern ten-slot save/restore and starter contracts.
+
+World content, runtime generation/enemy spawning, combat, crafting, inventory behavior, mobile controls, networking cadence, and current save progression are unchanged.
+
+---
+
+# v6-11-433 — Retired Crafting-History Purge
+
+Continues the confirmed-working v432 legacy cleanup without changing current crafting behavior.
+
+- Removed the obsolete one-time crafting-history flags for Wood Sword, Wood Bow, Shepherd Staff, Wood Helm, Wood Chest, Wood Greaves, and Wood Ring from client state, browser saves, server player state, and persistent-state restore payloads.
+- Removed the dormant `alreadyCrafted` rejection/reconciliation path. Every current crafting recipe was already marked repeatable, so that branch was unreachable in v432.
+- Removed now-redundant per-recipe `repeatable`, client `storyKey`, and server `stateKey` metadata from the crafting tables while preserving every current ingredient cost, output quantity, station rule, recovery-only rule, auto-equip behavior, and inventory grant.
+- Existing browser saves remain compatible: obsolete `story` data is simply ignored; save schema/version stays unchanged.
+- Kept shop-specific `repeatable` metadata intact because it is a separate live purchase rule, not part of the retired crafting-history system.
+- Advanced package/client/server build version to **6-11-433 / 0.6.11.433** and runtime cache token to **?v=431e-433**.
+- Added a dedicated v433 regression guard preventing the retired crafting-history tokens/metadata from returning while checking key recipe contracts.
+
+World content, runtime world generation/enemy spawning, combat, recipe costs/outputs, inventory behavior, mobile controls, networking cadence, and current save progression are unchanged.
+
+---
+
 # v6-11-432 — Retired Assignment-Rail CSS Purge
 
 Continues the v431 legacy-systems cleanup from confirmed-working Checkpoint 2E without changing gameplay.

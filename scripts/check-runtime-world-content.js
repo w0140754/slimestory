@@ -52,9 +52,11 @@ const map = sandbox.WORLD_CONTENT.maps.world_p0_p0;
 assert.ok(map, "coordinate spawn map missing from runtime content");
 assert.ok(Array.isArray(map.environment?.rocks), "coordinate spawn rocks missing");
 assert.ok(Array.isArray(map.terrain?.regions), "coordinate spawn terrain missing");
-assert.strictEqual(Object.keys(sandbox.WORLD_CONTENT.maps).length, 9, "runtime world should contain only the 3x3 coordinate grid");
+const runtimeMaps = Object.values(sandbox.WORLD_CONTENT.maps);
+assert.strictEqual(runtimeMaps.filter(entry => Number(entry?.grid?.layerDepth || 0) === 0).length, 9, "runtime world must retain the 3x3 surface coordinate grid");
+assert.strictEqual(runtimeMaps.filter(entry => Number(entry?.grid?.layerDepth || 0) > 0).length, 9, "every surface coordinate must have an underground layer");
 
 console.log(
   `runtime world content roundtrip ok: v${sandbox.WORLD_CONTENT.version}, ` +
-  `${map.environment.rocks.length} rocks, ${map.terrain.regions.length} terrain regions, 9 coordinate maps`
+  `${map.environment.rocks.length} rocks, ${map.terrain.regions.length} terrain regions, 9 surface maps + 9 underground maps`
 );

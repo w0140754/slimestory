@@ -114,15 +114,11 @@ function buildClientEnemyFoundation() {
   if (craftTorchJellyIcon) craftTorchJellyIcon.src = greenJellyCubeLootImage.src;
 
   document.getElementById("inventorySwordImg").src = swordImage.src;
-  document.getElementById("inventoryOldSwordImg").src = oldSwordImage.src;
   document.getElementById("inventoryBowImg").src = bowImage.src;
   document.getElementById("inventoryDreamcatcherImg").src = dreamcatcherBowImage.src;
-  document.getElementById("inventoryKatanaImg").src = katanaImage.src;
   document.getElementById("inventoryAxeImg").src = axeImage.src;
   const inventoryPickaxeImg = document.getElementById("inventoryPickaxeImg");
   if (inventoryPickaxeImg) inventoryPickaxeImg.src = pickaxeImage.src;
-  document.getElementById("inventoryWandImg").src = wandImage.src;
-  document.getElementById("inventoryRainWandImg").src = rainWandImage.src;
   document.getElementById("inventoryShepherdStaffImg").src = shepherdStaffImage.src;
   document.getElementById("inventoryLostKeyImg").src = lostKeyWandImage.src;
   document.getElementById("inventoryHugeSunflowerImg").src = hugeSunflowerWandImage.src;
@@ -342,6 +338,9 @@ function buildClientEnemyFoundation() {
   const woodFloorLootImage = loadImage("assets/ui/wood_floor.png?v=431");
   const stoneFloorLootImage = loadImage("assets/ui/stone_floor.png?v=431");
   const woodWallLootImage = loadImage("assets/ui/wood_wall.png?v=431");
+  const stoneWallLootImage = loadImage("assets/ui/stone_wall.png?v=443");
+  const stoneCubeLootImage = loadImage("assets/ui/stone_cube.png?v=449");
+  const stoneArchLootImage = loadImage("assets/building/stone_cave_door_v451.png?v=451");
   const woodDoorLootImage = loadImage("assets/ui/wood_door.png?v=431");
   const chestLootImage = loadImage("assets/building/chest_closed_v414.png?v=431");
   const craftingTableLootImage = loadImage("assets/wood_bench_v2.png?v=431");
@@ -381,6 +380,20 @@ function buildClientEnemyFoundation() {
     woodWall: Object.freeze({
       image: woodWallLootImage,
       shadowWidth: 8
+    }),
+    stoneWall: Object.freeze({
+      image: stoneWallLootImage,
+      shadowWidth: 8
+    }),
+    stoneCube: Object.freeze({
+      image: stoneCubeLootImage,
+      shadowWidth: 8
+    }),
+    caveDoor: Object.freeze({
+      image: stoneArchLootImage,
+      shadowWidth: 8,
+      drawWidth: 16,
+      drawHeight: 24
     }),
     woodDoor: Object.freeze({
       image: woodDoorLootImage,

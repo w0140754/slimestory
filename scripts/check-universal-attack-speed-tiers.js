@@ -15,12 +15,12 @@ const html = read('public', 'index.html');
 const pkg = JSON.parse(read('package.json'));
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-432";'), 'server build must be 6-11-406');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'), 'client build must be 6-11-406');
-assert(pkg.version === '0.6.11.432', 'package version must be 0.6.11.431');
+assert(server.includes('const BUILD_VERSION = "6-11-468";'), 'server build must be 6-11-406');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), 'client build must be 6-11-406');
+assert(pkg.version === '0.6.11.468', 'package version must be 0.6.11.431');
 assert(html.includes('/shared/combat-balance.js?v=431') && html.includes('/client-combat.js?v=431') && html.includes('/game.js?v=431'), 'v333 combat cache keys missing');
 
-assert(balance.version === 32, 'combat balance version must be 32');
+assert(balance.version === 34, 'combat balance version must be 34');
 assert(balance.attackSpeedTiers?.slow?.cooldown === 0.83, 'Slow tier must remain 0.83s');
 assert(balance.attackSpeedTiers?.normal?.cooldown === 0.75, 'Normal tier must remain 0.75s');
 assert(balance.attackSpeedTiers?.quick?.cooldown === 0.65, 'Quick tier must remain 0.65s');
@@ -28,10 +28,6 @@ assert(balance.attackSpeedTiers?.quick?.cooldown === 0.65, 'Quick tier must rema
 const expected = new Map([
   [0, ['Normal', 0.75]], // Wood Sword
   [1, ['Slow', 0.83]],   // Axe
-  [2, ['Slow', 0.83]],   // Fire Wand
-  [3, ['Slow', 0.83]],   // Rain Wand
-  [4, ['Quick', 0.65]],  // Katana
-  [5, ['Normal', 0.75]], // Sword
   [8, ['Slow', 0.83]],   // Shepherd Staff
   [9, ['Normal', 0.75]], // Tournesol
   [10, ['Quick', 0.65]], // Tabatha's Key
@@ -42,6 +38,7 @@ for (const [index, [label, cooldown]] of expected) {
   assert(balance.weaponAttackSpeedLabel(index) === label, `weapon ${index} expected ${label}`);
   assert(balance.weaponAttackCooldown(index) === cooldown, `weapon ${index} expected ${cooldown}s cooldown`);
 }
+assert([2, 3, 4, 5].every(index => balance.weaponAttackSpeedProfile(index) === null), 'retired weapon slots 2-5 must not have attack-speed profiles');
 assert(balance.weaponAttackSpeedProfile(6) === null && balance.weaponAttackSpeedProfile(7) === null, 'bows must be excluded from attack-speed tiers');
 
 assert(combat.includes('COMBAT_BALANCE.weaponAttackCooldown(player.weaponIndex)'), 'client basic attacks must read shared weapon attack cooldown');

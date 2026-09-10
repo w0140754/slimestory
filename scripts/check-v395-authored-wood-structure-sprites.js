@@ -32,7 +32,8 @@ assert(game.includes('const woodRoofStructureImage = loadImage("assets/building/
 assert(game.includes("ctx.drawImage(image, x, y, 16, 16);"));
 assert(game.includes("ctx.drawImage(woodWallStructureImage, left, top, 16, 32);"));
 assert(game.includes("ctx.drawImage(woodDoorStructureImage, left, top, 16, 32);"));
-assert(game.includes("ctx.drawImage(woodRoofStructureImage, x, y, 16, 16);"));
+assert(game.includes('const roofImage = roofMaterial === "stone" ? stoneRoofStructureImage : woodRoofStructureImage;'));
+assert(game.includes("ctx.drawImage(roofImage, x, y, 16, 16);"));
 assert(game.includes("verticalWallHasUpperHorizontalJoin(structure)"));
 assert(game.includes("ROOF_OVERHANG"));
 assert(game.includes("structureFadeAlpha(structure, alpha)"));

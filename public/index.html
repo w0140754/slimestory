@@ -4168,6 +4168,10 @@
           <img id="inventoryStoneImg" alt="Stone" />
           <span class="resource-menu-count" id="inventoryStoneCount">0</span>
         </div>
+        <div class="menu-item resource-menu-item" data-resource-key="dirt" data-build-item="dirt" data-hotbar-assignable="true" data-owned-item="dirt" title="Dirt · assign to a 1–0 hotkey to fill an excavation">
+          <img id="inventoryDirtImg" src="assets/ui/dirt.svg?v=468" alt="Dirt" />
+          <span class="resource-menu-count" id="inventoryDirtCount">0</span>
+        </div>
         <div class="menu-item resource-menu-item" data-resource-key="whiteFlowers" title="White Flower">
           <img id="inventoryWhiteFlowerImg" alt="White Flower" />
           <span class="resource-menu-count" id="inventoryWhiteFlowerCount">0</span>
@@ -4213,6 +4217,10 @@
         <div class="menu-item resource-menu-item" data-resource-key="woodFloors" data-build-item="woodFloor" data-hotbar-assignable="true" data-owned-item="woodFloor" title="Wood Floor · assign to a 1–0 hotkey"><img id="inventoryWoodFloorImg" src="assets/ui/wood_floor.png?v=431" alt="Wood Floor" /><span class="resource-menu-count" id="inventoryWoodFloorCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="stoneFloors" data-build-item="stoneFloor" data-hotbar-assignable="true" data-owned-item="stoneFloor" title="Stone Floor · assign to a 1–0 hotkey"><img id="inventoryStoneFloorImg" src="assets/ui/stone_floor.png?v=431" alt="Stone Floor" /><span class="resource-menu-count" id="inventoryStoneFloorCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="woodWalls" data-build-item="woodWall" data-hotbar-assignable="true" data-owned-item="woodWall" title="Wood Wall · assign to a 1–0 hotkey"><img id="inventoryWoodWallImg" src="assets/ui/wood_wall.png?v=431" alt="Wood Wall" /><span class="resource-menu-count" id="inventoryWoodWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="stoneWalls" data-build-item="stoneWall" data-hotbar-assignable="true" data-owned-item="stoneWall" title="Stone Wall · assign to a 1–0 hotkey"><img id="inventoryStoneWallImg" src="assets/ui/stone_wall.png?v=443" alt="Stone Wall" /><span class="resource-menu-count" id="inventoryStoneWallCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="stoneCubes" data-build-item="stoneCube" data-hotbar-assignable="true" data-owned-item="stoneCube" title="Stone Cube · assign to a 1–0 hotkey"><img id="inventoryStoneCubeImg" src="assets/ui/stone_cube.png?v=449" alt="Stone Cube" /><span class="resource-menu-count" id="inventoryStoneCubeCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="stoneArches" data-build-item="caveDoor" data-hotbar-assignable="true" data-owned-item="caveDoor" title="Stone Arch · salvaged from natural caves · assign to a 1–0 hotkey"><img id="inventoryStoneArchImg" src="assets/building/stone_cave_door_v451.png?v=451" alt="Stone Arch" /><span class="resource-menu-count" id="inventoryStoneArchCount">0</span></div>
+        <div class="menu-item resource-menu-item" data-resource-key="ropes" data-build-item="rope" data-hotbar-assignable="true" data-owned-item="rope" title="Rope · place on a breakthrough hole · assign to a 1–0 hotkey"><img id="inventoryRopeImg" src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M4 3c7-3 10 6 4 8-5 2-7-4-3-6 4-2 6 2 3 4-2 1-3-1-2-2%27 fill=%27none%27 stroke=%27%23b88a4a%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="Rope" /><span class="resource-menu-count" id="inventoryRopeCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="woodDoors" data-build-item="woodDoor" data-hotbar-assignable="true" data-owned-item="woodDoor" title="Wood Door · assign to a 1–0 hotkey"><img id="inventoryWoodDoorImg" src="assets/ui/wood_door.png?v=431" alt="Wood Door" /><span class="resource-menu-count" id="inventoryWoodDoorCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="torches" data-build-item="torch" data-hotbar-assignable="true" data-owned-item="torch" title="Torch · hold for light or place in the world"><img id="inventoryTorchImg" src="assets/torch_v1.png?v=431" alt="Torch" /><span class="resource-menu-count" id="inventoryTorchCount">0</span></div>
         <div class="menu-item resource-menu-item" data-resource-key="chests" data-build-item="chest" data-hotbar-assignable="true" data-owned-item="chest" title="Chest · salvaged from generated treasure chests · assign to a 1–0 hotkey"><img id="inventoryChestImg" src="assets/building/chest_closed_v414.png?v=431" alt="Chest" /><span class="resource-menu-count" id="inventoryChestCount">0</span></div>
@@ -4223,14 +4231,10 @@
       <div class="menu-section-title">Weapons</div>
       <div id="inventoryWeaponsGrid" class="inventory-grid">
         <div class="menu-item" data-owned-item="weapon_sword" data-hotbar-assignable="true"><img id="inventorySwordImg" alt="Wood Sword" /><span>Wood Sword</span></div>
-        <div class="menu-item" data-owned-item="weapon_oldSword" data-hotbar-assignable="true"><img id="inventoryOldSwordImg" alt="Sword" /><span>Sword</span></div>
         <div class="menu-item" data-owned-item="weapon_bow" data-hotbar-assignable="true"><img id="inventoryBowImg" alt="Wood Bow" /><span>Wood Bow</span></div>
         <div class="menu-item" data-owned-item="weapon_dreamcatcher" data-hotbar-assignable="true"><img id="inventoryDreamcatcherImg" alt="Dreamcatcher" /><span>Dreamcatcher</span></div>
-        <div class="menu-item" data-owned-item="weapon_katana" data-hotbar-assignable="true"><img id="inventoryKatanaImg" alt="Katana" /><span>Katana</span></div>
         <div class="menu-item" data-owned-item="weapon_axe" data-hotbar-assignable="true"><img id="inventoryAxeImg" alt="Axe" /><span>Axe</span></div>
         <div class="menu-item" data-owned-item="weapon_pickaxe" data-hotbar-assignable="true"><img id="inventoryPickaxeImg" alt="Pickaxe" /><span>Pickaxe</span></div>
-        <div class="menu-item" data-owned-item="weapon_wand" data-hotbar-assignable="true"><img id="inventoryWandImg" alt="Wand" /><span>Wand</span></div>
-        <div class="menu-item" data-owned-item="weapon_rainWand" data-hotbar-assignable="true"><img id="inventoryRainWandImg" alt="Rain Wand" /><span>Rain Wand</span></div>
         <div class="menu-item" data-owned-item="weapon_shepherdStaff" data-hotbar-assignable="true"><img id="inventoryShepherdStaffImg" alt="Shepherd Staff" /><span>Shepherd Staff</span></div>
         <div class="menu-item" data-owned-item="weapon_lostKey" data-hotbar-assignable="true"><img id="inventoryLostKeyImg" alt="Tournesol" /><span>Tournesol</span></div>
         <div class="menu-item" data-owned-item="weapon_hugeSunflower" data-hotbar-assignable="true"><img id="inventoryHugeSunflowerImg" alt="Tabatha's Key" /><span>Tabatha's Key</span></div>
@@ -4374,9 +4378,12 @@
     </div>
     <div id="craftGrid" role="list" aria-label="Available crafting recipes">
       <button class="craft-recipe" type="button" data-craft-recipe="craftingTable"><img src="assets/wood_bench_v2.png" alt="Wood Crafting Table" /><span class="craft-recipe-name">Wood Crafting Table</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">10</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="rope"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M4 3c7-3 10 6 4 8-5 2-7-4-3-6 4-2 6 2 3 4-2 1-3-1-2-2%27 fill=%27none%27 stroke=%27%23b88a4a%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="Rope" /><span class="craft-recipe-name">Rope</span><span class="craft-recipe-cost">FREE · NO TABLE</span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodFloor"><img src="assets/ui/wood_floor.png?v=431" alt="Wood Floor" /><span class="craft-recipe-name">Wood Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="stoneFloor"><img src="assets/ui/stone_floor.png?v=431" alt="Stone Floor" /><span class="craft-recipe-name">Stone Floor ×4</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">2</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodWall"><img src="assets/ui/wood_wall.png?v=431" alt="Wood Wall" /><span class="craft-recipe-name">Wood Wall ×2</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">3</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="stoneWall"><img src="assets/ui/stone_wall.png?v=443" alt="Stone Wall" /><span class="craft-recipe-name">Stone Wall</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
+      <button class="craft-recipe" type="button" data-craft-recipe="stoneCube"><img src="assets/ui/stone_cube.png?v=449" alt="Stone Cube" /><span class="craft-recipe-name">Stone Cube</span><span class="craft-recipe-cost"><span data-craft-ingredient="stone"><img class="craft-ingredient-icon" alt="Stone" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="woodDoor"><img src="assets/ui/wood_door.png?v=431" alt="Wood Door" /><span class="craft-recipe-name">Wood Door</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" alt="Wood" /><span class="craft-cost-value">4</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="torch"><img id="craftTorchImg" src="assets/torch_v1.png?v=431" alt="Torch" /><span class="craft-recipe-name">Torch</span><span class="craft-recipe-cost"><span data-craft-ingredient="wood"><img class="craft-ingredient-icon" id="craftTorchWoodIcon" alt="Wood" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span><span data-craft-ingredient="greenJellyCubes"><img class="craft-ingredient-icon" id="craftTorchJellyIcon" src="assets/green_jelly_cube.png?v=431" alt="Green Jelly Cube" /><span class="craft-cost-value">1</span><span class="craft-ingredient-check">✓</span></span></span><span class="craft-recipe-status">CRAFT</span></button>
       <button class="craft-recipe" type="button" data-craft-recipe="testWoodSupply"><img alt="Wood" /><span class="craft-recipe-name">Test Wood +100</span><span class="craft-recipe-cost">FREE · TEST SUPPLY</span><span class="craft-recipe-status">TAKE</span></button>
@@ -4439,35 +4446,32 @@
     <div id="rewardToastDetail"></div>
   </div>
 </div>
-<script src="/shared/world-content-runtime.js?v=431e-432"></script>
-<script src="/shared/terrain-rules.js?v=431e-432"></script>
-<script src="/shared/terrain-presentation.js?v=431e-432"></script>
-<script src="/shared/combat-balance.js?v=431e-432"></script>
-<script src="/shared/action-balance.js?v=431e-432"></script>
-<script src="/shared/rain-field.js?v=431e-432"></script>
-<script src="/shared/weather-rules.js?v=431e-432"></script>
-<script src="/shared/enemy-net-protocol.js?v=431e-432"></script>
-<script src="/shared/structure-geometry.js?v=431e-432"></script>
-<script src="/shared/structure-topology.js?v=431e-432"></script>
-<script src="/shared/player-net-protocol.js?v=431e-432"></script>
-<script src="/client-config.js?v=431e-432"></script>
-<script src="/client-utils.js?v=431e-432"></script>
-<script src="/client-world.js?v=431e-432"></script>
-<script src="/client-maps.js?v=431e-432"></script>
-<script src="/client-enemies.js?v=431e-432"></script>
-<script src="/client-enemy-runtime.js?v=431e-432"></script>
-<script src="/client-enemy-rendering.js?v=431e-432"></script>
-<script src="/client-combat.js?v=431e-432"></script>
-<script src="/client-actions.js?v=431e-432"></script>
-<script src="/client-wand-actions.js?v=431e-432"></script>
-<script src="/client-tiger-paw-actions.js?v=431e-432"></script>
-<script src="/client-status.js?v=431e-432"></script>
-<script src="/client-fire-environment.js?v=431e-432"></script>
-<script src="/client-network.js?v=431e-432"></script>
-<script src="/client-simulation-foundation.js?v=431e-432"></script>
-<script src="/game.js?v=431e-432"></script>
-<script src="/client-terrain.js?v=431e-432"></script>
-<script src="/client-input.js?v=431e-432"></script>
-<script src="/client-app.js?v=431e-432"></script>
+<script src="/shared/world-content-runtime.js?v=431e-468"></script>
+<script src="/shared/terrain-rules.js?v=431e-468"></script>
+<script src="/shared/terrain-presentation.js?v=431e-468"></script>
+<script src="/shared/combat-balance.js?v=431e-468"></script>
+<script src="/shared/weather-rules.js?v=431e-468"></script>
+<script src="/shared/enemy-net-protocol.js?v=431e-468"></script>
+<script src="/shared/structure-geometry.js?v=431e-468"></script>
+<script src="/shared/structure-topology.js?v=431e-468"></script>
+<script src="/shared/player-net-protocol.js?v=431e-468"></script>
+<script src="/client-config.js?v=431e-468"></script>
+<script src="/client-utils.js?v=431e-468"></script>
+<script src="/client-world.js?v=431e-468"></script>
+<script src="/client-maps.js?v=431e-468"></script>
+<script src="/client-enemies.js?v=431e-468"></script>
+<script src="/client-enemy-runtime.js?v=431e-468"></script>
+<script src="/client-enemy-rendering.js?v=431e-468"></script>
+<script src="/client-combat.js?v=431e-468"></script>
+<script src="/client-actions.js?v=431e-468"></script>
+<script src="/client-tiger-paw-actions.js?v=431e-468"></script>
+<script src="/client-status.js?v=431e-468"></script>
+<script src="/client-fire-environment.js?v=431e-468"></script>
+<script src="/client-network.js?v=431e-468"></script>
+<script src="/client-simulation-foundation.js?v=431e-468"></script>
+<script src="/game.js?v=431e-468"></script>
+<script src="/client-terrain.js?v=431e-468"></script>
+<script src="/client-input.js?v=431e-468"></script>
+<script src="/client-app.js?v=431e-468"></script>
 </body>
 </html>

@@ -46,7 +46,7 @@ assert.match(server, /spawnSharedResource\([\s\S]*?"stone"/);
 assert.doesNotMatch(server, /handleRockHurlAction|tickServerRockHurl|rockMotion|rockState/, "retired throwable-rock Hurl runtime must stay removed");
 assert.match(server, /ROCK_REGROW_MIN_MS/);
 assert.match(game, /weapon_pickaxe: 1/);
-assert.match(game, /for \(const starterItemId of \["weapon_sword", "weapon_pickaxe", "weapon_axe"\]\)/);
+assert.match(game, /items: \{\s*weapon_sword: 1,\s*weapon_pickaxe: 1,\s*weapon_axe: 1\s*\}/);
 assert.match(game, /function tryHitRock\(/);
 assert.match(combat, /weapon === "pickaxe"/);
 assert.match(balance, /id: "weapon_pickaxe"/);

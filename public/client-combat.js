@@ -11,13 +11,11 @@ function spawnRemoteBasicProjectileImpact(
   const y = Number(payload.y) || 0;
 
   const projectileType =
-    payload.projectileType === "rainWand"
-      ? "rainWand"
-      : payload.projectileType === "shepherdStaff"
-        ? "shepherdStaff"
-        : payload.projectileType === "arrow"
-          ? "arrow"
-          : "wand";
+    payload.projectileType === "shepherdStaff"
+      ? "shepherdStaff"
+      : payload.projectileType === "arrow"
+        ? "arrow"
+        : "wand";
 
   removeClosestRemoteProjectile(
     basicProjectiles,
@@ -206,15 +204,6 @@ function isWandTypeWeapon(weapon = equippedWeapon()) {
   return WAND_WEAPON_TYPES.includes(weapon);
 }
 
-function showWandRequiredMessage() {
-  spawnFloatingText(
-    player.x,
-    player.y - 31,
-    "WAND REQUIRED",
-    "#d9c6ff",
-    0.72
-  );
-}
 
 function updateBasicProjectiles(dt) {
   for (let i = basicProjectiles.length - 1; i >= 0; i--) {
@@ -375,16 +364,7 @@ function drawBasicProjectile(projectile, camX, camY) {
     return;
   }
 
-  if (projectile.type === "rainWand") {
-    ctx.fillStyle = "#28597a";
-    ctx.fillRect(x - 2, y - 1, 4, 3);
-
-    ctx.fillStyle = "#71c3f0";
-    ctx.fillRect(x - 1, y - 1, 3, 2);
-
-    ctx.fillStyle = "#d9f7ff";
-    ctx.fillRect(x + 1, y, 1, 1);
-  } else if (projectile.type === "shepherdStaff") {
+  if (projectile.type === "shepherdStaff") {
     ctx.fillStyle = "#5b4928";
     ctx.fillRect(x - 2, y - 1, 4, 3);
 
@@ -406,7 +386,7 @@ function drawBasicProjectile(projectile, camX, camY) {
 }
 
 function currentMeleeReach() {
-  return equippedWeapon() === "katana" ? 31 : SWORD_REACH;
+  return SWORD_REACH;
 }
 
 function damageEnemyWithProjectile(
@@ -516,6 +496,7 @@ function tryHitEnemies(source = "melee", maxTargets = Infinity) {
   for (const { enemy } of selectedTargets) {
     damageEnemyWithMelee(enemy, source);
   }
+  return selectedTargets.length;
 }
 
 function attackCooldownForWeapon(_weapon) {
@@ -547,14 +528,18 @@ function attackImpactDelayForWeapon(weapon) {
 }
 
 function queueBasicAttackImpact(weapon) {
+  const lockedStructure = weapon === "pickaxe" ? playerStructurePickaxeTarget() : null;
+  const pointerWorldX = currentCamX + mouseCanvasX;
+  const pointerWorldY = currentCamY + mouseCanvasY;
   pendingBasicAttack = {
     weapon,
     mapId: currentMapId,
     time: attackImpactDelayForWeapon(weapon),
     // Lock the cursor-selected structure at mouse/touch-down so the delayed
     // Pickaxe impact cannot switch targets if the pointer moves during swing.
-    structureTargetId: weapon === "pickaxe"
-      ? playerStructurePickaxeTarget()?.id || null
+    structureTargetId: lockedStructure?.id || null,
+    groundDigTarget: weapon === "pickaxe" && !lockedStructure
+      ? { x: pointerWorldX, y: pointerWorldY }
       : null
   };
 }
@@ -586,7 +571,8 @@ function updatePendingBasicAttack(dt) {
 
   executeWeaponAttack(
     pending.weapon,
-    pending.structureTargetId
+    pending.structureTargetId,
+    pending.groundDigTarget
   );
 
 }
@@ -616,12 +602,8 @@ function updateAttackAimFromPointer(pointerX, pointerY) {
   };
 }
 
-function executeWeaponAttack(weapon, lockedStructureId = undefined) {
-  if (
-    weapon === "sword" ||
-    weapon === "oldSword" ||
-    weapon === "katana"
-  ) {
+function executeWeaponAttack(weapon, lockedStructureId = undefined, lockedGroundDigTarget = null) {
+  if (weapon === "sword") {
     tryHitEnemies("melee", 1);
     tryCutHarvestFlowers();
     tryCutGrass();
@@ -635,9 +617,9 @@ function executeWeaponAttack(weapon, lockedStructureId = undefined) {
   }
 
   if (weapon === "pickaxe") {
-    tryHitEnemies("melee", 1);
-    if (!tryHitPlayerStructure(lockedStructureId)) {
-      tryHitRock();
+    const enemyHits = tryHitEnemies("melee", 1);
+    if (enemyHits <= 0 && !tryHitPlayerStructure(lockedStructureId) && !tryHitRock()) {
+      tryDigSurfaceGround(lockedGroundDigTarget);
     }
     return;
   }
@@ -689,29 +671,6 @@ function executePrimaryAttackCommand(payload) {
       return;
   }
 
-  // Item-driven actions belong directly to the equipped item. Fire Wand uses
-  // Fireball as its primary press/aim/release action; Rain Wand begins the
-  // Rain Cloud cast.
-  if (currentWeapon === "wand") {
-    const target = {
-      x: currentCamX + Number(payload.pointerX || 0),
-      y: currentCamY + Number(payload.pointerY || 0)
-    };
-    updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
-    beginFireballAim(target);
-      return;
-  }
-
-  if (currentWeapon === "rainWand") {
-    const target = {
-      x: currentCamX + Number(payload.pointerX || 0),
-      y: currentCamY + Number(payload.pointerY || 0)
-    };
-    updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
-    beginRainCloudCast(target);
-      return;
-  }
-
   if (currentWeapon === "tigerPaw") {
     updateAttackAimFromPointer(payload.pointerX, payload.pointerY);
     tryCastHurl();
@@ -756,7 +715,6 @@ function handlePrimaryAttack(event) {
   if (typeof tryPlaceSelectedBuildPiece === "function" && tryPlaceSelectedBuildPiece(event)) return;
   if (player.isDead) return;
   if (shopOpen || beachQuestOpen || event.button !== 0) return;
-  if (player.rainCloudCasting || fireballIsAiming()) return;
 
   const pointer = getCanvasPointerPosition(event);
   mouseCanvasX = pointer.x;
@@ -790,7 +748,6 @@ function repeatHeldPrimaryAttackIfReady() {
   if (!primaryAttackHeld) return;
   if (player.isDead || player.hp <= 0) return;
   if (shopOpen || beachQuestOpen) return;
-  if (player.rainCloudCasting || fireballIsAiming()) return;
   if (player.attackCooldown > 0) return;
 
   const weapon = equippedWeapon();
@@ -813,27 +770,10 @@ function handleBowVisualMouseUp(event) {
     }
   }
 
-  // Fire Wand owns Fireball in v377. Reuse the existing pointer-up bridge
-  // (desktop mouse and mobile ATK both arrive here) to commit the aimed cast.
-  if (
-    !player.isDead &&
-    event.button === 0 &&
-    fireballIsAiming() &&
-    equippedWeapon() === "wand"
-  ) {
-    const pointer = getCanvasPointerPosition(event);
-    releaseFireballAim({
-      x: currentCamX + pointer.x,
-      y: currentCamY + pointer.y
-    });
-    return;
-  }
-
   if (
     player.isDead ||
     event.button !== 0 ||
-    !player.bowDrawing ||
-    player.rainCloudCasting
+    !player.bowDrawing
   ) {
     return;
   }

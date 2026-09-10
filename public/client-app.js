@@ -133,10 +133,7 @@ function updateTransientSystems(dt) {
   updateWoodDrops(dt);
   updateFlowerDrops(dt);
   updateLootPickupAnimations(dt);
-  updateFireballAim(dt);
-  updateRainCloudCast(dt);
   updateBasicProjectiles(dt);
-  updateRainMagic(dt);
   updateFire(dt);
   updateEnvironmentRegrowthEffects(dt);
 }
@@ -233,22 +230,6 @@ function updatePlayerStatusAndTimers(dt) {
     player.attackDuration = DEFAULT_BASIC_ATTACK_DURATION;
   }
 
-  if (player.actionCooldowns) {
-    for (const actionId of Object.keys(player.actionCooldowns)) {
-      const endAtMs = Number(player.actionCooldownEndTimes?.[actionId]) || 0;
-      if (endAtMs > 0) {
-        player.actionCooldowns[actionId] = Math.max(
-          0,
-          (endAtMs - Date.now()) / 1000
-        );
-      } else {
-        player.actionCooldowns[actionId] = Math.max(
-          0,
-          (Number(player.actionCooldowns[actionId]) || 0) - dt
-        );
-      }
-    }
-  }
 
   updatePlayerBurnStatus(dt);
 }
@@ -295,7 +276,6 @@ function updatePlayerMovement(dt) {
   const movement = readMovementInput();
   const strafeMultiplier = bowStrafeMovementMultiplier();
   const canActuallyMove =
-    !player.rainCloudCasting &&
     movement.moving &&
     strafeMultiplier > 0;
 
@@ -305,8 +285,7 @@ function updatePlayerMovement(dt) {
       player.walkTime = 0;
     }
 
-    // Magic Grass is caster-created control terrain: players can roam through
-    // it freely. Wet still slows players normally.
+    // Wet slows players normally.
     const wetMovementMultiplier =
       playerIsWet() ? GAME_CONFIG.player.wetSpeedMultiplier : 1;
 
@@ -330,6 +309,7 @@ function updatePlayerMovement(dt) {
   player.y = clampToWorld(player.y, 15, world.height - 1);
 
   updateMapConnection();
+  if (typeof updateRopeShaftTraversal === "function") updateRopeShaftTraversal(movement);
 }
 
 function collectNearbyPickups() {
@@ -399,7 +379,6 @@ function processGameCommand(command) {
 
   if (command.type === "equipWeapon") {
     // Wand actions are committed while aiming/casting.
-    if (fireballIsAiming() || player.rainCloudCasting) return;
 
     const slotIndex =
       Number(command.payload.index);
@@ -413,24 +392,17 @@ function processGameCommand(command) {
     return;
   }
 
-  if (command.type === "releaseFireball") {
-    releaseFireballAim();
-    return;
-  }
-
   if (command.type === "mobilePointTarget") {
     executeMobilePointTargetCommand(command.payload);
     return;
   }
 
   if (command.type === "interact") {
-    if (player.rainCloudCasting) return;
     interactWithNearbyObject();
     return;
   }
 
   if (command.type === "primaryAttack") {
-    if (player.rainCloudCasting) return;
     executePrimaryAttackCommand(command.payload);
   }
 }
@@ -507,6 +479,9 @@ function drawTerrainBackdrop() {
 }
 
 function drawTerrainEarthFaces(camX, camY) {
+  // v458: the old brown south-face overhang is a surface cliff treatment and
+  // looks like a deprecated 3D lip inside the underground layer.
+  if (typeof currentMapIsSubterranean === "function" && currentMapIsSubterranean()) return;
   if (typeof drawTerrainSouthVoidFaces === "function") {
     drawTerrainSouthVoidFaces(
       currentMapId,
@@ -542,9 +517,6 @@ function drawTerrainGroundLayer(camX, camY) {
     drawBeachTideOverlay(currentMapId, camX, camY);
   }
 
-  for (const cloud of rainClouds) {
-    drawRainCloudGround(cloud, camX, camY);
-  }
 
   for (const house of houses) {
     drawHouseGround(house, camX, camY);
@@ -727,22 +699,6 @@ function buildWorldDrawables(camX, camY) {
     );
   }
 
-  for (const fireball of fireballs) {
-    addDrawable(
-      drawables,
-      fireball.y,
-      () => drawFireball(fireball, camX, camY)
-    );
-  }
-
-
-  for (const cloud of rainClouds) {
-    addDrawable(
-      drawables,
-      cloud.y,
-      () => drawRainCloud(cloud, camX, camY)
-    );
-  }
 
   if (onlineClient) {
     for (const remotePlayer of onlineClient.playersOnCurrentMap()) {
@@ -807,8 +763,6 @@ function drawForegroundLayer(camX, camY) {
   drawGrowthParticles(camX, camY);
   drawLevelUpParticles(camX, camY);
 
-  drawFireballTargeting(camX, camY);
-  drawRainCloudCastIndicator(camX, camY);
   drawDamageNumbers(camX, camY);
   drawFloatingTexts(camX, camY);
   drawPotionUseEffects(camX, camY);
@@ -928,12 +882,6 @@ class GameApp {
     // changes, the player explicitly switches context, or a stack is moved.
     if (typeof updateNearbyChestContext === "function") {
       updateNearbyChestContext();
-    }
-
-    // Cooldown deadlines are wall-clock based; refresh only the lightweight
-    // item-action layer every frame. This never rewrites item image sources.
-    if (typeof updateHotbarActionCooldownHud === "function") {
-      updateHotbarActionCooldownHud();
     }
 
     // v420: recipe availability depends on live proximity to a portable

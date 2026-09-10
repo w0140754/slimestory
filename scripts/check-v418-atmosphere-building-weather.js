@@ -15,9 +15,9 @@ const game = read("public", "game.js");
 const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(html.includes('/shared/weather-rules.js?v=431'));
 assert(html.indexOf('/shared/weather-rules.js?v=431') < html.indexOf('/game.js?v=431'));
 
@@ -33,7 +33,7 @@ assert(!server.includes('reason = "roofed"'));
 assert(!game.includes("if (floorExistsAcrossBuildEdge(candidate.floorX, candidate.floorY, candidate.edge)) return null;"));
 assert(!game.includes("if (!candidate || floorBelongsToCompletedRoof(candidate.floor)) return null;"));
 assert(server.includes('reason = "doorNeedsWalls"'));
-assert(game.includes('kind === "woodDoor" && !doorCandidateHasFlankingWalls(candidate)'));
+assert(game.includes('["woodDoor", "caveDoor"].includes(kind) && !doorCandidateHasFlankingWalls(candidate)'));
 
 // Door anti-stuck is symmetric client/server and still constrained to the real
 // doorway channel; adjacent wall pieces continue to own the solid frame.

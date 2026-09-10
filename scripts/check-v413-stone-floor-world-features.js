@@ -16,10 +16,10 @@ const input = read("public", "client-input.js");
 const html = read("public", "index.html");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(html.includes('/game.js?v=431'));
 
 function pngDimensions(file) {
@@ -36,7 +36,7 @@ assert.strictEqual(topology.layerOf({ kind: "stoneFloor" }), topology.LAYERS.SUR
 assert(topology.SURFACE_KINDS.has("woodFloor") && topology.SURFACE_KINDS.has("stoneFloor"));
 
 assert(game.includes('const BUILD_FLOOR_STRUCTURE_KINDS = Object.freeze(["woodFloor", "stoneFloor"]);'));
-assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest", "craftingTable"]);'));
+assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"]);'));
 assert(game.includes('stoneFloor: Object.freeze({'));
 assert(game.includes('resourceKey: "stoneFloors"'));
 assert(game.includes('structure?.kind === "stoneFloor" ? stoneFloorStructureImage : woodFloorStructureImage'));
@@ -44,8 +44,8 @@ assert(html.includes('data-build-item="stoneFloor"'));
 assert(html.includes('id="inventoryStoneFloorCount"'));
 assert(input.includes('["woodFloor", "stoneFloor", "chest", "craftingTable"].includes(selectedBuildPiece)'));
 assert(server.includes('const BUILD_FLOOR_KINDS = Object.freeze(new Set(["woodFloor", "stoneFloor"]));'));
-assert(server.includes('stoneFloor: Object.freeze({ repeatable: true, resourceKey: "stoneFloors", outputCount: 4'));
-assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "woodDoor", "torch", "chest"'));
+assert(server.includes('stoneFloor: Object.freeze({ resourceKey: "stoneFloors", outputCount: 4'));
+assert(server.includes('"woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "chest"'));
 
 const featureTypes = new Set();
 let generatedBuildingCount = 0;
@@ -73,11 +73,17 @@ for (const [mapId, map] of Object.entries(world.maps)) {
   }
   for (const chest of structures.filter(item => item.kind === "chest" && item.treasure)) {
     generatedTreasureCount += 1;
-    assert(typeof chest.id === "string" && chest.id.includes(":treasure:"));
     assert.strictEqual(chest.worldGenerated, true);
+    if (chest.featureType === "cave" || chest.naturalCave) {
+      assert(typeof chest.roomId === "string" && chest.roomId.length > 0, "cave treasure must belong to a specific chamber");
+      const supportingFloor = structures.find(item => item.kind === "caveFloor" && item.x === chest.x && item.y === chest.y && item.roomId === chest.roomId);
+      assert(supportingFloor, "cave treasure must sit on a cave floor cell inside its room");
+      continue;
+    }
+    assert(typeof chest.id === "string" && chest.id.includes(":treasure:"));
     const houseFeature = features.find(feature => feature.id === chest.featureId);
-    assert(houseFeature && ["house", "ruin"].includes(houseFeature.type), "treasure must belong to a generated building");
-    assert(Math.hypot(chest.x - houseFeature.x, chest.y - houseFeature.y) <= 24, "treasure must be inside the generated building footprint");
+    assert(houseFeature && ["house", "ruin"].includes(houseFeature.type), "non-cave treasure must belong to a generated building");
+    assert(Math.hypot(chest.x - houseFeature.x, chest.y - houseFeature.y) <= 24, "non-cave treasure must be inside the generated building footprint");
   }
   for (const region of map.terrain?.regions || []) if (region.type === "water") pondCount += 1;
   for (const structure of structures.filter(item => item.featureType === "stonePatch")) {

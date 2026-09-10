@@ -14,16 +14,16 @@ const combat = read("public", "client-combat.js");
 const html = read("public", "index.html");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 
 assert(world.worldGrid, "coordinate world metadata missing");
 assert.strictEqual(world.worldGrid.radius, 1);
 assert.strictEqual(world.worldGrid.startMapId, "world_p0_p0");
 assert.strictEqual(world.defaultPlayerLoad.mapId, "world_p0_p0");
 
-const gridEntries = Object.entries(world.maps).filter(([, map]) => map?.grid);
+const gridEntries = Object.entries(world.maps).filter(([, map]) => map?.grid && Number(map.grid.layerDepth || 0) === 0);
 assert.strictEqual(gridEntries.length, 9);
 const coords = new Set();
 for (const [mapId, map] of gridEntries) {
@@ -52,11 +52,10 @@ assert(!game.includes("abilityPoints"));
 assert(!game.includes("statPoints"));
 assert(!server.includes("sanitizedClassId"));
 
-// Item actions remain tied directly to the equipped item.
-assert(combat.includes('if (currentWeapon === "wand")'));
-assert(combat.includes("beginFireballAim(target)"));
-assert(combat.includes('if (currentWeapon === "rainWand")'));
-assert(combat.includes("beginRainCloudCast(target)"));
+// Current item actions remain tied directly to equipped items. Retired Fire/Rain Wand
+// primary wiring is intentionally gone; Tiger Paw remains current.
+assert(!combat.includes('if (currentWeapon === "wand")'));
+assert(!combat.includes('if (currentWeapon === "rainWand")'));
 assert(combat.includes('if (currentWeapon === "tigerPaw")'));
 assert(combat.includes("tryCastHurl();"));
 

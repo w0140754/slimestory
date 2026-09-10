@@ -16,10 +16,10 @@ const network = read("public", "client-network.js");
 const enemyRendering = read("public", "client-enemy-rendering.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert(html.includes('/game.js?v=431'));
 
 // The experimental house-only darkness and v405 wall-face carve are gone.
@@ -55,7 +55,7 @@ assert(network.includes('payload.supportId = supportId'));
 assert(server.includes("function torchSupportById(mapId, supportId)"));
 assert(server.includes("function attachedTorchForSupport(mapId, supportId)"));
 assert(server.includes('supportId: torchSupport.id'));
-assert(server.includes('mountType: torchSupport.kind === "woodWall" ? "wall" : "floor"'));
+assert(server.includes('mountType: BUILD_WALL_KINDS.has(torchSupport.kind) ? "wall" : "floor"'));
 assert(server.includes('reason: "supportPickaxeFirst"') || server.includes('"supportPickaxeFirst"'));
 assert(server.includes("attachmentRemoved: true"));
 assert(server.includes("supportId: structure.id"));

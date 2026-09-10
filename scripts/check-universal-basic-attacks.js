@@ -13,8 +13,8 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-432";'), "server build must be 6-11-431");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'), "client build must be 6-11-431");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build must be 6-11-431");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build must be 6-11-431");
 assert(html.includes('/client-combat.js?v=431') && html.includes('/game.js?v=431'), "client cache keys must be v431");
 
 assert(game.includes('let pendingBasicAttack = null;'), "generic pending basic attack state missing");
@@ -30,7 +30,7 @@ assert(combat.includes('player.basicAttackMovementLockTime = 0;'), "all non-bow 
 assert(combat.includes('queueBasicAttackImpact(currentWeapon);'), "primary attacks must queue through generic impact path");
 assert(!combat.includes('if (isWandTypeWeapon(currentWeapon)) {\n    // Plant only voluntary movement'), "old wand-only impact branch still present");
 
-for (const weapon of ['"sword"', '"oldSword"', '"katana"', '"axe"', '"pickaxe"']) {
+for (const weapon of ['"sword"', '"axe"', '"pickaxe"']) {
   assert(combat.includes(weapon), `expected non-bow weapon routing missing: ${weapon}`);
 }
 assert(combat.includes('if (isWandTypeWeapon(weapon))'), "wand routing must remain");

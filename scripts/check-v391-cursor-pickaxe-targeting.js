@@ -11,11 +11,11 @@ const config = read("public", "client-config.js");
 const game = read("public", "game.js");
 const combat = read("public", "client-combat.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
-assert(server.includes('const BUILD_VERSION = "6-11-432";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-432";'));
+assert.strictEqual(pkg.version, "0.6.11.468");
+assert(server.includes('const BUILD_VERSION = "6-11-468";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
 assert.strictEqual(world.version, 414);
-assert.strictEqual(Object.keys(world.maps).length, 9, "v391 must preserve the active coordinate world");
+assert.strictEqual(Object.values(world.maps).filter(map => Number(map?.grid?.layerDepth || 0) === 0).length, 9, "v391 must preserve the active coordinate world");
 
 assert(game.includes("function pickaxeStructurePointerBounds("), "cursor hit bounds helper missing");
 assert(game.includes("const pointerWorldX = currentCamX + mouseCanvasX;"), "Pickaxe target must use cursor world X");
@@ -30,9 +30,9 @@ assert(!targetSource.includes("bestDistance"), "nearest-to-player tie breaking s
 assert(game.includes("pointerDistance < bestPointerDistance"), "cursor proximity must select the winning structure");
 assert(game.includes("priority < bestPriority"), "wall/door overlap priority should remain for visible facades");
 
-assert(combat.includes('structureTargetId: weapon === "pickaxe"'), "Pickaxe click must lock the cursor-selected structure");
+assert(combat.includes('const lockedStructure = weapon === "pickaxe" ? playerStructurePickaxeTarget() : null;') && combat.includes('structureTargetId: lockedStructure?.id || null'), "Pickaxe click must lock the cursor-selected structure");
 assert(combat.includes("pending.structureTargetId"), "delayed impact must receive the locked structure id");
-assert(combat.includes("executeWeaponAttack(weapon, lockedStructureId = undefined)"), "attack must distinguish unlocked from explicitly empty targets");
+assert(combat.includes("executeWeaponAttack(weapon, lockedStructureId = undefined, lockedGroundDigTarget = null)"), "attack must distinguish locked structure targets from empty-ground dig targets");
 assert(game.includes("function tryHitPlayerStructure(lockedStructureId = undefined)"), "structure hit must accept a locked target id");
 assert(game.includes("lockedStructureId === undefined"), "null click target must not fall back to a later cursor position");
 

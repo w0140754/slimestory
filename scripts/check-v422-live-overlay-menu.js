@@ -14,7 +14,7 @@ const app = read("public", "client-app.js");
 const combat = read("public", "client-combat.js");
 const network = read("public", "client-network.js");
 
-assert.strictEqual(pkg.version, "0.6.11.432");
+assert.strictEqual(pkg.version, "0.6.11.468");
 assert(html.includes('id="menuHudButton"') && html.includes('id="craftHudButton"'));
 assert(html.includes('id="inventoryDetailPanel"'));
 assert(html.includes('data-equipment-slot="head"') && html.includes('data-equipment-slot="charm"'));
