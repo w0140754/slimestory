@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const BUILD_VERSION = "6-11-468";
+const BUILD_VERSION = "6-11-471";
 const ENEMY_KNOCKBACK_DAMAGE_THRESHOLD = 0.25;
 
 // v389 shared world clock. One full in-game day lasts 12 real minutes, which
@@ -1172,7 +1172,10 @@ function runtimeEnemySpawnPoint(mapId) {
     ...(environment.houses || []).map(entity => ({ x: entity.x, y: entity.y, radius: 34 })),
     ...(definition.features || [])
       .filter(feature => ["house", "ruin"].includes(feature?.type))
-      .map(feature => ({ x: feature.x, y: feature.y, radius: Math.max(34, Number(feature.radius) || 48) }))
+      .map(feature => ({ x: feature.x, y: feature.y, radius: Math.max(34, Number(feature.radius) || 48) })),
+    ...(definition.structures || [])
+      .filter(structure => structure?.kind === "cavernColumn")
+      .map(structure => ({ x: structure.x, y: structure.y, radius: 13 }))
   ];
 
   for (let attempt = 0; attempt < 120; attempt += 1) {
@@ -1187,7 +1190,11 @@ function runtimeEnemySpawnPoint(mapId) {
     return { x: Math.round(x), y: Math.round(y) };
   }
 
-  return {
+  const fallbackSpawn = definition.subterranean && definition.playerSpawns?.[0];
+  return fallbackSpawn ? {
+    x: Number(fallbackSpawn.x),
+    y: Number(fallbackSpawn.y)
+  } : {
     x: Math.max(minEdge, Math.min(dimensions.width - minEdge, dimensions.width * 0.25)),
     y: Math.max(minEdge, Math.min(dimensions.height - minEdge, dimensions.height * 0.25))
   };
@@ -1592,7 +1599,7 @@ function serverPointHitsStructureWall(
   { includeDoors = true } = {}
 ) {
   for (const structure of structuresOnMap(mapId)) {
-    if (!BUILD_WALL_KINDS.has(structure.kind) && !["stoneCube", "dugPit"].includes(structure.kind) && !(includeDoors && structure.kind === "woodDoor")) continue;
+    if (!BUILD_WALL_KINDS.has(structure.kind) && !["stoneCube", "cavernColumn", "dugPit"].includes(structure.kind) && !(includeDoors && structure.kind === "woodDoor")) continue;
     if (structure.kind === "dugPit" && structure.ropePlaced) continue;
     if (structure.kind === "woodDoor" && serverDoorCurrentlyOpen(structure)) continue;
     if (circleRectHit(x, y, radius, structureRect(structure))) return true;
@@ -1642,6 +1649,7 @@ function serverWoodWallImpact(
   for (const structure of structuresOnMap(mapId)) {
     const blocks = BUILD_WALL_KINDS.has(structure?.kind) ||
       structure?.kind === "stoneCube" ||
+      structure?.kind === "cavernColumn" ||
       (structure?.kind === "woodDoor" && !ignoreDoors && !serverDoorCurrentlyOpen(structure));
     if (!blocks) continue;
     if (ignoreStructureId && structure.id === ignoreStructureId) continue;
@@ -1722,7 +1730,7 @@ function serverSurfaceRopeAllowsPlayerStep(structure, fromX, fromY, toX, toY, ra
 
 function serverPlayerStepHitsStructureWall(playerId, mapId, fromX, fromY, toX, toY, radius = 4) {
   for (const structure of structuresOnMap(mapId)) {
-    if (!["woodWall", "stoneWall", "stoneCube", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure.kind)) continue;
+    if (!["woodWall", "stoneWall", "stoneCube", "cavernColumn", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure.kind)) continue;
     if (!circleRectHit(toX, toY, radius, structureRect(structure))) continue;
     if (
       structure.kind === "dugPit" &&
@@ -1747,7 +1755,7 @@ function playerSpawnPointBlocked(mapId, x, y, radius = 4) {
     TERRAIN_RULES.circleCanOccupy(definition, x, y, radius, { allowWater: true }) === false
   ) return true;
   return structuresOnMap(mapId).some(structure =>
-    ["woodWall", "stoneWall", "stoneCube", "dugPit", "chest", "craftingTable"].includes(structure?.kind) &&
+    ["woodWall", "stoneWall", "stoneCube", "cavernColumn", "dugPit", "chest", "craftingTable"].includes(structure?.kind) &&
     !(structure.kind === "dugPit" && structure.ropePlaced) &&
     circleRectHit(x, y, radius, structureRect(structure))
   );
@@ -1979,6 +1987,12 @@ function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
     if (!wall || structuresOnMap(mapId).some(structure => wallMatchesBoundary(structure, wall))) return true;
   }
 
+  if (structuresOnMap(mapId).some(structure =>
+    structure?.kind === "cavernColumn" &&
+    Math.abs(Number(structure.x) - Number(x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(y)) < 1
+  )) return true;
+
   for (const entity of environmentEntitiesOnMap(mapId)) {
     if (entity.removed || entity.depleted || entity.cut) continue;
     if (Math.hypot(entity.x - testX, entity.y - testY) < (edgeKind ? 10 : 18)) return true;
@@ -2000,6 +2014,14 @@ function structurePlacementBlocked(mapId, kind, x, y, wall = null) {
     }
   }
   return false;
+}
+
+function excavationAtBuildCell(mapId, x, y) {
+  return structuresOnMap(mapId).some(structure =>
+    ["dugPit", "dugDirt"].includes(structure?.kind) &&
+    Math.abs(Number(structure.x) - Number(x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(y)) < 1
+  );
 }
 
 function handleStructurePlaceRequest(playerId, socket, message) {
@@ -2088,6 +2110,7 @@ function handleStructurePlaceRequest(playerId, socket, message) {
   let reason = null;
 
   if ((Number(playerState[resourceKey]) || 0) <= 0) reason = "noneOwned";
+  else if (excavationAtBuildCell(playerState.mapId, floorX, floorY)) reason = "blocked";
   else if ((BUILD_WALL_KINDS.has(kind) || ["woodDoor", "caveDoor"].includes(kind)) && (!wall || !floorStructureAt(playerState.mapId, floorX, floorY))) reason = "needsFloor";
   else if (kind === "chest" && !floorStructureAt(playerState.mapId, floorX, floorY)) reason = "needsFloor";
   else if (["chest", "craftingTable", "stoneCube"].includes(kind) && structuresOnMap(playerState.mapId).some(structure =>
@@ -2222,6 +2245,24 @@ function removeDoorsOrphanedByWall(removedWall) {
   return removedDoors;
 }
 
+function cavernColumnIsExposed(mapId, structure) {
+  if (structure?.kind !== "cavernColumn") return false;
+  const x = Number(structure.x);
+  const y = Number(structure.y);
+  const dimensions = mapWorldDimensions(mapId);
+  // The outer ring remains the world's sealed boundary. Reciprocal generated
+  // tunnels are already carved through that ring where map travel is allowed.
+  if (x <= 0 || y <= 0 || x >= dimensions.width || y >= dimensions.height) return false;
+  const columns = structuresOnMap(mapId);
+  return [[0, -16], [16, 0], [0, 16], [-16, 0]].some(([dx, dy]) =>
+    !columns.some(candidate =>
+      candidate?.kind === "cavernColumn" &&
+      Math.abs(Number(candidate.x) - (x + dx)) < 1 &&
+      Math.abs(Number(candidate.y) - (y + dy)) < 1
+    )
+  );
+}
+
 function handleStructureDestroyRequest(playerId, socket, message) {
   const playerState = players.get(playerId);
   const structureId = typeof message?.structureId === "string" ? message.structureId : "";
@@ -2236,6 +2277,34 @@ function handleStructureDestroyRequest(playerId, socket, message) {
 
   if (reason) {
     sendJson(socket, { type: "structureDestroyResult", success: false, reason, structureId });
+    return;
+  }
+
+  if (structure.kind === "cavernColumn") {
+    if (!cavernColumnIsExposed(structure.mapId, structure)) {
+      sendJson(socket, { type: "structureDestroyResult", success: false, reason: "blocked", structureId });
+      return;
+    }
+    if (!environmentMeleeValid(playerState, structure, [11], 0, 10, 0.92)) {
+      sendJson(socket, { type: "structureDestroyResult", success: false, reason: "tooFar", structureId });
+      return;
+    }
+    const removedColumn = removeAnyStructure(structure.id, structure.mapId);
+    if (!removedColumn) return;
+    broadcastToMap(removedColumn.mapId, {
+      type: "structureRemoved",
+      structureId: removedColumn.id,
+      mapId: removedColumn.mapId,
+      reason: "minedCavernColumn"
+    });
+    const dx = Number(playerState.x) - Number(removedColumn.x);
+    const dy = Number(playerState.y) - Number(removedColumn.y);
+    const distance = Math.hypot(dx, dy) || 1;
+    spawnSharedResource(removedColumn.mapId, "stone", Number(removedColumn.x) + dx / distance * 10, Number(removedColumn.y) + dy / distance * 10, {
+      ownerId: playerId,
+      life: 30
+    });
+    sendJson(socket, { type: "structureDestroyResult", success: true, structureId: removedColumn.id, kind: "cavernColumn" });
     return;
   }
 
@@ -3981,7 +4050,7 @@ function environmentMeleeValid(
       1,
       {
         ignoreStructureId:
-          (BUILD_WALL_KINDS.has(entity?.kind) || ["woodDoor", "caveDoor"].includes(entity?.kind) || entity?.kind === "stoneCube")
+          (BUILD_WALL_KINDS.has(entity?.kind) || ["woodDoor", "caveDoor"].includes(entity?.kind) || ["stoneCube", "cavernColumn"].includes(entity?.kind))
             ? entity.id
             : null
       }

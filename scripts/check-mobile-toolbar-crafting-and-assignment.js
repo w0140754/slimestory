@@ -11,9 +11,9 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build must be v377");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build must be v377");
-assert.strictEqual(pkg.version, "0.6.11.468", "package version must be v377");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), "server build must be v377");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), "client build must be v377");
+assert.strictEqual(pkg.version, "0.6.11.471", "package version must be v377");
 assert(html.includes('/game.js?v=431e') && html.includes('/client-input.js?v=431e'), "v431e cache keys missing");
 
 assert(html.includes('translateX(-50%) scale(.84)'), "mobile top weapon/tool hotbar was not enlarged");

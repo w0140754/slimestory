@@ -16,10 +16,10 @@ const config = read("public", "client-config.js");
 const balanceText = read("public", "shared", "combat-balance.js");
 const balance = require(path.join(root, "public", "shared", "combat-balance.js"));
 
-assert(pkg.version === "0.6.11.468", "package version must be 437");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build marker must be 437");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build marker must be 437");
-assert(html.includes('/game.js?v=431e-468'), "game cache token must be 437");
+assert(pkg.version === "0.6.11.471", "package version must be 437");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), "server build marker must be 437");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), "client build marker must be 437");
+assert(html.includes('/game.js?v=431e-471'), "game cache token must be 437");
 
 // The three pre-current-game equipment items are no longer valid inventory/equipment tokens.
 for (const token of ["weapon_wand", "weapon_rainWand", "weapon_katana"]) {

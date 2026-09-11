@@ -12,9 +12,9 @@ const network = read("public", "client-network.js");
 const enemies = read("public", "client-enemies.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
 
 assert(game.includes('const BUILD_HOTBAR_ITEMS = Object.freeze(["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "rope", "dirt", "chest", "craftingTable"]);'), "Wood Door must join the unified build hotbar list");
 assert(game.includes("if (heldBuildPieceForCurrentDraw()) return null;"), "build selection must render local and replicated remote build holders empty-handed");
@@ -41,7 +41,7 @@ assert(enemies.includes('woodDoor: Object.freeze({'), "Wood Door ground-loot pro
 assert(server.includes('woodDoor: Object.freeze({ resourceKey: "woodDoors", outputCount: 1, ingredients: Object.freeze({ wood: 4 }) })'), "server Wood Door recipe missing");
 assert(!server.includes("AUTO_DOOR_OPEN_RADIUS"), "server must not restore proximity-only auto doors");
 assert(server.includes("const DOOR_ADJACENT_DISTANCE = 10;"), "server directional door threshold missing");
-assert(server.includes('["woodWall", "stoneWall", "stoneCube", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure.kind)'), "door must share wall-edge collision/boundary rules");
+assert(server.includes('["woodWall", "stoneWall", "stoneCube", "cavernColumn", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure.kind)'), "door must share wall-edge collision/boundary rules");
 assert(server.includes("function serverDoorAllowsPlayerStep("), "server directional door passage helper missing");
 assert(server.includes("serverPlayerStepHitsStructureWall(id, mapId"), "authoritative movement must use directional door passage collision");
 assert(server.includes("function enemyMapPointAllowed(enemy, x, y, padding = 0,"), "enemy occupancy path missing");

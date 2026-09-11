@@ -20,10 +20,10 @@ const world = read("public", "client-world.js");
 const protocol = read("public", "shared", "player-net-protocol.js");
 const server = read("server.js");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468') && html.includes('/client-network.js?v=431e-468'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471') && html.includes('/client-network.js?v=431e-471'));
 
 // The two files whose only purpose was the retired Fire/Rain Wand action layer
 // must be physically absent and no longer loaded by the browser.

@@ -19,10 +19,10 @@ const terrain = read("public", "client-terrain.js");
 const terrainRules = read("public", "shared", "terrain-rules.js");
 const balance = read("public", "shared", "combat-balance.js");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'));
 
 // The compact Rain Cloud / magic-grass field backend had no creation path after
 // v438. v442 removes the dead server tick/registry/protocol and client mirror.
@@ -63,7 +63,7 @@ assert(server.includes("function refreshServerMapWeatherWetness("));
 assert(server.includes("function applyServerPlayerWet("));
 assert(server.includes("function tickServerPlayerWetTimers("));
 assert(app.includes("playerIsWet()"));
-assert(html.includes("/shared/weather-rules.js?v=431e-468"));
+assert(html.includes("/shared/weather-rules.js?v=431e-471"));
 
 // Environmental fire and normal permanent grass remain live.
 assert(fire.includes("function igniteGrass("));

@@ -58,7 +58,7 @@ async function setAim(socket, angle) {
       socket.once("error", reject);
     });
     const welcome = await welcomePending;
-    if (welcome.buildVersion !== "6-11-468") throw new Error(`unexpected build ${welcome.buildVersion}`);
+    if (welcome.buildVersion !== "6-11-471") throw new Error(`unexpected build ${welcome.buildVersion}`);
 
     const restoredPending = waitForMessage(socket, "persistentStateRestored");
     socket.send(JSON.stringify({

@@ -15,9 +15,9 @@ const game = read("public", "game.js");
 const app = read("public", "client-app.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
 assert(html.includes('/shared/weather-rules.js?v=431'));
 assert(html.indexOf('/shared/weather-rules.js?v=431') < html.indexOf('/game.js?v=431'));
 

@@ -14,10 +14,10 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'));
 
 const surface = world.maps.world_m1_p0;
 const underground = world.maps.world_m1_p0_u1;
@@ -26,9 +26,10 @@ assert.strictEqual(surface.undergroundMapId, "world_m1_p0_u1");
 assert.strictEqual(underground.surfaceMapId, "world_m1_p0");
 assert.strictEqual(underground.subterranean, true);
 assert.strictEqual(underground.grid.layerDepth, 1);
-assert.strictEqual(underground.terrain.defaultType, "void");
-assert((underground.terrain.regions || []).some(region => terrain.circleCanOccupy(underground, region.x + 8, region.y + 8, 4, { allowWater: false })), "generated cavern must contain open terrain");
-assert(underground.structures.filter(s => s.kind === "stoneWall").length >= 60, "underground open cells need a real light/collision-blocking Stone Wall shell");
+assert.strictEqual(underground.terrain.defaultType, "stone");
+assert((underground.playerSpawns || []).every(spawn => !underground.structures.some(structure => structure.kind === "cavernColumn" && structure.x === Math.floor(spawn.x / 16) * 16 && structure.y === Math.floor(spawn.y / 16) * 16)), "every advertised underground spawn must be an open cell");
+assert(underground.structures.filter(s => s.kind === "cavernColumn").length >= 300, "underground solid space must be composed of light/collision-blocking Cavern Columns");
+assert(!underground.structures.some(s => s.kind === "stoneWall" && s.undergroundShell), "the old one-cell Stone Wall shell must stay retired");
 assert.strictEqual(topology.automaticRoofRegions(underground.structures, 16).length, 0, "underground prototype must not use automatic roof artwork");
 assert(!underground.structures.some(s => /stair/i.test(String(s.kind))), "prototype must not use designated stair structures");
 
@@ -37,8 +38,8 @@ assert(server.includes('kind: breakthrough ? "dugPit" : "dugDirt"'));
 assert(server.includes('kind: "shaftOpening"'));
 assert(server.includes('surfaceDefinition?.undergroundMapId'));
 assert(server.includes('TERRAIN_RULES.circleCanOccupy(\n    undergroundDefinition'));
-assert(server.includes('["stoneCube", "dugPit"].includes(structure.kind)'), "enemy navigation must treat pits as obstacles");
-assert(server.includes('["woodWall", "stoneWall", "stoneCube", "dugPit", "woodDoor", "chest", "craftingTable"]'), "server player movement must route around dug pits");
+assert(server.includes('["stoneCube", "cavernColumn", "dugPit"].includes(structure.kind)'), "enemy navigation must treat columns and pits as obstacles");
+assert(server.includes('["woodWall", "stoneWall", "stoneCube", "cavernColumn", "dugPit", "woodDoor", "chest", "craftingTable"]'), "server player movement must route around columns and dug pits");
 assert(server.includes('previousDefinition.undergroundMapId === requestedMapId'), "vertical map links must be server-authorized");
 assert(server.includes('if (WORLD_CONTENT?.maps?.[mapId]?.subterranean) return 0;'), "underground server weather must not rain");
 
@@ -59,4 +60,4 @@ assert(game.includes('torchLightVisibilityPolygon(worldX, worldY, radius + 6'), 
 assert(game.includes('if (currentMapIsSubterranean()) return 0;'), "client rain intensity must be zero underground");
 
 assert(world.maps.world_p1_p1?.name !== "Great Cavern", "retired Great Cavern surface reservation must stay removed");
-console.log("v457 compatibility passed under v466: aligned digging/shafts, dark underground terrain, daylight apertures, and generated underground links are wired without stair tiles.");
+console.log("v457 compatibility passed under v471: aligned digging/shafts, solid column caverns, daylight apertures, and generated underground links are wired without stair tiles.");

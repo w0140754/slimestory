@@ -7,7 +7,7 @@ const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 const pkg = require(path.join(root, "package.json"));
 const game = read("public", "game.js");
 const server = read("server.js");
-assert.strictEqual(pkg.version, "0.6.11.468");
+assert.strictEqual(pkg.version, "0.6.11.471");
 const oldSeed = process.env.SLIME_STORY_WORLD_SEED;
 process.env.SLIME_STORY_WORLD_SEED = "0";
 delete require.cache[require.resolve(path.join(root, "public", "shared", "world-content.js"))];

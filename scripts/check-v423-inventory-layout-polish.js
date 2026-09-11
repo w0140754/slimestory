@@ -12,9 +12,9 @@ const game = read("public", "game.js");
 const server = read("server.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
 
 assert(!html.includes("body.crafting-overlay-open #inventoryOverlay.open"), "Craft state must never shift the Menu overlay");
 assert(!game.includes('document.body.classList.toggle("crafting-overlay-open", craftingOpen);'), "Craft state must not mutate Menu layout state");

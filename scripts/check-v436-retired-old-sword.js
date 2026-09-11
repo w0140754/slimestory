@@ -16,10 +16,10 @@ const balanceText = read("public", "shared", "combat-balance.js");
 const balance = require(path.join(root, "public", "shared", "combat-balance.js"));
 
 assert.strictEqual = (actual, expected, message) => assert(actual === expected, `${message}: expected ${expected}, got ${actual}`);
-assert.strictEqual(pkg.version, "0.6.11.468", "package version");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build marker must be 436");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build marker must be 436");
-assert(html.includes('/game.js?v=431e-468'), "game cache token must be 436");
+assert.strictEqual(pkg.version, "0.6.11.471", "package version");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), "server build marker must be 436");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), "client build marker must be 436");
+assert(html.includes('/game.js?v=431e-471'), "game cache token must be 436");
 
 // The actual retired item/art/style must be gone from runtime files.
 for (const [name, source] of [["game", game], ["combat", combat], ["enemies", enemies], ["html", html], ["server", server], ["balance", balanceText]]) {

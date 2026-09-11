@@ -13,10 +13,10 @@ const html = read("public", "index.html");
 const source = read("public", "shared", "world-content.js");
 const topology = require(path.join(root, "public", "shared", "structure-topology.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'));
 assert(!source.includes('const MEGA_CAVE_TEST_MAP_ID = worldGridMapId(1, 1);'));
 assert(!source.includes('function addMegaCaveTestMap() {'));
 assert(source.includes('function buildGeneratedUndergroundMap(x, y) {'));

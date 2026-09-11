@@ -1,3 +1,22 @@
+# Slime Story v6-11-471 — Destructible Cavern Columns
+
+- Rebuilt every generated underground map as a solid deterministic field of **Cavern Columns**, with the existing scattered rooms, corridors, Rope shafts, and reciprocal cross-map tunnels carved out of it.
+- Cavern Columns are new 16×32 depth-sorted rock forms composed from a square stone top and the authored Stone Wall face. Their collision remains one aligned 16×16 underground cell.
+- Only exposed columns bordering open cavern space can be mined. The permanent outer boundary remains sealed except at generated cross-map tunnels.
+- Pickaxing a column removes it immediately, opens a walkable stone cell, updates collision and light blocking, and drops exactly one ordinary Stone beside the miner.
+- Stable coordinate IDs and the existing sparse world-mutation channel persist and synchronize only removed columns; the untouched rock field is never transmitted as multiplayer placement traffic.
+- Ordinary building placement is blocked on intact columns. Generated enemy spawns are restricted to carved open areas.
+- Restored the confirmed v469 baseline first; the unsuccessful v470 entity-lighting experiment is not included.
+
+# Slime Story v6-11-469 — Excavation Placement Guard
+
+- Shallow Dirt patches and breakthrough holes now reject every ordinary build placement on both client and server.
+- Wood/Stone Floors, walls, doors, cubes, chests, crafting tables, and ground- or support-mounted Torches cannot conceal or overlap an excavation.
+- Placement previews show invalid rather than allowing a visually misleading object over a blocked hole.
+- Rope remains the dedicated traversal placement for valid breakthrough fronts; Dirt remains the dedicated action for filling an unroped excavation.
+
+Verification: **28/28 runtime JavaScript syntax targets + 130/130 retained static regression checks pass**, including mirrored client/server excavation-placement rejection and preserved Rope handling.
+
 # Slime Story v6-11-468 — Persistent Shallow Dirt
 
 - Hitting an existing shallow Dirt patch with the Pickaxe no longer removes it or turns it back into grass.

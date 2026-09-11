@@ -7,7 +7,7 @@ const game = fs.readFileSync(path.join(root, "public", "game.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
+assert.strictEqual(pkg.version, "0.6.11.471");
 assert(game.includes("dugPitNeighborAt(Number(structure.x), Number(structure.y) - BUILD_GRID_SIZE)"));
 assert(server.includes("const northPit = pit && structuresOnMap(playerState.mapId).some"));
 assert(server.includes("if (!pit || northPit || Math.hypot"));

@@ -786,37 +786,22 @@
       if (side === 'south') addCell(cx, WORLD_GRID_MAP_HEIGHT - 16);
     }
 
-    for (const key of openCells) {
-      const [cx, cy] = key.split(',').map(Number);
-      terrainRegions.push({ type: 'stone', x: cx - 8, y: cy - 8, width: 16, height: 16 });
-    }
-
-    const directions = [
-      { side: 'north', dx: 0, dy: -16, axis: 'horizontal', bx: 0, by: -8 },
-      { side: 'east', dx: 16, dy: 0, axis: 'vertical', bx: 8, by: 0 },
-      { side: 'south', dx: 0, dy: 16, axis: 'horizontal', bx: 0, by: 8 },
-      { side: 'west', dx: -16, dy: 0, axis: 'vertical', bx: -8, by: 0 }
-    ];
-    const boundaryKeys = new Set();
-    let boundaryIndex = 0;
-    for (const key of openCells) {
-      const [cx, cy] = key.split(',').map(Number);
-      for (const direction of directions) {
-        if (openCells.has(`${cx + direction.dx},${cy + direction.dy}`)) continue;
-        const openMapEdge = direction.side === 'west' && cx === 0 && edgePlans.west.linked ||
-          direction.side === 'east' && cx === WORLD_GRID_MAP_WIDTH && edgePlans.east.linked ||
-          direction.side === 'north' && cy === 0 && edgePlans.north.linked ||
-          direction.side === 'south' && cy === WORLD_GRID_MAP_HEIGHT && edgePlans.south.linked;
-        if (openMapEdge) continue;
-        const bx = cx + direction.bx;
-        const by = cy + direction.by;
-        const boundaryKey = `${direction.axis}:${bx},${by}`;
-        if (boundaryKeys.has(boundaryKey)) continue;
-        boundaryKeys.add(boundaryKey);
+    // The underground is a complete destructible rock field. Generated rooms,
+    // corridors and reciprocal map-edge tunnels are the cells omitted from the
+    // baseline column grid. Stable coordinate IDs let the server persist only
+    // mined removals instead of serializing or networking thousands of blocks.
+    for (let cy = 0; cy <= WORLD_GRID_MAP_HEIGHT; cy += 16) {
+      for (let cx = 0; cx <= WORLD_GRID_MAP_WIDTH; cx += 16) {
+        if (openCells.has(`${cx},${cy}`)) continue;
         structures.push({
-          id: `${mapId}:rock-shell:${++boundaryIndex}`,
-          mapId, kind: 'stoneWall', x: bx, y: by, axis: direction.axis,
-          worldGenerated: true, featureType: 'undergroundRock', undergroundShell: true
+          id: `${mapId}:cavern-column:${cx}:${cy}`,
+          mapId,
+          kind: 'cavernColumn',
+          x: cx,
+          y: cy,
+          worldGenerated: true,
+          featureType: 'undergroundRock',
+          undergroundColumn: true
         });
       }
     }
@@ -829,17 +814,17 @@
       undergroundConnections: Object.fromEntries(Object.entries(edgePlans).filter(([, plan]) => plan.linked).map(([side]) => [side, true])),
       playerSpawns: [
         { id: 'center', x: centers[0][0], y: centers[0][1] },
-        { id: 'west', x: 16, y: edgePlans.west.coordinate || centers[0][1] },
-        { id: 'east', x: WORLD_GRID_MAP_WIDTH - 16, y: edgePlans.east.coordinate || centers[0][1] },
-        { id: 'north', x: edgePlans.north.coordinate || centers[0][0], y: 16 },
-        { id: 'south', x: edgePlans.south.coordinate || centers[0][0], y: WORLD_GRID_MAP_HEIGHT - 16 }
+        ...(edgePlans.west.linked ? [{ id: 'west', x: 16, y: edgePlans.west.coordinate }] : []),
+        ...(edgePlans.east.linked ? [{ id: 'east', x: WORLD_GRID_MAP_WIDTH - 16, y: edgePlans.east.coordinate }] : []),
+        ...(edgePlans.north.linked ? [{ id: 'north', x: edgePlans.north.coordinate, y: 16 }] : []),
+        ...(edgePlans.south.linked ? [{ id: 'south', x: edgePlans.south.coordinate, y: WORLD_GRID_MAP_HEIGHT - 16 }] : [])
       ],
       portals: [],
       environment: { trees: [], tallGrass: [], rocks: [], sceneryRocks: [], harvestFlowers: [], houses: [] },
       structures, features,
       enemyGeneration: { level: 2 + Math.abs(x) + Math.abs(y), slimeCount: 2 + (worldGridHash(x, y, 2480) % 3), mushroomCount: 0, purpleSlimeChance: 0.10 },
       npcs: [],
-      terrain: { cellSize: 8, defaultType: 'void', regions: terrainRegions },
+      terrain: { cellSize: 8, defaultType: 'stone', regions: terrainRegions },
       collision: { waterRects: [] }
     };
   }

@@ -10,7 +10,7 @@ const worldSource = read("public", "shared", "world-content.js");
 const html = read("public", "index.html");
 const pkg = require(path.join(root, "package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
+assert.strictEqual(pkg.version, "0.6.11.471");
 assert(game.includes("ctx.filter = `brightness(${Math.max(0.10, 1 - transitionDarkness).toFixed(3)})`"));
 assert(worldSource.includes("function buildGeneratedUndergroundMap(x, y) {"));
 assert(worldSource.includes("function undergroundEdgePlan(x, y, side) {"));

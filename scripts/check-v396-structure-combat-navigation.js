@@ -12,10 +12,10 @@ const enemies = read("public", "client-enemies.js");
 const world = require(path.join(root, "public", "shared", "world-content.js"));
 const pkg = JSON.parse(read("package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
+assert.strictEqual(pkg.version, "0.6.11.471");
 assert.strictEqual(world.version, 414);
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
 
 // Authored structure UI icons are now the live menu/loot assets.
 for (const name of ["wood_floor.png", "wood_wall.png", "wood_door.png"]) {

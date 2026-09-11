@@ -6,7 +6,7 @@ const root = path.join(__dirname, "..");
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), "utf8");
 const source = read("public", "shared", "world-content.js");
 const pkg = require(path.join(root, "package.json"));
-assert.strictEqual(pkg.version, "0.6.11.468");
+assert.strictEqual(pkg.version, "0.6.11.471");
 assert(!source.includes("function addSpawnCave()"), "the old authored Spawn cave must stay retired");
 assert(source.includes("function addGeneratedCave(reservation, caveIndex = 1)"));
 assert(source.includes('pushBoundary(key === externalArchKey ? "caveDoor" : "stoneWall"'));

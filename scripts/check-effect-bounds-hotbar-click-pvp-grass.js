@@ -12,8 +12,8 @@ const clientApp = read('public', 'client-app.js');
 const html = read('public', 'index.html');
 const config = read('public', 'client-config.js');
 
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), 'server build must be 6-11-431');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), 'client build must be 6-11-431');
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), 'server build must be 6-11-431');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), 'client build must be 6-11-431');
 assert(html.includes('/game.js?v=431') && html.includes('/client-app.js?v=431'), 'client cache keys must be v431');
 
 assert(!server.includes('clampNumber(value, -32, 672'), 'legacy 640px visual-effect clamp must be removed');

@@ -11,10 +11,10 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const pkg = JSON.parse(read("package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'), "v434 runtime cache token missing");
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'), "v434 runtime cache token missing");
 
 // The pre-v424 five-slot/equipment hotbar remapper is retired.
 assert(!game.includes("legacyFiveSlotHotbar"), "retired five-slot migration flag survived");

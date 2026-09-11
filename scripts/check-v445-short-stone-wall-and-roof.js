@@ -11,7 +11,7 @@ const server = read("server.js");
 const network = read("public", "client-network.js");
 const html = read("public", "index.html");
 const pkg = require(path.join(root, "package.json"));
-assert.strictEqual(pkg.version, "0.6.11.468");
+assert.strictEqual(pkg.version, "0.6.11.471");
 
 // v448 intentionally supersedes the v445 Short Stone Wall concept: the 16x16
 // visual becomes a Stone Cube object and must no longer be a wall boundary.

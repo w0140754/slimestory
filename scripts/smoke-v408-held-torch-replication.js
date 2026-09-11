@@ -38,7 +38,7 @@ async function connect() {
     socket.once("error", reject);
   });
   const welcome = await welcomePending;
-  if (welcome.buildVersion !== "6-11-468") throw new Error(`unexpected build ${welcome.buildVersion}`);
+  if (welcome.buildVersion !== "6-11-471") throw new Error(`unexpected build ${welcome.buildVersion}`);
   return { socket, welcome };
 }
 

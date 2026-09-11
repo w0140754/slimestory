@@ -15,9 +15,9 @@ const combat = read("public", "client-combat.js");
 const clientWorld = read("public", "client-world.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.468", "package version must be v380");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build marker must be v380");
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build marker must be v380");
+assert.strictEqual(pkg.version, "0.6.11.471", "package version must be v380");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), "server build marker must be v380");
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-471";'), "client build marker must be v380");
 
 assert.strictEqual(world.worldGrid.mapWidth, 400, "grid maps must be 400px wide");
 assert.strictEqual(world.worldGrid.mapHeight, 400, "grid maps must be 400px high");

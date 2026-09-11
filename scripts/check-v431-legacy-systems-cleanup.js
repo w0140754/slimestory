@@ -21,9 +21,9 @@ const app = read("public", "client-app.js");
 const server = read("server.js");
 const balance = require(path.join(root, "public", "shared", "combat-balance.js"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(read("public", "client-config.js").includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
 assert(!fs.existsSync(path.join(root, "public", "shared", "ability-scaling.js")));
 assert(!fs.existsSync(path.join(root, "public", "shared", "camouflage-rules.js")));
 assert(!fs.existsSync(path.join(root, "public", "assets", "skills")));

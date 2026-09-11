@@ -12,10 +12,10 @@ const html = read("public", "index.html");
 const server = read("server.js");
 const config = read("public", "client-config.js");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'));
 
 // v438 removed the circular Wand cast pose state along with Fire/Rain casting.
 // No drawPlayer branch may still reference that deleted local symbol.

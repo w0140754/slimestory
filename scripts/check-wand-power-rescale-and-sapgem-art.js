@@ -12,9 +12,9 @@ const balance = require(path.join(root, "public", "shared", "combat-balance.js")
 const pkg = require(path.join(root, "package.json"));
 const readme = read("README.md");
 
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build must be 6-11-406");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build must be 6-11-406");
-assert(pkg.version === "0.6.11.468", "package version must be 0.6.11.431");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), "server build must be 6-11-406");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), "client build must be 6-11-406");
+assert(pkg.version === "0.6.11.471", "package version must be 0.6.11.431");
 assert(html.includes('/shared/combat-balance.js?v=431') && html.includes('/game.js?v=431'), "v336 cache keys missing");
 assert(balanceText.includes('const VERSION = 34;'), "combat balance version must be 34");
 assert(fs.existsSync(path.join(root, "public", "assets", "sapgem_wand_v4.png")), "current redrawn Sapgem sprite missing");

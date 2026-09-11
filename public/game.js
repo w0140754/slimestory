@@ -7826,12 +7826,16 @@ function structureWallImpactPoint(fromX, fromY, toX, toY, padding = 0) {
   let best = null;
   for (const structure of currentMapStructures()) {
     const isStoneCube = structure?.kind === "stoneCube";
+    const isCavernColumn = structure?.kind === "cavernColumn";
     const blocks = BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||
       isStoneCube ||
+      isCavernColumn ||
       (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure));
     if (!blocks) continue;
     const collisionRect = isStoneCube
       ? STRUCTURE_GEOMETRY.stoneCubeFootprintRect(structure)
+      : isCavernColumn
+        ? cavernColumnFootprintRect(structure)
       : wallCollisionRect(structure);
     const t = segmentRectIntersectionT(
       Number(fromX),
@@ -8364,6 +8368,59 @@ function drawStoneCube(structure, camX, camY, alpha = 1) {
   ctx.restore();
 }
 
+function cavernColumnFootprintRect(structure) {
+  const x = Number(structure?.x);
+  const y = Number(structure?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x: x - 8, y: y - 8, width: 16, height: 16 };
+}
+
+function cavernColumnIsExposed(structure) {
+  if (structure?.kind !== "cavernColumn") return false;
+  const x = Number(structure.x);
+  const y = Number(structure.y);
+  if (x <= 0 || y <= 0 || x >= world.width || y >= world.height) return false;
+  const structures = currentMapStructures();
+  return [[0, -16], [16, 0], [0, 16], [-16, 0]].some(([dx, dy]) =>
+    !structures.some(candidate =>
+      candidate?.kind === "cavernColumn" &&
+      Math.abs(Number(candidate.x) - (x + dx)) < 1 &&
+      Math.abs(Number(candidate.y) - (y + dy)) < 1
+    )
+  );
+}
+
+function drawCavernColumn(structure, camX, camY, alpha = 1) {
+  const sx = Math.round(Number(structure?.x) - camX);
+  const sy = Math.round(Number(structure?.y) - camY);
+  const left = sx - 8;
+  const top = sy - 24;
+  if (left > VIEW_W + 16 || left + 16 < -16 || top > VIEW_H + 16 || top + 32 < -16) return;
+  const topImage = stoneCubeStructureVariantImages[stoneCubeVariantIndex(structure)] || stoneCubeStructureImage;
+  const faceImage = stoneWallStructureVariantImages[stoneWallVariantIndex(structure)] || stoneWallStructureImage;
+
+  ctx.save();
+  ctx.globalAlpha = localForegroundOcclusionAlpha(
+    { x: Number(structure.x) - 8, y: Number(structure.y) - 24, width: 16, height: 32 },
+    Number(structure.y) + 8,
+    alpha
+  );
+  ctx.imageSmoothingEnabled = false;
+  // A square stone cap sits one tile above the physical cell; the lower half
+  // of the authored Stone Wall supplies the column's vertical front face.
+  ctx.drawImage(topImage, 0, 0, 16, 16, left, top, 16, 16);
+  ctx.drawImage(faceImage, 0, 16, 16, 16, left, top + 16, 16, 16);
+  ctx.fillStyle = "#34383b";
+  ctx.fillRect(left, top, 16, 1);
+  ctx.fillRect(left, top, 1, 32);
+  ctx.fillRect(left + 15, top, 1, 32);
+  ctx.fillRect(left, top + 31, 16, 1);
+  ctx.fillStyle = "#a5abad";
+  ctx.globalAlpha *= 0.24;
+  ctx.fillRect(left + 1, top + 1, 14, 1);
+  ctx.restore();
+}
+
 function roofRegionIsNaturalCave(region) {
   return Boolean(region?.floors?.length) && region.floors.every(floor =>
     floor?.kind === "caveFloor" || floor?.featureType === "cave"
@@ -8627,6 +8684,10 @@ function addPlayerStructureDrawables(drawables, camX, camY) {
       addDrawable(drawables, Number(structure.y) + 8, () => drawStoneCube(structure, camX, camY));
       continue;
     }
+    if (structure.kind === "cavernColumn") {
+      addDrawable(drawables, Number(structure.y) + 8, () => drawCavernColumn(structure, camX, camY));
+      continue;
+    }
     if (!BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)) continue;
     addDrawable(drawables, wallDrawSortY(structure), () => {
       if (structure.kind === "woodDoor") drawWoodDoor(structure, camX, camY);
@@ -8668,6 +8729,11 @@ function hitsPlayerStructureObstacle(x, y, playerRadius = 4, options = {}) {
     }
     if (structure.kind === "stoneCube") {
       const rect = STRUCTURE_GEOMETRY.stoneCubeFootprintRect(structure);
+      if (rect && circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) return true;
+      continue;
+    }
+    if (structure.kind === "cavernColumn") {
+      const rect = cavernColumnFootprintRect(structure);
       if (rect && circleRectCollision(x, y, playerRadius, rect.x, rect.y, rect.width, rect.height)) return true;
       continue;
     }
@@ -8732,6 +8798,15 @@ function pickaxeStructurePointerBounds(structure) {
     };
   }
 
+  if (structure?.kind === "cavernColumn") {
+    return {
+      left: Number(structure.x) - 8,
+      top: Number(structure.y) - 24,
+      right: Number(structure.x) + 8,
+      bottom: Number(structure.y) + 8
+    };
+  }
+
   if (structure?.kind === "stoneCube") {
     return {
       left: Number(structure.x) - 8,
@@ -8791,12 +8866,12 @@ function playerStructurePickaxeTarget() {
   let bestPriority = Infinity;
 
   for (const structure of currentMapStructures()) {
-    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "caveDoor", "woodDoor", "torch", "chest", "craftingTable", "dugDirt", "dugPit"].includes(structure.kind)) continue;
-
+    if (!structure?.id || !["woodFloor", "stoneFloor", "woodWall", "stoneWall", "stoneCube", "cavernColumn", "caveDoor", "woodDoor", "torch", "chest", "craftingTable", "dugDirt", "dugPit"].includes(structure.kind)) continue;
     // Player position is only a reach gate. It must never decide which placed
     // piece wins when several structures are in range; the cursor does that.
     const physicalDistance = Math.hypot(Number(structure.x) - originX, Number(structure.y) - originY);
     if (physicalDistance > maxRange) continue;
+    if (structure.kind === "cavernColumn" && !cavernColumnIsExposed(structure)) continue;
 
     const pointerDistance = pointDistanceToRect(
       pointerWorldX,
@@ -8808,7 +8883,7 @@ function playerStructurePickaxeTarget() {
     // If the pointer overlaps a wall/door facade and the floor behind it,
     // prefer the visible edge structure. Otherwise choose whichever structure
     // is geometrically closest to the cursor, independent of player distance.
-    const priority = ["torch", "chest", "craftingTable", "stoneCube"].includes(structure.kind)
+    const priority = ["torch", "chest", "craftingTable", "stoneCube", "cavernColumn"].includes(structure.kind)
       ? 0
       : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)
         ? 1
@@ -8867,6 +8942,13 @@ function drawPickaxeStructureTargetHighlight(camX, camY) {
     ctx.fillRect(left, top + 17, 16, 1);
     ctx.fillRect(left, top, 1, 18);
     ctx.fillRect(left + 15, top, 1, 18);
+  } else if (structure.kind === "cavernColumn") {
+    const left = Math.round(Number(structure.x) - camX - 9);
+    const top = Math.round(Number(structure.y) - camY - 25);
+    ctx.fillRect(left, top, 18, 1);
+    ctx.fillRect(left, top + 33, 18, 1);
+    ctx.fillRect(left, top, 1, 34);
+    ctx.fillRect(left + 17, top, 1, 34);
   } else if (structure.kind === "stoneCube") {
     const left = Math.round(Number(structure.x) - camX - 9);
     const top = Math.round(Number(structure.y) - camY - 9);
@@ -9036,6 +9118,7 @@ function rawWallPlacementCandidate(worldX, worldY) {
 function wallPlacementCandidate(worldX, worldY, kind = selectedBuildPiece) {
   const candidate = rawWallPlacementCandidate(worldX, worldY);
   if (!candidate) return null;
+  if (excavationAtBuildCell(candidate.floorX, candidate.floorY) || cavernColumnAtBuildCell(candidate.floorX, candidate.floorY)) return null;
   // v418: boundaries may sit between two floor tiles. This enables interior
   // partitions, rooms, cave-like layouts, and later editing inside an already
   // completed roof without treating adjacent floor as an invalid placement.
@@ -9086,6 +9169,22 @@ function buildPlacementWithinRange(x, y) {
   return Math.hypot(Number(x) - Number(player.x), Number(y) - Number(player.y)) <= BUILD_PLACE_RANGE;
 }
 
+function excavationAtBuildCell(x, y) {
+  return currentMapStructures().some(structure =>
+    ["dugPit", "dugDirt"].includes(structure?.kind) &&
+    Math.abs(Number(structure.x) - Number(x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(y)) < 1
+  );
+}
+
+function cavernColumnAtBuildCell(x, y) {
+  return currentMapStructures().some(structure =>
+    structure?.kind === "cavernColumn" &&
+    Math.abs(Number(structure.x) - Number(x)) < 1 &&
+    Math.abs(Number(structure.y) - Number(y)) < 1
+  );
+}
+
 function torchAttachedToSupport(supportId) {
   return Boolean(supportId) && currentMapStructures().some(structure =>
     structure?.kind === "torch" && structure?.supportId === supportId
@@ -9118,7 +9217,7 @@ function chestPlacementCandidate(worldX, worldY) {
     Math.abs(Number(structure.x) - x) < 1 &&
     Math.abs(Number(structure.y) - y) < 1
   );
-  return { x, y, valid: Boolean(floor) && !occupied };
+  return { x, y, valid: Boolean(floor) && !occupied && !excavationAtBuildCell(x, y) && !cavernColumnAtBuildCell(x, y) };
 }
 
 function craftingTablePlacementCandidate(worldX, worldY) {
@@ -9129,7 +9228,7 @@ function craftingTablePlacementCandidate(worldX, worldY) {
     Math.abs(Number(structure.x) - x) < 1 &&
     Math.abs(Number(structure.y) - y) < 1
   );
-  return { x, y, valid: !occupied };
+  return { x, y, valid: !occupied && !excavationAtBuildCell(x, y) && !cavernColumnAtBuildCell(x, y) };
 }
 
 function stoneCubePlacementCandidate(worldX, worldY) {
@@ -9140,7 +9239,7 @@ function stoneCubePlacementCandidate(worldX, worldY) {
     Math.abs(Number(structure.x) - x) < 1 &&
     Math.abs(Number(structure.y) - y) < 1
   );
-  return { x, y, valid: !occupied };
+  return { x, y, valid: !occupied && !excavationAtBuildCell(x, y) && !cavernColumnAtBuildCell(x, y) };
 }
 
 function torchPlacementCandidate(worldX, worldY) {
@@ -9155,7 +9254,10 @@ function torchPlacementCandidate(worldX, worldY) {
       mountSide: wall.axis === "vertical"
         ? (Number(player.x) < Number(wall.x) ? "west" : "east")
         : (Number(player.y) < Number(wall.y) ? "north" : "south"),
-      valid: !torchAttachedToSupport(wall.id)
+      valid: !torchAttachedToSupport(wall.id) && !excavationAtBuildCell(
+        Math.round(Number(wall.x) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE,
+        Math.round(Number(wall.y) / BUILD_GRID_SIZE) * BUILD_GRID_SIZE
+      )
     };
   }
 
@@ -9166,7 +9268,7 @@ function torchPlacementCandidate(worldX, worldY) {
       y: Number(floor.y),
       supportId: floor.id,
       mountType: "floor",
-      valid: !torchAttachedToSupport(floor.id)
+      valid: !torchAttachedToSupport(floor.id) && !excavationAtBuildCell(Number(floor.x), Number(floor.y)) && !cavernColumnAtBuildCell(Number(floor.x), Number(floor.y))
     };
   }
 
@@ -9175,7 +9277,13 @@ function torchPlacementCandidate(worldX, worldY) {
     y: Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE,
     supportId: null,
     mountType: "ground",
-    valid: true
+    valid: !excavationAtBuildCell(
+      Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE,
+      Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE
+    ) && !cavernColumnAtBuildCell(
+      Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE,
+      Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE
+    )
   };
 }
 
@@ -9277,7 +9385,7 @@ function tryPlaceSelectedBuildPieceAtWorld(worldX, worldY) {
 
   const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
-  if (!buildPlacementWithinRange(x, y)) return true;
+  if (!buildPlacementWithinRange(x, y) || excavationAtBuildCell(x, y) || cavernColumnAtBuildCell(x, y)) return true;
   if (typeof onlineClient !== "undefined" && onlineClient?.connected) {
     onlineClient.requestStructurePlacement(selectedBuildPiece, x, y);
   }
@@ -9397,8 +9505,9 @@ function drawBuildPlacementPreview(camX, camY) {
   const x = Math.round(worldX / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const y = Math.round(worldY / BUILD_GRID_SIZE) * BUILD_GRID_SIZE;
   const inRange = buildPlacementWithinRange(x, y);
-  drawStructureFloor({ kind: selectedBuildPiece, x, y }, camX, camY, inRange ? 0.55 : 0.2);
-  if (!inRange) drawBuildCursorMarker(x, y, camX, camY, false);
+  const valid = inRange && !excavationAtBuildCell(x, y) && !cavernColumnAtBuildCell(x, y);
+  drawStructureFloor({ kind: selectedBuildPiece, x, y }, camX, camY, valid ? 0.55 : 0.2);
+  if (!valid) drawBuildCursorMarker(x, y, camX, camY, false);
 }
 
 // -----------------------------------------------------------------------------
@@ -9837,6 +9946,7 @@ function torchLightBlockingSegments(sourceX, sourceY, radius) {
   const maxDistance = radius + 18;
   for (const structure of currentMapStructures()) {
     const blocks = BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||
+      structure?.kind === "cavernColumn" ||
       (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure));
     if (!blocks) continue;
 
@@ -9848,9 +9958,22 @@ function torchLightBlockingSegments(sourceX, sourceY, radius) {
     // v408: light, collision and attack blocking now start from the same
     // canonical boundary segment. A tiny tangential overlap seals connected
     // corners against floating-point/ray gaps without making the wall thicker.
-    const boundary = STRUCTURE_GEOMETRY.lightBarrierSegment(structure, 0.4);
-    if (!boundary) continue;
-    segments.push({ id: structure.id, ...boundary });
+    if (structure.kind === "cavernColumn") {
+      const left = x - 8.4;
+      const right = x + 8.4;
+      const top = y - 8.4;
+      const bottom = y + 8.4;
+      segments.push(
+        { id: structure.id, x1: left, y1: top, x2: right, y2: top },
+        { id: structure.id, x1: right, y1: top, x2: right, y2: bottom },
+        { id: structure.id, x1: right, y1: bottom, x2: left, y2: bottom },
+        { id: structure.id, x1: left, y1: bottom, x2: left, y2: top }
+      );
+    } else {
+      const boundary = STRUCTURE_GEOMETRY.lightBarrierSegment(structure, 0.4);
+      if (!boundary) continue;
+      segments.push({ id: structure.id, ...boundary });
+    }
   }
   return segments;
 }
@@ -10069,11 +10192,15 @@ function collectTorchLightSources() {
 function structureBlocksLight(structure) {
   return Boolean(
     BUILD_WALL_STRUCTURE_KINDS.includes(structure?.kind) ||
+    structure?.kind === "cavernColumn" ||
     (structure?.kind === "woodDoor" && !doorVisuallyOpen(structure))
   );
 }
 
 function structureFacadeWorldRect(structure) {
+  if (structure?.kind === "cavernColumn") {
+    return { x: Number(structure.x) - 8, y: Number(structure.y) - 24, width: 16, height: 32 };
+  }
   return STRUCTURE_GEOMETRY.facadeRect(structure, {
     upperJoin: structure?.axis === "vertical" && verticalWallHasUpperHorizontalJoin(structure)
   });
@@ -10444,8 +10571,74 @@ function lightPathToStructureFaceClear(source, targetStructure, sourceSide) {
   return true;
 }
 
+function pointInsideLightPolygon(x, y, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const crosses = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / ((yj - yi) || 0.000001) + xi);
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function carveCavernColumnFaceLight(bufferCtx, source, structure) {
+  const footprint = cavernColumnFootprintRect(structure);
+  if (!bufferCtx || !footprint || !source) return;
+  const sourceX = Number(source.visibilityX);
+  const sourceY = Number(source.visibilityY);
+  const radius = Math.max(1, Number(source.radius) || 0);
+  if (![sourceX, sourceY].every(Number.isFinite)) return;
+
+  const closestX = Math.max(footprint.x, Math.min(sourceX, footprint.x + footprint.width));
+  const closestY = Math.max(footprint.y, Math.min(sourceY, footprint.y + footprint.height));
+  const dx = sourceX - closestX;
+  const dy = sourceY - closestY;
+  const distance = Math.hypot(dx, dy);
+  if (distance > radius + 4) return;
+
+  // Probe just outside the column's near face. If that ground point belongs to
+  // the source visibility polygon, the entire upright receiver face can take
+  // the same light without allowing the ray through the solid footprint.
+  const probeScale = distance > 0.001 ? 0.8 / distance : 0;
+  const probeX = closestX + dx * probeScale;
+  const probeY = closestY + dy * probeScale;
+  const polygon = torchLightVisibilityPolygon(
+    sourceX,
+    sourceY,
+    radius + 8,
+    source.key ? `column-face:${source.key}` : null
+  );
+  if (!polygon.length || !pointInsideLightPolygon(probeX, probeY, polygon)) return;
+
+  const facade = structureFacadeWorldRect(structure);
+  const screenX = Number(source.x) - currentCamX;
+  const screenY = Number(source.y) - currentCamY;
+  const strength = Math.max(0, Math.min(1, Number(source.strength ?? 1)));
+  const gradient = bufferCtx.createRadialGradient(screenX, screenY, 0, screenX, screenY, radius);
+  gradient.addColorStop(0, `rgba(0,0,0,${(0.94 * strength).toFixed(3)})`);
+  gradient.addColorStop(0.55, `rgba(0,0,0,${(0.58 * strength).toFixed(3)})`);
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  bufferCtx.save();
+  bufferCtx.beginPath();
+  bufferCtx.rect(facade.x - currentCamX, facade.y - currentCamY, facade.width, facade.height);
+  bufferCtx.clip();
+  bufferCtx.globalCompositeOperation = "destination-out";
+  bufferCtx.fillStyle = gradient;
+  bufferCtx.fillRect(screenX - radius, screenY - radius, radius * 2, radius * 2);
+  bufferCtx.restore();
+}
+
 function carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceSide = null) {
   if (!bufferCtx || !source || !structureBlocksLight(structure)) return;
+  if (structure?.kind === "cavernColumn") {
+    carveCavernColumnFaceLight(bufferCtx, source, structure);
+    return;
+  }
   const targetRegion = roofRegionForStructureFacade(structure);
   if (!sourceMayLightStructureFacade(source, structure, targetRegion)) return;
   const closest = STRUCTURE_GEOMETRY.closestPointOnBoundary(
@@ -10539,6 +10732,23 @@ function carveUndergroundShaftDaylight(bufferCtx) {
   }
 }
 
+function collectUndergroundShaftFaceLightSources() {
+  if (!currentMapIsSubterranean()) return [];
+  const daylight = worldClockSunShadowFactor();
+  if (daylight <= 0.02) return [];
+  return currentMapStructures()
+    .filter(structure => structure?.kind === "shaftOpening")
+    .map(structure => ({
+      key: `shaft-face:${structure.id || `${structure.x},${structure.y}`}`,
+      x: Number(structure.x),
+      y: Number(structure.y),
+      visibilityX: Number(structure.x),
+      visibilityY: Number(structure.y),
+      radius: 58,
+      strength: daylight
+    }));
+}
+
 function drawWorldLightingOverlay() {
   const minutes = currentWorldClockMinutes();
   const nightAlpha = worldClockLightingAlpha(minutes);
@@ -10570,6 +10780,7 @@ function drawWorldLightingOverlay() {
   // client-side light pipeline. Placed torches still use shared structures;
   // held torches use the already change-only replicated heldBuildPiece field.
   const torchSources = collectTorchLightSources();
+  const structureLightSources = torchSources.concat(collectUndergroundShaftFaceLightSources());
   for (const source of torchSources) {
     carveTorchLight(
       bufferCtx,
@@ -10602,7 +10813,7 @@ function drawWorldLightingOverlay() {
   for (const structure of currentMapStructures()) {
     if (!structureBlocksLight(structure)) continue;
     const visibleFaceSide = visibleStructureLightFaceSide(structure);
-    for (const source of torchSources) {
+    for (const source of structureLightSources) {
       carveTorchStructureFaceLight(bufferCtx, source, structure, visibleFaceSide);
     }
   }
@@ -12519,9 +12730,11 @@ function ropeLandingBlockedOnMap(mapId, x, y, playerRadius = 4) {
   const structures = worldGeneratedStructuresForMap(mapId).concat(placed);
   for (const structure of structures) {
     if (structure?.kind === "shaftOpening" || structure?.kind === "caveDoor" || structure?.kind === "caveMouth") continue;
-    if (!["woodWall", "stoneWall", "stoneCube", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure?.kind)) continue;
+    if (!["woodWall", "stoneWall", "stoneCube", "cavernColumn", "dugPit", "woodDoor", "chest", "craftingTable"].includes(structure?.kind)) continue;
     const rect = structure.kind === "stoneCube"
       ? STRUCTURE_GEOMETRY.stoneCubeFootprintRect(structure)
+      : structure.kind === "cavernColumn"
+        ? cavernColumnFootprintRect(structure)
       : (structure.kind === "chest" || structure.kind === "craftingTable")
         ? { x: Number(structure.x) - 7, y: Number(structure.y) - 8, width: 14, height: 8 }
         : BUILD_EDGE_STRUCTURE_KINDS.includes(structure.kind)

@@ -13,9 +13,9 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const pkg = JSON.parse(read("package.json"));
 
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), "server build must be v350");
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), "client build must be v350");
-assert(pkg.version === "0.6.11.468", "package version must be v431");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), "server build must be v350");
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), "client build must be v350");
+assert(pkg.version === "0.6.11.471", "package version must be v431");
 assert(html.includes('id="mobileMovePad"') && html.includes('id="mobileAttackButton"'), "mobile movement/attack controls missing");
 assert(html.includes('id="mobileInteractButton"') && html.includes('id="mobileRotatePrompt"'), "mobile interact/orientation UI missing");
 assert(html.includes('(hover: none) and (pointer: coarse) and (orientation: landscape)'), "coarse-pointer landscape gate missing");

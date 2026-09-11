@@ -10,8 +10,8 @@ const server = read('server.js');
 const config = read('public', 'client-config.js');
 const readme = read('README.md');
 
-assert(server.includes('const BUILD_VERSION = "6-11-468";'), 'server build must be 6-11-406');
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'), 'client build must be 6-11-406');
+assert(server.includes('const BUILD_VERSION = "6-11-471";'), 'server build must be 6-11-406');
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'), 'client build must be 6-11-406');
 assert(html.includes('/client-enemy-rendering.js?v=431'), 'current Crab renderer cache key must be v340');
 assert(rendering.includes('function drawCrab(crab, camX, camY)'), 'Crab renderer missing');
 assert(!rendering.includes('drawEnemySpawnShimmer('), 'undefined drawEnemySpawnShimmer call must not remain');

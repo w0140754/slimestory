@@ -11,10 +11,10 @@ const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 const pkg = JSON.parse(read("package.json"));
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'), "v435 runtime cache token missing");
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'), "v435 runtime cache token missing");
 
 // The old tutorial-era restore shim must stay retired.
 assert(!game.includes("Bring every migrated character up to the current starter loadout"), "retired starter migration comment survived");

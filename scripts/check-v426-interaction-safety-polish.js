@@ -12,9 +12,9 @@ const enemies = read("public", "client-enemies.js");
 const worldContent = read("public", "shared", "world-content.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
 assert(html.includes('?v=431'));
 
 // Drop quantity selection + compact crisp world count.

@@ -75,7 +75,7 @@ async function moveToMap(socket, mapId, x, y) {
 
     const primary = await connectAtSpawn();
     sockets.push(primary.socket);
-    if (primary.welcome.buildVersion !== "6-11-468") throw new Error(`unexpected build ${primary.welcome.buildVersion}`);
+    if (primary.welcome.buildVersion !== "6-11-471") throw new Error(`unexpected build ${primary.welcome.buildVersion}`);
 
     // Keep one player on Spawn so the night wave keeps advancing.
     await delay(1000);

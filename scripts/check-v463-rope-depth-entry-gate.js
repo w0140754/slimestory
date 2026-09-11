@@ -12,10 +12,10 @@ const server = read("server.js");
 const config = read("public", "client-config.js");
 const html = read("public", "index.html");
 
-assert.strictEqual(pkg.version, "0.6.11.468");
-assert(server.includes('const BUILD_VERSION = "6-11-468";'));
-assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-468";'));
-assert(html.includes('/game.js?v=431e-468'));
+assert.strictEqual(pkg.version, "0.6.11.471");
+assert(server.includes('const BUILD_VERSION = "6-11-471";'));
+assert(config.includes('const CLIENT_BUILD_VERSION = "6-11-471";'));
+assert(html.includes('/game.js?v=431e-471'));
 
 // Underground Rope must participate in the normal Y-sorted drawable layer,
 // using its hanging base as the depth key so players behind it draw underneath.
